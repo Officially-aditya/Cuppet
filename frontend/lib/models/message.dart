@@ -1,0 +1,158 @@
+enum MessageSender { user, agent, system }
+
+enum MessageDeliveryState { sending, sent, failed }
+
+class Message {
+  const Message({
+    required this.id,
+    required this.threadId,
+    required this.sender,
+    required this.createdAt,
+    required this.content,
+    this.deliveryState = MessageDeliveryState.sent,
+  });
+
+  final String id;
+  final String threadId;
+  final MessageSender sender;
+  final DateTime createdAt;
+  final Map<String, dynamic> content;
+  final MessageDeliveryState deliveryState;
+
+  String get template => content['template']?.toString() ?? 'plain_text';
+
+  Map<String, dynamic> get data {
+    final raw = content['data'];
+    if (raw is Map<String, dynamic>) {
+      return raw;
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+
+  String get preview {
+    final text = data['text']?.toString() ?? content['text']?.toString();
+    if (text != null && text.trim().isNotEmpty) {
+      return text.trim();
+    }
+    final body = data['body']?.toString();
+    if (body != null && body.trim().isNotEmpty) {
+      return body.trim();
+    }
+    return switch (template) {
+      'progress_tracker' => data['title']?.toString() ?? 'Progress update',
+      'urgency_list' => data['title']?.toString() ?? 'Priority update',
+      'data_summary' => data['title']?.toString() ?? 'Summary ready',
+      'checklist' => data['title']?.toString() ?? 'Checklist update',
+      'streak_counter' => data['label']?.toString() ?? 'Streak update',
+      'system' =>
+        data['text']?.toString() ??
+            data['message']?.toString() ??
+            data['detail']?.toString() ??
+            'System update',
+      _ => 'New message',
+    };
+  }
+
+  factory Message.plainText({
+    required String id,
+    required String threadId,
+    required MessageSender sender,
+    required String text,
+    DateTime? createdAt,
+  }) {
+    return Message(
+      id: id,
+      threadId: threadId,
+      sender: sender,
+      createdAt: createdAt ?? DateTime.now(),
+      content: {
+        'template': 'plain_text',
+        'data': {'text': text},
+      },
+    );
+  }
+
+  factory Message.system({
+    required String id,
+    required String threadId,
+    required String text,
+    DateTime? createdAt,
+  }) {
+    return Message(
+      id: id,
+      threadId: threadId,
+      sender: MessageSender.system,
+      createdAt: createdAt ?? DateTime.now(),
+      content: {
+        'template': 'system',
+        'data': {'text': text},
+      },
+    );
+  }
+
+  factory Message.fromJson(Map<String, dynamic> json) {
+    final rawContent = json['content'];
+    return Message(
+      id: json['id']?.toString() ?? '',
+      threadId:
+          json['threadId']?.toString() ??
+          json['thread_id']?.toString() ??
+          json['agent_id']?.toString() ??
+          '',
+      sender: _senderFromString((json['sender'] ?? json['role'])?.toString()),
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
+      content:
+          rawContent is Map
+              ? Map<String, dynamic>.from(rawContent)
+              : const {'template': 'plain_text', 'data': {}},
+      deliveryState: _deliveryStateFromString(
+        (json['deliveryState'] ?? json['delivery_state'])?.toString(),
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'threadId': threadId,
+      'sender': sender.name,
+      'createdAt': createdAt.toIso8601String(),
+      'content': content,
+      'deliveryState': deliveryState.name,
+    };
+  }
+}
+
+DateTime _parseDate(Object? value) {
+  if (value is DateTime) {
+    return value;
+  }
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.now();
+  }
+  return DateTime.now();
+}
+
+MessageSender _senderFromString(String? value) {
+  final normalized =
+      value?.replaceAll('_', '').replaceAll('-', '').toLowerCase();
+  if (normalized == 'assistant') {
+    return MessageSender.agent;
+  }
+  return MessageSender.values.firstWhere(
+    (sender) => sender.name.toLowerCase() == normalized,
+    orElse: () => MessageSender.agent,
+  );
+}
+
+MessageDeliveryState _deliveryStateFromString(String? value) {
+  final normalized =
+      value?.replaceAll('_', '').replaceAll('-', '').toLowerCase();
+  return MessageDeliveryState.values.firstWhere(
+    (state) => state.name.toLowerCase() == normalized,
+    orElse: () => MessageDeliveryState.sent,
+  );
+}

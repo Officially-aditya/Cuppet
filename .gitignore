@@ -1,0 +1,97 @@
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Editors / local workspace
+.idea/
+.vscode/
+*.iml
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile
+google-services.json
+GoogleService-Info.plist
+firebase-service-account*.json
+*service-account*.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+flutter_run.*.log
+flutter_*_run.*.log
+emulator_*.log
+
+# Node / TypeScript backend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+coverage/
+**/coverage/
+*.tsbuildinfo
+.eslintcache
+
+# Flutter / Dart
+.dart_tool/
+**/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+build/
+**/build/
+
+# Android / Gradle
+.gradle/
+**/.gradle/
+local.properties
+**/local.properties
+captures/
+**/captures/
+.cxx/
+**/.cxx/
+key.properties
+**/key.properties
+*.keystore
+*.jks
+
+# iOS / CocoaPods / Xcode
+Pods/
+**/Pods/
+DerivedData/
+**/DerivedData/
+xcuserdata/
+**/xcuserdata/
+Flutter/Flutter.framework
+Flutter/Flutter.podspec
+Flutter/Generated.xcconfig
+Flutter/ephemeral/
+Flutter/flutter_export_environment.sh
+
+# Generated Flutter plugin files
+GeneratedPluginRegistrant.java
+Runner/GeneratedPluginRegistrant.*
+
+# Local runtime data
+tmp/
+temp/
+.cache/
+postgres-data/
+redis-data/
+pgdata/
+**/postgres-data/
+**/redis-data/
+**/pgdata/

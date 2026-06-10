@@ -1,0 +1,38 @@
+{
+  "name": "sydney-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:api": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch worker.ts",
+    "build": "tsc",
+    "start:api": "node dist/src/index.js",
+    "start:worker": "node dist/worker.js",
+    "migrate": "node-pg-migrate --envPath .env -m src/db/migrations up",
+    "migrate:down": "node-pg-migrate --envPath .env -m src/db/migrations down",
+    "migrate:create": "node-pg-migrate --envPath .env -m src/db/migrations create",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.0.0",
+    "better-auth": "^1.6.0",
+    "bullmq": "^5.34.2",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.3.0",
+    "jose": "^6.2.3",
+    "pg": "^8.13.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.11.11",
+    "node-pg-migrate": "^8.0.4",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

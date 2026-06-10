@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #f9f9f7;
+  --color-surface-dim: #dadad8;
+  --color-surface-bright: #f9f9f7;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f4f2;
+  --color-surface-container: #eeeeec;
+  --color-surface-container-high: #e8e8e6;
+  --color-surface-container-highest: #e2e3e1;
+  --color-on-surface: #1a1c1b;
+  --color-on-surface-variant: #3f4943;
+  --color-inverse-surface: #2f3130;
+  --color-inverse-on-surface: #f1f1ef;
+  --color-outline: #6f7a73;
+  --color-outline-variant: #bec9c2;
+  --color-surface-tint: #006c4f;
+  --color-primary: #006046;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1d7a5c;
+  --color-on-primary-container: #afffdc;
+  --color-inverse-primary: #81d7b4;
+  --color-secondary: #57615b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d8e2db;
+  --color-on-secondary-container: #5b6560;
+  --color-tertiary: #55544e;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #6e6c66;
+  --color-on-tertiary-container: #f2eee6;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #9df4cf;
+  --color-primary-fixed-dim: #81d7b4;
+  --color-on-primary-fixed: #002116;
+  --color-on-primary-fixed-variant: #00513b;
+  --color-secondary-fixed: #dbe5de;
+  --color-secondary-fixed-dim: #bfc9c2;
+  --color-on-secondary-fixed: #141d1a;
+  --color-on-secondary-fixed-variant: #3f4944;
+  --color-tertiary-fixed: #e6e2da;
+  --color-tertiary-fixed-dim: #c9c6bf;
+  --color-on-tertiary-fixed: #1c1c17;
+  --color-on-tertiary-fixed-variant: #484741;
+  --color-background: #f9f9f7;
+  --color-on-background: #1a1c1b;
+  --color-surface-variant: #e2e3e1;
+  --color-ink: #17201C;
+  --color-muted-ink: #66736D;
+  --color-subtle-ink: #8B9691;
+  --color-line: #E7E4DD;
+  --color-primary-soft: #E4F3EC;
+  --color-agent-bubble: #FFFFFF;
+  --color-user-bubble: #DDF4E8;
+  --color-system-bubble: #F1EEE8;
+  --color-danger: #C84A3D;
+  --color-danger-soft: #FCE9E6;
+  --color-warning: #C07A22;
+  --color-warning-soft: #FFF3D8;
+  --color-info: #356C91;
+  --color-info-soft: #E5F1F7;
+
+  /* Sydney specific aliases if needed */
+  --color-sydney-surface: #f9f9f7;
+  --color-sydney-surface-muted: #f4f4f2;
+  --color-sydney-primary: #1d7a5c;
+  --color-sydney-primary-hover: #176049;
+  --color-sydney-text: #1a1c1b;
+  --color-sydney-muted: #6f7a73;
+  --color-sydney-border: #bec9c2;
+  --color-sydney-input: #eeeeec;
+  --color-sydney-purple: #8b5cf6;
+  --color-sydney-green: #2e7d32;
+  --color-sydney-green-hover: #1b5e20;
+  --color-sydney-light-green: #e8f2ef;
+
+  --font-sans: "Roboto", "Inter", system-ui, sans-serif;
+  --font-roboto: "Roboto", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+/* Base custom styles to replicate design specifications */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #f9f9f7;
+  font-family: var(--font-sans);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

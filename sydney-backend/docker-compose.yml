@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sydney_dev
+      POSTGRES_USER: sydney
+      POSTGRES_PASSWORD: sydney
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sydney -d sydney_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: dev
+    command: npx node-pg-migrate -m src/db/migrations up
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://sydney:sydney@postgres:5432/sydney_dev
+      REDIS_URL: redis://redis:6379
+
+  api:
+    build:
+      context: .
+      target: dev
+    command: npm run dev:api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      AUTH_BASE_URL: http://localhost:3000
+      TRUSTED_ORIGINS: http://localhost:3000,http://localhost:5173
+      DATABASE_URL: postgresql://sydney:sydney@postgres:5432/sydney_dev
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FIREBASE_SERVICE_ACCOUNT: ${FIREBASE_SERVICE_ACCOUNT}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
+      - ./worker.ts:/app/worker.ts
+
+  worker:
+    build:
+      context: .
+      target: dev
+    command: npm run dev:worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://sydney:sydney@postgres:5432/sydney_dev
+      REDIS_URL: redis://redis:6379
+      AUTH_BASE_URL: http://localhost:3000
+      TRUSTED_ORIGINS: http://localhost:3000,http://localhost:5173
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FIREBASE_SERVICE_ACCOUNT: ${FIREBASE_SERVICE_ACCOUNT}
+    volumes:
+      - ./src:/app/src
+      - ./worker.ts:/app/worker.ts
+
+volumes:
+  postgres_data:
