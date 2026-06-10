@@ -1,11 +1,140 @@
 # Sydney Frontend Premium UI Audit
 
 Date: 2026-06-11
+Audience: Product design, visual design, frontend engineering.
 Scope: Flutter frontend visual quality, interaction polish, and product feel.
 
 This audit focuses on the "premium feel" layer: consistency, restraint, button language, corners, spacing, hierarchy, trust, and the small details that make the app feel intentional rather than scaffolded.
 
 It does not replace the backend/product gap audit. This document is specifically about the frontend presentation and interaction quality.
+
+## How To Read This As A Designer
+
+You do not need to know Dart or Flutter to use this document.
+
+When you see file paths like `frontend/lib/screens/inbox/inbox_screen.dart`, treat them as implementation notes for engineers. The design issue is explained in normal language before or after each reference.
+
+For design review, focus on these questions:
+
+- Does the screen look like a polished messaging app?
+- Is there one clear primary action?
+- Are buttons, corners, spacing, icons, and text styles consistent?
+- Does the screen feel calm and trustworthy?
+- Is anything visible that looks fake, unfinished, or overly technical?
+- Would a non-technical user understand what to do within 10 seconds?
+
+The sections marked P0 and P1 are the most important for design quality. P2 and P3 are polish and release-readiness improvements.
+
+## Plain-Language Summary For Design
+
+Sydney should feel like a quiet, premium messaging app where agents are contacts. Right now the app has the right structure, but several details make it feel like a working prototype:
+
+- Some screens use cards where a messaging app would use clean list rows.
+- Buttons change shape from screen to screen without a clear reason.
+- Some icons are visible but do nothing.
+- Some screens still show fake user data.
+- The same UI object sometimes has two different designs.
+- Loading, empty, and error states are functional but not yet carefully designed.
+- The visual system exists, but it does not yet enforce a strong style.
+
+The design goal is not to make the app flashy. The goal is to make it feel intentional, calm, consistent, and trustworthy.
+
+## Basic Design Principles To Apply
+
+These are the simple rules the whole frontend should follow.
+
+| Area | Basic rule | Why it matters |
+|---|---|---|
+| Visual hierarchy | One screen should have one main action and one clear reading order. | Users should not have to decide what matters. |
+| Consistency | The same type of thing should look the same everywhere. | Consistency creates trust and makes the app feel mature. |
+| Spacing | Use a predictable spacing rhythm between sections, rows, and controls. | Uneven spacing makes a UI feel accidental. |
+| Corners | Rounded corners should have a rule, not be chosen randomly. | Corner consistency is one of the fastest ways to make an app feel premium. |
+| Buttons | Button shape, size, and color should communicate importance. | Users learn what is primary, secondary, dangerous, or status-only. |
+| Typography | Titles, labels, body text, timestamps, and metadata need distinct roles. | Text hierarchy makes screens scannable. |
+| Color | Color should mostly signal action, state, or status. | Too much decorative color weakens the product. |
+| Icons | Icons should be familiar, consistent, and functional. | Unclear or dead icons reduce trust. |
+| Empty states | Empty screens should guide the user gently. | A blank or generic empty state feels unfinished. |
+| Loading states | Loading should match the shape of final content. | Users should feel the app is working, not broken. |
+| Error states | Errors should be human, specific, and actionable. | Technical errors make the product feel unsafe. |
+| Touch targets | Tappable controls should be large enough to hit comfortably. | Small controls feel cheap and frustrate users. |
+| Motion | Motion should explain change, not decorate. | Subtle motion makes the app feel native and alive. |
+
+## Designer Glossary
+
+These terms appear throughout the audit.
+
+| Term | Meaning |
+|---|---|
+| Component | A reusable piece of UI, like a button, message bubble, input field, or list row. |
+| Token | A shared design value, like a color, spacing size, text style, or corner radius. |
+| Radius | The roundness of a corner. For example, cards may have 12px corners and pills may be fully rounded. |
+| Pill | A fully rounded shape, usually used for chips, compact statuses, or small actions. |
+| FAB | Floating Action Button. In this app it is the `New` button floating over the inbox. |
+| Skeleton | A placeholder shape shown while content is loading. |
+| Empty state | What users see when there is no data yet. |
+| Error state | What users see when something fails. |
+| Visual grammar | The set of repeated rules that teach users what each shape, color, and layout means. |
+| Affordance | A visual clue that something can be tapped, edited, opened, or changed. |
+| Chrome | Interface controls around the content, such as app bars, nav bars, borders, and tool buttons. |
+| Density | How much content appears in a given area. Messaging apps need enough density to scan conversations. |
+
+## Flutter Terms Translated For Designers
+
+Some findings mention current Flutter component names so engineers can find the issue quickly. Designers can read them as plain UI objects.
+
+| Flutter/code term | Designer translation |
+|---|---|
+| `FilledButton` | A filled primary-style button. |
+| `OutlinedButton` | A secondary button with an outline. |
+| `TextButton` | A low-emphasis text-only action. |
+| `IconButton` | A tappable icon. |
+| `FloatingActionButton` or `FAB` | The floating `New` button. |
+| `FilterChip` | A selectable shortcut chip. |
+| `SurfaceCard` | A bordered card or panel. |
+| `AgentListItem` | The current heavy inbox card row. |
+| `AgentTile` | The lighter messaging-style inbox row. |
+| `MessageCard` | The current message bubble renderer. |
+| `MessageBubble` | An older/alternate message bubble renderer. |
+| `SydneyColors` | The shared color palette. |
+| `SydneyRadius` | The shared corner-radius scale. |
+| `SydneySpacing` | The shared spacing scale. |
+| `SydneyTypography` | The shared text style scale. |
+
+## What "Premium" Means For Sydney
+
+For Sydney, premium does not mean glossy, decorative, dark, gradient-heavy, or complicated.
+
+Premium means:
+
+- The app feels quiet and confident.
+- The user always knows what to do.
+- The UI gets out of the way of the messages.
+- No visible element looks fake or unfinished.
+- Every repeated pattern has a clear rule.
+- The app feels native on Android.
+- The messaging model is obvious from the first screen.
+- Permission and settings screens feel trustworthy.
+- Agent replies and structured messages feel carefully presented.
+
+## Quick Visual Checklist
+
+Use this checklist during a design pass or screenshot review.
+
+- Are all primary buttons the same height and corner radius?
+- Are secondary buttons visually quieter than primary buttons?
+- Are there any buttons or icons that do nothing?
+- Are cards used only where framing adds meaning?
+- Does the inbox look like a contact list, not a dashboard?
+- Do message bubbles use the same padding, width, and corner logic everywhere?
+- Do app bars have consistent title placement and icon treatment?
+- Does every screen have one clear first thing to look at?
+- Are fake names, fake emails, fake security claims, or placeholder copy gone?
+- Do loading states resemble the final layout?
+- Do errors tell users what happened and what to do next?
+- Are text sizes readable on a small Android phone?
+- Are tap targets comfortable?
+- Is color being used for action/status rather than decoration?
+- Does the app still feel good in grayscale?
 
 ## Executive Summary
 
@@ -948,64 +1077,128 @@ Rules:
 - Consistent label/hint behavior.
 - Multi-line variant for create prompt.
 
-## Proposed Design Token Changes
+## Proposed Design Tokens In Designer Terms
 
-### Radius
+This section describes the shared visual rules designers and engineers should agree on. Engineers can translate these into Flutter code after the design rules are approved.
 
-Replace generic usage with semantic tokens:
+### Corner Radius Rules
 
-```dart
-class SydneyRadius {
-  static const double card = 12;
-  static const double button = 14;
-  static const double input = 16;
-  static const double iconButton = 999;
-  static const double pill = 999;
-  static const double bubble = 18;
-  static const double bubbleTail = 6;
-}
-```
+The app should not use random corner sizes. Each kind of surface should have a consistent corner shape.
 
-### Spacing
+| UI element | Recommended corner | Designer note |
+|---|---:|---|
+| Message bubble | 18px, with the tail-side bottom corner at 6px | Gives chat bubbles a familiar messaging shape. |
+| Cards and settings groups | 12px | Calm, modern, not too soft. |
+| Text fields | 16px | Friendly and easy to recognize as input areas. |
+| Main buttons | 14px | Premium rounded rectangle, not too pill-like. |
+| Compact chips/status pills | Fully rounded | Good for short labels like `Connected` or `Ready`. |
+| Avatars | Circle | Contacts should feel like people/agents. |
+| App bar icon buttons | Circle | Common mobile pattern. |
+| Large decorative glyphs | 20px maximum | Avoid overly soft toy-like shapes. |
 
-Current spacing is acceptable, but should gain semantic aliases:
+Designer decision needed:
 
-```dart
-class SydneySpacing {
-  static const double screenX = 20;
-  static const double screenY = 16;
-  static const double rowGap = 12;
-  static const double sectionGap = 24;
-  static const double appBarHeight = 64;
-  static const double bottomBarHeight = 72;
-}
-```
+- Should Sydney's primary buttons be softly rounded rectangles or full pills? Recommendation: rounded rectangles for main actions, full pills only for compact chips and statuses.
 
-### Typography
+### Spacing Rules
 
-Add semantic styles:
+Spacing should feel calm and repeatable. The app should use a clear rhythm instead of one-off margins.
 
-```dart
-class SydneyTypography {
-  static const agentName;
-  static const messagePreview;
-  static const timestamp;
-  static const messageBody;
-  static const sectionLabel;
-  static const buttonLabel;
-}
-```
+| Spacing use | Recommended value | Designer note |
+|---|---:|---|
+| Screen left/right padding | 20px | Already feels good on mobile. |
+| Small gap between related items | 8px | Example: title to subtitle. |
+| Normal gap between controls | 12px | Example: input to helper text. |
+| Row internal padding | 16px | Comfortable touch area. |
+| Section gap | 24px | Separates major screen groups. |
+| Large top/bottom breathing room | 32px | Use sparingly for auth/create screens. |
+| App bar height | 64px | Current height is acceptable. |
+| Bottom nav/reply area | 72px plus safe area | Should feel stable and easy to tap. |
 
-### Shadows
+Basic rule:
 
-If shadows stay, centralize them:
+- Related things should be close together.
+- Unrelated sections need more space.
+- Spacing should not change randomly between screens.
 
-```dart
-class SydneyShadows {
-  static const subtle;
-  static const floatingAction;
-}
-```
+### Typography Rules
+
+The app needs named text roles, not just font sizes.
+
+| Text role | Suggested use | Designer note |
+|---|---|---|
+| App title | `Sydney`, auth title, major page title | Use sparingly. |
+| Screen title | Create account, Connectors, Settings | Should not compete with app bar. |
+| Agent name | Inbox rows and thread headers | Strong but not oversized. |
+| Message body | Chat bubble text | Needs excellent readability. |
+| Message preview | Inbox last-message preview | Softer than agent name, easy to scan. |
+| Timestamp | Inbox/thread metadata | Small but readable. |
+| Section label | Settings groups, connector sections | Use restrained color and weight. |
+| Button label | All buttons | Consistent weight and size. |
+| Helper/error text | Form hints and validation | Human, direct, not too small. |
+
+Designer decision needed:
+
+- Keep Roboto for now or choose a more distinctive product font later. Recommendation: keep Roboto until the product shape stabilizes, then revisit typography as a brand pass.
+
+### Color Rules
+
+The palette should remain restrained. Color should mostly explain state and action.
+
+| Color role | Use |
+|---|---|
+| App background | Main screen background. |
+| Elevated surface | Cards, input fields, message bubbles. |
+| Subtle border | Separators and low-emphasis outlines. |
+| Primary action | Main buttons and active states. |
+| Primary soft | Selected nav/chip backgrounds. |
+| Danger | Delete, failed, destructive warnings. |
+| Warning | Needs review, attention required. |
+| Info | Neutral system information. |
+| User bubble | User messages only. |
+| Agent bubble | Agent messages only. |
+| System bubble | Internal app messages only. |
+
+Basic rule:
+
+- If everything is green, nothing feels important.
+- Use green for primary actions and success-like states.
+- Use warm neutral surfaces for calm.
+- Use red/yellow/blue only for actual status meaning.
+
+### Shadow And Depth Rules
+
+Sydney should not feel flat, but it also should not look like a stack of floating cards.
+
+| Surface | Depth recommendation |
+|---|---|
+| Inbox rows | No shadow, subtle separator. |
+| Message bubbles | Very subtle shadow only if needed. |
+| Confirmation card | Border plus optional soft shadow. |
+| FAB | Shadow allowed. |
+| Bottom bars | Top border, no heavy shadow. |
+| Settings groups | Border or subtle fill, not heavy elevation. |
+
+Basic rule:
+
+- Use depth to show importance or layering.
+- Do not use shadows as decoration.
+
+### Component Naming For Engineers
+
+Designers do not need to implement these names, but this is the component set engineering should build from the design rules:
+
+| Design concept | Engineering component |
+|---|---|
+| Main button | `SydneyPrimaryButton` |
+| Secondary button | `SydneySecondaryButton` |
+| Icon-only button | `SydneyIconButton` |
+| Inbox row | `SydneyListRow` or `AgentRow` |
+| Message bubble | `SydneyMessageBubble` |
+| System pill | `SydneySystemPill` |
+| Text field | `SydneyTextField` |
+| Loading placeholder | `SydneySkeleton` |
+| Error block | `SydneyErrorState` |
 
 ## Implementation Plan
 
