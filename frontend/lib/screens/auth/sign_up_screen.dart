@@ -104,6 +104,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               onPressed: loading ? null : _submit,
               child: Text(loading ? 'Creating...' : 'Create account'),
             ),
+            const SizedBox(height: SydneySpacing.md),
+            OutlinedButton.icon(
+              onPressed: loading ? null : _continueWithGoogle,
+              icon: const Text(
+                'G',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              label: Text(
+                loading ? 'Opening Google...' : 'Sign up with Google',
+              ),
+            ),
           ],
         ),
       ),
@@ -121,6 +132,19 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
+    if (!mounted) {
+      return;
+    }
+    final state = ref.read(authControllerProvider).asData?.value;
+    if (state?.isAuthenticated == true) {
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+    }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    await ref.read(authControllerProvider.notifier).continueWithGoogle();
     if (!mounted) {
       return;
     }

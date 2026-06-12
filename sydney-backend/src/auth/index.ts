@@ -3,6 +3,16 @@ import { bearer, jwt } from "better-auth/plugins";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 
+const socialProviders =
+  config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
+    ? {
+        google: {
+          clientId: config.GOOGLE_CLIENT_ID,
+          clientSecret: config.GOOGLE_CLIENT_SECRET
+        }
+      }
+    : {};
+
 export const auth = betterAuth({
   appName: "Sydney",
   baseURL: config.AUTH_BASE_URL,
@@ -10,6 +20,7 @@ export const auth = betterAuth({
   database: pool,
   secret: config.BETTER_AUTH_SECRET,
   trustedOrigins: config.TRUSTED_ORIGINS,
+  socialProviders,
   emailAndPassword: {
     enabled: true
   },
@@ -45,6 +56,10 @@ export const auth = betterAuth({
       idToken: "id_token",
       createdAt: "created_at",
       updatedAt: "updated_at"
+    },
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google"]
     }
   },
   verification: {

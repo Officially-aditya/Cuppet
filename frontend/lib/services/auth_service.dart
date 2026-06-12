@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
 import '../config/env.dart';
 import '../models/user.dart';
@@ -114,6 +115,81 @@ class AuthService {
     }
   }
 
+  Future<AuthSession> continueWithGoogle() async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      final token = 'mock-session-${DateTime.now().millisecondsSinceEpoch}';
+      final user = _mockUser(email: 'alex@gmail.com');
+      await _api.writeSessionToken(token);
+      return AuthSession(user: user, token: token);
+    }
+
+    try {
+      final callbackUri = Uri(
+        scheme: Env.authCallbackScheme,
+        host: 'auth',
+        path: '/google',
+      );
+      final authOrigin =
+          Env.authOrigin.endsWith('/')
+              ? Env.authOrigin.substring(0, Env.authOrigin.length - 1)
+              : Env.authOrigin;
+      final mobileCallbackUri = Uri.parse(
+        '$authOrigin/auth/mobile/google/callback',
+      ).replace(queryParameters: {'redirect_uri': callbackUri.toString()});
+
+      final response = await _api.post<Map<String, dynamic>>(
+        '/auth/sign-in/social',
+        data: {
+          'provider': 'google',
+          'disableRedirect': true,
+          'requestSignUp': true,
+          'callbackURL': mobileCallbackUri.toString(),
+          'newUserCallbackURL': mobileCallbackUri.toString(),
+          'errorCallbackURL': callbackUri.toString(),
+        },
+        options: authRouteOptions(),
+      );
+
+      final authUrl = response.data?['url']?.toString();
+      if (authUrl == null || authUrl.isEmpty) {
+        throw const ApiException('Google sign-up is not configured yet.');
+      }
+
+      final result = await FlutterWebAuth2.authenticate(
+        url: authUrl,
+        callbackUrlScheme: Env.authCallbackScheme,
+      );
+      final params = _callbackParameters(Uri.parse(result));
+      final error = params['error'];
+      if (error != null && error.isNotEmpty) {
+        throw ApiException(_googleAuthErrorMessage(error));
+      }
+
+      final token = params['token'];
+      if (token == null || token.isEmpty) {
+        throw const ApiException('Google did not return a Sydney session.');
+      }
+
+      await _api.writeSessionToken(token);
+      final me = await _api.get<Map<String, dynamic>>('/users/me');
+      final userData = me.data?['user'];
+      if (userData is! Map) {
+        throw const ApiException('The server returned an incomplete session.');
+      }
+
+      return AuthSession(
+        user: User.fromJson(Map<String, dynamic>.from(userData)),
+        token: token,
+      );
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not continue with Google. Please try again.',
+      );
+    }
+  }
+
   Future<void> signOut() async {
     if (!Env.useMockData) {
       try {
@@ -169,6 +245,26 @@ class AuthService {
       displayName: email.split('@').first,
     );
   }
+}
+
+Map<String, String> _callbackParameters(Uri uri) {
+  final params = <String, String>{...uri.queryParameters};
+  if (uri.fragment.isNotEmpty) {
+    params.addAll(Uri.splitQueryString(uri.fragment));
+  }
+  return params;
+}
+
+String _googleAuthErrorMessage(String code) {
+  return switch (code) {
+    'missing_session' =>
+      'Google signed in, but Sydney could not create a session.',
+    'account_not_linked' || 'account not linked' =>
+      'This email already has a Sydney account. Sign in with email first, then link Google later.',
+    'signup_disabled' ||
+    'signup disabled' => 'Google sign-up is currently disabled.',
+    _ => 'Google sign-up did not finish. Please try again.',
+  };
 }
 
 Options skipAuthOptions() {

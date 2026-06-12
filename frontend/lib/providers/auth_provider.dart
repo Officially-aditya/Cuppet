@@ -69,6 +69,14 @@ class AuthController extends AsyncNotifier<AuthState> {
     });
   }
 
+  Future<void> continueWithGoogle() async {
+    state = const AsyncValue<AuthState>.loading();
+    state = await AsyncValue.guard(() async {
+      final session = await ref.read(authServiceProvider).continueWithGoogle();
+      return AuthState(user: session.user, sessionToken: session.token);
+    });
+  }
+
   Future<void> signOut() async {
     await ref.read(authServiceProvider).signOut();
     state = const AsyncValue<AuthState>.data(AuthState.signedOut());

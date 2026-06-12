@@ -98,6 +98,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               onPressed: loading ? null : _submit,
               child: Text(loading ? 'Signing in...' : 'Sign in'),
             ),
+            const SizedBox(height: SydneySpacing.md),
+            _GoogleAuthButton(
+              label: 'Continue with Google',
+              loading: loading,
+              onPressed: _continueWithGoogle,
+            ),
             const SizedBox(height: SydneySpacing.sm),
             TextButton(
               onPressed:
@@ -131,6 +137,40 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         context,
       ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
     }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    await ref.read(authControllerProvider.notifier).continueWithGoogle();
+    if (!mounted) {
+      return;
+    }
+    final state = ref.read(authControllerProvider).asData?.value;
+    if (state?.isAuthenticated == true) {
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+    }
+  }
+}
+
+class _GoogleAuthButton extends StatelessWidget {
+  const _GoogleAuthButton({
+    required this.label,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: loading ? null : onPressed,
+      icon: const Text('G', style: TextStyle(fontWeight: FontWeight.w700)),
+      label: Text(loading ? 'Opening Google...' : label),
+    );
   }
 }
 

@@ -41,6 +41,11 @@ class Env {
     defaultValue: 'sydney',
   );
 
+  static const authCallbackScheme = String.fromEnvironment(
+    'SYDNEY_AUTH_CALLBACK_SCHEME',
+    defaultValue: 'sydney',
+  );
+
   static const useMockData = bool.fromEnvironment(
     'SYDNEY_USE_MOCKS',
     defaultValue: false,

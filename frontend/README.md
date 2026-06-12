@@ -48,6 +48,23 @@ flutter run \
 The Android emulator automatically uses `http://10.0.2.2:3000` for the local
 backend. Web, macOS, and iOS simulator builds use `http://localhost:3000`.
 
+Google sign-up uses Better Auth social OAuth through the backend, then returns
+to the app with the `sydney://auth/google` URL scheme. Configure the backend
+with a Google Web application OAuth client:
+
+```sh
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+AUTH_BASE_URL=https://your-dev-backend.example
+TRUSTED_ORIGINS=https://your-dev-backend.example,http://localhost:3000
+MOBILE_AUTH_CALLBACK_SCHEME=sydney
+```
+
+For Android emulator testing, `AUTH_BASE_URL` must be reachable by the browser
+that Google opens. A temporary HTTPS tunnel is usually cleaner than `localhost`.
+Pass that same origin to Flutter with
+`--dart-define=SYDNEY_AUTH_ORIGIN=https://your-dev-backend.example`.
+
 To launch the configured Android emulator and run the app in one step:
 
 ```sh

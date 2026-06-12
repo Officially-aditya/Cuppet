@@ -1,10 +1,31 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import { fromNodeHeaders } from "better-auth/node";
 import { ensureAssistantContact } from "../agents/assistant.js";
 import { config } from "../config.js";
 import { auth } from "./index.js";
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/auth/mobile/google/callback", async (request, reply) => {
+    const query = request.query as { redirect_uri?: string };
+    const redirectUri = resolveMobileGoogleRedirect(query.redirect_uri);
+
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(request.headers)
+    });
+
+    if (!session) {
+      return redirectMobileAuthError(reply, redirectUri, "missing_session");
+    }
+
+    await ensureAssistantContact(session.user.id);
+
+    redirectUri.hash = new URLSearchParams({
+      token: session.session.token
+    }).toString();
+
+    return reply.redirect(redirectUri.toString());
+  });
+
   app.route({
     method: ["GET", "POST"],
     url: "/auth/*",
@@ -58,4 +79,31 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
     }
   });
+}
+
+function resolveMobileGoogleRedirect(value?: string): URL {
+  const fallback = `${config.MOBILE_AUTH_CALLBACK_SCHEME}://auth/google`;
+  const url = new URL(value || fallback);
+  const expectedProtocol = `${config.MOBILE_AUTH_CALLBACK_SCHEME}:`;
+
+  if (
+    url.protocol !== expectedProtocol ||
+    url.hostname !== "auth" ||
+    url.pathname !== "/google"
+  ) {
+    throw new Error("Invalid mobile Google auth callback URL.");
+  }
+
+  url.search = "";
+  url.hash = "";
+  return url;
+}
+
+function redirectMobileAuthError(
+  reply: FastifyReply,
+  redirectUri: URL,
+  code: string
+) {
+  redirectUri.hash = new URLSearchParams({ error: code }).toString();
+  return reply.redirect(redirectUri.toString());
 }
