@@ -60,7 +60,7 @@ class AgentService {
         description: prompt,
         lastMessagePreview: 'Setup checklist finalized.',
         latestMessageAt: DateTime.now(),
-        accentColor: 0xFF8B5CF6,
+        accentColor: 0xFF006046,
       );
       _mockAgents = Agent.sortForInbox([..._mockAgents!, created]);
       return created;
@@ -103,6 +103,7 @@ class AgentService {
 
 List<Agent> _buildMockAgents() {
   final now = DateTime.now();
+  final todayAt941 = DateTime(now.year, now.month, now.day, 9, 41);
   return [
     Agent(
       id: 'assistant',
@@ -110,7 +111,8 @@ List<Agent> _buildMockAgents() {
       name: 'Assistant',
       avatarInitials: 'S',
       description: 'Your home base for delegation.',
-      lastMessagePreview: 'I can help you turn a sentence into a useful agent.',
+      lastMessagePreview:
+          'I can help you turn a sentence into a useful micro-agent.',
       latestMessageAt: now.subtract(const Duration(minutes: 4)),
       isAssistant: true,
       isPinned: true,
@@ -118,26 +120,26 @@ List<Agent> _buildMockAgents() {
       accentColor: 0xFF1D7A5C,
     ),
     Agent(
-      id: 'agent_ops',
+      id: 'ops-watch',
       threadId: 'thread_ops',
       name: 'Ops Watch',
       avatarInitials: 'OW',
       description: 'Tracks deadlines and flags anything slipping.',
       lastMessagePreview: 'Two items need attention before Friday.',
-      latestMessageAt: now.subtract(const Duration(hours: 1, minutes: 22)),
+      latestMessageAt: todayAt941,
       unreadCount: 1,
       availability: AgentAvailability.thinking,
-      accentColor: 0xFFC07A22,
+      accentColor: 0xFFEA580C,
     ),
     Agent(
-      id: 'agent_research',
+      id: 'research-scout',
       threadId: 'thread_research',
       name: 'Research Scout',
       avatarInitials: 'RS',
       description: 'Collects weekly market notes.',
       lastMessagePreview: 'I summarized the latest category shifts.',
-      latestMessageAt: now.subtract(const Duration(hours: 5, minutes: 8)),
-      accentColor: 0xFF356C91,
+      latestMessageAt: now.subtract(const Duration(days: 1)),
+      accentColor: 0xFF1E40AF,
     ),
   ];
 }

@@ -7,6 +7,7 @@ import '../../models/agent.dart';
 import '../../providers/agents_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
+import '../../widgets/sydney_primitives.dart';
 
 class InboxScreen extends ConsumerWidget {
   const InboxScreen({super.key});
@@ -17,12 +18,12 @@ class InboxScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Menu',
-          onPressed: () {},
-          icon: const Icon(Icons.menu_rounded),
+        automaticallyImplyLeading: false,
+        backgroundColor: SydneyColors.surface,
+        title: Text(
+          'Sydney',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20),
         ),
-        title: const Text('Inbox'),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: SydneyColors.line),
@@ -32,7 +33,7 @@ class InboxScreen extends ConsumerWidget {
             tooltip: 'Connectors',
             onPressed:
                 () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-            icon: const Icon(Icons.hub_outlined),
+            icon: const Icon(Icons.public_rounded),
           ),
           IconButton(
             tooltip: 'Settings',
@@ -52,7 +53,8 @@ class InboxScreen extends ConsumerWidget {
             data: (items) => _InboxList(agents: items),
             loading: () => const _InboxLoading(),
             error:
-                (error, _) => _InboxError(
+                (error, _) => SydneyErrorState(
+                  title: 'Messages could not load',
                   message: error.toString(),
                   onRetry: () => ref.read(agentsProvider.notifier).refresh(),
                 ),
@@ -63,6 +65,9 @@ class InboxScreen extends ConsumerWidget {
         onPressed: () => Navigator.of(context).pushNamed(AppRoutes.create),
         icon: const Icon(Icons.add_rounded),
         label: const Text('New'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+        ),
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
@@ -76,16 +81,16 @@ class InboxScreen extends ConsumerWidget {
       return;
     }
     if (index == 1) {
+      Navigator.of(context).pushNamed(AppRoutes.connectors);
+      return;
+    }
+    if (index == 2) {
       final agents = ref.read(agentsProvider).asData?.value ?? const <Agent>[];
       final scout = agents.firstWhere(
         (agent) => agent.threadId == 'thread_research',
         orElse: _researchFallback,
       );
       Navigator.of(context).pushNamed(AppRoutes.thread, arguments: scout);
-      return;
-    }
-    if (index == 2) {
-      Navigator.of(context).pushNamed(AppRoutes.connectors);
       return;
     }
     Navigator.of(context).pushNamed(AppRoutes.settings);
@@ -100,6 +105,7 @@ class _InboxList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleAgents = agents.isEmpty ? [_assistantFallback()] : agents;
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -109,7 +115,9 @@ class _InboxList extends StatelessWidget {
         118,
       ),
       children: [
-        const _SystemPill(),
+        const SydneyNotice(
+          text: 'Assistant is pinned so you always have a place to start.',
+        ),
         const SizedBox(height: SydneySpacing.lg),
         for (final agent in visibleAgents) ...[
           AgentListItem(
@@ -119,35 +127,43 @@ class _InboxList extends StatelessWidget {
                   context,
                 ).pushNamed(AppRoutes.thread, arguments: agent),
           ),
-          const SizedBox(height: SydneySpacing.md),
+          const SizedBox(height: 10),
         ],
+        const SizedBox(height: SydneySpacing.xl),
+        const _StartSentencePrompt(),
       ],
     );
   }
 }
 
-class _SystemPill extends StatelessWidget {
-  const _SystemPill();
+class _StartSentencePrompt extends StatelessWidget {
+  const _StartSentencePrompt();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: SydneySpacing.lg,
-          vertical: SydneySpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: SydneyColors.systemBubble,
-          borderRadius: BorderRadius.circular(SydneyRadius.full),
-        ),
-        child: Text(
-          'Assistant is pinned so you always have a place to start.',
-          textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: SydneyColors.onSurfaceVariant),
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: SydneySpacing.lg),
+      child: Column(
+        children: [
+          Text(
+            'Start with one sentence',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontSize: 14),
+          ),
+          const SizedBox(height: SydneySpacing.xs),
+          SizedBox(
+            width: 280,
+            child: Text(
+              'Create an agent for something you want watched, summarized, or prepared.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: SydneyColors.mutedInk,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -167,52 +183,13 @@ class _InboxLoading extends StatelessWidget {
         118,
       ),
       itemCount: 4,
-      separatorBuilder: (_, _) => const SizedBox(height: SydneySpacing.md),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        return Container(
-          height: index == 0 ? 34 : 82,
-          decoration: BoxDecoration(
-            color:
-                index == 0
-                    ? SydneyColors.systemBubble
-                    : SydneyColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(
-              index == 0 ? SydneyRadius.full : SydneyRadius.sm,
-            ),
-            border: index == 0 ? null : Border.all(color: SydneyColors.line),
-          ),
-        );
+        if (index == 0) {
+          return const SydneyLoadingBlock(height: 44, radius: SydneyRadius.md);
+        }
+        return const SydneyLoadingBlock(height: 78, radius: SydneyRadius.md);
       },
-    );
-  }
-}
-
-class _InboxError extends StatelessWidget {
-  const _InboxError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(SydneySpacing.page),
-      children: [
-        Text(
-          'Messages could not load',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: SydneySpacing.sm),
-        Text(
-          message,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: SydneyColors.mutedInk),
-        ),
-        const SizedBox(height: SydneySpacing.lg),
-        FilledButton(onPressed: onRetry, child: const Text('Try again')),
-      ],
     );
   }
 }
@@ -224,22 +201,24 @@ Agent _assistantFallback() {
     name: 'Assistant',
     avatarInitials: 'S',
     description: 'Your home base for delegation.',
-    lastMessagePreview: 'I can help you turn a sentence into a useful agent.',
+    lastMessagePreview:
+        'I can help you turn a sentence into a useful micro-agent.',
     latestMessageAt: DateTime.now(),
     isAssistant: true,
     isPinned: true,
+    accentColor: 0xFF1D7A5C,
   );
 }
 
 Agent _researchFallback() {
   return Agent(
-    id: 'agent_research',
+    id: 'research-scout',
     threadId: 'thread_research',
     name: 'Research Scout',
     avatarInitials: 'RS',
     description: 'Collects weekly market notes.',
     lastMessagePreview: 'I summarized the latest category shifts.',
-    latestMessageAt: DateTime.now(),
-    accentColor: 0xFF356C91,
+    latestMessageAt: DateTime.now().subtract(const Duration(days: 1)),
+    accentColor: 0xFF1E40AF,
   );
 }

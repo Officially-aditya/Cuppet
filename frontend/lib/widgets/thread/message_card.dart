@@ -25,14 +25,33 @@ class MessageCard extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 320),
             padding: const EdgeInsets.symmetric(
               horizontal: SydneySpacing.lg,
-              vertical: SydneySpacing.sm,
+              vertical: 10,
             ),
             decoration: BoxDecoration(
               color: SydneyColors.systemBubble,
-              borderRadius: BorderRadius.circular(SydneyRadius.full),
+              borderRadius: BorderRadius.circular(SydneyRadius.md),
               border: Border.all(color: SydneyColors.line),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            child: SystemTemplate(data: message.data),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: SydneyColors.info,
+                  size: 16,
+                ),
+                const SizedBox(width: 10),
+                Flexible(child: SystemTemplate(data: message.data)),
+              ],
+            ),
           ),
         ),
       );
@@ -44,7 +63,7 @@ class MessageCard extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(SydneySpacing.lg),
       decoration: BoxDecoration(
-        color: isUser ? SydneyColors.primary : SydneyColors.agentBubble,
+        color: isUser ? SydneyColors.userBubble : SydneyColors.agentBubble,
         borderRadius:
             isUser ? SydneyRadius.bubbleUser : SydneyRadius.bubbleAgent,
         border: isUser ? null : Border.all(color: SydneyColors.line),
@@ -58,7 +77,7 @@ class MessageCard extends StatelessWidget {
       ),
       child: DefaultTextStyle.merge(
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isUser ? Colors.white : SydneyColors.ink,
+          color: isUser ? SydneyColors.ink : SydneyColors.onSurface,
         ),
         child: _TemplateRouter(message: message, isUser: isUser),
       ),
@@ -68,47 +87,8 @@ class MessageCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: SydneySpacing.lg),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child:
-            message.template == 'data_summary'
-                ? _ReadyStack(child: content)
-                : content,
+        child: content,
       ),
-    );
-  }
-}
-
-class _ReadyStack extends StatelessWidget {
-  const _ReadyStack({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: SydneyColors.primary,
-              size: 16,
-            ),
-            const SizedBox(width: SydneySpacing.xs),
-            Text(
-              'Ready',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: SydneyColors.primary,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: SydneySpacing.xs),
-        child,
-      ],
     );
   }
 }
@@ -123,7 +103,7 @@ class _TemplateRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = message.data;
     if (isUser) {
-      return PlainTextTemplate(data: data, textColor: Colors.white);
+      return PlainTextTemplate(data: data, textColor: SydneyColors.ink);
     }
 
     return switch (message.template) {

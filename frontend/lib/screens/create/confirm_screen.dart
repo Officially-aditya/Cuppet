@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/agents_provider.dart';
 import '../../services/agent_service.dart';
-import '../../widgets/surface_card.dart';
+import '../../widgets/sydney_primitives.dart';
 import 'create_screen.dart';
 
 class ConfirmScreen extends ConsumerStatefulWidget {
@@ -26,23 +25,14 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back',
-          onPressed: _creating ? null : () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: _creating ? null : () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
         ),
-        centerTitle: true,
         title: const Text('Confirm'),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: SydneyColors.line),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'More',
-            onPressed: () {},
-            icon: const Icon(Icons.more_horiz_rounded),
-          ),
-          const SizedBox(width: SydneySpacing.sm),
-        ],
       ),
       body: SafeArea(
         bottom: false,
@@ -51,36 +41,32 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
             SydneySpacing.page,
             SydneySpacing.lg,
             SydneySpacing.page,
-            SydneySpacing.actionFooterHeight + SydneySpacing.lg,
+            140,
           ),
           children: [
-            SurfaceCard(
+            SydneyPanel(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      color: SydneyColors.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'S',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: SydneyColors.primary,
-                      ),
-                    ),
+                  const SydneyIconBadge(
+                    size: 48,
+                    color: SydneyColors.primarySoft,
+                    foregroundColor: SydneyColors.primary,
+                    radius: SydneyRadius.full,
+                    child: Text('M'),
                   ),
-                  const SizedBox(height: SydneySpacing.sm),
-                  Text('Sydney', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: SydneySpacing.sm),
+                  const SizedBox(height: SydneySpacing.md),
+                  Text(
+                    _agentName(widget.draft),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: SydneySpacing.md),
                   Text(
                     '"${widget.draft.prompt}"',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SydneyColors.mutedInk,
-                      fontStyle: FontStyle.italic,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SydneyColors.onSurfaceVariant,
+                      height: 1.45,
                     ),
                   ),
                 ],
@@ -104,74 +90,69 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
               icon: Icons.schedule_rounded,
               title: 'When it runs',
               child: Text(
-                'Whenever you message it',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                widget.draft.responseTiming == 'daily'
+                    ? 'A consolidated digest each day'
+                    : 'Whenever you message it',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: SydneyColors.onSurfaceVariant,
+                  height: 1.35,
                 ),
               ),
             ),
             const SizedBox(height: SydneySpacing.md),
-            const _InfoCard(
-              icon: Icons.vpn_key_outlined,
+            _InfoCard(
+              icon: Icons.lock_outline_rounded,
               title: 'What it needs',
               child: Wrap(
                 spacing: SydneySpacing.sm,
                 runSpacing: SydneySpacing.sm,
                 children: [
-                  _AccessPill(
-                    icon: Icons.calendar_month_outlined,
-                    label: 'Calendar Access',
-                  ),
-                  _AccessPill(
-                    icon: Icons.description_outlined,
-                    label: 'Notes Access',
-                  ),
+                  for (final tool in widget.draft.connectedTools)
+                    _AccessPill(icon: _toolIcon(tool), label: '$tool Access'),
                 ],
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.md),
+            const _InfoCard(
+              icon: Icons.send_rounded,
+              title: 'What it sends',
+              child: Text(
+                'A draft agenda and summary message',
+                style: TextStyle(
+                  color: SydneyColors.onSurfaceVariant,
+                  fontSize: 12,
+                  height: 1.35,
+                ),
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            SydneySpacing.page,
-            SydneySpacing.md,
-            SydneySpacing.page,
-            SydneySpacing.lg,
-          ),
-          decoration: const BoxDecoration(
-            color: SydneyColors.surface,
-            border: Border(top: BorderSide(color: SydneyColors.line)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FilledButton(
-                onPressed: _creating ? null : _create,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                  backgroundColor: SydneyColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(SydneyRadius.full),
-                  ),
-                ),
-                child: Text(_creating ? 'Creating...' : 'Create agent'),
+      bottomNavigationBar: SydneyFooter(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FilledButton(
+              onPressed: _creating ? null : _create,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
               ),
-              const SizedBox(height: SydneySpacing.sm),
-              OutlinedButton(
-                onPressed: _creating ? null : () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(SydneyRadius.full),
-                  ),
+              child: Text(_creating ? 'Creating...' : 'Create agent'),
+            ),
+            const SizedBox(height: SydneySpacing.sm),
+            OutlinedButton(
+              onPressed: _creating ? null : () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: SydneyColors.onSurface,
+                minimumSize: const Size.fromHeight(44),
+                textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w800,
                 ),
-                child: const Text('Edit sentence'),
               ),
-            ],
-          ),
+              child: const Text('EDIT SENTENCE'),
+            ),
+          ],
         ),
       ),
     );
@@ -181,7 +162,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     setState(() => _creating = true);
     final navigator = Navigator.of(context);
     try {
-      final agent = await ref
+      await ref
           .read(agentsProvider.notifier)
           .createAgent(
             CreateAgentRequest(
@@ -193,7 +174,6 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
         return;
       }
       navigator.popUntil((route) => route.isFirst);
-      await navigator.pushNamed(AppRoutes.thread, arguments: agent);
     } catch (error) {
       if (!mounted) {
         return;
@@ -222,30 +202,25 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SurfaceCard(
+    return SydneyPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: SydneyColors.primary, size: 18),
+              Icon(icon, color: SydneyColors.primary, size: 16),
               const SizedBox(width: SydneySpacing.sm),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: SydneyColors.ink,
-                    letterSpacing: 0,
-                  ),
+              Text(
+                title.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SydneyColors.primary,
+                  letterSpacing: 0.7,
                 ),
               ),
             ],
           ),
           const SizedBox(height: SydneySpacing.md),
-          Padding(
-            padding: const EdgeInsets.only(left: SydneySpacing.xl),
-            child: child,
-          ),
+          child,
         ],
       ),
     );
@@ -260,24 +235,21 @@ class _Bullet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: SydneySpacing.sm),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 4,
-            height: 4,
-            margin: const EdgeInsets.only(top: 8, right: SydneySpacing.sm),
-            decoration: const BoxDecoration(
-              color: SydneyColors.onSurfaceVariant,
-              shape: BoxShape.circle,
-            ),
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Icon(Icons.circle, size: 4, color: SydneyColors.mutedInk),
           ),
+          const SizedBox(width: SydneySpacing.sm),
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: SydneyColors.onSurfaceVariant,
+                height: 1.35,
               ),
             ),
           ),
@@ -296,29 +268,44 @@ class _AccessPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: SydneySpacing.md,
-        vertical: SydneySpacing.sm,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: SydneyColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(SydneyRadius.full),
+        color: SydneyColors.surface,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
         border: Border.all(color: SydneyColors.line),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: SydneyColors.primary, size: 16),
+          Icon(icon, color: SydneyColors.onSurfaceVariant, size: 12),
           const SizedBox(width: SydneySpacing.xs),
           Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            label.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: SydneyColors.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              letterSpacing: 0.4,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+String _agentName(AgentCreationDraft draft) {
+  if (draft.templateId == 'summary') {
+    return 'Meeting Prep';
+  }
+  return draft.templateLabel;
+}
+
+IconData _toolIcon(String tool) {
+  if (tool.toLowerCase().contains('calendar')) {
+    return Icons.calendar_month_outlined;
+  }
+  if (tool.toLowerCase().contains('gmail')) {
+    return Icons.mail_outline_rounded;
+  }
+  return Icons.description_outlined;
 }

@@ -1,4 +1,11 @@
-enum ConnectorStatus { connected, disconnected, actionRequired, linking }
+enum ConnectorStatus {
+  connected,
+  disconnected,
+  actionRequired,
+  linking,
+  oauth,
+  connecting,
+}
 
 class Connector {
   const Connector({
@@ -6,6 +13,7 @@ class Connector {
     required this.name,
     required this.description,
     required this.status,
+    this.category = 'EMAIL & COMMUNICATION',
     this.iconName,
     this.requiredScopes = const [],
   });
@@ -14,6 +22,7 @@ class Connector {
   final String name;
   final String description;
   final ConnectorStatus status;
+  final String category;
   final String? iconName;
   final List<String> requiredScopes;
 
@@ -24,6 +33,7 @@ class Connector {
     String? name,
     String? description,
     ConnectorStatus? status,
+    String? category,
     String? iconName,
     List<String>? requiredScopes,
   }) {
@@ -32,6 +42,7 @@ class Connector {
       name: name ?? this.name,
       description: description ?? this.description,
       status: status ?? this.status,
+      category: category ?? this.category,
       iconName: iconName ?? this.iconName,
       requiredScopes: requiredScopes ?? this.requiredScopes,
     );
@@ -43,6 +54,7 @@ class Connector {
       name: json['name']?.toString() ?? 'Connector',
       description: json['description']?.toString() ?? '',
       status: _statusFromString(json['status']?.toString()),
+      category: json['category']?.toString() ?? 'EMAIL & COMMUNICATION',
       iconName: json['iconName']?.toString() ?? json['icon_name']?.toString(),
       requiredScopes: _stringList(
         json['requiredScopes'] ?? json['required_scopes'],
@@ -56,6 +68,7 @@ class Connector {
       'name': name,
       'description': description,
       'status': status.name,
+      'category': category,
       'iconName': iconName,
       'requiredScopes': requiredScopes,
     };
@@ -65,6 +78,12 @@ class Connector {
 ConnectorStatus _statusFromString(String? value) {
   final normalized =
       value?.replaceAll('_', '').replaceAll('-', '').toLowerCase();
+  if (normalized == 'oauth') {
+    return ConnectorStatus.oauth;
+  }
+  if (normalized == 'connecting') {
+    return ConnectorStatus.connecting;
+  }
   return ConnectorStatus.values.firstWhere(
     (status) => status.name.toLowerCase() == normalized,
     orElse: () => ConnectorStatus.disconnected,

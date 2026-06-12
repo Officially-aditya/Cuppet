@@ -2,180 +2,335 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../../models/connector.dart';
-import '../surface_card.dart';
+import '../sydney_primitives.dart';
 
 class ConnectorListItem extends StatelessWidget {
   const ConnectorListItem({
     required this.connector,
     required this.onToggle,
+    this.compact = false,
     super.key,
   });
+
+  final Connector connector;
+  final VoidCallback onToggle;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SydneyPanel(
+      onTap: compact ? onToggle : null,
+      padding: EdgeInsets.all(compact ? SydneySpacing.md : SydneySpacing.lg),
+      shadow: !compact,
+      child:
+          compact
+              ? _CompactConnector(connector: connector)
+              : _AdvancedConnector(connector: connector, onToggle: onToggle),
+    );
+  }
+}
+
+class _AdvancedConnector extends StatelessWidget {
+  const _AdvancedConnector({required this.connector, required this.onToggle});
 
   final Connector connector;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final needsReview = connector.status == ConnectorStatus.actionRequired;
-    return SurfaceCard(
-      borderColor: needsReview ? SydneyColors.warning : SydneyColors.line,
-      padding: EdgeInsets.zero,
-      child: IntrinsicHeight(
-        child: Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (needsReview) Container(width: 4, color: SydneyColors.warning),
+            ConnectorIcon(connector: connector, size: 40),
+            const SizedBox(width: SydneySpacing.md),
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  needsReview ? SydneySpacing.md : SydneySpacing.lg,
-                  SydneySpacing.lg,
-                  SydneySpacing.lg,
-                  SydneySpacing.lg,
-                ),
-                child: Row(
-                  children: [
-                    _ConnectorIcon(connector: connector),
-                    const SizedBox(width: SydneySpacing.lg),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            connector.name,
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: SydneySpacing.xs),
-                          Text(
-                            _statusText(connector),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(
-                              color:
-                                  needsReview
-                                      ? SydneyColors.warning
-                                      : SydneyColors.subtleInk,
-                            ),
-                          ),
-                        ],
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    connector.name,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: SydneyColors.onSurface,
+                      fontWeight: FontWeight.w800,
                     ),
-                    const SizedBox(width: SydneySpacing.md),
-                    _ConnectorAction(
-                      status: connector.status,
-                      onPressed: onToggle,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    connector.description,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: SydneyColors.onSurfaceVariant,
+                      fontWeight: FontWeight.w400,
+                      height: 1.35,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: SydneySpacing.md),
+        _ConnectorStatusLine(connector: connector, onToggle: onToggle),
+      ],
     );
   }
 }
 
-class _ConnectorIcon extends StatelessWidget {
-  const _ConnectorIcon({required this.connector});
+class _CompactConnector extends StatelessWidget {
+  const _CompactConnector({required this.connector});
 
   final Connector connector;
 
   @override
   Widget build(BuildContext context) {
-    final needsReview = connector.status == ConnectorStatus.actionRequired;
-    final icon = switch (connector.iconName) {
-      'calendar' => Icons.calendar_month_outlined,
-      'chat' || 'tag' => Icons.tag_rounded,
-      _ => Icons.mail_outline_rounded,
-    };
-
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color:
-            needsReview
-                ? SydneyColors.warningSoft
-                : SydneyColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(SydneyRadius.sm),
-      ),
-      child: Icon(
-        icon,
-        color: needsReview ? SydneyColors.warning : SydneyColors.primary,
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ConnectorIcon(connector: connector, size: 36),
+        const SizedBox(width: SydneySpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      connector.name,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: SydneyColors.onSurface,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (connector.isConnected)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check_rounded,
+                          color: SydneyColors.primary,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Active',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.copyWith(
+                            color: SydneyColors.primary,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                connector.description,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SydneyColors.mutedInk,
+                  fontWeight: FontWeight.w400,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _ConnectorAction extends StatelessWidget {
-  const _ConnectorAction({required this.status, required this.onPressed});
+class _ConnectorStatusLine extends StatelessWidget {
+  const _ConnectorStatusLine({required this.connector, required this.onToggle});
 
-  final ConnectorStatus status;
-  final VoidCallback onPressed;
+  final Connector connector;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (status) {
-      ConnectorStatus.connected => 'Connected',
-      ConnectorStatus.actionRequired => 'Review',
-      ConnectorStatus.linking => 'Opening',
-      ConnectorStatus.disconnected => 'Link',
-    };
-    final icon =
-        status == ConnectorStatus.connected ? Icons.check_circle_rounded : null;
-    final background = switch (status) {
-      ConnectorStatus.connected => SydneyColors.primarySoft,
-      ConnectorStatus.actionRequired => SydneyColors.warningSoft,
-      ConnectorStatus.linking => SydneyColors.infoSoft,
-      ConnectorStatus.disconnected => SydneyColors.surfaceContainer,
-    };
-    final foreground = switch (status) {
-      ConnectorStatus.connected => SydneyColors.primary,
-      ConnectorStatus.actionRequired => SydneyColors.warning,
-      ConnectorStatus.linking => SydneyColors.info,
-      ConnectorStatus.disconnected => SydneyColors.ink,
-    };
+    if (connector.status == ConnectorStatus.connected) {
+      return Row(
+        children: [
+          const Icon(
+            Icons.check_rounded,
+            color: SydneyColors.primary,
+            size: 16,
+          ),
+          const SizedBox(width: SydneySpacing.sm),
+          Text(
+            'CONNECTED',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      );
+    }
 
-    return FilledButton.icon(
-      onPressed: status == ConnectorStatus.linking ? null : onPressed,
-      icon: icon == null ? const SizedBox.shrink() : Icon(icon, size: 15),
-      label: Text(label),
-      style: FilledButton.styleFrom(
-        backgroundColor: background,
-        disabledBackgroundColor: background,
-        foregroundColor: foreground,
-        disabledForegroundColor: foreground,
-        minimumSize: const Size(0, 36),
-        padding: EdgeInsets.symmetric(
-          horizontal: icon == null ? SydneySpacing.lg : SydneySpacing.md,
-          vertical: SydneySpacing.sm,
-        ),
-        textStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w800,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(SydneyRadius.full),
-          side: BorderSide(
-            color:
-                status == ConnectorStatus.actionRequired
-                    ? SydneyColors.warning
-                    : Colors.transparent,
+    final label = switch (connector.status) {
+      ConnectorStatus.oauth => 'Opening OAuth',
+      ConnectorStatus.connecting => 'Connecting...',
+      ConnectorStatus.linking => 'Opening authorization',
+      ConnectorStatus.actionRequired => 'Action required',
+      ConnectorStatus.disconnected => 'Ready to connect',
+      ConnectorStatus.connected => 'CONNECTED',
+    };
+    final buttonLabel = switch (connector.status) {
+      ConnectorStatus.oauth => 'Opening...',
+      ConnectorStatus.connecting => 'Connecting...',
+      ConnectorStatus.linking => 'Opening...',
+      ConnectorStatus.actionRequired => 'Review',
+      ConnectorStatus.disconnected => 'Connect',
+      ConnectorStatus.connected => 'Connected',
+    };
+    final disabled =
+        connector.status == ConnectorStatus.connecting ||
+        connector.status == ConnectorStatus.linking;
+
+    return Row(
+      children: [
+        const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: SydneyColors.primary,
           ),
         ),
-      ),
+        const SizedBox(width: SydneySpacing.sm),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: SydneyColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: SydneySpacing.sm),
+        FilledButton(
+          onPressed: disabled ? null : onToggle,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 32),
+            padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.md),
+            textStyle: Theme.of(context).textTheme.labelSmall,
+          ),
+          child: Text(buttonLabel),
+        ),
+      ],
     );
   }
 }
 
-String _statusText(Connector connector) {
-  return switch (connector.status) {
-    ConnectorStatus.connected => connector.description,
-    ConnectorStatus.disconnected => connector.description,
-    ConnectorStatus.actionRequired => 'Action required',
-    ConnectorStatus.linking => 'Opening authorization',
+class ConnectorIcon extends StatelessWidget {
+  const ConnectorIcon({required this.connector, this.size = 40, super.key});
+
+  final Connector connector;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _iconColors(connector.iconName);
+    return SydneyIconBadge(
+      size: size,
+      radius: SydneyRadius.md,
+      color: colors.background,
+      foregroundColor: colors.foreground,
+      borderColor: colors.border,
+      child: Icon(_iconData(connector.iconName), size: size * 0.48),
+    );
+  }
+}
+
+IconData _iconData(String? iconName) {
+  return switch (iconName) {
+    'Calendar' || 'Clock' => Icons.calendar_month_outlined,
+    'MessageSquare' => Icons.chat_bubble_outline_rounded,
+    'Layers' => Icons.layers_outlined,
+    'BookOpen' => Icons.menu_book_outlined,
+    'FileText' => Icons.description_outlined,
+    'Trello' => Icons.view_kanban_outlined,
+    'CheckSquare' => Icons.check_box_outlined,
+    'Github' => Icons.code_rounded,
+    'HardDrive' => Icons.storage_rounded,
+    'FolderOpen' => Icons.folder_open_rounded,
+    _ => Icons.mail_outline_rounded,
+  };
+}
+
+({Color background, Color foreground, Color? border}) _iconColors(
+  String? iconName,
+) {
+  return switch (iconName) {
+    'Mail' => (
+      background: const Color(0xFFFEE2E2),
+      foreground: const Color(0xFFDC2626),
+      border: null,
+    ),
+    'Calendar' => (
+      background: const Color(0xFFDBEAFE),
+      foreground: const Color(0xFF2563EB),
+      border: null,
+    ),
+    'MessageSquare' => (
+      background: const Color(0xFFD1FAE5),
+      foreground: const Color(0xFF047857),
+      border: null,
+    ),
+    'Layers' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFF4F46E5),
+      border: SydneyColors.line,
+    ),
+    'Clock' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFFEA580C),
+      border: SydneyColors.line,
+    ),
+    'BookOpen' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFFD97706),
+      border: SydneyColors.line,
+    ),
+    'FileText' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFF0EA5E9),
+      border: SydneyColors.line,
+    ),
+    'Trello' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFF9333EA),
+      border: SydneyColors.line,
+    ),
+    'CheckSquare' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFF059669),
+      border: SydneyColors.line,
+    ),
+    'Github' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFF1F2937),
+      border: SydneyColors.line,
+    ),
+    'HardDrive' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFF2563EB),
+      border: SydneyColors.line,
+    ),
+    'FolderOpen' => (
+      background: SydneyColors.surface,
+      foreground: const Color(0xFFCA8A04),
+      border: SydneyColors.line,
+    ),
+    _ => (
+      background: SydneyColors.primarySoft,
+      foreground: SydneyColors.primary,
+      border: SydneyColors.line,
+    ),
   };
 }

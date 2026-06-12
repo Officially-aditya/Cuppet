@@ -1,7 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  
   --color-surface: #f9f9f7;
   --color-surface-dim: #dadad8;
   --color-surface-bright: #f9f9f7;
@@ -63,40 +65,4 @@
   --color-warning-soft: #FFF3D8;
   --color-info: #356C91;
   --color-info-soft: #E5F1F7;
-
-  /* Sydney specific aliases if needed */
-  --color-sydney-surface: #f9f9f7;
-  --color-sydney-surface-muted: #f4f4f2;
-  --color-sydney-primary: #1d7a5c;
-  --color-sydney-primary-hover: #176049;
-  --color-sydney-text: #1a1c1b;
-  --color-sydney-muted: #6f7a73;
-  --color-sydney-border: #bec9c2;
-  --color-sydney-input: #eeeeec;
-  --color-sydney-purple: #8b5cf6;
-  --color-sydney-green: #2e7d32;
-  --color-sydney-green-hover: #1b5e20;
-  --color-sydney-light-green: #e8f2ef;
-
-  --font-sans: "Roboto", "Inter", system-ui, sans-serif;
-  --font-roboto: "Roboto", sans-serif;
-  --font-inter: "Inter", sans-serif;
 }
-
-/* Base custom styles to replicate design specifications */
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background-color: #f9f9f7;
-  font-family: var(--font-sans);
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-

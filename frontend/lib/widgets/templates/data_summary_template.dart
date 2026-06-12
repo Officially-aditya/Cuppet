@@ -10,36 +10,94 @@ class DataSummaryTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = data['title']?.toString() ?? 'Summary';
-    final summary = data['summary']?.toString();
+    final intro = data['text']?.toString();
+    final summary =
+        data['summary']?.toString() ?? data['description']?.toString();
     final metrics = _maps(data['metrics']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleSmall),
-        if (summary != null && summary.isNotEmpty) ...[
-          const SizedBox(height: SydneySpacing.sm),
+        if (intro != null && intro.isNotEmpty) ...[
           Text(
-            summary,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: SydneyColors.mutedInk),
+            intro,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: SydneyColors.onSurface,
+              height: 1.45,
+            ),
           ),
-        ],
-        if (metrics.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.md),
-          Wrap(
-            spacing: SydneySpacing.sm,
-            runSpacing: SydneySpacing.sm,
+          const Divider(height: 1, color: SydneyColors.line),
+          const SizedBox(height: SydneySpacing.md),
+        ],
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              color: SydneyColors.primary,
+              size: 16,
+            ),
+            const SizedBox(width: SydneySpacing.xs),
+            Text(
+              'READY',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: SydneyColors.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: SydneySpacing.md),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(SydneySpacing.md),
+          decoration: BoxDecoration(
+            color: SydneyColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(SydneyRadius.md),
+            border: Border.all(color: SydneyColors.line),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final metric in metrics)
-                _MetricPill(
-                  label: metric['label']?.toString() ?? 'Metric',
-                  value: metric['value']?.toString() ?? '-',
+              Text(
+                title.toUpperCase(),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: SydneyColors.onSurface,
+                  letterSpacing: 0.5,
                 ),
+              ),
+              if (summary != null && summary.isNotEmpty) ...[
+                const SizedBox(height: SydneySpacing.xs),
+                Text(
+                  summary,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: SydneyColors.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+              if (metrics.isNotEmpty) ...[
+                const SizedBox(height: SydneySpacing.md),
+                Row(
+                  children: [
+                    for (var index = 0; index < metrics.length; index++) ...[
+                      Expanded(
+                        child: _MetricPill(
+                          label:
+                              metrics[index]['label']?.toString() ?? 'Metric',
+                          value: metrics[index]['value']?.toString() ?? '-',
+                        ),
+                      ),
+                      if (index < metrics.length - 1)
+                        const SizedBox(width: SydneySpacing.sm),
+                    ],
+                  ],
+                ),
+              ],
             ],
           ),
-        ],
+        ),
       ],
     );
   }
@@ -55,27 +113,39 @@ class _MetricPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: SydneySpacing.md,
+        horizontal: SydneySpacing.xs,
         vertical: SydneySpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: SydneyColors.surfaceContainerLow,
+        color: SydneyColors.surface,
         borderRadius: BorderRadius.circular(SydneyRadius.sm),
         border: Border.all(color: SydneyColors.line),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.mutedInk,
+              color: SydneyColors.onSurfaceVariant,
+              fontSize: 8,
+              height: 1.05,
               letterSpacing: 0,
             ),
           ),
           const SizedBox(height: SydneySpacing.xs),
-          Text(value, style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: SydneyColors.onSurface,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );

@@ -24,29 +24,32 @@ class AppBottomNav extends StatelessWidget {
         child: SizedBox(
           height: SydneySpacing.bottomNavHeight,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavButton(
                 tooltip: 'Inbox',
-                icon: Icons.mail_outline_rounded,
+                icon: Icons.inbox_outlined,
+                label: 'Inbox',
                 selected: currentIndex == 0,
                 onPressed: () => onSelected(0),
               ),
               _NavButton(
-                tooltip: 'Research Scout',
-                icon: Icons.bar_chart_rounded,
+                tooltip: 'Connectors',
+                icon: Icons.public_rounded,
+                label: 'Connectors',
                 selected: currentIndex == 1,
                 onPressed: () => onSelected(1),
               ),
               _NavButton(
-                tooltip: 'Connectors',
-                icon: Icons.groups_2_outlined,
+                tooltip: 'Scout',
+                icon: Icons.auto_awesome_rounded,
+                label: 'Scout',
                 selected: currentIndex == 2,
                 onPressed: () => onSelected(2),
               ),
               _NavButton(
                 tooltip: 'Settings',
                 icon: Icons.settings_outlined,
+                label: 'Settings',
                 selected: currentIndex == 3,
                 onPressed: () => onSelected(3),
               ),
@@ -62,12 +65,14 @@ class _NavButton extends StatelessWidget {
   const _NavButton({
     required this.tooltip,
     required this.icon,
+    required this.label,
     required this.selected,
     required this.onPressed,
   });
 
   final String tooltip;
   final IconData icon;
+  final String label;
   final bool selected;
   final VoidCallback onPressed;
 
@@ -79,21 +84,29 @@ class _NavButton extends StatelessWidget {
         label: tooltip,
         selected: selected,
         button: true,
-        child: InkResponse(
+        child: InkWell(
           onTap: onPressed,
-          radius: 28,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: selected ? SydneyColors.primarySoft : Colors.transparent,
-              borderRadius: BorderRadius.circular(SydneyRadius.full),
-            ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: selected ? SydneyColors.primary : SydneyColors.mutedInk,
+          child: SizedBox(
+            width: MediaQuery.sizeOf(context).width / 4,
+            height: SydneySpacing.bottomNavHeight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? SydneyColors.primary : SydneyColors.outline,
+                ),
+                const SizedBox(height: SydneySpacing.xs),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color:
+                        selected ? SydneyColors.primary : SydneyColors.outline,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

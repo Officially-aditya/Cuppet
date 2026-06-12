@@ -1,6 +1,6 @@
 {
   "name": "Sydney",
-  "description": "A polished multi-screen asynchronous agent workspace for delegating tasks.",
+  "description": "Premium multi-screen agent delegation workspace and inbox.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
