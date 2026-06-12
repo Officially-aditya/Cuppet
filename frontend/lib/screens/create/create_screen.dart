@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
-import '../../widgets/surface_card.dart';
+import '../../widgets/sydney_primitives.dart';
 
 class AgentCreationDraft {
   const AgentCreationDraft({
     required this.prompt,
     required this.templateId,
     required this.templateLabel,
+    this.connectedTools = const ['Gmail', 'Google Calendar'],
+    this.responseTiming = 'real-time',
   });
 
   final String prompt;
   final String templateId;
   final String templateLabel;
+  final List<String> connectedTools;
+  final String responseTiming;
 }
 
 class CreateScreen extends StatefulWidget {
@@ -25,11 +29,12 @@ class CreateScreen extends StatefulWidget {
 
 class _CreateScreenState extends State<CreateScreen> {
   static const _defaultPrompt =
-      'Summarize the key points from recent meetings and prepare a draft agenda for tomorrow.';
+      'Watch my customer escalations and brief me each morning.';
 
   late final TextEditingController _promptController;
-  final Set<String> _activeCapabilities = {};
-  String _selectedTemplate = _capabilities.first.id;
+  final Set<String> _connectedTools = {'Gmail', 'Google Calendar'};
+  String _selectedTemplate = 'summary';
+  String _responseTiming = 'real-time';
   String? _error;
   bool _dictating = false;
   int _suggestionIndex = 0;
@@ -52,23 +57,14 @@ class _CreateScreenState extends State<CreateScreen> {
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back',
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
         ),
-        centerTitle: true,
-        title: const Text('New agent'),
+        title: const Text('New Agent'),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: SydneyColors.line),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'More',
-            onPressed: () {},
-            icon: const Icon(Icons.more_horiz_rounded),
-          ),
-          const SizedBox(width: SydneySpacing.sm),
-        ],
       ),
       body: SafeArea(
         bottom: false,
@@ -77,16 +73,43 @@ class _CreateScreenState extends State<CreateScreen> {
             SydneySpacing.page,
             SydneySpacing.lg,
             SydneySpacing.page,
-            SydneySpacing.actionFooterHeight + SydneySpacing.lg,
+            104,
           ),
           children: [
-            const _AgentGlyph(),
-            const SizedBox(height: SydneySpacing.xl),
-            Text(
-              'What should this agent handle?',
-              style: Theme.of(context).textTheme.titleMedium,
+            Center(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const SydneyIconBadge(
+                    size: 64,
+                    color: SydneyColors.primarySoft,
+                    foregroundColor: SydneyColors.primary,
+                    radius: SydneyRadius.lg,
+                    borderColor: SydneyColors.line,
+                    child: Icon(Icons.smart_toy_outlined, size: 38),
+                  ),
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: SydneyColors.surfaceContainerLowest,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: SydneyColors.line),
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        size: 14,
+                        color: SydneyColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: SydneySpacing.sm),
+            const SizedBox(height: SydneySpacing.xl),
+            const SydneySectionLabel('What should this agent handle?'),
             _PromptEditor(
               controller: _promptController,
               dictating: _dictating,
@@ -104,34 +127,33 @@ class _CreateScreenState extends State<CreateScreen> {
                 _error!,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.copyWith(color: SydneyColors.danger),
+                ).textTheme.bodySmall?.copyWith(color: SydneyColors.danger),
               ),
             ],
-            const SizedBox(height: SydneySpacing.xl),
-            Text(
-              'Common capabilities',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: SydneyColors.mutedInk,
-                letterSpacing: 0,
-              ),
+            const SizedBox(height: SydneySpacing.lg),
+            _ConnectedTools(
+              selectedTools: _connectedTools,
+              onToggle: _toggleTool,
+              onManage:
+                  () => Navigator.of(context).pushNamed(AppRoutes.connectors),
             ),
-            const SizedBox(height: SydneySpacing.md),
+            const SizedBox(height: SydneySpacing.lg),
+            const SydneySectionLabel('Common capabilities'),
             Wrap(
               spacing: SydneySpacing.sm,
               runSpacing: SydneySpacing.sm,
               children: [
                 for (final capability in _capabilities)
-                  _CapabilityChip(
+                  _CapabilityPill(
                     capability: capability,
-                    selected: _activeCapabilities.contains(capability.id),
-                    onTap: () => _toggleCapability(capability),
+                    selected: _selectedTemplate == capability.id,
+                    onTap:
+                        () => setState(() => _selectedTemplate = capability.id),
                   ),
               ],
             ),
-            const SizedBox(height: SydneySpacing.xl),
-            SurfaceCard(
-              color: SydneyColors.surfaceContainerLow,
-              borderColor: SydneyColors.line.withValues(alpha: 0.6),
+            const SizedBox(height: SydneySpacing.lg),
+            SydneyPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -139,59 +161,63 @@ class _CreateScreenState extends State<CreateScreen> {
                     children: [
                       const Icon(
                         Icons.tune_rounded,
-                        color: SydneyColors.mutedInk,
-                        size: 18,
+                        size: 16,
+                        color: SydneyColors.primary,
                       ),
                       const SizedBox(width: SydneySpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'Agent settings',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelSmall?.copyWith(
-                            color: SydneyColors.mutedInk,
-                            letterSpacing: 0,
-                          ),
+                      Text(
+                        'Response Timing'.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: SydneyColors.primary,
+                          letterSpacing: 0.7,
                         ),
                       ),
-                      TextButton(onPressed: () {}, child: const Text('Edit')),
                     ],
                   ),
+                  const SizedBox(height: SydneySpacing.md),
+                  _TimingOption(
+                    title: 'Real-time',
+                    subtitle: 'Get updates as soon as they happen',
+                    selected: _responseTiming == 'real-time',
+                    onTap: () => setState(() => _responseTiming = 'real-time'),
+                  ),
                   const SizedBox(height: SydneySpacing.sm),
-                  const _SettingLine('Runs continuously in background'),
-                  const SizedBox(height: SydneySpacing.sm),
-                  const _SettingLine('Connects to Inbox and Calendar'),
+                  _TimingOption(
+                    title: 'Daily Summary',
+                    subtitle: 'Get summaries compiled daily',
+                    selected: _responseTiming == 'daily',
+                    onTap: () => setState(() => _responseTiming = 'daily'),
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            SydneySpacing.page,
-            SydneySpacing.md,
-            SydneySpacing.page,
-            SydneySpacing.lg,
-          ),
-          decoration: const BoxDecoration(
-            color: SydneyColors.surface,
-            border: Border(top: BorderSide(color: SydneyColors.line)),
-          ),
-          child: FilledButton.icon(
-            onPressed: _continue,
-            icon: const Icon(Icons.arrow_forward_rounded),
-            label: const Text('Review agent'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(54),
-              backgroundColor: SydneyColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(SydneyRadius.md),
+      bottomNavigationBar: SydneyFooter(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SydneyColors.onSurface,
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('Cancel'),
               ),
             ),
-          ),
+            const SizedBox(width: SydneySpacing.md),
+            Expanded(
+              child: FilledButton(
+                onPressed: _continue,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: const Text('Submit'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -213,27 +239,22 @@ class _CreateScreenState extends State<CreateScreen> {
 
   void _suggest() {
     const suggestions = [
-      'Track recent calendar events, extract key decision points, and draft a structured agenda for upcoming meetings.',
-      'Watch customer feedback for urgent bug reports and flag high priority items.',
-      'Summarize the latest category shifts for the market pulse and filter out noise.',
-      'Analyze sales pipelines and prepare a briefing summary every Monday morning.',
+      'Watch my customer escalations and brief me each morning.',
+      'Summarize the key points from recent meetings and prepare a draft agenda for tomorrow.',
+      'Summarize the latest category shifts for the market pulse.',
+      'Track project risks and prepare a concise daily handoff.',
     ];
     _promptController.text = suggestions[_suggestionIndex % suggestions.length];
     _suggestionIndex += 1;
     setState(() => _error = null);
   }
 
-  void _toggleCapability(_Capability capability) {
-    final selected = _activeCapabilities.contains(capability.id);
-    final text = _promptController.text;
+  void _toggleTool(String tool) {
     setState(() {
-      if (selected) {
-        _activeCapabilities.remove(capability.id);
-        _promptController.text = text.replaceAll(capability.appendText, '');
+      if (_connectedTools.contains(tool)) {
+        _connectedTools.remove(tool);
       } else {
-        _activeCapabilities.add(capability.id);
-        _selectedTemplate = capability.id;
-        _promptController.text = '$text${capability.appendText}';
+        _connectedTools.add(tool);
       }
     });
   }
@@ -254,53 +275,8 @@ class _CreateScreenState extends State<CreateScreen> {
         prompt: prompt,
         templateId: selected.id,
         templateLabel: selected.label,
-      ),
-    );
-  }
-}
-
-class _AgentGlyph extends StatelessWidget {
-  const _AgentGlyph();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: SydneyColors.primarySoft,
-              borderRadius: BorderRadius.circular(SydneyRadius.xxl),
-              border: Border.all(color: SydneyColors.line),
-            ),
-            child: const Icon(
-              Icons.smart_toy_outlined,
-              color: SydneyColors.primary,
-              size: 42,
-            ),
-          ),
-          Positioned(
-            top: -3,
-            right: -3,
-            child: Container(
-              width: 25,
-              height: 25,
-              decoration: BoxDecoration(
-                color: SydneyColors.surfaceContainerHighest,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.surface, width: 2),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: SydneyColors.mutedInk,
-                size: 16,
-              ),
-            ),
-          ),
-        ],
+        connectedTools: _connectedTools.toList(growable: false),
+        responseTiming: _responseTiming,
       ),
     );
   }
@@ -323,42 +299,50 @@ class _PromptEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        TextField(
-          controller: controller,
-          minLines: 5,
-          maxLines: 7,
-          textCapitalization: TextCapitalization.sentences,
-          onChanged: onChanged,
-          decoration: const InputDecoration(
-            hintText:
-                'Watch my customer escalations and brief me each morning.',
-            contentPadding: EdgeInsets.fromLTRB(16, 16, 88, 52),
+    return SydneyPanel(
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      shadow: false,
+      child: Stack(
+        children: [
+          TextField(
+            controller: controller,
+            minLines: 3,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            onChanged: onChanged,
+            decoration: const InputDecoration(
+              hintText:
+                  'Write one sentence to describe what the agent should do...',
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.fromLTRB(0, 0, 48, 44),
+            ),
           ),
-        ),
-        Positioned(
-          right: SydneySpacing.md,
-          bottom: SydneySpacing.md,
-          child: Row(
-            children: [
-              _EditorIconButton(
-                tooltip: 'Use microphone',
-                icon: Icons.mic_none_rounded,
-                active: dictating,
-                onPressed: onDictate,
-              ),
-              const SizedBox(width: SydneySpacing.sm),
-              _EditorIconButton(
-                tooltip: 'Suggest prompt',
-                icon: Icons.auto_awesome_rounded,
-                primary: true,
-                onPressed: onSuggest,
-              ),
-            ],
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Row(
+              children: [
+                _EditorIconButton(
+                  tooltip: 'Use microphone',
+                  icon: Icons.mic_none_rounded,
+                  active: dictating,
+                  onPressed: onDictate,
+                ),
+                const SizedBox(width: SydneySpacing.sm),
+                _EditorIconButton(
+                  tooltip: 'Suggest prompt',
+                  icon: Icons.send_rounded,
+                  primary: true,
+                  onPressed: onSuggest,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -382,23 +366,22 @@ class _EditorIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color =
         primary ? SydneyColors.primary : SydneyColors.surfaceContainer;
-    final foreground = primary ? Colors.white : SydneyColors.mutedInk;
+    final foreground = primary ? Colors.white : SydneyColors.outlineVariant;
     return Tooltip(
       message: tooltip,
-      child: InkResponse(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
         onTap: onPressed,
-        radius: 20,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: 34,
-          height: 34,
+        child: Container(
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             color: active ? SydneyColors.dangerSoft : color,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(SydneyRadius.sm),
           ),
           child: Icon(
             icon,
-            size: 18,
+            size: 16,
             color: active ? SydneyColors.danger : foreground,
           ),
         ),
@@ -407,8 +390,126 @@ class _EditorIconButton extends StatelessWidget {
   }
 }
 
-class _CapabilityChip extends StatelessWidget {
-  const _CapabilityChip({
+class _ConnectedTools extends StatelessWidget {
+  const _ConnectedTools({
+    required this.selectedTools,
+    required this.onToggle,
+    required this.onManage,
+  });
+
+  final Set<String> selectedTools;
+  final ValueChanged<String> onToggle;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            const Expanded(child: SydneySectionLabel('Connected Tools')),
+            TextButton(onPressed: onManage, child: const Text('Manage')),
+          ],
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(
+            spacing: SydneySpacing.sm,
+            runSpacing: SydneySpacing.sm,
+            children: [
+              _ToolChip(
+                icon: Icons.mail_outline_rounded,
+                label: 'Gmail',
+                selected: selectedTools.contains('Gmail'),
+                onTap: () => onToggle('Gmail'),
+              ),
+              _ToolChip(
+                icon: Icons.calendar_month_outlined,
+                label: 'Google Calendar',
+                selected: selectedTools.contains('Google Calendar'),
+                onTap: () => onToggle('Google Calendar'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onManage,
+                icon: const Icon(Icons.add_rounded, size: 14),
+                label: const Text('Add'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(
+                    color: SydneyColors.outlineVariant,
+                    style: BorderStyle.solid,
+                  ),
+                  minimumSize: const Size(0, 36),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: SydneySpacing.md,
+                  ),
+                  textStyle: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ToolChip extends StatelessWidget {
+  const _ToolChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SydneyPanel(
+      onTap: onTap,
+      shadow: false,
+      padding: const EdgeInsets.symmetric(
+        horizontal: SydneySpacing.md,
+        vertical: SydneySpacing.sm,
+      ),
+      color:
+          selected
+              ? SydneyColors.primarySoft
+              : SydneyColors.surfaceContainerLowest,
+      borderColor: selected ? SydneyColors.primary : SydneyColors.line,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color:
+                selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
+          ),
+          const SizedBox(width: SydneySpacing.sm),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color:
+                  selected
+                      ? SydneyColors.primary
+                      : SydneyColors.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CapabilityPill extends StatelessWidget {
+  const _CapabilityPill({
     required this.capability,
     required this.selected,
     required this.onTap,
@@ -420,100 +521,126 @@ class _CapabilityChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      selected: selected,
-      onSelected: (_) => onTap(),
-      avatar: Icon(
-        capability.icon,
-        size: 17,
-        color: selected ? SydneyColors.primary : SydneyColors.subtleInk,
+    return SydneyPanel(
+      onTap: onTap,
+      shadow: false,
+      radius: SydneyRadius.full,
+      padding: const EdgeInsets.symmetric(
+        horizontal: SydneySpacing.md,
+        vertical: 6,
       ),
-      label: Text(capability.label),
-      labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: selected ? SydneyColors.primary : SydneyColors.ink,
-        fontWeight: FontWeight.w700,
-      ),
-      selectedColor: SydneyColors.primarySoft,
-      backgroundColor: SydneyColors.surfaceContainerLowest,
-      side: BorderSide(
-        color: selected ? SydneyColors.primaryFixed : SydneyColors.line,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+      color: SydneyColors.surfaceContainerLow,
+      borderColor: selected ? SydneyColors.primary : SydneyColors.line,
+      child: Text(
+        capability.label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color:
+              selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
 }
 
-class _SettingLine extends StatelessWidget {
-  const _SettingLine(this.text);
+class _TimingOption extends StatelessWidget {
+  const _TimingOption({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
 
-  final String text;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: SydneyColors.primary,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: SydneySpacing.md),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: SydneyColors.ink,
-              fontWeight: FontWeight.w600,
+    return SydneyPanel(
+      onTap: onTap,
+      shadow: false,
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      borderColor: selected ? SydneyColors.primary : SydneyColors.line,
+      color:
+          selected
+              ? SydneyColors.primarySoft.withValues(alpha: 0.5)
+              : SydneyColors.surfaceContainerLowest,
+      child: Row(
+        children: [
+          _RadioDot(selected: selected),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: SydneyColors.ink),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: SydneyColors.mutedInk,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RadioDot extends StatelessWidget {
+  const _RadioDot({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? SydneyColors.primary : SydneyColors.outline,
         ),
-      ],
+      ),
+      alignment: Alignment.center,
+      child:
+          selected
+              ? Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: SydneyColors.primary,
+                  shape: BoxShape.circle,
+                ),
+              )
+              : null,
     );
   }
 }
 
 class _Capability {
-  const _Capability({
-    required this.id,
-    required this.label,
-    required this.icon,
-    required this.appendText,
-  });
+  const _Capability({required this.id, required this.label});
 
   final String id;
   final String label;
-  final IconData icon;
-  final String appendText;
 }
 
 const _capabilities = [
-  _Capability(
-    id: 'summary',
-    label: 'Summarize',
-    icon: Icons.article_outlined,
-    appendText: ' and summarize key discussion points',
-  ),
-  _Capability(
-    id: 'tracker',
-    label: 'Track progress',
-    icon: Icons.trending_up_rounded,
-    appendText: ' and track milestones as we go',
-  ),
-  _Capability(
-    id: 'urgent',
-    label: 'Flag urgency',
-    icon: Icons.warning_amber_rounded,
-    appendText: ' and flag escalations immediately',
-  ),
-  _Capability(
-    id: 'checklist',
-    label: 'Checklist',
-    icon: Icons.checklist_rounded,
-    appendText: ' and prepare a structured todo checklist',
-  ),
+  _Capability(id: 'summary', label: 'Summarize'),
+  _Capability(id: 'tracker', label: 'Track progress'),
+  _Capability(id: 'urgent', label: 'Flag urgency'),
+  _Capability(id: 'checklist', label: 'Checklist'),
 ];

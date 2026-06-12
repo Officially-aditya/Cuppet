@@ -21,10 +21,12 @@ class SydneyColors {
   static const outlineVariant = Color(0xFFBEC9C2);
   static const line = Color(0xFFE7E4DD);
 
-  static const primary = Color(0xFF1D7A5C);
-  static const primaryDark = Color(0xFF006046);
-  static const primaryHover = Color(0xFF176049);
+  static const primary = Color(0xFF006046);
+  static const primaryContainer = Color(0xFF1D7A5C);
+  static const primaryDark = Color(0xFF004D39);
+  static const primaryHover = Color(0xFF1D7A5C);
   static const onPrimary = Color(0xFFFFFFFF);
+  static const onPrimaryContainer = Color(0xFFAFFFDC);
   static const primarySoft = Color(0xFFE4F3EC);
   static const primaryFixed = Color(0xFF9DF4CF);
   static const inversePrimary = Color(0xFF81D7B4);

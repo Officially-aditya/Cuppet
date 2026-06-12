@@ -2,29 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
-import '../../widgets/surface_card.dart';
+import '../../widgets/sydney_primitives.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _pushNotifications = true;
-
-  @override
   Widget build(BuildContext context) {
-    const email = 'elementary221b@gmail.com';
-    const displayName = 'John Doe';
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
         ),
         title: const Text('Settings'),
         bottom: const PreferredSize(
@@ -33,26 +23,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       body: SafeArea(
+        bottom: false,
         child: ListView(
-          padding: const EdgeInsets.all(SydneySpacing.page),
+          padding: const EdgeInsets.fromLTRB(
+            SydneySpacing.page,
+            SydneySpacing.lg,
+            SydneySpacing.page,
+            112,
+          ),
           children: [
-            SurfaceCard(
+            SydneyPanel(
               child: Row(
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: SydneyColors.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'EL',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: SydneyColors.primary,
-                      ),
-                    ),
+                  const SydneyIconBadge(
+                    size: 48,
+                    radius: SydneyRadius.md,
+                    color: SydneyColors.primarySoft,
+                    foregroundColor: SydneyColors.primary,
+                    child: Text('AU'),
                   ),
                   const SizedBox(width: SydneySpacing.lg),
                   Expanded(
@@ -60,14 +48,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          displayName,
-                          style: Theme.of(context).textTheme.titleSmall,
+                          'Authenticated User',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(fontSize: 14),
                         ),
                         const SizedBox(height: SydneySpacing.xs),
                         Text(
-                          email,
+                          'user@session.local',
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: SydneyColors.mutedInk),
                         ),
                       ],
                     ),
@@ -75,167 +66,136 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: SydneySpacing.xl),
-            const _SectionLabel('Preferences'),
-            _SettingsGroup(
-              children: [
-                _SettingsRow(
-                  title: 'Push notifications',
-                  body: 'Enable message and agent status alerts.',
-                  trailing: Switch(
-                    value: _pushNotifications,
-                    onChanged:
-                        (value) => setState(() => _pushNotifications = value),
+            const SizedBox(height: SydneySpacing.lg),
+            const SydneySectionLabel('Preferences'),
+            SydneyPanel(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Push notifications',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: SydneyColors.onSurface),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Enable message and agent status alerts.',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.copyWith(
+                            color: SydneyColors.mutedInk,
+                            fontWeight: FontWeight.w400,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: SydneySpacing.xl),
-            const _SectionLabel('Security'),
-            _SettingsGroup(
-              children: [
-                _SettingsRow(
-                  title: 'Connectors',
-                  body: 'Review accounts approved for backend access.',
-                  trailing: const Icon(
-                    Icons.chevron_right_rounded,
-                    color: SydneyColors.outline,
+                  const SizedBox(width: SydneySpacing.md),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: SydneySpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: SydneyColors.surface,
+                      borderRadius: BorderRadius.circular(SydneyRadius.full),
+                      border: Border.all(color: SydneyColors.line),
+                    ),
+                    child: Text(
+                      'Not configured',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: SydneyColors.outline,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                  onTap:
-                      () =>
-                          Navigator.of(context).pushNamed(AppRoutes.connectors),
-                ),
-              ],
-            ),
-            const SizedBox(height: SydneySpacing.xl),
-            const _SectionLabel('Privacy'),
-            const _SettingsGroup(
-              children: [
-                _SettingsRow(
-                  title: 'Session storage',
-                  body:
-                      'This app stores only your Sydney session token on device.',
-                ),
-              ],
-            ),
-            const SizedBox(height: SydneySpacing.xxl),
-            OutlinedButton.icon(
-              onPressed: _signOut,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Sign out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: SydneyColors.danger,
-                side: const BorderSide(color: SydneyColors.dangerSoft),
-                minimumSize: const Size.fromHeight(50),
+                ],
               ),
             ),
-            const SizedBox(height: SydneySpacing.xxl),
-            Text(
-              'Sydney Agent v1.2.4\nEncryption active',
-              textAlign: TextAlign.center,
-              style: Theme.of(
+            const SizedBox(height: SydneySpacing.lg),
+            const SydneySectionLabel('Security'),
+            SydneyPanel(
+              onTap:
+                  () => Navigator.of(context).pushNamed(AppRoutes.connectors),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Connectors',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: SydneyColors.onSurface),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Review accounts approved for backend access.',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.copyWith(
+                            color: SydneyColors.mutedInk,
+                            fontWeight: FontWeight.w400,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: SydneyColors.outlineVariant,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.lg),
+            const SydneySectionLabel('Privacy'),
+            SydneyPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Session storage',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: SydneyColors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'This app stores only your Sydney session token on device. No browser fingerprints or passive scripts are injected.',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: SydneyColors.mutedInk,
+                      fontWeight: FontWeight.w400,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SydneyFooter(
+        child: OutlinedButton.icon(
+          onPressed:
+              () => Navigator.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: SydneyColors.subtleInk),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _signOut() {
-    Navigator.of(
-      context,
-    ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        left: SydneySpacing.xs,
-        bottom: SydneySpacing.sm,
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: SydneyColors.primary,
-          letterSpacing: 0,
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return SurfaceCard(
-      padding: EdgeInsets.zero,
-      child: Column(mainAxisSize: MainAxisSize.min, children: children),
-    );
-  }
-}
-
-class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({
-    required this.title,
-    required this.body,
-    this.trailing,
-    this.onTap,
-  });
-
-  final String title;
-  final String body;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final content = Padding(
-      padding: const EdgeInsets.all(SydneySpacing.lg),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: SydneySpacing.xs),
-                Text(
-                  body,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
-                ),
-              ],
-            ),
+              ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false),
+          icon: const Icon(Icons.logout_rounded, size: 16),
+          label: const Text('Sign out'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFDC2626),
+            side: const BorderSide(color: Color(0xFFFECACA)),
+            minimumSize: const Size.fromHeight(48),
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: SydneySpacing.md),
-            trailing!,
-          ],
-        ],
+        ),
       ),
-    );
-
-    if (onTap == null) {
-      return content;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(onTap: onTap, child: content),
     );
   }
 }

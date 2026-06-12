@@ -8,6 +8,7 @@ import '../../config/routes.dart';
 import '../../widgets/thread/message_card.dart';
 import '../../widgets/thread/reply_bar.dart';
 import '../../widgets/thread/typing_indicator.dart';
+import '../../widgets/sydney_primitives.dart';
 
 class ThreadScreen extends ConsumerStatefulWidget {
   const ThreadScreen({required this.agent, super.key});
@@ -39,21 +40,31 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
+        backgroundColor: SydneyColors.surfaceContainerLowest,
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: SydneyColors.line),
         ),
+        leading: IconButton(
+          tooltip: 'Back',
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Color(
-                widget.agent.accentColor,
-              ).withValues(alpha: 0.12),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Color(widget.agent.accentColor),
+                borderRadius: BorderRadius.circular(SydneyRadius.sm),
+              ),
+              alignment: Alignment.center,
               child: Text(
                 widget.agent.avatarInitials,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Color(widget.agent.accentColor),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -65,13 +76,35 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   Text(
                     widget.agent.name,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(fontSize: 14),
                   ),
-                  Text(
-                    widget.agent.availability == AgentAvailability.thinking
-                        ? 'Working'
-                        : 'Ready',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 6,
+                        height: 6,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: SydneyColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.agent.availability == AgentAvailability.paused
+                            ? 'PAUSED'
+                            : 'ACTIVE',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: SydneyColors.primary,
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -83,13 +116,18 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             tooltip: 'Connectors',
             onPressed:
                 () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-            icon: const Icon(Icons.shield_outlined),
+            icon: const Icon(
+              Icons.public_rounded,
+              color: SydneyColors.primary,
+              size: 18,
+            ),
           ),
           IconButton(
-            tooltip: 'Settings',
+            tooltip: 'Agent preferences',
             onPressed:
-                () => Navigator.of(context).pushNamed(AppRoutes.settings),
-            icon: const Icon(Icons.info_outline_rounded),
+                () =>
+                    Navigator.of(context).pushNamed(AppRoutes.agentPreferences),
+            icon: const Icon(Icons.settings_outlined, size: 18),
           ),
           const SizedBox(width: SydneySpacing.sm),
         ],
@@ -108,19 +146,31 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                         SydneySpacing.page,
                         SydneySpacing.lg,
                       ),
-                      itemCount: items.length + 1,
+                      itemCount: items.length + 2,
                       itemBuilder: (context, index) {
-                        if (index == items.length) {
+                        if (index == 0) {
+                          return const _ThreadDayPill();
+                        }
+                        final messageIndex = index - 1;
+                        if (messageIndex == items.length) {
                           return widget.agent.availability ==
                                   AgentAvailability.thinking
                               ? const TypingIndicator()
                               : const SizedBox.shrink();
                         }
-                        return MessageCard(message: items[index]);
+                        return MessageCard(message: items[messageIndex]);
                       },
                     ),
                 loading: () => const _ThreadLoading(),
-                error: (error, _) => _ThreadError(message: error.toString()),
+                error:
+                    (error, _) => SydneyErrorState(
+                      title: 'Conversation could not load',
+                      message: error.toString(),
+                      onRetry:
+                          () => ref.invalidate(
+                            messagesProvider(widget.agent.threadId),
+                          ),
+                    ),
               ),
             ),
             ReplyBar(onSend: _sendReply),
@@ -151,6 +201,36 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
+  }
+}
+
+class _ThreadDayPill extends StatelessWidget {
+  const _ThreadDayPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: SydneySpacing.lg),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: SydneySpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: SydneyColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(SydneyRadius.full),
+          ),
+          child: Text(
+            'TODAY',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: SydneyColors.mutedInk,
+              letterSpacing: 1.1,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -187,35 +267,6 @@ class _ThreadLoading extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ThreadError extends StatelessWidget {
-  const _ThreadError({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(SydneySpacing.page),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Conversation could not load',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: SydneySpacing.sm),
-          Text(
-            message,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: SydneyColors.mutedInk),
-          ),
-        ],
-      ),
     );
   }
 }

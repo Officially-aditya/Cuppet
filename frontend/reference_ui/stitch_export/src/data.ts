@@ -1,108 +1,175 @@
-import { Connector, AgentThread, ChatMessage } from "./types";
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Agent, Message, Connector } from './types';
+
+export const INITIAL_AGENTS: Agent[] = [
+  {
+    id: 'assistant',
+    name: 'Assistant',
+    avatarText: 'S',
+    avatarBg: 'bg-primary-container text-on-primary-container',
+    lastMessage: 'I can help you turn a sentence into a useful micro-agent.',
+    lastMessageTime: 'Permanent',
+    isPinned: true,
+    isActive: false,
+  },
+  {
+    id: 'ops-watch',
+    name: 'Ops Watch',
+    avatarText: 'OW',
+    avatarBg: 'bg-orange-600 text-white',
+    lastMessage: 'Two items need attention before Friday.',
+    lastMessageTime: '9:41 AM',
+    isPinned: false,
+    isActive: true,
+  },
+  {
+    id: 'research-scout',
+    name: 'Research Scout',
+    avatarText: 'RS',
+    avatarBg: 'bg-blue-800 text-white',
+    lastMessage: 'I summarized the latest category shifts.',
+    lastMessageTime: 'Yesterday',
+    isPinned: false,
+    isActive: false,
+  }
+];
+
+export const SC_MESSAGES: Message[] = [
+  {
+    id: 'msg-1',
+    sender: 'system',
+    text: 'Assistant is pinned so you always have a place to start.'
+  },
+  {
+    id: 'msg-2',
+    sender: 'agent',
+    text: 'Tell me what you want watched, summarized, reminded, or prepared. One sentence is enough.'
+  },
+  {
+    id: 'msg-3',
+    sender: 'user',
+    text: 'Summarize the latest category shifts for the market pulse.'
+  },
+  {
+    id: 'msg-4',
+    sender: 'agent',
+    text: 'Ready to summarize. Below is the parsed market pulse summary generated based on connected insights.',
+    subContent: {
+      title: 'Market pulse',
+      description: 'Demand is shifting toward lighter setup and clearer privacy controls.',
+      metrics: [
+        { label: 'SOURCES CHECKED', value: '18' },
+        { label: 'STRONG SIGNALS', value: '5' },
+        { label: 'NOISE FILTERED', value: '42%' }
+      ]
+    }
+  },
+  {
+    id: 'msg-5',
+    sender: 'system',
+    text: 'Delegation streak: 3 days. Small, steady handoffs build trust.'
+  }
+];
 
 export const INITIAL_CONNECTORS: Connector[] = [
   {
-    id: "gmail",
-    name: "Gmail",
-    summary: "Read & send emails",
-    status: "connected",
-    iconName: "mail",
+    id: 'gmail',
+    name: 'Gmail',
+    description: 'Let agents read approved mailbox context through the backend.',
+    status: 'CONNECTED',
+    category: 'EMAIL & COMMUNICATION',
+    icon: 'Mail'
   },
   {
-    id: "calendar",
-    name: "Google Calendar",
-    summary: "Manage schedule",
-    status: "linked",
-    iconName: "calendar_month",
+    id: 'gcal',
+    name: 'Google Calendar',
+    description: 'Use availability and upcoming events when you approve it.',
+    status: 'OAUTH',
+    category: 'CALENDAR & SCHEDULING',
+    icon: 'Calendar'
   },
   {
-    id: "slack",
-    name: "Slack",
-    summary: "Action required",
-    status: "review",
-    iconName: "tag",
-  },
-];
-
-export const INITIAL_THREADS: AgentThread[] = [
-  {
-    id: "assistant",
-    name: "Assistant",
-    initials: "S",
-    colorClass: "bg-primary-container text-on-primary",
-    preview: "Your home base for delegation.",
-    detail: "I can help you turn a sentence into a useful agent.",
-    isPinned: true,
+    id: 'slack',
+    name: 'Slack',
+    description: 'Watch selected channels and prepare concise updates.',
+    status: 'CONNECTING',
+    category: 'EMAIL & COMMUNICATION',
+    icon: 'MessageSquare'
   },
   {
-    id: "opswatch",
-    name: "Ops Watch",
-    initials: "OW",
-    colorClass: "bg-warning text-white",
-    preview: "Tracks deadlines and flags anything slipping.",
-    detail: "Two items need attention before Friday.",
-    hasBadge: true,
+    id: 'outlook',
+    name: 'Outlook',
+    description: 'Access emails and communications from your Microsoft account.',
+    status: 'DISCONNECTED',
+    category: 'EMAIL & COMMUNICATION',
+    icon: 'Layers'
   },
   {
-    id: "scout",
-    name: "Research Scout",
-    initials: "RS",
-    colorClass: "bg-info text-white",
-    preview: "Collects weekly market notes.",
-    detail: "I summarized the latest category shifts.",
-  },
-];
-
-export const INITIAL_SCOUT_CHAT: ChatMessage[] = [
-  {
-    id: "scout-1",
-    sender: "system",
-    content: "Assistant is pinned so you always have a place to start.",
+    id: 'calendly',
+    name: 'Calendly',
+    description: 'Manage your scheduling and meeting links seamlessly.',
+    status: 'DISCONNECTED',
+    category: 'CALENDAR & SCHEDULING',
+    icon: 'Clock'
   },
   {
-    id: "scout-2",
-    sender: "agent",
-    content: "Tell me what you want watched, summarized, reminded, or prepared. One sentence is enough.",
+    id: 'notion',
+    name: 'Notion',
+    description: 'Connect your workspace for documentation and notes.',
+    status: 'DISCONNECTED',
+    category: 'PRODUCTIVITY & DOCS',
+    icon: 'BookOpen'
   },
   {
-    id: "scout-3",
-    sender: "user",
-    content: "Summarize the latest category shifts for the market pulse.",
+    id: 'gdocs',
+    name: 'Google Docs',
+    description: 'Allow agents to reference and summarize documents.',
+    status: 'DISCONNECTED',
+    category: 'PRODUCTIVITY & DOCS',
+    icon: 'FileText'
   },
   {
-    id: "scout-4",
-    sender: "agent",
-    content: "Demand is shifting toward lighter setup and clearer privacy controls.",
-    templateType: "report",
+    id: 'jira',
+    name: 'Jira',
+    description: 'Track project progress and issue statuses.',
+    status: 'DISCONNECTED',
+    category: 'PROJECT MANAGEMENT',
+    icon: 'Trello'
   },
   {
-    id: "scout-5",
-    sender: "agent",
-    content: "Delegation streak: 3 days. Small, steady handoffs build trust.",
-    templateType: "streak",
-  },
-];
-
-export const INITIAL_TRACKER_CHAT: ChatMessage[] = [
-  {
-    id: "tr-1",
-    sender: "system",
-    content: "Yesterday, 10:42 AM",
+    id: 'asana',
+    name: 'Asana',
+    description: 'Keep your tasks and projects in sync with Sydney.',
+    status: 'DISCONNECTED',
+    category: 'PROJECT MANAGEMENT',
+    icon: 'CheckSquare'
   },
   {
-    id: "tr-2",
-    sender: "agent",
-    content: "I'm ready to help. Let's finish setting up your workflow so I can start delegating tasks.",
-    templateType: "progress",
+    id: 'github',
+    name: 'GitHub',
+    description: 'Monitor repositories, issues, and pull requests.',
+    status: 'DISCONNECTED',
+    category: 'DEVELOPER TOOLS',
+    icon: 'Github'
   },
   {
-    id: "tr-3",
-    sender: "user",
-    content: "I'll connect the CRM tool now. What else do we need?",
+    id: 'gdrive',
+    name: 'Google Drive',
+    description: 'Access your cloud files and resources.',
+    status: 'DISCONNECTED',
+    category: 'STORAGE & FILES',
+    icon: 'HardDrive'
   },
   {
-    id: "tr-4",
-    sender: "system",
-    content: "Awaiting connection",
-  },
+    id: 'dropbox',
+    name: 'Dropbox',
+    description: 'Keep your digital media synchronized.',
+    status: 'DISCONNECTED',
+    category: 'STORAGE & FILES',
+    icon: 'FolderOpen'
+  }
 ];

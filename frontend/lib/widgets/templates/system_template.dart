@@ -15,10 +15,12 @@ class SystemTemplate extends StatelessWidget {
         'System update';
     return Text(
       text,
-      textAlign: TextAlign.center,
-      style: Theme.of(
-        context,
-      ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
+      textAlign: TextAlign.left,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: SydneyColors.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+        fontSize: 11,
+      ),
     );
   }
 }

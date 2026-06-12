@@ -58,5 +58,7 @@ ConnectorStatus _nextStatus(ConnectorStatus status) {
     ConnectorStatus.disconnected => ConnectorStatus.connected,
     ConnectorStatus.actionRequired => ConnectorStatus.connected,
     ConnectorStatus.linking => ConnectorStatus.connected,
+    ConnectorStatus.oauth => ConnectorStatus.connected,
+    ConnectorStatus.connecting => ConnectorStatus.connected,
   };
 }

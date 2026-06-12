@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class SydneyRadius {
   const SydneyRadius._();
 
+  static const double xxs = 2;
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
@@ -16,7 +17,7 @@ class SydneyRadius {
   static const BorderRadius bubbleAgent = BorderRadius.only(
     topLeft: Radius.circular(lg),
     topRight: Radius.circular(lg),
-    bottomLeft: Radius.circular(xs),
+    bottomLeft: Radius.circular(xxs),
     bottomRight: Radius.circular(lg),
   );
 
@@ -24,6 +25,6 @@ class SydneyRadius {
     topLeft: Radius.circular(lg),
     topRight: Radius.circular(lg),
     bottomLeft: Radius.circular(lg),
-    bottomRight: Radius.circular(xs),
+    bottomRight: Radius.circular(xxs),
   );
 }

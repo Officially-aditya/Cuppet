@@ -7,6 +7,8 @@ class AppRoutes {
   static const thread = '/thread';
   static const create = '/create';
   static const confirmCreate = '/create/confirm';
+  static const agentPreferences = '/agent-preferences';
   static const connectors = '/connectors';
+  static const addConnector = '/connectors/add';
   static const settings = '/settings';
 }

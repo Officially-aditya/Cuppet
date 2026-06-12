@@ -25,24 +25,19 @@ class _ReplyBarState extends State<ReplyBar> {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: SydneyColors.surface,
+        color: SydneyColors.surfaceContainerLowest,
         border: Border(top: BorderSide(color: SydneyColors.line)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          SydneySpacing.page,
-          SydneySpacing.md,
-          SydneySpacing.page,
-          SydneySpacing.md,
-        ),
+        padding: const EdgeInsets.all(SydneySpacing.lg),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: SydneyColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(SydneyRadius.full),
+                  color: SydneyColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(SydneyRadius.md),
                   border: Border.all(color: SydneyColors.line),
                 ),
                 child: TextField(
@@ -58,7 +53,7 @@ class _ReplyBarState extends State<ReplyBar> {
                     focusedBorder: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: SydneySpacing.lg,
-                      vertical: SydneySpacing.md,
+                      vertical: 14,
                     ),
                   ),
                 ),
@@ -66,13 +61,15 @@ class _ReplyBarState extends State<ReplyBar> {
             ),
             const SizedBox(width: SydneySpacing.md),
             SizedBox(
-              width: 40,
-              height: 40,
+              width: 48,
+              height: 48,
               child: FilledButton(
                 onPressed: _sending ? null : _send,
                 style: FilledButton.styleFrom(
                   padding: EdgeInsets.zero,
-                  shape: const CircleBorder(),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(SydneyRadius.md),
+                  ),
                 ),
                 child: Icon(
                   _sending ? Icons.more_horiz_rounded : Icons.send_rounded,

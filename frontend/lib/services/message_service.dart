@@ -52,7 +52,27 @@ class MessageService {
         sender: MessageSender.user,
         text: trimmed,
       );
-      _mockThreads[threadId] = [..._mockThreads[threadId]!, message];
+      final reply = Message(
+        id: 'reply_${DateTime.now().microsecondsSinceEpoch}',
+        threadId: threadId,
+        sender: MessageSender.agent,
+        createdAt: DateTime.now().add(const Duration(milliseconds: 1)),
+        content: {
+          'template': 'data_summary',
+          'data': {
+            'text':
+                "Processed instructions: '$trimmed'. Based on your connected tools, I identified relevant items matching this pattern.",
+            'title': 'Dynamic Agent Insights',
+            'summary': 'Auto-analysis matching query filters.',
+            'metrics': [
+              {'label': 'SOURCES ANALYZED', 'value': '14'},
+              {'label': 'RELEVANCE LEVEL', 'value': 'High'},
+              {'label': 'CONFIDENCE', 'value': '98%'},
+            ],
+          },
+        },
+      );
+      _mockThreads[threadId] = [..._mockThreads[threadId]!, message, reply];
       return message;
     }
 
@@ -165,31 +185,24 @@ List<Message> _mockThread(String threadId) {
         content: {
           'template': 'data_summary',
           'data': {
+            'text':
+                'Ready to summarize. Below is the parsed market pulse summary generated based on connected insights.',
             'title': 'Market pulse',
             'summary':
                 'Demand is shifting toward lighter setup and clearer privacy controls.',
             'metrics': [
-              {'label': 'Sources checked', 'value': '18'},
-              {'label': 'Strong signals', 'value': '5'},
-              {'label': 'Noise filtered', 'value': '42%'},
+              {'label': 'SOURCES CHECKED', 'value': '18'},
+              {'label': 'STRONG SIGNALS', 'value': '5'},
+              {'label': 'NOISE FILTERED', 'value': '42%'},
             ],
           },
         },
       ),
-      Message(
+      Message.system(
         id: 'research_2',
         threadId: threadId,
-        sender: MessageSender.agent,
+        text: 'Delegation streak: 3 days. Small, steady handoffs build trust.',
         createdAt: now.subtract(const Duration(hours: 5, minutes: 8)),
-        content: {
-          'template': 'streak_counter',
-          'data': {
-            'label': 'Delegation streak',
-            'count': 3,
-            'unit': 'days',
-            'caption': 'Small, steady handoffs build trust.',
-          },
-        },
       ),
     ];
   }
@@ -215,39 +228,43 @@ List<Message> _mockThread(String threadId) {
       },
     ),
     Message(
-      id: 'assistant_2',
+      id: 'assistant_user_1',
       threadId: threadId,
-      sender: MessageSender.agent,
+      sender: MessageSender.user,
       createdAt: now.subtract(const Duration(minutes: 22)),
       content: {
-        'template': 'progress_tracker',
+        'template': 'plain_text',
         'data': {
-          'title': 'Agent setup guide',
-          'current': 2,
-          'total': 4,
-          'steps': [
-            {'label': 'Describe the job', 'done': true},
-            {'label': 'Review the plan', 'done': true},
-            {'label': 'Connect tools', 'done': false},
-            {'label': 'Start receiving updates', 'done': false},
-          ],
+          'text': 'Summarize the latest category shifts for the market pulse.',
         },
       },
     ),
     Message(
-      id: 'assistant_3',
+      id: 'assistant_2',
       threadId: threadId,
       sender: MessageSender.agent,
       createdAt: now.subtract(const Duration(minutes: 4)),
       content: {
-        'template': 'streak_counter',
+        'template': 'data_summary',
         'data': {
-          'label': 'Delegation streak',
-          'count': 3,
-          'unit': 'days',
-          'caption': 'Small, steady handoffs build trust.',
+          'text':
+              'Ready to summarize. Below is the parsed market pulse summary generated based on connected insights.',
+          'title': 'Market pulse',
+          'summary':
+              'Demand is shifting toward lighter setup and clearer privacy controls.',
+          'metrics': [
+            {'label': 'SOURCES CHECKED', 'value': '18'},
+            {'label': 'STRONG SIGNALS', 'value': '5'},
+            {'label': 'NOISE FILTERED', 'value': '42%'},
+          ],
         },
       },
+    ),
+    Message.system(
+      id: 'assistant_system_2',
+      threadId: threadId,
+      text: 'Delegation streak: 3 days. Small, steady handoffs build trust.',
+      createdAt: now.subtract(const Duration(minutes: 3)),
     ),
   ];
 }

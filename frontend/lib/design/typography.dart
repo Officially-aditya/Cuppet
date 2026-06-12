@@ -47,12 +47,12 @@ class SydneyTypography {
     bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      height: 1.4,
+      height: 1.45,
       color: SydneyColors.ink,
     ),
     bodySmall: TextStyle(
       fontSize: 12,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w400,
       height: 1.35,
       color: SydneyColors.mutedInk,
     ),

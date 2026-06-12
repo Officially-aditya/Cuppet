@@ -10,11 +10,13 @@ import 'providers/auth_provider.dart';
 import 'providers/messages_provider.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/sign_up_screen.dart';
+import 'screens/connectors/add_connector_screen.dart';
 import 'screens/connectors/connectors_screen.dart';
 import 'screens/create/confirm_screen.dart';
 import 'screens/create/create_screen.dart';
 import 'screens/inbox/inbox_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/thread/agent_preferences_screen.dart';
 import 'screens/thread/thread_screen.dart';
 
 class SydneyApp extends ConsumerWidget {
@@ -38,6 +40,11 @@ class SydneyApp extends ConsumerWidget {
       AppRoutes.inbox => _route(settings, const InboxScreen()),
       AppRoutes.create => _route(settings, const CreateScreen()),
       AppRoutes.connectors => _route(settings, const ConnectorsScreen()),
+      AppRoutes.addConnector => _route(settings, const AddConnectorScreen()),
+      AppRoutes.agentPreferences => _route(
+        settings,
+        const AgentPreferencesScreen(),
+      ),
       AppRoutes.settings => _route(settings, const SettingsScreen()),
       AppRoutes.thread => _threadRoute(settings),
       AppRoutes.confirmCreate => _confirmCreateRoute(settings),

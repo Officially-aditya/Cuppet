@@ -14,6 +14,8 @@ class SydneyTheme {
       brightness: Brightness.light,
       primary: SydneyColors.primary,
       onPrimary: SydneyColors.onPrimary,
+      primaryContainer: SydneyColors.primaryContainer,
+      onPrimaryContainer: SydneyColors.onPrimaryContainer,
       surface: SydneyColors.surface,
       onSurface: SydneyColors.onSurface,
       error: SydneyColors.danger,
@@ -28,7 +30,7 @@ class SydneyTheme {
       dividerColor: SydneyColors.line,
       visualDensity: VisualDensity.standard,
       appBarTheme: const AppBarTheme(
-        backgroundColor: SydneyColors.surface,
+        backgroundColor: SydneyColors.surfaceContainerLowest,
         foregroundColor: SydneyColors.ink,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -36,7 +38,7 @@ class SydneyTheme {
         centerTitle: false,
         toolbarHeight: SydneySpacing.appBarHeight,
         titleTextStyle: TextStyle(
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
           color: SydneyColors.ink,
         ),
@@ -63,6 +65,10 @@ class SydneyTheme {
           borderRadius: BorderRadius.circular(SydneyRadius.md),
           borderSide: const BorderSide(color: SydneyColors.danger),
         ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+          borderSide: const BorderSide(color: SydneyColors.line),
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: SydneySpacing.lg,
           vertical: SydneySpacing.md,
@@ -82,7 +88,7 @@ class SydneyTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: SydneyColors.primary,
-          side: const BorderSide(color: SydneyColors.primary),
+          side: const BorderSide(color: SydneyColors.line),
           minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(SydneyRadius.md),
@@ -107,7 +113,7 @@ class SydneyTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: SydneyColors.primary,
         foregroundColor: Colors.white,
-        elevation: 4,
+        elevation: 6,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(SydneyRadius.md),
         ),
