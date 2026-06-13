@@ -46,6 +46,10 @@ class Env {
     defaultValue: 'sydney',
   );
 
+  static const googleServerClientId = String.fromEnvironment(
+    'SYDNEY_GOOGLE_SERVER_CLIENT_ID',
+  );
+
   static const useMockData = bool.fromEnvironment(
     'SYDNEY_USE_MOCKS',
     defaultValue: false,

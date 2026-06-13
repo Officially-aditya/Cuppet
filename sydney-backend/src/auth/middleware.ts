@@ -14,6 +14,12 @@ export async function requireAuth(
   });
 
   if (!session) {
+    const databaseSessionAuth = await verifyDatabaseSessionBearer(request);
+    if (databaseSessionAuth) {
+      request.auth = databaseSessionAuth;
+      return;
+    }
+
     const jwtAuth = await verifyJwtBearer(request);
     if (jwtAuth) {
       request.auth = jwtAuth;
@@ -41,13 +47,68 @@ export async function requireAuth(
   };
 }
 
+async function verifyDatabaseSessionBearer(
+  request: FastifyRequest
+): Promise<FastifyRequest["auth"] | null> {
+  const token = bearerTokenFrom(request);
+  if (!token) return null;
+
+  try {
+    const result = await pool.query<{
+      session_id: string;
+      token: string;
+      expires_at: Date | string;
+      user_id: string;
+      email: string;
+      name: string | null;
+      image: string | null;
+    }>(
+      `
+        SELECT s.id AS session_id,
+               s.token,
+               s.expires_at,
+               u.id AS user_id,
+               u.email,
+               u.name,
+               u.image
+        FROM sessions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.token = $1
+          AND s.expires_at > NOW()
+        LIMIT 1
+      `,
+      [token]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      userId: row.user_id,
+      user: {
+        id: row.user_id,
+        email: row.email,
+        name: row.name,
+        image: row.image
+      },
+      session: {
+        id: row.session_id,
+        token: row.token,
+        expiresAt: row.expires_at
+      }
+    };
+  } catch (error) {
+    request.log.debug({ error }, "Database bearer session verification failed");
+    return null;
+  }
+}
+
 async function verifyJwtBearer(
   request: FastifyRequest
 ): Promise<FastifyRequest["auth"] | null> {
-  const authorization = request.headers.authorization;
-  if (!authorization?.startsWith("Bearer ")) return null;
+  const token = bearerTokenFrom(request);
+  if (!token) return null;
 
-  const token = authorization.slice("Bearer ".length).trim();
   const [encodedHeader] = token.split(".");
   if (!encodedHeader) return null;
 
@@ -105,4 +166,12 @@ async function verifyJwtBearer(
     request.log.debug({ error }, "JWT bearer verification failed");
     return null;
   }
+}
+
+function bearerTokenFrom(request: FastifyRequest): string | null {
+  const authorization = request.headers.authorization;
+  if (!authorization?.startsWith("Bearer ")) return null;
+
+  const token = authorization.slice("Bearer ".length).trim();
+  return token.length > 0 ? token : null;
 }

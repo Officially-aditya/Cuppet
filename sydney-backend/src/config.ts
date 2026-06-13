@@ -25,6 +25,7 @@ const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().default("claude-haiku-4-5-20251001"),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
   MOBILE_AUTH_CALLBACK_SCHEME: z.string().default("sydney"),
   SLACK_CLIENT_ID: z.string().optional(),
