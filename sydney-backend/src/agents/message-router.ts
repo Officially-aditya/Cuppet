@@ -53,6 +53,67 @@ const unsupportedConnectors = [
 
 const connectorNames = ["gmail", "email", "mail", "inbox", "drive", "slack"];
 
+const runCommandWords = new Set([
+  "brief",
+  "check",
+  "deliver",
+  "do",
+  "execute",
+  "fetch",
+  "find",
+  "get",
+  "give",
+  "prepare",
+  "read",
+  "recap",
+  "run",
+  "scan",
+  "send",
+  "show",
+  "start",
+  "summarise",
+  "summarize"
+]);
+
+const runTargetFillerWords = new Set([
+  "agent",
+  "again",
+  "current",
+  "immediate",
+  "immediately",
+  "latest",
+  "morning",
+  "now",
+  "please",
+  "right",
+  "today",
+  "tonight"
+]);
+
+const knownOutputNouns = new Set([
+  "brief",
+  "checklist",
+  "digest",
+  "email",
+  "inbox",
+  "item",
+  "mail",
+  "message",
+  "news",
+  "plan",
+  "prompt",
+  "question",
+  "recap",
+  "reminder",
+  "report",
+  "result",
+  "summary",
+  "task",
+  "tip",
+  "update",
+  "word"
+]);
+
 export function routeAgentMessage(
   agent: AgentMessageRouterContext,
   text: string
@@ -361,7 +422,7 @@ function scoreRunNow(
 
   let score = 0.35;
   if (hasImmediateContext(lower)) score += 0.32;
-  if (hasOutputNoun(lower)) score += 0.18;
+  if (hasKnownOutputNoun(lower) || hasRunTarget(lower)) score += 0.18;
   if (sharesAgentVocabulary(agent, lower)) score += 0.14;
 
   return {
@@ -373,7 +434,10 @@ function scoreRunNow(
 
 function isExplicitRunNowRequest(lower: string): boolean {
   return (
-    /\b(run|execute|start)\s+(it|this|agent|now)\b/.test(lower) ||
+    /^(?:please\s+)?(?:run|execute|start)(?:\s+please)?[.!?]?$/.test(lower) ||
+    /\b(?:run|execute|start)\s+(?:(?:the|this|that|my|current)\s+){0,2}(?:agent|automation|workflow|job|it)\b/.test(
+      lower
+    ) ||
     /\b(run|execute|start|check|send)\b.*\b(now|right now|immediately)\b/.test(
       lower
     )
@@ -398,9 +462,14 @@ function hasImmediateContext(lower: string): boolean {
   );
 }
 
-function hasOutputNoun(lower: string): boolean {
-  return /\b(summary|summaries|digest|recap|brief|report|update|updates|messages?|emails?|mail|inbox|news|question|tip|checklist|plan|task|word|prompt|reminder|items?|results?)\b/.test(
-    lower
+function hasKnownOutputNoun(lower: string): boolean {
+  return meaningfulTokens(lower).some((token) => knownOutputNouns.has(token));
+}
+
+function hasRunTarget(lower: string): boolean {
+  return meaningfulTokens(lower).some(
+    (token) =>
+      !runCommandWords.has(token) && !runTargetFillerWords.has(token)
   );
 }
 
@@ -461,7 +530,20 @@ function meaningfulTokens(value: string): string[] {
     .replace(/[^a-z0-9\s-]/g, " ")
     .split(/\s+/)
     .map((token) => token.trim())
+    .map(normalizeToken)
     .filter((token) => token.length > 2 && !stopWords.has(token));
+}
+
+function normalizeToken(token: string): string {
+  const invariantPlural = new Set(["analysis", "business", "news", "progress"]);
+  if (invariantPlural.has(token)) return token;
+  if (token.length > 4 && token.endsWith("ies")) {
+    return `${token.slice(0, -3)}y`;
+  }
+  if (token.length > 3 && token.endsWith("s") && !token.endsWith("ss")) {
+    return token.slice(0, -1);
+  }
+  return token;
 }
 
 function timeRangeFromText(

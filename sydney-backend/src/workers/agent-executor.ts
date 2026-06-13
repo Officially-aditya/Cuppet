@@ -703,9 +703,7 @@ function renderConnectorPending(
         task: `Connect ${config.connectorName}`,
         context: summary,
         estimated_minutes: 2,
-        actions: [
-          { id: "connect", label: "Open connectors", style: "primary" }
-        ]
+        actions: [connectorSetupAction(agent, config)]
       });
 
     case "comparison":
@@ -746,11 +744,60 @@ function renderConnectorReconnectRequired(
     actions: [
       {
         id: `reconnect_${connector.connectorId}`,
+        type: "connector_reconnect",
+        connector_id: connector.connectorId,
+        connector_name: connector.connectorName,
+        run_after_connect: true,
         label: `Reconnect ${connector.connectorName}`,
         style: "primary"
       }
     ]
   });
+}
+
+function connectorSetupAction(
+  agent: AgentRow,
+  config: ConnectorPendingConfig
+): {
+  id: string;
+  type: string;
+  label: string;
+  style: "primary";
+  connector_id?: string;
+  connector_name?: string;
+  run_after_connect?: boolean;
+} {
+  const connectorId = singleConnectorId(agent.connector_ids);
+  if (!connectorId) {
+    return {
+      id: "open_connectors",
+      type: "open_connectors",
+      label: "Open connectors",
+      style: "primary"
+    };
+  }
+
+  return {
+    id: `connect_${connectorId}`,
+    type: "connector_connect",
+    connector_id: connectorId,
+    connector_name: config.connectorName,
+    run_after_connect: true,
+    label: `Connect ${config.connectorName}`,
+    style: "primary"
+  };
+}
+
+function singleConnectorId(connectorIds: string[]): string | null {
+  const unique = [
+    ...new Set(
+      connectorIds
+        .map((connectorId) => connectorId.trim())
+        .filter((connectorId) => connectorId && connectorId !== "web_search")
+    )
+  ];
+
+  return unique.length === 1 ? unique[0]! : null;
 }
 
 function intentName(agent: AgentRow): string {

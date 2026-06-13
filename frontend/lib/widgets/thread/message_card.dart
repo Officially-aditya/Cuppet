@@ -13,9 +13,10 @@ import '../templates/system_template.dart';
 import '../templates/urgency_list_template.dart';
 
 class MessageCard extends StatelessWidget {
-  const MessageCard({required this.message, super.key});
+  const MessageCard({required this.message, this.onAction, super.key});
 
   final Message message;
+  final ValueChanged<Map<String, dynamic>>? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +82,11 @@ class MessageCard extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: isUser ? SydneyColors.ink : SydneyColors.onSurface,
         ),
-        child: _TemplateRouter(message: message, isUser: isUser),
+        child: _TemplateRouter(
+          message: message,
+          isUser: isUser,
+          onAction: onAction,
+        ),
       ),
     );
 
@@ -96,10 +101,15 @@ class MessageCard extends StatelessWidget {
 }
 
 class _TemplateRouter extends StatelessWidget {
-  const _TemplateRouter({required this.message, required this.isUser});
+  const _TemplateRouter({
+    required this.message,
+    required this.isUser,
+    required this.onAction,
+  });
 
   final Message message;
   final bool isUser;
+  final ValueChanged<Map<String, dynamic>>? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +124,7 @@ class _TemplateRouter extends StatelessWidget {
       'urgency_list' => UrgencyListTemplate(data: data),
       'data_summary' => DataSummaryTemplate(data: data),
       'checklist' => ChecklistTemplate(data: data),
-      'daily_task' => DailyTaskTemplate(data: data),
+      'daily_task' => DailyTaskTemplate(data: data, onAction: onAction),
       'streak_counter' => StreakCounterTemplate(data: data),
       'comparison' => ComparisonTemplate(data: data),
       'system' => SystemTemplate(data: data),

@@ -89,6 +89,10 @@ export type DailyTaskMessageContent = {
       id: string;
       label: string;
       style?: "primary" | "secondary" | "ghost";
+      type?: string;
+      connector_id?: string;
+      connector_name?: string;
+      run_after_connect?: boolean;
     }>;
   };
 };

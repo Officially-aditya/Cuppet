@@ -512,7 +512,17 @@ async function refreshGoogleToken(
   connectorId: GoogleWorkspaceConnectorId,
   refreshToken: string
 ): Promise<string> {
-  ensureGoogleWorkspaceAuthConfigured();
+  if (!googleTokenRefreshConfigured()) {
+    await markConnectorActionRequired(
+      userId,
+      connectorId,
+      "google_workspace_refresh_not_configured"
+    );
+    throw connectorAuthRequired(
+      connectorId,
+      "google_workspace_refresh_not_configured"
+    );
+  }
 
   const response = await fetch(googleTokenEndpoint, {
     method: "POST",
@@ -636,8 +646,20 @@ async function googleAccessToken(
   const token = rows[0];
   if (!token) return null;
 
-  const accessToken = decryptSecret(token.access_token_enc);
-  const refreshToken = decryptSecret(token.refresh_token_enc);
+  let accessToken: string;
+  let refreshToken: string;
+  try {
+    accessToken = decryptSecret(token.access_token_enc);
+    refreshToken = decryptSecret(token.refresh_token_enc);
+  } catch {
+    await markConnectorActionRequired(
+      userId,
+      connectorId,
+      "connector_token_decryption_failed"
+    );
+    throw connectorAuthRequired(connectorId, "connector_token_decryption_failed");
+  }
+
   const expiresAt = new Date(token.token_expires_at).getTime();
   if (Number.isFinite(expiresAt) && expiresAt > Date.now() + 60_000) {
     return accessToken;
@@ -1051,6 +1073,10 @@ function ensureGoogleWorkspaceAuthConfigured(): void {
   if (!googleWorkspaceAuthConfigured()) {
     throw new Error("google_workspace_oauth_not_configured");
   }
+}
+
+function googleTokenRefreshConfigured(): boolean {
+  return Boolean(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET);
 }
 
 function errorCode(error: unknown): string {

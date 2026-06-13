@@ -379,7 +379,8 @@ async function handleAgentTextMessage(
     name: string;
   };
 }> {
-  const decision = decideAgentInstruction(agent, text);
+  const lastAgentReply = await latestAgentReplyText(userId, agent.id);
+  const decision = decideAgentInstruction(agent, text, { lastAgentReply });
   const client = await pool.connect();
   let updatedAgent: UpdatedAgentRow | undefined;
   let instructionUpdate: InstructionUpdateRow;
@@ -486,6 +487,31 @@ async function handleAgentTextMessage(
   } finally {
     client.release();
   }
+}
+
+async function latestAgentReplyText(
+  userId: string,
+  agentId: string
+): Promise<string | null> {
+  const { rows } = await pool.query<{ body: string | null }>(
+    `
+      SELECT COALESCE(
+        content #>> '{data,body}',
+        content #>> '{data,text}',
+        content #>> '{data,message}',
+        content #>> '{data,summary}'
+      ) AS body
+      FROM agent_messages
+      WHERE user_id = $1
+        AND agent_id = $2
+        AND role = 'agent'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [userId, agentId]
+  );
+
+  return rows[0]?.body ?? null;
 }
 
 async function writeUserMessage(

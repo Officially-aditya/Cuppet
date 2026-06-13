@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
+import '../../providers/agents_provider.dart';
+import '../../providers/connectors_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../config/routes.dart';
 import '../../widgets/thread/message_card.dart';
@@ -158,7 +162,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                               ? const TypingIndicator()
                               : const SizedBox.shrink();
                         }
-                        return MessageCard(message: items[messageIndex]);
+                        return MessageCard(
+                          message: items[messageIndex],
+                          onAction: _handleMessageAction,
+                        );
                       },
                     ),
                 loading: () => const _ThreadLoading(),
@@ -202,6 +209,98 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
+
+  void _handleMessageAction(Map<String, dynamic> action) {
+    unawaited(_handleMessageActionAsync(action));
+  }
+
+  Future<void> _handleMessageActionAsync(Map<String, dynamic> action) async {
+    final actionType = action['type']?.toString();
+    final actionId = action['id']?.toString() ?? '';
+    final connectorId = _connectorIdFromAction(action);
+
+    if (connectorId == null) {
+      if (actionType == 'open_connectors' || actionId == 'connect') {
+        await Navigator.of(context).pushNamed(AppRoutes.connectors);
+      }
+      return;
+    }
+
+    try {
+      final connectorName = _connectorName(action, connectorId);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Opening $connectorName...')));
+      await ref.read(connectorServiceProvider).linkConnector(connectorId);
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(connectorsProvider);
+
+      final runAfterConnect = action['run_after_connect'] != false;
+      if (runAfterConnect) {
+        await ref.read(agentServiceProvider).runAgent(widget.agent.id);
+        ref.invalidate(messagesProvider(widget.agent.threadId));
+        ref.invalidate(agentsProvider);
+        _scheduleThreadRefresh(const Duration(seconds: 2));
+        _scheduleThreadRefresh(const Duration(seconds: 6));
+      }
+
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            runAfterConnect
+                ? '$connectorName connected. Run queued.'
+                : '$connectorName connected.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  void _scheduleThreadRefresh(Duration delay) {
+    Future<void>.delayed(delay, () {
+      if (mounted) {
+        ref.invalidate(messagesProvider(widget.agent.threadId));
+      }
+    });
+  }
+}
+
+String? _connectorIdFromAction(Map<String, dynamic> action) {
+  final direct = action['connector_id'] ?? action['connectorId'];
+  if (direct != null && direct.toString().trim().isNotEmpty) {
+    return direct.toString().trim();
+  }
+
+  final id = action['id']?.toString() ?? '';
+  final match = RegExp(r'^(?:reconnect|connect)_([a-z0-9_-]+)$').firstMatch(id);
+  return match?.group(1);
+}
+
+String _connectorName(Map<String, dynamic> action, String connectorId) {
+  final providedName = action['connector_name'] ?? action['connectorName'];
+  if (providedName != null && providedName.toString().trim().isNotEmpty) {
+    return providedName.toString().trim();
+  }
+
+  return switch (connectorId) {
+    'gmail' => 'Gmail',
+    'drive' => 'Google Drive',
+    'web_search' => 'Web Search',
+    'slack' => 'Slack',
+    _ => 'Connector',
+  };
 }
 
 class _ThreadDayPill extends StatelessWidget {

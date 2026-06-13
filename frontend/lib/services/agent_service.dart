@@ -99,6 +99,19 @@ class AgentService {
       throw apiExceptionFrom(error, 'We could not archive that agent.');
     }
   }
+
+  Future<void> runAgent(String agentId) async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      return;
+    }
+
+    try {
+      await _api.post<Map<String, dynamic>>('/agents/$agentId/run');
+    } catch (error) {
+      throw apiExceptionFrom(error, 'We could not run that agent.');
+    }
+  }
 }
 
 List<Agent> _buildMockAgents() {

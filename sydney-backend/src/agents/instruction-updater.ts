@@ -40,9 +40,24 @@ export type AgentInstructionContext = AgentMessageRouterContext;
 
 export function decideAgentInstruction(
   agent: AgentInstructionContext,
-  text: string
+  text: string,
+  context: { lastAgentReply?: string | null } = {}
 ): AgentInstructionDecision {
   const trimmed = text.trim();
+  if (confirmsPendingRun(trimmed, context.lastAgentReply)) {
+    const canRun = agent.status === "active";
+    return {
+      kind: "run_now",
+      status: canRun ? "queued" : "rejected",
+      confidence: 0.93,
+      reason: canRun ? "confirmed_pending_run" : "agent_not_active",
+      reply: canRun
+        ? "Queued a run now. I'll add the result to this thread when it finishes."
+        : "I can't run while this agent is paused or in an error state.",
+      patch: {}
+    };
+  }
+
   const route = routeAgentMessage(agent, trimmed);
 
   switch (route.intent) {
@@ -102,6 +117,22 @@ export function decideAgentInstruction(
         route.confidence
       );
   }
+}
+
+function confirmsPendingRun(
+  text: string,
+  lastAgentReply: string | null | undefined
+): boolean {
+  if (!lastAgentReply) return false;
+
+  const lower = text.trim().toLowerCase();
+  const reply = lastAgentReply.toLowerCase();
+  return (
+    /\bdo you want me to run this agent once now\b/.test(reply) &&
+    /^(yes|yeah|yep|sure|ok|okay|please do|go ahead|do it|run it)$/i.test(
+      lower
+    )
+  );
 }
 
 function statusDecision(

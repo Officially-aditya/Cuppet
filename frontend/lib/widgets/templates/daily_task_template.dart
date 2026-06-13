@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 
 class DailyTaskTemplate extends StatelessWidget {
-  const DailyTaskTemplate({required this.data, super.key});
+  const DailyTaskTemplate({required this.data, this.onAction, super.key});
 
   final Map<String, dynamic> data;
+  final ValueChanged<Map<String, dynamic>>? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +62,7 @@ class DailyTaskTemplate extends StatelessWidget {
                 _ActionPill(
                   label: action['label']?.toString() ?? 'Action',
                   primary: action['style'] == 'primary',
+                  onPressed: onAction == null ? null : () => onAction!(action),
                 ),
             ],
           ),
@@ -107,27 +109,48 @@ class _MetaPill extends StatelessWidget {
 }
 
 class _ActionPill extends StatelessWidget {
-  const _ActionPill({required this.label, required this.primary});
+  const _ActionPill({
+    required this.label,
+    required this.primary,
+    required this.onPressed,
+  });
 
   final String label;
   final bool primary;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: SydneySpacing.md,
-        vertical: SydneySpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: primary ? SydneyColors.primary : SydneyColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(SydneyRadius.full),
-        border: primary ? null : Border.all(color: SydneyColors.line),
+    final foreground =
+        primary ? SydneyColors.onPrimary : SydneyColors.onSurface;
+    final background =
+        primary ? SydneyColors.primary : SydneyColors.surfaceContainer;
+
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: foreground,
+        backgroundColor: background,
+        disabledForegroundColor: foreground,
+        disabledBackgroundColor: background,
+        padding: const EdgeInsets.symmetric(
+          horizontal: SydneySpacing.md,
+          vertical: SydneySpacing.sm,
+        ),
+        minimumSize: const Size(0, 36),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SydneyRadius.full),
+          side:
+              primary
+                  ? BorderSide.none
+                  : const BorderSide(color: SydneyColors.line),
+        ),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: primary ? SydneyColors.onPrimary : SydneyColors.onSurface,
+          color: foreground,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
         ),
