@@ -50,7 +50,7 @@ export async function scheduleAgentRun(
 ) {
   return agentExecutorQueue.upsertJobScheduler(
     agentSchedulerId(agentId),
-    { pattern: cronPattern },
+    { pattern: cronPattern, tz: config.AGENT_SCHEDULE_TIME_ZONE },
     {
       name: agentExecutorJobName,
       data: { agentId, trigger: "schedule" },

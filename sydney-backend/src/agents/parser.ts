@@ -25,6 +25,430 @@ const UNSUPPORTED_CONNECTORS = [
   "notion"
 ];
 
+type CapabilityDefinition = {
+  name: string;
+  avatar: string;
+  intent: string;
+  connector: string | null;
+  connectorIds?: string[];
+  action: string | ((prompt: string) => string);
+  defaultSchedule?: string | null;
+  outputTemplate: string;
+  permissionsNeeded: string[];
+  priority?: number;
+  match: {
+    all?: RegExp[];
+    any?: RegExp[];
+    allAny?: RegExp[][];
+    not?: RegExp[];
+  };
+};
+
+const CAPABILITIES: CapabilityDefinition[] = [
+  {
+    name: "Competitor Watch",
+    avatar: "binoculars",
+    intent: "competitor_watch",
+    connector: "web_search",
+    action:
+      "Watches competitors and compares notable product or messaging changes.",
+    defaultSchedule: "0 9 * * 1",
+    outputTemplate: "comparison",
+    permissionsNeeded: ["Web search (no login needed)"],
+    priority: 50,
+    match: { any: [/\bcompetitors?\b/, /\bcompetitive\s+(?:watch|analysis)\b/] }
+  },
+  {
+    name: "Portfolio Watch",
+    avatar: "line-chart",
+    intent: "portfolio_watch",
+    connector: "web_search",
+    action:
+      "Summarizes portfolio or market movement when reliable symbols are provided.",
+    defaultSchedule: "0 16 * * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Web search or market data"],
+    priority: 46,
+    match: {
+      any: [/\bstocks?\b/, /\bportfolio\b/, /\bmarket close\b/, /\bholdings?\b/]
+    }
+  },
+  {
+    name: "Job Market Radar",
+    avatar: "briefcase",
+    intent: "job_market_radar",
+    connector: "web_search",
+    action: "Searches for relevant job-market updates or openings.",
+    defaultSchedule: "0 8 * * 1",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Web search (no login needed)"],
+    priority: 44,
+    match: { any: [/\bjob market\b/, /\bjobs?\b/, /\broles?\b/, /\bopenings?\b/] }
+  },
+  {
+    name: "Tech News",
+    avatar: "newspaper",
+    intent: "tech_news_brief",
+    connector: "web_search",
+    action: "Searches and summarizes technology news.",
+    defaultSchedule: "0 7 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Web search (no login needed)"],
+    priority: 60,
+    match: {
+      allAny: [[/\btech(?:nology)?\b/], [/\bnews\b/, /\bheadlines?\b/, /\bbrief\b/]]
+    }
+  },
+  {
+    name: "News Brief",
+    avatar: "newspaper",
+    intent: "news_brief",
+    connector: "web_search",
+    action: "Searches and summarizes current news.",
+    defaultSchedule: "0 7 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Web search (no login needed)"],
+    priority: 24,
+    match: {
+      any: [
+        /\bnews\b/,
+        /\bheadlines?\b/,
+        /\b(?:updates?|brief|digest)\s+(?:about|on)\b/,
+        /\bstartup funding\b/
+      ]
+    }
+  },
+  {
+    name: "Weekly Progress",
+    avatar: "file-check",
+    intent: "weekly_progress_report",
+    connector: "slack",
+    connectorIds: ["slack", "drive"],
+    action:
+      "Combines Slack activity and Drive changes into a weekly progress report.",
+    defaultSchedule: "0 17 * * 5",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Slack message history access", "Google Drive read access"],
+    priority: 58,
+    match: { any: [/\bweekly progress\b/, /\baccomplished this week\b/] }
+  },
+  {
+    name: "Deadline Watcher",
+    avatar: "check-square",
+    intent: "project_deadline_watcher",
+    connector: "drive",
+    connectorIds: ["drive", "gmail"],
+    action: "Finds project deadlines and turns them into a weekly checklist.",
+    defaultSchedule: "0 8 * * 1",
+    outputTemplate: "checklist",
+    permissionsNeeded: ["Google Drive read access", "Gmail read access"],
+    priority: 57,
+    match: { any: [/\bdeadlines?\b/, /\bdue dates?\b/, /\bmilestones?\b/] }
+  },
+  {
+    name: "Travel Sentinel",
+    avatar: "map",
+    intent: "travel_sentinel",
+    connector: "gmail",
+    connectorIds: ["gmail"],
+    action:
+      "Watches travel booking emails and surfaces upcoming travel actions.",
+    outputTemplate: "checklist",
+    permissionsNeeded: ["Gmail read access"],
+    priority: 54,
+    match: { any: [/\btravel\b/, /\btrip\b/, /\bflight\b/, /\bhotel\b/, /\bbooking\b/] }
+  },
+  {
+    name: "Invoice Tracker",
+    avatar: "receipt",
+    intent: "invoice_tracker",
+    connector: "gmail",
+    connectorIds: ["gmail"],
+    action: "Tracks unpaid invoices and flags follow-ups.",
+    defaultSchedule: "0 9 * * 1",
+    outputTemplate: "urgency_list",
+    permissionsNeeded: ["Gmail read access"],
+    priority: 56,
+    match: { any: [/\binvoices?\b/, /\bunpaid\b/, /\bpayment due\b/] }
+  },
+  {
+    name: "Subscription Auditor",
+    avatar: "credit-card",
+    intent: "subscription_auditor",
+    connector: "gmail",
+    connectorIds: ["gmail"],
+    action: "Audits subscription receipts and recurring charges.",
+    defaultSchedule: "0 9 1 * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Gmail read access"],
+    priority: 55,
+    match: { any: [/\bsubscriptions?\b/, /\brecurring charges?\b/, /\brenewals?\b/] }
+  },
+  {
+    name: "Follow-up Watcher",
+    avatar: "mail-warning",
+    intent: "email_followup_watcher",
+    connector: "gmail",
+    connectorIds: ["gmail"],
+    action: "Finds outgoing emails that have not received replies.",
+    defaultSchedule: "0 10 * * *",
+    outputTemplate: "urgency_list",
+    permissionsNeeded: ["Gmail read access"],
+    priority: 55,
+    match: {
+      any: [
+        /\bfollow[- ]?ups?\b/,
+        /\bhas(?:n't| not) replied\b/,
+        /\bhave(?:n't| not) replied\b/
+      ]
+    }
+  },
+  {
+    name: "Lead Monitor",
+    avatar: "radar",
+    intent: "lead_response_monitor",
+    connector: "gmail",
+    connectorIds: ["gmail"],
+    action: "Watches Gmail for new lead messages.",
+    outputTemplate: "urgency_list",
+    permissionsNeeded: ["Gmail read access"],
+    priority: 53,
+    match: { any: [/\bleads?\b/, /\binquir(?:y|ies)\b/, /\bdemo requests?\b/] }
+  },
+  {
+    name: "Email Digest",
+    avatar: "mail",
+    intent: "email_digest",
+    connector: "gmail",
+    connectorIds: ["gmail"],
+    action: "Reads Gmail and summarizes messages that need attention.",
+    defaultSchedule: "0 18 * * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Gmail read access"],
+    priority: 35,
+    match: {
+      allAny: [[/\be-?mail\b/, /\bgmail\b/, /\bmail\b/, /\binbox\b/, /\bmailbox\b/]],
+      any: [/\bsummary\b/, /\bsummar(?:y|ize|ise|ization|isation)\b/, /\bdigest\b/, /\brecap\b/, /\bbrief\b/]
+    }
+  },
+  {
+    name: "EOD Task Report",
+    avatar: "clipboard-list",
+    intent: "eod_task_report",
+    connector: "slack",
+    connectorIds: ["slack"],
+    action:
+      "Summarizes the user's Slack activity into an end-of-day task report.",
+    defaultSchedule: "30 17 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Slack channel and message history access"],
+    priority: 58,
+    match: {
+      allAny: [[/\bslack\b/], [/\beod\b/, /\bend of day\b/, /\bwhat i did\b/]]
+    }
+  },
+  {
+    name: "Slack Watcher",
+    avatar: "chat",
+    intent: "slack_urgent_watcher",
+    connector: "slack",
+    connectorIds: ["slack"],
+    action: "Watches Slack for urgent messages and mentions.",
+    defaultSchedule: null,
+    outputTemplate: "urgency_list",
+    permissionsNeeded: ["Slack channel and message history access"],
+    priority: 57,
+    match: { allAny: [[/\bslack\b/], [/\burgent\b/, /\balert\b/]] }
+  },
+  {
+    name: "Slack Digest",
+    avatar: "chat",
+    intent: "slack_digest",
+    connector: "slack",
+    connectorIds: ["slack"],
+    action: "Reads Slack and summarizes important activity.",
+    defaultSchedule: "0 17 * * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Slack channel and message history access"],
+    priority: 34,
+    match: { any: [/\bslack\b/] }
+  },
+  {
+    name: "Meeting Recap",
+    avatar: "file-text",
+    intent: "meeting_recap",
+    connector: "drive",
+    connectorIds: ["drive"],
+    action:
+      "Reads Docs meeting notes and extracts decisions, actions, and key points.",
+    defaultSchedule: "0 19 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Google Drive read access"],
+    priority: 50,
+    match: { any: [/\bmeeting notes?\b/, /\bdocs?\b/, /\bgoogle docs?\b/] }
+  },
+  {
+    name: "PDF Summary",
+    avatar: "file-text",
+    intent: "pdf_summary",
+    connector: "drive",
+    connectorIds: ["drive"],
+    action: "Reads Google Drive files and summarizes relevant changes or documents.",
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Google Drive read access"],
+    priority: 52,
+    match: { any: [/\bpdfs?\b/] }
+  },
+  {
+    name: "Drive Summary",
+    avatar: "file-text",
+    intent: "drive_summary",
+    connector: "drive",
+    connectorIds: ["drive"],
+    action: "Reads Google Drive files and summarizes relevant changes or documents.",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Google Drive read access"],
+    priority: 38,
+    match: { any: [/\bdrive\b/, /\bgoogle drive\b/] }
+  },
+  {
+    name: "Interview Prep",
+    avatar: "target",
+    intent: "interview_prep",
+    connector: null,
+    action: "Creates one interview-prep task per day and tracks completion.",
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "daily_task",
+    permissionsNeeded: [],
+    priority: 44,
+    match: { any: [/\binterview prep\b/, /\binterview\b/] }
+  },
+  {
+    name: "Procrastination Breaker",
+    avatar: "hammer",
+    intent: "procrastination_breaker",
+    connector: null,
+    action: "Breaks an avoided project into small daily tasks.",
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "daily_task",
+    permissionsNeeded: [],
+    priority: 43,
+    match: {
+      any: [/\bprocrastinat/, /\bhelp me actually do it\b/, /\bportfolio website\b/, /\bside project\b/, /\bthesis\b/]
+    }
+  },
+  {
+    name: "Daily Word",
+    avatar: "languages",
+    intent: "language_word",
+    connector: null,
+    action: "Delivers one word per day and tracks the learning habit.",
+    defaultSchedule: "0 8 * * *",
+    outputTemplate: "streak_counter",
+    permissionsNeeded: [],
+    priority: 42,
+    match: {
+      allAny: [[/\bspanish\b/, /\bfrench\b/, /\blanguage\b/, /\bvocabulary\b/, /\bword\b/], [/\bteach\b/, /\bsend\b/, /\blearn\b/, /\bword\b/]]
+    }
+  },
+  {
+    name: "Coding Tip",
+    avatar: "code",
+    intent: "coding_tip",
+    connector: null,
+    action: "Sends one concrete coding tip on schedule.",
+    defaultSchedule: "0 8 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: [],
+    priority: 40,
+    match: { any: [/\bcoding tip\b/, /\badvanced .* tip\b/, /\bpython tip\b/, /\bdart tip\b/, /\bsql tip\b/] }
+  },
+  {
+    name: "Book Companion",
+    avatar: "book-open",
+    intent: "book_companion",
+    connector: null,
+    action: "Sends one book insight with an application prompt.",
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: [],
+    priority: 36,
+    match: { any: [/\bbook\b/, /\breading\b/, /\batomic habits\b/] }
+  },
+  {
+    name: "Parenting Milestones",
+    avatar: "heart",
+    intent: "parenting_milestones",
+    connector: null,
+    action: "Sends age-appropriate child development prompts.",
+    defaultSchedule: "0 9 * * 1",
+    outputTemplate: "plain_text",
+    permissionsNeeded: [],
+    priority: 38,
+    match: { any: [/\bbaby\b/, /\bparenting\b/, /\bmilestone\b/, /\bdevelopment\b/] }
+  },
+  {
+    name: "Relationship Nudge",
+    avatar: "users",
+    intent: "relationship_nudge",
+    connector: null,
+    action: "Suggests one person to check in with on schedule.",
+    defaultSchedule: "0 9 * * 1",
+    outputTemplate: "plain_text",
+    permissionsNeeded: [],
+    priority: 38,
+    match: { any: [/\bfriends?\b/, /\brelationship\b/, /\bcheck in\b/, /\blose touch\b/] }
+  },
+  {
+    name: "Gratitude Prompt",
+    avatar: "sparkles",
+    intent: "gratitude_prompt",
+    connector: null,
+    action: "Prompts the user to write three specific things they are grateful for.",
+    defaultSchedule: "0 21 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: [],
+    priority: 38,
+    match: { any: [/\bgratitude\b/, /\bgrateful\b/, /\bjournal\b/] }
+  },
+  {
+    name: "Daily Habit",
+    avatar: "flame",
+    intent: "habit_tracker",
+    connector: null,
+    action: "Sends a daily prompt and tracks streak progress.",
+    defaultSchedule: "0 8 * * *",
+    outputTemplate: "streak_counter",
+    permissionsNeeded: [],
+    priority: 34,
+    match: { any: [/\bhabit\b/, /\bstreak\b/, /\bmeditate\b/] }
+  },
+  {
+    name: "Study Plan",
+    avatar: "book-open",
+    intent: "study_plan",
+    connector: null,
+    action: "Creates a study plan and sends daily progress updates.",
+    defaultSchedule: "0 8 * * *",
+    outputTemplate: "progress_tracker",
+    permissionsNeeded: [],
+    priority: 34,
+    match: { any: [/\bstudy\b/, /\bjee\b/, /\bneet\b/, /\bexam\b/] }
+  },
+  {
+    name: "Reminder",
+    avatar: "bell",
+    intent: "scheduled_reminder",
+    connector: null,
+    action: reminderAction,
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "plain_text",
+    permissionsNeeded: [],
+    priority: 32,
+    match: { any: [/\bremind\b/, /\breminder\b/, /\bping me\b/] }
+  }
+];
+
 export function parseIntent(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
   const unsupported =
@@ -43,6 +467,11 @@ export function parseIntent(prompt: string): ParsedIntent {
       output_template: "system",
       permissions_needed: []
     });
+  }
+
+  const capability = classifyCapability(prompt, lower);
+  if (capability) {
+    return capability;
   }
 
   if (/\bcompetitors?\b/.test(lower)) {
@@ -491,6 +920,85 @@ function templateConfig(template: string): Record<string, boolean> {
     ].includes(template),
     has_checklist: template === "checklist"
   };
+}
+
+function classifyCapability(prompt: string, lower: string): ParsedIntent | null {
+  let best:
+    | {
+        definition: CapabilityDefinition;
+        score: number;
+      }
+    | null = null;
+
+  for (const definition of CAPABILITIES) {
+    const score = scoreCapability(definition, lower);
+    if (score === null) continue;
+
+    if (!best || score > best.score) {
+      best = { definition, score };
+    }
+  }
+
+  return best ? capabilityIntent(prompt, lower, best.definition) : null;
+}
+
+function scoreCapability(
+  definition: CapabilityDefinition,
+  lower: string
+): number | null {
+  const { match } = definition;
+  if (match.not?.some((pattern) => pattern.test(lower))) {
+    return null;
+  }
+
+  let score = definition.priority ?? 0;
+  let matchedRequired = false;
+
+  for (const pattern of match.all ?? []) {
+    if (!pattern.test(lower)) return null;
+    score += 8;
+    matchedRequired = true;
+  }
+
+  for (const group of match.allAny ?? []) {
+    const matches = group.filter((pattern) => pattern.test(lower)).length;
+    if (matches === 0) return null;
+    score += 8 + matches;
+    matchedRequired = true;
+  }
+
+  const optionalMatches =
+    match.any?.filter((pattern) => pattern.test(lower)).length ?? 0;
+  if (!matchedRequired && (match.any?.length ?? 0) > 0 && optionalMatches === 0) {
+    return null;
+  }
+
+  return score + optionalMatches * 3;
+}
+
+function capabilityIntent(
+  prompt: string,
+  lower: string,
+  definition: CapabilityDefinition
+): ParsedIntent {
+  const defaultSchedule =
+    definition.defaultSchedule === undefined
+      ? null
+      : definition.defaultSchedule;
+  return baseIntent(prompt, {
+    name: definition.name,
+    avatar: definition.avatar,
+    intent: definition.intent,
+    connector: definition.connector,
+    connector_ids: definition.connectorIds ?? [],
+    action:
+      typeof definition.action === "function"
+        ? definition.action(prompt)
+        : definition.action,
+    schedule_cron: parseSchedule(lower) ?? defaultSchedule,
+    output_template: definition.outputTemplate,
+    permissions_needed: definition.permissionsNeeded
+  });
 }
 
 function parseSchedule(prompt: string): string | null {
