@@ -1,0 +1,14 @@
+{
+  "name": "sydney",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm --prefix sydney-backend ci && npm --prefix sydney-backend run build",
+    "migrate": "npm --prefix sydney-backend run migrate",
+    "start": "npm --prefix sydney-backend run start:api",
+    "start:api": "npm --prefix sydney-backend run start:api",
+    "start:worker": "npm --prefix sydney-backend run start:worker"
+  }
+}
