@@ -101,7 +101,14 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         SELECT id, agent_id, user_id, role, content, source_refs, read_at, created_at
         FROM agent_messages
         WHERE user_id = $1 AND agent_id = $2
-        ORDER BY created_at DESC
+        ORDER BY
+          created_at DESC,
+          CASE role
+            WHEN 'agent' THEN 0
+            WHEN 'system' THEN 1
+            WHEN 'user' THEN 2
+            ELSE 3
+          END ASC
         LIMIT $3
       `,
       [userId, agentId, limit]
@@ -279,6 +286,8 @@ async function handleAssistantTextMessage(
   const parsedIntent = parseIntent(text);
   const client = await pool.connect();
   let createdAgent: CreatedAgentRow | undefined;
+  const userCreatedAt = new Date();
+  const assistantCreatedAt = offsetDate(userCreatedAt, 1);
 
   try {
     await client.query("BEGIN");
@@ -292,7 +301,8 @@ async function handleAssistantTextMessage(
         version: "1.0",
         data: { body: text }
       },
-      readAtNow: true
+      readAtNow: true,
+      createdAt: userCreatedAt
     });
 
     if (parsedIntent.unsupported_connector) {
@@ -300,7 +310,8 @@ async function handleAssistantTextMessage(
         agentId: assistantId,
         userId,
         role: "agent",
-        content: unsupportedConnectorContent(parsedIntent)
+        content: unsupportedConnectorContent(parsedIntent),
+        createdAt: assistantCreatedAt
       });
 
       await touchAgentWithClient(client, userId, assistantId);
@@ -322,7 +333,8 @@ async function handleAssistantTextMessage(
       agentId: assistantId,
       userId,
       role: "agent",
-      content: assistantAgentCreatedContent(parsedIntent)
+      content: assistantAgentCreatedContent(parsedIntent),
+      createdAt: assistantCreatedAt
     });
 
     await touchAgentWithClient(client, userId, assistantId);
@@ -373,6 +385,8 @@ async function handleAgentTextMessage(
   let instructionUpdate: InstructionUpdateRow;
   let userMessage: MessageRow;
   let agentMessage: MessageRow;
+  const userCreatedAt = new Date();
+  const agentCreatedAt = offsetDate(userCreatedAt, 1);
 
   try {
     await client.query("BEGIN");
@@ -386,7 +400,8 @@ async function handleAgentTextMessage(
         version: "1.0",
         data: { body: text }
       },
-      readAtNow: true
+      readAtNow: true,
+      createdAt: userCreatedAt
     });
 
     if (
@@ -409,7 +424,8 @@ async function handleAgentTextMessage(
         template: "plain_text",
         version: "1.0",
         data: { body: decision.reply }
-      }
+      },
+      createdAt: agentCreatedAt
     });
 
     instructionUpdate = await recordInstructionUpdate(client, {
@@ -497,19 +513,38 @@ async function insertMessage(
     role: "agent" | "user" | "system";
     content: Record<string, unknown>;
     readAtNow?: boolean;
+    createdAt?: Date;
   }
 ): Promise<MessageRow> {
   const { rows } = await client.query<MessageRow>(
     `
       INSERT INTO agent_messages
-        (agent_id, user_id, role, content, source_refs, read_at)
-      VALUES ($1, $2, $3, $4, '[]'::jsonb, ${input.readAtNow ? "NOW()" : "NULL"})
+        (agent_id, user_id, role, content, source_refs, read_at, created_at)
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        '[]'::jsonb,
+        ${input.readAtNow ? "COALESCE($5::timestamptz, NOW())" : "NULL"},
+        COALESCE($5::timestamptz, NOW())
+      )
       RETURNING id, agent_id, user_id, role, content, source_refs, read_at, created_at
     `,
-    [input.agentId, input.userId, input.role, JSON.stringify(input.content)]
+    [
+      input.agentId,
+      input.userId,
+      input.role,
+      JSON.stringify(input.content),
+      input.createdAt ?? null
+    ]
   );
 
   return rows[0]!;
+}
+
+function offsetDate(date: Date, milliseconds: number): Date {
+  return new Date(date.getTime() + milliseconds);
 }
 
 async function createAgent(

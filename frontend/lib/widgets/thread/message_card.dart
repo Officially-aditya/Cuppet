@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../../models/message.dart';
 import '../templates/checklist_template.dart';
+import '../templates/comparison_template.dart';
 import '../templates/data_summary_template.dart';
+import '../templates/daily_task_template.dart';
 import '../templates/plain_text_template.dart';
 import '../templates/progress_tracker_template.dart';
 import '../templates/streak_counter_template.dart';
@@ -112,7 +114,9 @@ class _TemplateRouter extends StatelessWidget {
       'urgency_list' => UrgencyListTemplate(data: data),
       'data_summary' => DataSummaryTemplate(data: data),
       'checklist' => ChecklistTemplate(data: data),
+      'daily_task' => DailyTaskTemplate(data: data),
       'streak_counter' => StreakCounterTemplate(data: data),
+      'comparison' => ComparisonTemplate(data: data),
       'system' => SystemTemplate(data: data),
       _ => const PlainTextTemplate(
         data: {

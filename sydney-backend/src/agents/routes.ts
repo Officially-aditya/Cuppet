@@ -61,10 +61,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           COALESCE(latest_message.created_at, a.last_message_at, a.updated_at, a.created_at) AS latest_message_at
         FROM agents a
         LEFT JOIN LATERAL (
-          SELECT id, content, created_at
+          SELECT id, role, content, created_at
           FROM agent_messages
           WHERE agent_id = a.id AND user_id = a.user_id
-          ORDER BY created_at DESC
+          ORDER BY
+            created_at DESC,
+            CASE role
+              WHEN 'agent' THEN 0
+              WHEN 'system' THEN 1
+              WHEN 'user' THEN 2
+              ELSE 3
+            END ASC
           LIMIT 1
         ) latest_message ON TRUE
         WHERE a.user_id = $1

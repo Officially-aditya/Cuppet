@@ -16,6 +16,7 @@ class Connector {
     this.category = 'EMAIL & COMMUNICATION',
     this.iconName,
     this.requiredScopes = const [],
+    this.authConfigured = false,
   });
 
   final String id;
@@ -25,8 +26,10 @@ class Connector {
   final String category;
   final String? iconName;
   final List<String> requiredScopes;
+  final bool authConfigured;
 
   bool get isConnected => status == ConnectorStatus.connected;
+  bool get shouldUseOAuth => authConfigured && requiredScopes.isNotEmpty;
 
   Connector copyWith({
     String? id,
@@ -36,6 +39,7 @@ class Connector {
     String? category,
     String? iconName,
     List<String>? requiredScopes,
+    bool? authConfigured,
   }) {
     return Connector(
       id: id ?? this.id,
@@ -45,6 +49,7 @@ class Connector {
       category: category ?? this.category,
       iconName: iconName ?? this.iconName,
       requiredScopes: requiredScopes ?? this.requiredScopes,
+      authConfigured: authConfigured ?? this.authConfigured,
     );
   }
 
@@ -59,6 +64,8 @@ class Connector {
       requiredScopes: _stringList(
         json['requiredScopes'] ?? json['required_scopes'],
       ),
+      authConfigured:
+          json['authConfigured'] == true || json['auth_configured'] == true,
     );
   }
 
@@ -71,6 +78,7 @@ class Connector {
       'category': category,
       'iconName': iconName,
       'requiredScopes': requiredScopes,
+      'authConfigured': authConfigured,
     };
   }
 }

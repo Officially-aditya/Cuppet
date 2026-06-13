@@ -10,12 +10,35 @@ class ChecklistTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = data['title']?.toString() ?? 'Checklist';
+    final subtitle = data['subtitle']?.toString();
+    final message = data['message']?.toString();
     final items = _maps(data['items']);
+    final footer = data['footer']?.toString();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: Theme.of(context).textTheme.titleMedium),
+        if (subtitle != null && subtitle.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.xs),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: SydneyColors.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+        ],
+        if (message != null && message.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.sm),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: SydneyColors.onSurface,
+              height: 1.35,
+            ),
+          ),
+        ],
         const SizedBox(height: SydneySpacing.md),
         if (items.isEmpty)
           Text(
@@ -49,6 +72,16 @@ class ChecklistTemplate extends StatelessWidget {
                 ],
               ),
             ),
+        if (footer != null && footer.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.sm),
+          Text(
+            footer,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: SydneyColors.mutedInk,
+              height: 1.35,
+            ),
+          ),
+        ],
       ],
     );
   }

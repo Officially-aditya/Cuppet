@@ -42,23 +42,64 @@ class ConnectorsController extends AsyncNotifier<List<Connector>> {
 
   void toggle(String connectorId) {
     final current = state.asData?.value ?? const <Connector>[];
+    Connector? connector;
+    for (final item in current) {
+      if (item.id == connectorId) {
+        connector = item;
+        break;
+      }
+    }
+
+    if (connector == null) {
+      return;
+    }
+
+    setConnected(connectorId, connected: !connector.isConnected);
+  }
+
+  Future<void> setConnected(
+    String connectorId, {
+    required bool connected,
+  }) async {
+    final current = state.asData?.value ?? const <Connector>[];
+    Connector? selected;
+    for (final connector in current) {
+      if (connector.id == connectorId) {
+        selected = connector;
+        break;
+      }
+    }
+
+    if (connected && selected?.shouldUseOAuth == true) {
+      await link(connectorId);
+      return;
+    }
+
     state = AsyncValue.data([
       for (final connector in current)
         if (connector.id == connectorId)
-          connector.copyWith(status: _nextStatus(connector.status))
+          connector.copyWith(
+            status:
+                connected
+                    ? ConnectorStatus.connected
+                    : ConnectorStatus.disconnected,
+          )
         else
           connector,
     ]);
-  }
-}
 
-ConnectorStatus _nextStatus(ConnectorStatus status) {
-  return switch (status) {
-    ConnectorStatus.connected => ConnectorStatus.disconnected,
-    ConnectorStatus.disconnected => ConnectorStatus.connected,
-    ConnectorStatus.actionRequired => ConnectorStatus.connected,
-    ConnectorStatus.linking => ConnectorStatus.connected,
-    ConnectorStatus.oauth => ConnectorStatus.connected,
-    ConnectorStatus.connecting => ConnectorStatus.connected,
-  };
+    try {
+      final updated = await ref
+          .read(connectorServiceProvider)
+          .setConnectorConnected(connectorId, connected: connected);
+      final latest = await ref.read(connectorServiceProvider).listConnectors();
+      state = AsyncValue.data([
+        for (final connector in latest)
+          connector.id == updated.id ? updated : connector,
+      ]);
+    } catch (error, stackTrace) {
+      state = AsyncValue.data(current);
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
 }

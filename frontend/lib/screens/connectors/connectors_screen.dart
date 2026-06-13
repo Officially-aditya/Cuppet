@@ -128,9 +128,6 @@ class _ConnectorList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visible =
-        connectors.where((connector) => !connector.isDisconnected).toList();
-
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -148,20 +145,20 @@ class _ConnectorList extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: SydneySpacing.lg),
-        if (visible.isEmpty)
+        if (connectors.isEmpty)
           const SydneyEmptyState(
             icon: Icons.public_rounded,
-            title: 'No connectors approved',
-            message: 'Add a connector to approve backend access.',
+            title: 'No connectors available',
+            message: 'Connector options will appear here when they load.',
           )
         else
-          for (final connector in visible) ...[
+          for (final connector in connectors) ...[
             ConnectorListItem(
               connector: connector,
-              onToggle:
-                  () => ref
+              onConnectedChanged:
+                  (connected) => ref
                       .read(connectorsProvider.notifier)
-                      .toggle(connector.id),
+                      .setConnected(connector.id, connected: connected),
             ),
             const SizedBox(height: SydneySpacing.md),
           ],
@@ -185,8 +182,4 @@ class _ConnectorLoading extends StatelessWidget {
       itemCount: 3,
     );
   }
-}
-
-extension on Connector {
-  bool get isDisconnected => status == ConnectorStatus.disconnected;
 }

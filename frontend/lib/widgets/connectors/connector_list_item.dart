@@ -7,34 +7,40 @@ import '../sydney_primitives.dart';
 class ConnectorListItem extends StatelessWidget {
   const ConnectorListItem({
     required this.connector,
-    required this.onToggle,
+    required this.onConnectedChanged,
     this.compact = false,
     super.key,
   });
 
   final Connector connector;
-  final VoidCallback onToggle;
+  final ValueChanged<bool> onConnectedChanged;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return SydneyPanel(
-      onTap: compact ? onToggle : null,
+      onTap: compact ? () => onConnectedChanged(!connector.isConnected) : null,
       padding: EdgeInsets.all(compact ? SydneySpacing.md : SydneySpacing.lg),
       shadow: !compact,
       child:
           compact
               ? _CompactConnector(connector: connector)
-              : _AdvancedConnector(connector: connector, onToggle: onToggle),
+              : _AdvancedConnector(
+                connector: connector,
+                onConnectedChanged: onConnectedChanged,
+              ),
     );
   }
 }
 
 class _AdvancedConnector extends StatelessWidget {
-  const _AdvancedConnector({required this.connector, required this.onToggle});
+  const _AdvancedConnector({
+    required this.connector,
+    required this.onConnectedChanged,
+  });
 
   final Connector connector;
-  final VoidCallback onToggle;
+  final ValueChanged<bool> onConnectedChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +78,10 @@ class _AdvancedConnector extends StatelessWidget {
           ],
         ),
         const SizedBox(height: SydneySpacing.md),
-        _ConnectorStatusLine(connector: connector, onToggle: onToggle),
+        _ConnectorStatusLine(
+          connector: connector,
+          onConnectedChanged: onConnectedChanged,
+        ),
       ],
     );
   }
@@ -105,22 +114,30 @@ class _CompactConnector extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (connector.isConnected)
+                  if (connector.isConnected || connector.status == ConnectorStatus.actionRequired)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.check_rounded,
-                          color: SydneyColors.primary,
+                        Icon(
+                          connector.isConnected
+                              ? Icons.check_rounded
+                              : Icons.error_outline_rounded,
+                          color:
+                              connector.isConnected
+                                  ? SydneyColors.primary
+                                  : SydneyColors.warning,
                           size: 10,
                         ),
                         const SizedBox(width: 2),
                         Text(
-                          'Active',
+                          connector.isConnected ? 'Active' : 'Reconnect',
                           style: Theme.of(
                             context,
                           ).textTheme.labelSmall?.copyWith(
-                            color: SydneyColors.primary,
+                            color:
+                                connector.isConnected
+                                    ? SydneyColors.primary
+                                    : SydneyColors.warning,
                             fontSize: 9,
                           ),
                         ),
@@ -146,81 +163,74 @@ class _CompactConnector extends StatelessWidget {
 }
 
 class _ConnectorStatusLine extends StatelessWidget {
-  const _ConnectorStatusLine({required this.connector, required this.onToggle});
+  const _ConnectorStatusLine({
+    required this.connector,
+    required this.onConnectedChanged,
+  });
 
   final Connector connector;
-  final VoidCallback onToggle;
+  final ValueChanged<bool> onConnectedChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (connector.status == ConnectorStatus.connected) {
-      return Row(
-        children: [
-          const Icon(
-            Icons.check_rounded,
-            color: SydneyColors.primary,
-            size: 16,
-          ),
-          const SizedBox(width: SydneySpacing.sm),
-          Text(
-            'CONNECTED',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: SydneyColors.primary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      );
-    }
-
-    final label = switch (connector.status) {
-      ConnectorStatus.oauth => 'Opening OAuth',
-      ConnectorStatus.connecting => 'Connecting...',
-      ConnectorStatus.linking => 'Opening authorization',
-      ConnectorStatus.actionRequired => 'Action required',
-      ConnectorStatus.disconnected => 'Ready to connect',
-      ConnectorStatus.connected => 'CONNECTED',
-    };
-    final buttonLabel = switch (connector.status) {
-      ConnectorStatus.oauth => 'Opening...',
-      ConnectorStatus.connecting => 'Connecting...',
-      ConnectorStatus.linking => 'Opening...',
-      ConnectorStatus.actionRequired => 'Review',
-      ConnectorStatus.disconnected => 'Connect',
-      ConnectorStatus.connected => 'Connected',
-    };
-    final disabled =
-        connector.status == ConnectorStatus.connecting ||
-        connector.status == ConnectorStatus.linking;
+    final connected = connector.isConnected;
+    final actionRequired = connector.status == ConnectorStatus.actionRequired;
+    final label =
+        connected
+            ? 'CONNECTED'
+            : actionRequired
+            ? 'RECONNECT REQUIRED'
+            : 'DISCONNECTED';
+    final statusColor =
+        connected
+            ? SydneyColors.primary
+            : actionRequired
+            ? SydneyColors.warning
+            : SydneyColors.onSurfaceVariant;
 
     return Row(
       children: [
-        const SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: SydneyColors.primary,
-          ),
+        Icon(
+          connected
+              ? Icons.radio_button_checked_rounded
+              : actionRequired
+              ? Icons.error_outline_rounded
+              : Icons.radio_button_unchecked_rounded,
+          color:
+              connected
+                  ? SydneyColors.primary
+                  : actionRequired
+                  ? SydneyColors.warning
+                  : SydneyColors.outline,
+          size: 18,
         ),
         const SizedBox(width: SydneySpacing.sm),
         Expanded(
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: SydneyColors.onSurfaceVariant,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: statusColor,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
         const SizedBox(width: SydneySpacing.sm),
-        FilledButton(
-          onPressed: disabled ? null : onToggle,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 32),
-            padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.md),
-            textStyle: Theme.of(context).textTheme.labelSmall,
+        Semantics(
+          label: '${connector.name} connector',
+          value:
+              connected
+                  ? 'Connected'
+                  : actionRequired
+                  ? 'Reconnect required'
+                  : 'Disconnected',
+          child: Switch.adaptive(
+            value: connected,
+            activeThumbColor: SydneyColors.onPrimary,
+            activeTrackColor: SydneyColors.primary,
+            inactiveThumbColor: SydneyColors.onPrimary,
+            inactiveTrackColor: SydneyColors.surfaceDim,
+            onChanged: onConnectedChanged,
           ),
-          child: Text(buttonLabel),
         ),
       ],
     );

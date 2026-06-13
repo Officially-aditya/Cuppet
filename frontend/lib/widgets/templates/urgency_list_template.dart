@@ -41,6 +41,16 @@ class UrgencyListTemplate extends StatelessWidget {
                           item['label']?.toString() ?? 'Untitled item',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
+                        if (item['preview'] != null)
+                          Text(
+                            item['preview'].toString(),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color: SydneyColors.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                          ),
                         if (item['due'] != null)
                           Text(
                             item['due'].toString(),

@@ -1,18 +1,9 @@
 import { config } from "../config.js";
 import type { AgentRunTrigger } from "../queue/index.js";
+import { renderedPlainText, type RenderedAgentMessage } from "./output.js";
 
-export type PlainTextMessageContent = {
-  template: "plain_text";
-  version: "1.0";
-  data: {
-    body: string;
-  };
-};
-
-export type RenderedAgentMessage = {
-  content: PlainTextMessageContent;
-  sourceRefs: SourceRef[];
-  tokensUsed: number;
+type NewsBriefOptions = {
+  heading?: string;
 };
 
 type SourceRef = {
@@ -103,22 +94,55 @@ const maxContinuationTurns = 2;
 
 export async function createTechNewsBrief(
   userPrompt: string,
-  trigger: AgentRunTrigger
+  trigger: AgentRunTrigger,
+  options: NewsBriefOptions = {}
 ): Promise<RenderedAgentMessage> {
+  return createWebNewsBrief({
+    options,
+    systemPrompt: buildNewsSystemPrompt({
+      agentName: "Tech News Agent",
+      focus:
+        "Prefer AI, developer platforms, consumer tech, security, and policy stories."
+    }),
+    userMessage: buildTechNewsPrompt(userPrompt, trigger)
+  });
+}
+
+export async function createGeneralNewsBrief(
+  userPrompt: string,
+  trigger: AgentRunTrigger,
+  options: NewsBriefOptions = {}
+): Promise<RenderedAgentMessage> {
+  return createWebNewsBrief({
+    options,
+    systemPrompt: buildNewsSystemPrompt({
+      agentName: "News Agent",
+      focus:
+        "Prefer high-impact world, business, technology, policy, science, and India-relevant stories."
+    }),
+    userMessage: buildGeneralNewsPrompt(userPrompt, trigger)
+  });
+}
+
+async function createWebNewsBrief(input: {
+  options: NewsBriefOptions;
+  systemPrompt: string;
+  userMessage: string;
+}): Promise<RenderedAgentMessage> {
   if (!config.ANTHROPIC_API_KEY) {
     throw new Error(
-      "ANTHROPIC_API_KEY is required to run the Tech News agent."
+      "ANTHROPIC_API_KEY is required to run web-search news agents."
     );
   }
 
   const messages: AnthropicMessageParam[] = [
     {
       role: "user",
-      content: buildTechNewsPrompt(userPrompt, trigger)
+      content: input.userMessage
     }
   ];
 
-  let response = await createAnthropicMessage(messages);
+  let response = await createAnthropicMessage(messages, input.systemPrompt);
   let tokensUsed = totalTokens(response);
   const allContent = [...response.content];
 
@@ -131,7 +155,7 @@ export async function createTechNewsBrief(
       role: "assistant",
       content: response.content
     });
-    response = await createAnthropicMessage(messages);
+    response = await createAnthropicMessage(messages, input.systemPrompt);
     tokensUsed += totalTokens(response);
     allContent.push(...response.content);
   }
@@ -146,21 +170,15 @@ export async function createTechNewsBrief(
     throw new Error("Anthropic returned no Tech News brief text.");
   }
 
-  return {
-    content: {
-      template: "plain_text",
-      version: "1.0",
-      data: {
-        body
-      }
-    },
+  return renderedPlainText(withHeading(body, input.options.heading), {
     sourceRefs: extractSourceRefs(allContent),
     tokensUsed
-  };
+  });
 }
 
 async function createAnthropicMessage(
-  messages: AnthropicMessageParam[]
+  messages: AnthropicMessageParam[],
+  systemPrompt: string
 ): Promise<AnthropicMessageResponse> {
   const response = await fetch(anthropicMessagesUrl, {
     method: "POST",
@@ -172,14 +190,7 @@ async function createAnthropicMessage(
     body: JSON.stringify({
       model: config.ANTHROPIC_MODEL,
       max_tokens: 1200,
-      system: [
-        "You are Sydney's Tech News Agent.",
-        "Use web search for current information.",
-        "Return only the final digest. Do not mention that you searched.",
-        "Keep it concise: one short headline sentence, then three numbered items.",
-        "Each numbered item should include why it matters in one sentence.",
-        "Do not insert line breaks inside a numbered item."
-      ].join(" "),
+      system: systemPrompt,
       messages,
       tools: [
         {
@@ -204,20 +215,60 @@ async function createAnthropicMessage(
   return payload as AnthropicMessageResponse;
 }
 
+function buildNewsSystemPrompt(input: {
+  agentName: string;
+  focus: string;
+}): string {
+  return [
+    `You are Sydney's ${input.agentName}.`,
+    "Use web search for current information.",
+    "Return only the final digest. Do not mention that you searched.",
+    "Keep it concise: one short headline sentence, then three numbered items.",
+    "Each numbered item should include why it matters in one sentence.",
+    input.focus,
+    "Avoid rumors, minor product updates, duplicate stories, and market-price-only items.",
+    "Do not insert line breaks inside a numbered item."
+  ].join(" ");
+}
+
 function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
   return [
     "Create today's technology news brief.",
     `Original user request: ${userPrompt}`,
     `Run trigger: ${trigger}.`,
     "Search the web for recent, high-signal technology news from reputable sources.",
-    "Prefer AI, developer platforms, consumer tech, security, and policy stories.",
-    "Avoid rumors, minor product updates, duplicate stories, and market-price-only items.",
     "Use this exact output shape:",
     "Tech news brief for today:",
     "1. <headline>: <summary and why it matters>",
     "2. <headline>: <summary and why it matters>",
     "3. <headline>: <summary and why it matters>"
   ].join("\n");
+}
+
+function buildGeneralNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
+  return [
+    "Create today's news brief.",
+    `Original user request: ${userPrompt}`,
+    `Run trigger: ${trigger}.`,
+    "Search the web for recent, high-signal news from reputable sources.",
+    "Prioritize stories a busy user should know before starting the day.",
+    "Use this exact output shape:",
+    "News brief for today:",
+    "1. <headline>: <summary and why it matters>",
+    "2. <headline>: <summary and why it matters>",
+    "3. <headline>: <summary and why it matters>"
+  ].join("\n");
+}
+
+function withHeading(body: string, heading: string | undefined): string {
+  const cleanHeading = heading?.trim();
+  if (!cleanHeading) {
+    return body;
+  }
+
+  return body.startsWith(cleanHeading)
+    ? body
+    : [cleanHeading, body].join("\n\n");
 }
 
 function extractFinalText(content: AnthropicContentBlock[]): string {

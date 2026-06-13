@@ -46,7 +46,9 @@ class Message {
       'urgency_list' => data['title']?.toString() ?? 'Priority update',
       'data_summary' => data['title']?.toString() ?? 'Summary ready',
       'checklist' => data['title']?.toString() ?? 'Checklist update',
+      'daily_task' => data['title']?.toString() ?? 'Daily task',
       'streak_counter' => data['label']?.toString() ?? 'Streak update',
+      'comparison' => data['title']?.toString() ?? 'Comparison update',
       'system' =>
         data['text']?.toString() ??
             data['message']?.toString() ??

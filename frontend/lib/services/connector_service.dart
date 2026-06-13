@@ -72,6 +72,52 @@ class ConnectorService {
     return completeOAuth(connectorId, Uri.parse(callbackUrl));
   }
 
+  Future<Connector> setConnectorConnected(
+    String connectorId, {
+    required bool connected,
+  }) async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 240));
+      _mockConnectors ??= _mockConnectorList();
+      final index = _mockConnectors!.indexWhere(
+        (item) => item.id == connectorId,
+      );
+      if (index == -1) {
+        throw const ApiException('That connector is not available.');
+      }
+      final updated = _mockConnectors![index].copyWith(
+        status:
+            connected
+                ? ConnectorStatus.connected
+                : ConnectorStatus.disconnected,
+      );
+      _mockConnectors = [
+        for (final connector in _mockConnectors!)
+          connector.id == connectorId ? updated : connector,
+      ];
+      return updated;
+    }
+
+    try {
+      final response = await _api.post<Map<String, dynamic>>(
+        '/connectors/$connectorId/status',
+        data: {'connected': connected},
+      );
+      final data = response.data;
+      if (data == null) {
+        throw const ApiException('The connector did not return a status.');
+      }
+      return Connector.fromJson(data);
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        connected
+            ? 'We could not connect that connector.'
+            : 'We could not disconnect that connector.',
+      );
+    }
+  }
+
   Future<ConnectorOAuthSession> beginOAuth(String connectorId) async {
     try {
       final response = await _api.post<Map<String, dynamic>>(
