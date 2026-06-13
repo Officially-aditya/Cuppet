@@ -8,11 +8,22 @@ import '../../providers/connectors_provider.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 
-class ConnectorsScreen extends ConsumerWidget {
+class ConnectorsScreen extends ConsumerStatefulWidget {
   const ConnectorsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConnectorsScreen> createState() => _ConnectorsScreenState();
+}
+
+class _ConnectorsScreenState extends ConsumerState<ConnectorsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.invalidate(connectorsProvider));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final connectors = ref.watch(connectorsProvider);
 
     return Scaffold(

@@ -163,7 +163,17 @@ export function renderedDataSummary(
   data: DataSummaryMessageContent["data"],
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
-  return rendered("data_summary", data, meta);
+  return rendered("data_summary", normalizeDataSummary(data), meta);
+}
+
+export function digestSection(title: string, lines: string[]): string {
+  const cleaned = lines.map(cleanDigestLine).filter(Boolean);
+  if (cleaned.length === 0) return "";
+
+  return [
+    `${title}:`,
+    ...cleaned.map((line) => (line.startsWith("• ") ? line : `• ${line}`))
+  ].join("\n");
 }
 
 export function renderedUrgencyList(
@@ -222,4 +232,65 @@ function rendered<TTemplate extends AgentMessageContent["template"]>(
     sourceRefs: meta.sourceRefs ?? [],
     tokensUsed: meta.tokensUsed ?? 0
   };
+}
+
+function normalizeDataSummary(
+  data: DataSummaryMessageContent["data"]
+): DataSummaryMessageContent["data"] {
+  return {
+    ...data,
+    ...(typeof data.summary === "string"
+      ? { summary: normalizeSummaryText(data.summary) }
+      : {}),
+    ...(typeof data.description === "string"
+      ? { description: normalizeSummaryText(data.description) }
+      : {})
+  };
+}
+
+function normalizeSummaryText(value: string): string {
+  const sections = value
+    .split(/\n{2,}/)
+    .map((section) => section.trim())
+    .filter(Boolean);
+
+  if (sections.length > 1) {
+    return sections.map(normalizeSummarySection).join("\n\n");
+  }
+
+  return normalizeSummarySection(value);
+}
+
+function normalizeSummarySection(value: string): string {
+  const lines = value
+    .split("\n")
+    .map(cleanDigestLine)
+    .filter(Boolean);
+
+  if (lines.length <= 1) {
+    return lines[0] ?? "";
+  }
+
+  const [first, ...rest] = lines;
+  if (!first) {
+    return "";
+  }
+
+  if (first.endsWith(":")) {
+    return [
+      first,
+      ...rest.map((line) => (line.startsWith("• ") ? line : `• ${line}`))
+    ].join("\n");
+  }
+
+  return lines
+    .map((line) => (line.startsWith("• ") ? line : `• ${line}`))
+    .join("\n");
+}
+
+function cleanDigestLine(value: string): string {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/^[-*]\s+/, "")
+    .trim();
 }

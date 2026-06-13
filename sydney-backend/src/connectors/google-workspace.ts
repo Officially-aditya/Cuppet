@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEq
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import {
+  digestSection,
   renderedChecklist,
   renderedDataSummary,
   renderedPlainText,
@@ -56,6 +57,14 @@ type GmailMessage = {
     headers?: Array<{ name?: string; value?: string }>;
   };
   internalDate?: string;
+};
+
+type GmailDigestItem = {
+  subject: string;
+  sender: string;
+  snippet: string;
+  category: "attention" | "finance" | "system" | "update";
+  line: string;
 };
 
 type DriveFile = {
@@ -376,11 +385,12 @@ async function renderGmailAgent(
 
   return renderedDataSummary(
     {
-      title,
+      title: "Mailbox highlights",
       text: options.scheduledIntro(agent, gmailOutputLabel(intent)),
-      summary: messages.slice(0, 5).map(compactMessageLine).join("\n"),
+      summary: buildEmailDigestSummary(messages),
       metrics: [
         { label: "Messages", value: String(messages.length) },
+        { label: "Needs review", value: String(reviewCount(messages)) },
         { label: "Source", value: "Gmail" }
       ],
       footer: "Summarized from Gmail metadata and snippets."
@@ -448,9 +458,9 @@ async function renderDriveAgent(
 
   return renderedDataSummary(
     {
-      title,
+      title: "Drive highlights",
       text: options.scheduledIntro(agent, driveOutputLabel(intent)),
-      summary: files.slice(0, 6).map(driveFileLine).join("\n"),
+      summary: buildDriveSummary(files),
       metrics: [
         { label: "Files", value: String(files.length) },
         { label: "Source", value: "Drive" }
@@ -771,10 +781,14 @@ async function googleJson<T>(url: URL, accessToken: string): Promise<T> {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   const body = (await response.json()) as T & {
-    error?: { message?: string; status?: string };
+    error?: {
+      message?: string;
+      status?: string;
+      errors?: Array<{ reason?: string; message?: string }>;
+    };
   };
 
-  if (response.status === 401 || response.status === 403) {
+  if (isGoogleAuthFailure(response.status, body)) {
     throw new ConnectorAuthRequiredError({
       connectorId: googleConnectorIdFromUrl(url),
       connectorName: googleConnectorName(googleConnectorIdFromUrl(url)),
@@ -783,10 +797,45 @@ async function googleJson<T>(url: URL, accessToken: string): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(body.error?.status ?? body.error?.message ?? "google_api_failed");
+    throw new Error(googleApiErrorReason(body));
   }
 
   return body;
+}
+
+function isGoogleAuthFailure(
+  status: number,
+  body: { error?: { message?: string; status?: string; errors?: Array<{ reason?: string }> } }
+): boolean {
+  if (status === 401) return true;
+  if (status !== 403) return false;
+
+  const googleStatus = body.error?.status;
+  const message = body.error?.message?.toLowerCase() ?? "";
+  const reasons = new Set(
+    (body.error?.errors ?? [])
+      .map((error) => error.reason?.toLowerCase())
+      .filter(Boolean)
+  );
+
+  return (
+    googleStatus === "UNAUTHENTICATED" ||
+    reasons.has("autherror") ||
+    reasons.has("insufficientpermissions") ||
+    message.includes("insufficient authentication scopes") ||
+    message.includes("request had insufficient authentication scopes")
+  );
+}
+
+function googleApiErrorReason(body: {
+  error?: {
+    message?: string;
+    status?: string;
+    errors?: Array<{ reason?: string; message?: string }>;
+  };
+}): string {
+  const reason = body.error?.errors?.find((error) => error.reason)?.reason;
+  return reason ?? body.error?.status ?? body.error?.message ?? "google_api_failed";
 }
 
 async function markConnectorActionRequired(
@@ -950,6 +999,176 @@ function compactMessageLine(message: GmailMessage): string {
   return [subject, from ? `from ${from}` : null, date].filter(Boolean).join(" - ");
 }
 
+function buildEmailDigestSummary(messages: GmailMessage[]): string {
+  const items = messages.map(gmailDigestItem);
+  const attention = items.filter((item) => item.category === "attention");
+  const finance = items.filter((item) => item.category === "finance");
+  const updates = items.filter(
+    (item) => item.category === "update" || item.category === "system"
+  );
+  const sections: string[] = [];
+
+  if (attention.length > 0) {
+    sections.push(
+      digestSection(
+        "Needs attention",
+        attention.slice(0, 3).map((item) => item.line)
+      )
+    );
+  }
+
+  if (finance.length > 0) {
+    sections.push(
+      digestSection(
+        "Bills and receipts",
+        finance.slice(0, 3).map((item) => item.line)
+      )
+    );
+  }
+
+  const remaining = updates
+    .filter((item) => !attention.includes(item) && !finance.includes(item))
+    .slice(0, Math.max(2, 5 - attention.length - finance.length));
+  if (remaining.length > 0) {
+    sections.push(
+      digestSection(
+        "Other updates",
+        remaining.map((item) => item.line)
+      )
+    );
+  }
+
+  const fallback = items
+    .filter(
+      (item) =>
+        !attention.includes(item) &&
+        !finance.includes(item) &&
+        !remaining.includes(item)
+    )
+    .slice(0, 5);
+  if (sections.length === 0 && fallback.length > 0) {
+    sections.push(
+      digestSection(
+        "Recent messages",
+        fallback.map((item) => item.line)
+      )
+    );
+  }
+
+  return [
+    ...sections,
+    "Open Gmail for full message bodies before taking action."
+  ].join("\n\n");
+}
+
+function reviewCount(messages: GmailMessage[]): number {
+  return messages.filter((message) =>
+    ["attention", "finance"].includes(gmailDigestItem(message).category)
+  ).length;
+}
+
+function gmailDigestItem(message: GmailMessage): GmailDigestItem {
+  const subject = cleanSubject(subjectOrFallback(message));
+  const sender = senderLabel(header(message, "From"));
+  const snippet = cleanSnippet(message.snippet ?? "");
+  const category = gmailDigestCategory(subject, sender, snippet);
+  const detail = digestDetail(subject, snippet);
+  const actionHint = categoryHint(category);
+
+  return {
+    subject,
+    sender,
+    snippet,
+    category,
+    line: [sender, detail, actionHint].filter(Boolean).join(" - ")
+  };
+}
+
+function gmailDigestCategory(
+  subject: string,
+  sender: string,
+  snippet: string
+): GmailDigestItem["category"] {
+  const text = `${subject} ${sender} ${snippet}`.toLowerCase();
+  if (/\b(failed|failure|urgent|action required|security alert|verify|blocked)\b/.test(text)) {
+    return "attention";
+  }
+  if (/\b(invoice|receipt|payment|paid|bill|e-bill|renewal|subscription|due)\b/.test(text)) {
+    return "finance";
+  }
+  if (/\b(build|deploy|system|notification|alert)\b/.test(text)) {
+    return "system";
+  }
+  return "update";
+}
+
+function digestDetail(subject: string, snippet: string): string {
+  const cleanedSnippet = snippet.replace(new RegExp(escapeRegExp(subject), "i"), "").trim();
+  if (cleanedSnippet && cleanedSnippet.length > 18) {
+    return `${subject}: ${truncateSentence(cleanedSnippet, 110)}`;
+  }
+  return subject;
+}
+
+function categoryHint(category: GmailDigestItem["category"]): string | null {
+  switch (category) {
+    case "attention":
+      return "check this first";
+    case "finance":
+      return "review if payment or records matter";
+    default:
+      return null;
+  }
+}
+
+function cleanSubject(subject: string): string {
+  const cleaned = decodeHtml(subject)
+    .replace(/^(re|fw|fwd):\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || "Gmail message";
+}
+
+function cleanSnippet(snippet: string): string {
+  return decodeHtml(snippet)
+    .replace(/\s+/g, " ")
+    .replace(/\s*-\s*from\s+.+$/i, "")
+    .trim();
+}
+
+function senderLabel(from: string | null): string {
+  if (!from) return "Unknown sender";
+  const decoded = decodeHtml(from).trim();
+  const quoted = decoded.match(/^"([^"]+)"/);
+  if (quoted?.[1]) return quoted[1];
+
+  const angle = decoded.match(/^([^<]+)</);
+  if (angle?.[1]?.trim()) return angle[1].trim().replace(/^'|'$/g, "");
+
+  const email = decoded.match(/[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})/i);
+  if (email?.[1]) return email[1].replace(/^mail\./, "");
+
+  return decoded;
+}
+
+function truncateSentence(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function messageDate(message: GmailMessage): string | undefined {
   const date = header(message, "Date");
   if (date) return date;
@@ -964,6 +1183,44 @@ function driveFileLine(file: DriveFile): string {
     ? `modified ${new Date(file.modifiedTime).toLocaleDateString("en-US")}`
     : "modified date unavailable";
   return `${file.name} (${modified})`;
+}
+
+function buildDriveSummary(files: DriveFile[]): string {
+  const docs = files
+    .filter((file) => file.mimeType?.includes("document"))
+    .slice(0, 3)
+    .map(driveDigestLine);
+  const pdfs = files
+    .filter((file) => file.mimeType === "application/pdf")
+    .slice(0, 3)
+    .map(driveDigestLine);
+  const other = files
+    .filter(
+      (file) =>
+        !file.mimeType?.includes("document") &&
+        file.mimeType !== "application/pdf"
+    )
+    .slice(0, Math.max(2, 5 - docs.length - pdfs.length))
+    .map(driveDigestLine);
+
+  return [
+    digestSection("Documents", docs),
+    digestSection("PDFs", pdfs),
+    digestSection("Other recent files", other),
+    "Open Drive for full document contents before taking action."
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function driveDigestLine(file: DriveFile): string {
+  const modified = file.modifiedTime
+    ? `updated ${new Date(file.modifiedTime).toLocaleDateString("en-US")}`
+    : "updated date unavailable";
+  const owner = file.owners?.[0]?.displayName
+    ? `owner ${file.owners[0].displayName}`
+    : null;
+  return [file.name, owner, modified].filter(Boolean).join(" - ");
 }
 
 function signOAuthState(payload: OAuthState): string {

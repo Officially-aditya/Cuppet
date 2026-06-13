@@ -6,6 +6,7 @@ import '../services/message_service.dart';
 import '../services/websocket_service.dart';
 import 'agents_provider.dart';
 import 'auth_provider.dart';
+import 'connectors_provider.dart';
 
 final messageServiceProvider = Provider<MessageService>((ref) {
   return MessageService(api: ref.watch(apiClientProvider));
@@ -66,6 +67,11 @@ void handleRealtimeEvent(WidgetRef ref, RealtimeEvent event) {
   final agentId = event.agentId;
   if (agentId != null && agentId.isNotEmpty) {
     ref.invalidate(messagesProvider(agentId));
+  }
+  if (event.type.startsWith('connector.') ||
+      event.data['action_required'] == true ||
+      event.data['connector_id'] != null) {
+    ref.invalidate(connectorsProvider);
   }
   ref.invalidate(agentsProvider);
 }
