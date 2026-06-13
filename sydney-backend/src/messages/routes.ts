@@ -412,7 +412,8 @@ async function handleAgentTextMessage(
       updatedAgent = await updateAgentInstructions(client, userId, agent, {
         prompt: decision.nextPrompt,
         parsedIntent: decision.nextParsedIntent,
-        scheduleCron: decision.nextScheduleCron ?? null
+        scheduleCron: decision.nextScheduleCron ?? null,
+        status: decision.nextStatus ?? agent.status
       });
     }
 
@@ -598,6 +599,7 @@ async function updateAgentInstructions(
     prompt: string;
     parsedIntent: ParsedIntent;
     scheduleCron: string | null;
+    status: "active" | "paused" | "error";
   }
 ): Promise<UpdatedAgentRow> {
   const { rows } = await client.query<UpdatedAgentRow>(
@@ -606,8 +608,9 @@ async function updateAgentInstructions(
       SET prompt = $1,
           parsed_intent = $2,
           schedule_cron = $3,
+          status = $4,
           last_message_at = NOW()
-      WHERE id = $4 AND user_id = $5
+      WHERE id = $5 AND user_id = $6
       RETURNING
         id,
         name,
@@ -627,6 +630,7 @@ async function updateAgentInstructions(
       update.prompt,
       JSON.stringify(update.parsedIntent),
       update.scheduleCron,
+      update.status,
       agent.id,
       userId
     ]
