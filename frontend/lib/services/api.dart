@@ -177,6 +177,13 @@ ApiException apiExceptionFrom(Object error, String fallback) {
     return error;
   }
   if (error is DioException) {
+    if (error.response == null) {
+      return const ApiException(
+        'Sydney could not reach the backend. Check your connection or install a build configured for the deployed API.',
+        statusCode: null,
+      );
+    }
+
     final data = error.response?.data;
     final message =
         data is Map

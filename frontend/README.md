@@ -42,7 +42,8 @@ flutter run -d chrome --web-port=5173 \
 
 # Android emulator
 flutter run \
-  --dart-define=SYDNEY_USE_MOCKS=false
+  --dart-define=SYDNEY_USE_MOCKS=false \
+  --dart-define=SYDNEY_GOOGLE_SERVER_CLIENT_ID=196727476983-mcou7vm9g1kar5nr9217sq3ljrbtv53g.apps.googleusercontent.com
 ```
 
 The Android emulator automatically uses `http://10.0.2.2:3000` for the local
@@ -55,6 +56,7 @@ with a Google Web application OAuth client:
 ```sh
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
+GOOGLE_ANDROID_CLIENT_ID=...
 AUTH_BASE_URL=https://your-dev-backend.example
 TRUSTED_ORIGINS=https://your-dev-backend.example,http://localhost:3000
 MOBILE_AUTH_CALLBACK_SCHEME=sydney

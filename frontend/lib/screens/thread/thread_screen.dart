@@ -25,6 +25,7 @@ class ThreadScreen extends ConsumerStatefulWidget {
 
 class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   final _scrollController = ScrollController();
+  int _lastRenderedMessageCount = -1;
 
   @override
   void initState() {
@@ -141,33 +142,39 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
           children: [
             Expanded(
               child: messages.when(
-                data:
-                    (items) => ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(
-                        SydneySpacing.page,
-                        SydneySpacing.lg,
-                        SydneySpacing.page,
-                        SydneySpacing.lg,
-                      ),
-                      itemCount: items.length + 2,
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return const _ThreadDayPill();
-                        }
-                        final messageIndex = index - 1;
-                        if (messageIndex == items.length) {
-                          return widget.agent.availability ==
-                                  AgentAvailability.thinking
-                              ? const TypingIndicator()
-                              : const SizedBox.shrink();
-                        }
-                        return MessageCard(
-                          message: items[messageIndex],
-                          onAction: _handleMessageAction,
-                        );
-                      },
+                data: (items) {
+                  if (_lastRenderedMessageCount != items.length) {
+                    _lastRenderedMessageCount = items.length;
+                    _scrollToBottomSoon();
+                  }
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(
+                      SydneySpacing.page,
+                      SydneySpacing.lg,
+                      SydneySpacing.page,
+                      SydneySpacing.lg,
                     ),
+                    itemCount: items.length + 2,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return const _ThreadDayPill();
+                      }
+                      final messageIndex = index - 1;
+                      if (messageIndex == items.length) {
+                        return widget.agent.availability ==
+                                AgentAvailability.thinking
+                            ? const TypingIndicator()
+                            : const SizedBox.shrink();
+                      }
+                      return MessageCard(
+                        message: items[messageIndex],
+                        onAction: _handleMessageAction,
+                      );
+                    },
+                  );
+                },
                 loading: () => const _ThreadLoading(),
                 error:
                     (error, _) => SydneyErrorState(
@@ -208,6 +215,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
+  }
+
+  void _scrollToBottomSoon() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        return;
+      }
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    });
   }
 
   void _handleMessageAction(Map<String, dynamic> action) {

@@ -18,4 +18,6 @@ while [ "$("$adb_bin" -s "$device_id" shell getprop sys.boot_completed 2>/dev/nu
   sleep 2
 done
 
-flutter run -d "$device_id" --dart-define=SYDNEY_USE_MOCKS=false
+flutter run -d "$device_id" \
+  --dart-define=SYDNEY_USE_MOCKS=false \
+  --dart-define=SYDNEY_GOOGLE_SERVER_CLIENT_ID=196727476983-mcou7vm9g1kar5nr9217sq3ljrbtv53g.apps.googleusercontent.com

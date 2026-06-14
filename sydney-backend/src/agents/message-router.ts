@@ -51,7 +51,7 @@ const unsupportedConnectors = [
   "notion"
 ];
 
-const connectorNames = ["gmail", "email", "mail", "inbox", "drive", "slack"];
+const connectorNames = ["gmail", "email", "mail", "mailbox", "inbox", "drive", "slack"];
 
 const runCommandWords = new Set([
   "brief",
@@ -416,6 +416,14 @@ function scoreRunNow(
     };
   }
 
+  if (asksForFreshAgentData(agent, lower)) {
+    return {
+      confidence: 0.88,
+      reason: "fresh_agent_data_request",
+      timeRange: timeRangeFromText(lower) ?? "latest"
+    };
+  }
+
   if (!hasRunCommand(lower)) {
     return { confidence: 0, reason: "no_run_command" };
   }
@@ -448,6 +456,36 @@ function hasRunCommand(lower: string): boolean {
   return /\b(send|show|give|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do)\b/.test(
     lower
   );
+}
+
+function asksForFreshAgentData(
+  agent: AgentMessageRouterContext,
+  lower: string
+): boolean {
+  if (!looksLikeQuestion(lower)) return false;
+
+  const asksFreshness =
+    /\b(?:anything|what(?:'s| is)?|any|latest|current|recent|new)\b/.test(lower) &&
+    /\b(?:new|latest|current|recent|today|today's|now|unread|updates?|changed?)\b/.test(lower);
+  if (!asksFreshness) return false;
+
+  const hasDataBackedAgent =
+    agent.parsed_intent.connector_ids.length > 0 ||
+    Boolean(agent.parsed_intent.connector) ||
+    ["data_summary", "urgency_list", "comparison", "checklist"].includes(
+      agent.parsed_intent.output_template
+    );
+  if (!hasDataBackedAgent) return false;
+
+  return (
+    mentionsAgentConnector(lower) ||
+    hasKnownOutputNoun(lower) ||
+    sharesAgentVocabulary(agent, lower)
+  );
+}
+
+function mentionsAgentConnector(lower: string): boolean {
+  return connectorNames.some((connector) => lower.includes(connector));
 }
 
 function hasCommandVerb(lower: string): boolean {
