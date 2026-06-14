@@ -119,6 +119,18 @@ const CAPABILITIES: CapabilityDefinition[] = [
     }
   },
   {
+    name: "Web Search",
+    avatar: "search",
+    intent: "web_search_agent",
+    connector: "web_search",
+    action: "Searches the web and summarizes relevant results.",
+    defaultSchedule: null,
+    outputTemplate: "plain_text",
+    permissionsNeeded: ["Web search (no login needed)"],
+    priority: 22,
+    match: { any: [/\bsearch(?:es|ing)?\b/, /\blook\s+up\b/] }
+  },
+  {
     name: "Weekly Progress",
     avatar: "file-check",
     intent: "weekly_progress_report",
@@ -538,6 +550,19 @@ export function parseIntent(prompt: string): ParsedIntent {
       connector: "web_search",
       action: "Searches and summarizes current news.",
       schedule_cron: parseSchedule(lower) ?? "0 7 * * *",
+      output_template: "plain_text",
+      permissions_needed: ["Web search (no login needed)"]
+    });
+  }
+
+  if (/\bsearch(?:es|ing)?\b/.test(lower) || /\blook\s+up\b/.test(lower)) {
+    return baseIntent(prompt, {
+      name: "Web Search",
+      avatar: "search",
+      intent: "web_search_agent",
+      connector: "web_search",
+      action: "Searches the web and summarizes relevant results.",
+      schedule_cron: parseSchedule(lower),
       output_template: "plain_text",
       permissions_needed: ["Web search (no login needed)"]
     });

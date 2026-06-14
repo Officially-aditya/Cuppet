@@ -18,7 +18,27 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(api: ref.watch(apiClientProvider));
 });
 
-final pushServiceProvider = Provider<PushService>((ref) => PushService());
+final pushServiceProvider = Provider<PushService>((ref) {
+  final api = ref.watch(apiClientProvider);
+  
+  return PushService(
+    onTokenRegistered: (token) async {
+      try {
+        await api.post('/notifications/register', data: {
+          'token': token,
+          'device_info': {
+            'platform': 'android',
+            'app_version': '0.1.0',
+          },
+        });
+        print('FCM token registered successfully');
+      } catch (e) {
+        print('Failed to register FCM token: $e');
+        rethrow;
+      }
+    },
+  );
+});
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, AuthState>(
   AuthController.new,

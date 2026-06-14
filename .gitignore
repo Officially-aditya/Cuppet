@@ -7,23 +7,33 @@ Thumbs.db
 .vscode/
 *.iml
 
-# Environment and secrets
+# Environment and secrets - CRITICAL
 .env
 .env.*
 !.env.example
 **/.env
 **/.env.*
 !**/.env.example
+
+# Firebase & Service Accounts - CRITICAL
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+firebase-service-account*.json
+*service-account*.json
+*firebase-adminsdk*.json
+
+# API Keys & Credentials - CRITICAL
 *.pem
 *.key
 *.p8
 *.p12
 *.mobileprovision
 *.provisionprofile
-google-services.json
-GoogleService-Info.plist
-firebase-service-account*.json
-*service-account*.json
+*.jks
+*.keystore
+key.properties
+**/key.properties
 
 # Logs
 logs/
@@ -63,10 +73,6 @@ captures/
 **/captures/
 .cxx/
 **/.cxx/
-key.properties
-**/key.properties
-*.keystore
-*.jks
 
 # iOS / CocoaPods / Xcode
 Pods/

@@ -14,11 +14,233 @@ class PlainTextTemplate extends StatelessWidget {
         data['text']?.toString() ??
         data['body']?.toString() ??
         'No message content was provided.';
-    return Text(
-      text,
-      style: Theme.of(
-        context,
-      ).textTheme.bodyMedium?.copyWith(color: textColor ?? SydneyColors.ink),
+    final blocks = _parseBlocks(text);
+    final color = textColor ?? SydneyColors.ink;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var index = 0; index < blocks.length; index++) ...[
+          _PlainTextBlockView(block: blocks[index], textColor: color),
+          if (index < blocks.length - 1)
+            SizedBox(height: blocks[index].spacingAfter),
+        ],
+      ],
     );
   }
+}
+
+enum _PlainTextBlockType { heading, paragraph, bullet, numbered }
+
+class _PlainTextBlock {
+  const _PlainTextBlock({required this.type, required this.text, this.number});
+
+  final _PlainTextBlockType type;
+  final String text;
+  final String? number;
+
+  double get spacingAfter {
+    return switch (type) {
+      _PlainTextBlockType.heading => SydneySpacing.sm,
+      _PlainTextBlockType.paragraph => SydneySpacing.md,
+      _PlainTextBlockType.bullet ||
+      _PlainTextBlockType.numbered => SydneySpacing.sm,
+    };
+  }
+}
+
+class _PlainTextBlockView extends StatelessWidget {
+  const _PlainTextBlockView({required this.block, required this.textColor});
+
+  final _PlainTextBlock block;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (block.type) {
+      _PlainTextBlockType.heading => Text.rich(
+        _inlineSpans(block.text, context, textColor, bold: true),
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(color: textColor, height: 1.25),
+      ),
+      _PlainTextBlockType.paragraph => Text.rich(
+        _inlineSpans(block.text, context, textColor),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.38),
+      ),
+      _PlainTextBlockType.bullet => _IndentedLine(
+        marker: '•',
+        text: block.text,
+        textColor: textColor,
+      ),
+      _PlainTextBlockType.numbered => _IndentedLine(
+        marker: '${block.number ?? '1'}.',
+        text: block.text,
+        textColor: textColor,
+      ),
+    };
+  }
+}
+
+class _IndentedLine extends StatelessWidget {
+  const _IndentedLine({
+    required this.marker,
+    required this.text,
+    required this.textColor,
+  });
+
+  final String marker;
+  final String text;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: marker == '•' ? 14 : 24,
+          child: Text(
+            marker,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w800,
+              height: 1.35,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text.rich(
+            _inlineSpans(text, context, textColor),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.35),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+List<_PlainTextBlock> _parseBlocks(String value) {
+  final blocks = <_PlainTextBlock>[];
+  final paragraphLines = <String>[];
+
+  void flushParagraph() {
+    if (paragraphLines.isEmpty) return;
+    blocks.add(
+      _PlainTextBlock(
+        type: _PlainTextBlockType.paragraph,
+        text: paragraphLines.join(' ').trim(),
+      ),
+    );
+    paragraphLines.clear();
+  }
+
+  for (final rawLine in value.split('\n')) {
+    final trimmed = rawLine.trim();
+    if (trimmed.isEmpty) {
+      flushParagraph();
+      continue;
+    }
+
+    final heading = _headingText(trimmed);
+    if (heading != null) {
+      flushParagraph();
+      blocks.add(
+        _PlainTextBlock(type: _PlainTextBlockType.heading, text: heading),
+      );
+      continue;
+    }
+
+    final bullet = RegExp(r'^[•*\-]\s+(.+)$').firstMatch(trimmed);
+    if (bullet != null) {
+      flushParagraph();
+      blocks.add(
+        _PlainTextBlock(
+          type: _PlainTextBlockType.bullet,
+          text: _cleanInline(bullet.group(1) ?? ''),
+        ),
+      );
+      continue;
+    }
+
+    final numbered = RegExp(r'^(\d{1,2})[.)]\s+(.+)$').firstMatch(trimmed);
+    if (numbered != null) {
+      flushParagraph();
+      blocks.add(
+        _PlainTextBlock(
+          type: _PlainTextBlockType.numbered,
+          number: numbered.group(1),
+          text: _cleanInline(numbered.group(2) ?? ''),
+        ),
+      );
+      continue;
+    }
+
+    paragraphLines.add(_cleanInline(trimmed));
+  }
+
+  flushParagraph();
+  return blocks.isEmpty
+      ? [_PlainTextBlock(type: _PlainTextBlockType.paragraph, text: value)]
+      : blocks;
+}
+
+String? _headingText(String value) {
+  final markdown = RegExp(r'^#{1,6}\s+(.+)$').firstMatch(value);
+  if (markdown != null) return _cleanInline(markdown.group(1) ?? '');
+
+  final boldOnly = RegExp(r'^\*\*([^*]+)\*\*:?\s*$').firstMatch(value);
+  if (boldOnly != null) return _cleanInline(boldOnly.group(1) ?? '');
+
+  final clean = _cleanInline(value);
+  if (clean.endsWith(':') && clean.length <= 70) {
+    return clean.substring(0, clean.length - 1);
+  }
+
+  return null;
+}
+
+TextSpan _inlineSpans(
+  String value,
+  BuildContext context,
+  Color color, {
+  bool bold = false,
+}) {
+  final baseStyle = TextStyle(
+    color: color,
+    fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
+  );
+  final spans = <TextSpan>[];
+  final pattern = RegExp(r'\*\*([^*]+)\*\*|__([^_]+)__');
+  var cursor = 0;
+
+  for (final match in pattern.allMatches(value)) {
+    if (match.start > cursor) {
+      spans.add(TextSpan(text: value.substring(cursor, match.start)));
+    }
+    spans.add(
+      TextSpan(
+        text: match.group(1) ?? match.group(2) ?? '',
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    );
+    cursor = match.end;
+  }
+
+  if (cursor < value.length) {
+    spans.add(TextSpan(text: value.substring(cursor)));
+  }
+
+  return TextSpan(style: baseStyle, children: spans);
+}
+
+String _cleanInline(String value) {
+  return value
+      .replaceFirst(RegExp(r'^#{1,6}\s*'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 }

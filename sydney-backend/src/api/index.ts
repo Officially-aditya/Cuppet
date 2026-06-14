@@ -4,6 +4,7 @@ import { requireAuth } from "../auth/middleware.js";
 import { authRoutes } from "../auth/routes.js";
 import { connectorRoutes } from "../connectors/routes.js";
 import { messageRoutes } from "../messages/routes.js";
+import { notificationRoutes } from "../notifications/routes.js";
 import { realtimeRoutes } from "../realtime/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
@@ -11,6 +12,7 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(agentRoutes);
   await app.register(connectorRoutes);
   await app.register(messageRoutes);
+  await app.register(notificationRoutes);
   await app.register(realtimeRoutes);
 
   app.get("/health", async () => ({

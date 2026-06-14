@@ -22,20 +22,43 @@ class PushSetupException implements Exception {
 }
 
 class PushService {
+  PushService({required this.onTokenRegistered});
+
+  final Future<void> Function(String token) onTokenRegistered;
+
   Future<PushSetupResult> configure() async {
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        throw const PushSetupException(
+          'Firebase not initialized. Cannot enable push notifications.',
+        );
       }
+      
       final settings = await FirebaseMessaging.instance.requestPermission();
       final token = await FirebaseMessaging.instance.getToken();
+      
+      if (token != null) {
+        // Register token with backend
+        await onTokenRegistered(token);
+        
+        // Listen for token refreshes
+        FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+          onTokenRegistered(newToken).catchError((error) {
+            print('Failed to refresh FCM token: $error');
+          });
+        });
+      }
+      
       return PushSetupResult(
         permissionStatus: settings.authorizationStatus,
         token: token,
       );
-    } catch (_) {
-      throw const PushSetupException(
-        'Push notifications need Firebase platform configuration before they can be enabled.',
+    } catch (e) {
+      if (e is PushSetupException) {
+        rethrow;
+      }
+      throw PushSetupException(
+        'Push notifications need Firebase platform configuration before they can be enabled. Error: $e',
       );
     }
   }

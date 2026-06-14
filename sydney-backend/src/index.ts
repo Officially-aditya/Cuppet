@@ -2,7 +2,11 @@ import { syncActiveAgentSchedules } from "./agents/scheduler.js";
 import { buildApp } from "./app.js";
 import { config } from "./config.js";
 import { closeDatabase } from "./db/index.js";
+import { initializeFirebase } from "./notifications/firebase.js";
 import { closeQueue } from "./queue/index.js";
+
+// Initialize Firebase on startup
+initializeFirebase();
 
 const app = await buildApp();
 

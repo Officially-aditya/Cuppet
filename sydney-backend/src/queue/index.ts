@@ -1,4 +1,8 @@
-import { Queue, type ConnectionOptions } from "bullmq";
+import {
+  Queue,
+  type ConnectionOptions,
+  type JobSchedulerJson
+} from "bullmq";
 import { config } from "../config.js";
 
 const redisUrl = new URL(config.REDIS_URL);
@@ -66,6 +70,12 @@ export async function scheduleAgentRun(
 
 export async function removeAgentSchedule(agentId: string): Promise<boolean> {
   return agentExecutorQueue.removeJobScheduler(agentSchedulerId(agentId));
+}
+
+export async function listAgentSchedules(): Promise<
+  Array<JobSchedulerJson<AgentExecutorJobData>>
+> {
+  return agentExecutorQueue.getJobSchedulers(0, -1, true);
 }
 
 function agentSchedulerId(agentId: string): string {

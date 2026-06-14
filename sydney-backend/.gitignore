@@ -1,20 +1,31 @@
 node_modules/
 dist/
 coverage/
+
+# Environment & Secrets - CRITICAL
 .env
 .env.*
 !.env.example
-.DS_Store
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-*.log
-*.tsbuildinfo
-.eslintcache
+
+# Firebase & Service Accounts - CRITICAL
 google-services.json
 firebase-service-account.json
 firebase-service-account*.json
 *service-account*.json
+*firebase-adminsdk*.json
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+*.log
+
+# Build & Development
+*.tsbuildinfo
+.eslintcache
+.DS_Store
+
+# Local runtime data
 postgres-data/
 redis-data/
 pgdata/

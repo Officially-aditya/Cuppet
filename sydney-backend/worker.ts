@@ -1,6 +1,10 @@
 import { closeDatabase } from "./src/db/index.js";
+import { initializeFirebase } from "./src/notifications/firebase.js";
 import { closeQueue } from "./src/queue/index.js";
 import { createAgentExecutorWorker } from "./src/workers/agent-executor.js";
+
+// Initialize Firebase on worker startup
+initializeFirebase();
 
 const worker = createAgentExecutorWorker();
 

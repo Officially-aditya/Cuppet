@@ -1,6 +1,10 @@
 import type { FastifyBaseLogger } from "fastify";
 import { pool } from "../db/index.js";
-import { removeAgentSchedule, scheduleAgentRun } from "../queue/index.js";
+import {
+  listAgentSchedules,
+  removeAgentSchedule,
+  scheduleAgentRun
+} from "../queue/index.js";
 import { parseIntent, type ParsedIntent } from "./parser.js";
 
 type SchedulableAgent = {
@@ -49,7 +53,34 @@ export async function syncActiveAgentSchedules(
     await syncAgentSchedule(agent);
   }
 
-  logger?.info({ count: rows.length }, "Synced active agent schedules");
+  const removed = await removeOrphanedAgentSchedules(
+    new Set(rows.map((agent) => agent.id))
+  );
+
+  logger?.info(
+    { count: rows.length, removed_orphaned_schedules: removed },
+    "Synced active agent schedules"
+  );
+}
+
+async function removeOrphanedAgentSchedules(activeAgentIds: Set<string>): Promise<number> {
+  const schedulers = await listAgentSchedules();
+  let removed = 0;
+
+  for (const scheduler of schedulers) {
+    const agentId = scheduler.key.startsWith("agent:")
+      ? scheduler.key.slice("agent:".length)
+      : null;
+
+    if (!agentId || activeAgentIds.has(agentId)) {
+      continue;
+    }
+
+    await removeAgentSchedule(agentId);
+    removed += 1;
+  }
+
+  return removed;
 }
 
 async function reconcileCustomAgentIntents(

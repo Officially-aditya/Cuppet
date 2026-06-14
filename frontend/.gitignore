@@ -15,10 +15,19 @@ emulator_*.log
 .vscode/
 *.iml
 
+# Android - CRITICAL: Never commit secrets
 android/.gradle/
 android/local.properties
 android/app/google-services.json
+
+# iOS - CRITICAL: Never commit secrets
 ios/Runner/GoogleService-Info.plist
+ios/Runner.xcworkspace/xcuserdata/
+
+# Firebase - CRITICAL: Never commit configuration
+lib/firebase_options.dart
+
+# Signing & keys - CRITICAL: Never commit credentials
 **/key.properties
 **/*.keystore
 **/*.jks

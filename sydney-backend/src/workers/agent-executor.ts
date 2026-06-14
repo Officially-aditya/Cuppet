@@ -29,6 +29,7 @@ import {
 import { isConnectorAuthRequiredError } from "../connectors/errors.js";
 import { renderGoogleWorkspaceAgent } from "../connectors/google-workspace.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
+import { sendPushNotification } from "../notifications/push.js";
 
 type AgentRow = {
   id: string;
@@ -140,6 +141,10 @@ const renderers: Record<string, AgentRenderer> = {
     createGeneralNewsBrief(agent.prompt, trigger, {
       heading: scheduledIntro(agent, "job market radar")
     }),
+  web_search_agent: ({ agent, trigger }) =>
+    createGeneralNewsBrief(agent.prompt, trigger, {
+      heading: scheduledIntro(agent, "web search")
+    }),
   scheduled_reminder: ({ agent, trigger }) =>
     renderScheduledReminder(agent, trigger),
   study_plan: ({ agent }) => renderStudyPlan(agent),
@@ -221,6 +226,19 @@ async function executeAgentJob(
       message_id: message.id,
       run_id: run.id,
       data: { trigger: job.data.trigger, tokens_used: rendered.tokensUsed }
+    });
+
+    // Send push notification
+    await sendPushNotification(pool, agent.user_id, {
+      title: agent.name,
+      body: extractNotificationBody(rendered.content),
+      data: {
+        agent_id: agent.id,
+        message_id: message.id,
+        run_id: run.id,
+      },
+    }).catch((error) => {
+      console.error("Failed to send push notification:", error);
     });
 
     return { runId: run.id, messageId: message.id };
@@ -1101,4 +1119,32 @@ function errorMessage(error: unknown): string {
   }
 
   return String(error).slice(0, 2000);
+}
+
+
+function extractNotificationBody(content: AgentMessageContent): string {
+  if (content.template === "plain_text" && content.data.body) {
+    const body = String(content.data.body);
+    // Extract first line or first 100 characters
+    const firstLine = body.split("\n")[0] || "";
+    return firstLine.length > 100 ? firstLine.substring(0, 97) + "..." : firstLine;
+  }
+
+  if (content.template === "data_summary" && content.data.text) {
+    return String(content.data.text).substring(0, 100);
+  }
+
+  if (content.template === "daily_task" && content.data.task) {
+    return String(content.data.task);
+  }
+
+  if (content.template === "urgency_list" && content.data.items?.[0]?.label) {
+    return String(content.data.items[0].label);
+  }
+
+  if (content.template === "checklist" && content.data.message) {
+    return String(content.data.message);
+  }
+
+  return "New message available";
 }
