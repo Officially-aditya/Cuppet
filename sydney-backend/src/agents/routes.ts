@@ -5,7 +5,8 @@ import { pool } from "../db/index.js";
 import { requireAuth } from "../auth/middleware.js";
 import { enqueueAgentRun } from "../queue/index.js";
 import { ensureAssistantContact } from "./assistant.js";
-import { parseIntent } from "./parser.js";
+import { parseIntentHybrid } from "./llm-intent.js";
+import type { ParsedIntent } from "./parser.js";
 import { removeScheduleForAgent, syncAgentSchedule } from "./scheduler.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 
@@ -96,7 +97,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const parsedIntent = parseIntent(body.data.prompt);
+    const parsedIntent = await parseIntentHybrid(body.data.prompt);
     if (parsedIntent.unsupported_connector) {
       return reply.code(422).send({
         error: {
@@ -366,7 +367,7 @@ async function getAgent(userId: string, agentId: string) {
 async function writeAgentCreatedMessage(
   userId: string,
   agentId: string,
-  parsedIntent: ReturnType<typeof parseIntent>
+  parsedIntent: ParsedIntent
 ): Promise<void> {
   const content = {
     template: "system",

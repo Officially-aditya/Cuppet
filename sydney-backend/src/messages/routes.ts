@@ -6,7 +6,10 @@ import {
   decideAgentInstruction,
   type AgentInstructionDecision
 } from "../agents/instruction-updater.js";
-import { parseIntent, type ParsedIntent } from "../agents/parser.js";
+import { parseIntentHybrid } from "../agents/llm-intent.js";
+import { refineAmbiguousAgentMessage } from "../agents/llm-message-router.js";
+import { routeAgentMessage } from "../agents/message-router.js";
+import type { ParsedIntent } from "../agents/parser.js";
 import { syncAgentSchedule } from "../agents/scheduler.js";
 import { requireAuth } from "../auth/middleware.js";
 import { pool } from "../db/index.js";
@@ -283,7 +286,7 @@ async function handleAssistantTextMessage(
   messages: MessageRow[];
   agent?: CreatedAgentRow;
 }> {
-  const parsedIntent = parseIntent(text);
+  const assistantMode = classifyAssistantMessage(text);
   const client = await pool.connect();
   let createdAgent: CreatedAgentRow | undefined;
   const userCreatedAt = new Date();
@@ -304,6 +307,29 @@ async function handleAssistantTextMessage(
       readAtNow: true,
       createdAt: userCreatedAt
     });
+
+    if (assistantMode === "chat") {
+      const assistantMessage = await insertMessage(client, {
+        agentId: assistantId,
+        userId,
+        role: "agent",
+        content: assistantChatContent(text),
+        createdAt: assistantCreatedAt
+      });
+
+      await touchAgentWithClient(client, userId, assistantId);
+      await client.query("COMMIT");
+      await publishMessageEvents(userId, [userMessage, assistantMessage]);
+
+      return {
+        message: userMessage,
+        agent_message: assistantMessage,
+        messages: [userMessage, assistantMessage],
+        assistant_message: assistantMessage
+      };
+    }
+
+    const parsedIntent = await parseIntentHybrid(text);
 
     if (parsedIntent.unsupported_connector) {
       const assistantMessage = await insertMessage(client, {
@@ -380,7 +406,14 @@ async function handleAgentTextMessage(
   };
 }> {
   const lastAgentReply = await latestAgentReplyText(userId, agent.id);
-  const decision = decideAgentInstruction(agent, text, { lastAgentReply });
+  const route = routeAgentMessage(agent, text);
+  const refinedRoute = route.intent === "clarification_needed"
+    ? await refineAmbiguousAgentMessage({ agent, text, route })
+    : null;
+  const decision = decideAgentInstruction(agent, text, {
+    lastAgentReply,
+    routeOverride: refinedRoute ?? route
+  });
   const client = await pool.connect();
   let updatedAgent: UpdatedAgentRow | undefined;
   let instructionUpdate: InstructionUpdateRow;
@@ -572,6 +605,36 @@ async function insertMessage(
 
 function offsetDate(date: Date, milliseconds: number): Date {
   return new Date(date.getTime() + milliseconds);
+}
+
+type AssistantMessageMode = "create_agent" | "chat";
+
+function classifyAssistantMessage(text: string): AssistantMessageMode {
+  const lower = text.trim().toLowerCase();
+  const explicitlyCreatesAgent =
+    /\b(?:create|make|build)\s+(?:a|an|new|the)?\s*agent\b/.test(lower) ||
+    /\bset\s+up\s+(?:a|an|new|the)?\s*agent\b/.test(lower) ||
+    /\bsetup\s+(?:a|an|new|the)?\s*agent\b/.test(lower);
+
+  if (explicitlyCreatesAgent) {
+    return "create_agent";
+  }
+
+  return "chat";
+}
+
+function assistantChatContent(text: string) {
+  const lower = text.trim().toLowerCase();
+  const body =
+    /\b(?:what can you do|what do you do|who are you)\b/.test(lower)
+      ? "I can chat, answer questions, explain Sydney, and use connected data when you approve connectors. I only create agents when you use New or explicitly ask me to create an agent."
+      : "I can help with that. To create an agent, use New or say something like: create an agent that sends me a Gmail digest at 6 PM.";
+
+  return {
+    template: "plain_text",
+    version: "1.0",
+    data: { body }
+  };
 }
 
 async function createAgent(

@@ -7,6 +7,7 @@ import {
   createGeneralNewsBrief,
   createTechNewsBrief
 } from "../agents/tech-news.js";
+import { renderLlmCustomAgent } from "../agents/custom-agent.js";
 import {
   renderedChecklist,
   renderedComparison,
@@ -478,6 +479,16 @@ async function renderCustomAgent(
 
   if (wantsDsaQuestion(text)) {
     return renderedPlainText(createDsaQuestionSection({ agentId: agent.id }));
+  }
+
+  const llmRendered = await renderLlmCustomAgent({
+    agentName: agent.name,
+    prompt: agent.prompt,
+    action: actionText(agent),
+    heading: scheduledIntro(agent, "update")
+  });
+  if (llmRendered) {
+    return llmRendered;
   }
 
   return renderedPlainText(

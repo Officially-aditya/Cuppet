@@ -2,6 +2,7 @@ import type { ParsedIntent } from "./parser.js";
 import {
   describeSchedule,
   routeAgentMessage,
+  type AgentMessageRoute,
   type AgentMessageRouterContext
 } from "./message-router.js";
 
@@ -41,7 +42,7 @@ export type AgentInstructionContext = AgentMessageRouterContext;
 export function decideAgentInstruction(
   agent: AgentInstructionContext,
   text: string,
-  context: { lastAgentReply?: string | null } = {}
+  context: { lastAgentReply?: string | null; routeOverride?: AgentMessageRoute | null } = {}
 ): AgentInstructionDecision {
   const trimmed = text.trim();
   if (confirmsPendingRun(trimmed, context.lastAgentReply)) {
@@ -58,7 +59,7 @@ export function decideAgentInstruction(
     };
   }
 
-  const route = routeAgentMessage(agent, trimmed);
+  const route = context.routeOverride ?? routeAgentMessage(agent, trimmed);
 
   switch (route.intent) {
     case "unsupported":

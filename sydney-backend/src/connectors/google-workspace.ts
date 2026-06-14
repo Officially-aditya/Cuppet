@@ -9,6 +9,7 @@ import {
   renderedUrgencyList,
   type RenderedAgentMessage
 } from "../agents/output.js";
+import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
 
 export type GoogleWorkspaceConnectorId = "gmail" | "drive";
@@ -383,11 +384,18 @@ async function renderGmailAgent(
     );
   }
 
+  const synthesized = await synthesizeConnectorDigest({
+    connectorName: "Gmail",
+    agentName: agent.name,
+    userPrompt: agent.prompt,
+    records: messages.map(gmailDigestRecord)
+  });
+
   return renderedDataSummary(
     {
       title: "Mailbox highlights",
       text: options.scheduledIntro(agent, gmailOutputLabel(intent)),
-      summary: buildEmailDigestSummary(messages),
+      summary: synthesized?.summary ?? buildEmailDigestSummary(messages),
       metrics: [
         { label: "Messages", value: String(messages.length) },
         { label: "Needs review", value: String(reviewCount(messages)) },
@@ -395,7 +403,7 @@ async function renderGmailAgent(
       ],
       footer: "Summarized from Gmail metadata and snippets."
     },
-    { sourceRefs }
+    { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
   );
 }
 
@@ -456,18 +464,25 @@ async function renderDriveAgent(
     );
   }
 
+  const synthesized = await synthesizeConnectorDigest({
+    connectorName: "Google Drive",
+    agentName: agent.name,
+    userPrompt: agent.prompt,
+    records: files.map(driveDigestRecord)
+  });
+
   return renderedDataSummary(
     {
       title: "Drive highlights",
       text: options.scheduledIntro(agent, driveOutputLabel(intent)),
-      summary: buildDriveSummary(files),
+      summary: synthesized?.summary ?? buildDriveSummary(files),
       metrics: [
         { label: "Files", value: String(files.length) },
         { label: "Source", value: "Drive" }
       ],
       footer: "Based on Google Drive file metadata."
     },
-    { sourceRefs }
+    { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
   );
 }
 
@@ -1084,6 +1099,20 @@ function gmailDigestItem(message: GmailMessage): GmailDigestItem {
   };
 }
 
+function gmailDigestRecord(message: GmailMessage): string {
+  const item = gmailDigestItem(message);
+  const date = messageDate(message);
+  return [
+    `Subject: ${item.subject}`,
+    `Sender: ${item.sender}`,
+    item.snippet ? `Snippet: ${item.snippet}` : null,
+    date ? `Date: ${date}` : null,
+    `Category hint: ${item.category}`
+  ]
+    .filter(Boolean)
+    .join(" | ");
+}
+
 function gmailDigestCategory(
   subject: string,
   sender: string,
@@ -1221,6 +1250,19 @@ function driveDigestLine(file: DriveFile): string {
     ? `owner ${file.owners[0].displayName}`
     : null;
   return [file.name, owner, modified].filter(Boolean).join(" - ");
+}
+
+function driveDigestRecord(file: DriveFile): string {
+  return [
+    `Name: ${file.name}`,
+    file.mimeType ? `Type: ${file.mimeType}` : null,
+    file.modifiedTime
+      ? `Modified: ${new Date(file.modifiedTime).toLocaleDateString("en-US")}`
+      : null,
+    file.owners?.[0]?.displayName ? `Owner: ${file.owners[0].displayName}` : null
+  ]
+    .filter(Boolean)
+    .join(" | ");
 }
 
 function signOAuthState(payload: OAuthState): string {

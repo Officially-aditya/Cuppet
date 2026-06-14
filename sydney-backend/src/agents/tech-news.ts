@@ -1,5 +1,13 @@
-import { config } from "../config.js";
 import type { AgentRunTrigger } from "../queue/index.js";
+import {
+  createAnthropicMessage,
+  extractAnthropicText,
+  totalAnthropicTokens,
+  type AnthropicContentBlock,
+  type AnthropicTextMessage,
+  type AnthropicTextBlock,
+  type AnthropicWebSearchToolResultBlock
+} from "./anthropic.js";
 import { renderedPlainText, type RenderedAgentMessage } from "./output.js";
 
 type NewsBriefOptions = {
@@ -14,50 +22,6 @@ type SourceRef = {
   page_age?: string;
 };
 
-type AnthropicMessageParam = {
-  role: "user" | "assistant";
-  content: string | AnthropicContentBlock[];
-};
-
-type AnthropicContentBlock =
-  | AnthropicTextBlock
-  | AnthropicServerToolUseBlock
-  | AnthropicWebSearchToolResultBlock;
-
-type AnthropicTextBlock = {
-  type: "text";
-  text: string;
-  citations?: AnthropicCitation[];
-};
-
-type AnthropicCitation = {
-  type: "web_search_result_location";
-  url: string;
-  title?: string | null;
-  cited_text?: string;
-  encrypted_index?: string;
-};
-
-type AnthropicServerToolUseBlock = {
-  type: "server_tool_use";
-  id: string;
-  name: "web_search" | string;
-  input?: {
-    query?: string;
-  };
-};
-
-type AnthropicWebSearchToolResultBlock = {
-  type: "web_search_tool_result";
-  tool_use_id: string;
-  content:
-    | AnthropicWebSearchResult[]
-    | {
-        type: "web_search_tool_result_error";
-        error_code: string;
-      };
-};
-
 type AnthropicWebSearchResult = {
   type: "web_search_result";
   url: string;
@@ -65,31 +29,6 @@ type AnthropicWebSearchResult = {
   page_age?: string;
 };
 
-type AnthropicMessageResponse = {
-  id: string;
-  role: "assistant";
-  content: AnthropicContentBlock[];
-  stop_reason: "end_turn" | "max_tokens" | "pause_turn" | "refusal" | string | null;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-    cache_creation_input_tokens?: number;
-    cache_read_input_tokens?: number;
-    server_tool_use?: {
-      web_search_requests?: number;
-    };
-  };
-};
-
-type AnthropicErrorResponse = {
-  error?: {
-    message?: string;
-    type?: string;
-  };
-};
-
-const anthropicMessagesUrl = "https://api.anthropic.com/v1/messages";
-const anthropicVersion = "2023-06-01";
 const maxContinuationTurns = 2;
 
 export async function createTechNewsBrief(
@@ -129,21 +68,15 @@ async function createWebNewsBrief(input: {
   systemPrompt: string;
   userMessage: string;
 }): Promise<RenderedAgentMessage> {
-  if (!config.ANTHROPIC_API_KEY) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is required to run web-search news agents."
-    );
-  }
-
-  const messages: AnthropicMessageParam[] = [
+  const messages: AnthropicTextMessage[] = [
     {
-      role: "user",
+      role: "user" as const,
       content: input.userMessage
     }
   ];
 
-  let response = await createAnthropicMessage(messages, input.systemPrompt);
-  let tokensUsed = totalTokens(response);
+  let response = await createNewsMessage(messages, input.systemPrompt);
+  let tokensUsed = totalAnthropicTokens(response);
   const allContent = [...response.content];
 
   for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
@@ -155,8 +88,8 @@ async function createWebNewsBrief(input: {
       role: "assistant",
       content: response.content
     });
-    response = await createAnthropicMessage(messages, input.systemPrompt);
-    tokensUsed += totalTokens(response);
+    response = await createNewsMessage(messages, input.systemPrompt);
+    tokensUsed += totalAnthropicTokens(response);
     allContent.push(...response.content);
   }
 
@@ -176,43 +109,22 @@ async function createWebNewsBrief(input: {
   });
 }
 
-async function createAnthropicMessage(
-  messages: AnthropicMessageParam[],
+async function createNewsMessage(
+  messages: AnthropicTextMessage[],
   systemPrompt: string
-): Promise<AnthropicMessageResponse> {
-  const response = await fetch(anthropicMessagesUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": config.ANTHROPIC_API_KEY!,
-      "anthropic-version": anthropicVersion
-    },
-    body: JSON.stringify({
-      model: config.ANTHROPIC_MODEL,
-      max_tokens: 1200,
-      system: systemPrompt,
-      messages,
-      tools: [
-        {
-          type: "web_search_20250305",
-          name: "web_search",
-          max_uses: 3
-        }
-      ]
-    })
+){
+  return createAnthropicMessage({
+    messages,
+    system: systemPrompt,
+    maxTokens: 1200,
+    tools: [
+      {
+        type: "web_search_20250305",
+        name: "web_search",
+        max_uses: 3
+      }
+    ]
   });
-
-  const payload = (await response.json()) as
-    | AnthropicMessageResponse
-    | AnthropicErrorResponse;
-
-  if (!response.ok) {
-    throw new Error(
-      `Anthropic Messages API failed (${response.status}): ${anthropicErrorMessage(payload)}`
-    );
-  }
-
-  return payload as AnthropicMessageResponse;
 }
 
 function buildNewsSystemPrompt(input: {
@@ -278,21 +190,13 @@ function extractFinalText(content: AnthropicContentBlock[]): string {
       ? content
       : content.slice(lastSearchResultIndex + 1);
 
-  const text = candidateBlocks
-    .filter((block): block is AnthropicTextBlock => block.type === "text")
-    .map((block) => block.text)
-    .filter(Boolean)
-    .join("");
+  const text = extractAnthropicText(candidateBlocks);
 
   if (text) {
     return normalizeDigestText(text);
   }
 
-  const fallbackText = content
-    .filter((block): block is AnthropicTextBlock => block.type === "text")
-    .map((block) => block.text)
-    .filter(Boolean)
-    .join("");
+  const fallbackText = extractAnthropicText(content);
 
   return normalizeDigestText(fallbackText);
 }
@@ -385,31 +289,4 @@ function extractSearchErrors(content: AnthropicContentBlock[]): string[] {
 
     return [];
   });
-}
-
-function totalTokens(response: AnthropicMessageResponse): number {
-  const usage = response.usage;
-  if (!usage) return 0;
-
-  let tokens = 0;
-  for (const value of [
-    usage.input_tokens,
-    usage.output_tokens,
-    usage.cache_creation_input_tokens,
-    usage.cache_read_input_tokens
-  ]) {
-    tokens += value ?? 0;
-  }
-
-  return tokens;
-}
-
-function anthropicErrorMessage(
-  payload: AnthropicMessageResponse | AnthropicErrorResponse
-): string {
-  if ("error" in payload) {
-    return payload.error?.message ?? payload.error?.type ?? "Unknown error";
-  }
-
-  return "Unknown error";
 }
