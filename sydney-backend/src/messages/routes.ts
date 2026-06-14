@@ -6,6 +6,7 @@ import {
   decideAgentInstruction,
   type AgentInstructionDecision
 } from "../agents/instruction-updater.js";
+import { createAssistantChatReply } from "../agents/assistant-chat.js";
 import { parseIntentHybrid } from "../agents/llm-intent.js";
 import { refineAmbiguousAgentMessage } from "../agents/llm-message-router.js";
 import { routeAgentMessage } from "../agents/message-router.js";
@@ -260,11 +261,7 @@ function clampLimit(rawLimit: string | undefined): number {
 
 function messageContent(body: z.infer<typeof sendMessageSchema>) {
   return body.text
-    ? {
-        template: "plain_text",
-        version: "1.0",
-        data: { body: body.text }
-      }
+    ? plainTextContent(body.text)
     : {
         template: "action",
         version: "1.0",
@@ -273,6 +270,14 @@ function messageContent(body: z.infer<typeof sendMessageSchema>) {
           payload: body.payload ?? {}
         }
       };
+}
+
+function plainTextContent(body: string) {
+  return {
+    template: "plain_text",
+    version: "1.0",
+    data: { body }
+  };
 }
 
 async function handleAssistantTextMessage(
@@ -309,11 +314,12 @@ async function handleAssistantTextMessage(
     });
 
     if (assistantMode === "chat") {
+      const reply = await createAssistantChatReply(text);
       const assistantMessage = await insertMessage(client, {
         agentId: assistantId,
         userId,
         role: "agent",
-        content: assistantChatContent(text),
+        content: plainTextContent(reply),
         createdAt: assistantCreatedAt
       });
 
@@ -621,20 +627,6 @@ function classifyAssistantMessage(text: string): AssistantMessageMode {
   }
 
   return "chat";
-}
-
-function assistantChatContent(text: string) {
-  const lower = text.trim().toLowerCase();
-  const body =
-    /\b(?:what can you do|what do you do|who are you)\b/.test(lower)
-      ? "I can chat, answer questions, explain Sydney, and use connected data when you approve connectors. I only create agents when you use New or explicitly ask me to create an agent."
-      : "I can help with that. To create an agent, use New or say something like: create an agent that sends me a Gmail digest at 6 PM.";
-
-  return {
-    template: "plain_text",
-    version: "1.0",
-    data: { body }
-  };
 }
 
 async function createAgent(
