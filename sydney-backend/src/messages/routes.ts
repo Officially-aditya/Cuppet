@@ -6,6 +6,7 @@ import {
   decideAgentInstruction,
   type AgentInstructionDecision
 } from "../agents/instruction-updater.js";
+import { createAgentChatReply } from "../agents/agent-chat.js";
 import { createAssistantChatReply } from "../agents/assistant-chat.js";
 import { parseIntentHybrid } from "../agents/llm-intent.js";
 import { refineAmbiguousAgentMessage } from "../agents/llm-message-router.js";
@@ -119,6 +120,34 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     );
 
     return { messages: rows.reverse() };
+  });
+
+  app.delete("/agents/:agentId/messages", { preHandler: requireAuth }, async (request, reply) => {
+    const { agentId } = request.params as { agentId: string };
+    const userId = request.auth!.userId;
+
+    if (!isUuid(agentId)) {
+      return agentNotFound(reply);
+    }
+
+    const agent = await getOwnedAgent(userId, agentId);
+    if (!agent) {
+      return agentNotFound(reply);
+    }
+
+    await pool.query(
+      "DELETE FROM agent_messages WHERE user_id = $1 AND agent_id = $2",
+      [userId, agentId]
+    );
+
+    await publishRealtimeEvent({
+      type: "messages.cleared",
+      user_id: userId,
+      agent_id: agentId,
+      data: {}
+    });
+
+    return reply.code(204).send();
   });
 
   app.post("/agents/:agentId/messages", { preHandler: requireAuth }, async (request, reply) => {
@@ -420,6 +449,30 @@ async function handleAgentTextMessage(
     lastAgentReply,
     routeOverride: refinedRoute ?? route
   });
+
+  // Generate LLM reply for chat follow-ups on agent output.
+  let chatReplyText = decision.reply;
+  if (decision.needsLlmReply) {
+    try {
+      const agentOutput = await latestAgentReply(userId, agent.id);
+      const recentUserMsgs = await recentUserMessageTexts(userId, agent.id, 2);
+      chatReplyText = await createAgentChatReply({
+        agent: {
+          name: agent.name,
+          prompt: agent.prompt,
+          parsed_intent: agent.parsed_intent
+        },
+        latestAgentOutput: agentOutput.body ?? "",
+        sourceRefs: agentOutput.sourceRefs,
+        recentUserMessages: recentUserMsgs,
+        userText: text
+      });
+    } catch {
+      // Fall back to the static reply from the decision.
+      chatReplyText = decision.reply;
+    }
+  }
+
   const client = await pool.connect();
   let updatedAgent: UpdatedAgentRow | undefined;
   let instructionUpdate: InstructionUpdateRow;
@@ -464,7 +517,7 @@ async function handleAgentTextMessage(
       content: {
         template: "plain_text",
         version: "1.0",
-        data: { body: decision.reply }
+        data: { body: chatReplyText }
       },
       createdAt: agentCreatedAt
     });
@@ -551,6 +604,62 @@ async function latestAgentReplyText(
   );
 
   return rows[0]?.body ?? null;
+}
+
+async function latestAgentReply(
+  userId: string,
+  agentId: string
+): Promise<{ body: string | null; sourceRefs: unknown[] }> {
+  const { rows } = await pool.query<{ body: string | null; source_refs: unknown[] }>(
+    `
+      SELECT COALESCE(
+        content #>> '{data,body}',
+        content #>> '{data,text}',
+        content #>> '{data,message}',
+        content #>> '{data,summary}'
+      ) AS body,
+      COALESCE(source_refs, '[]'::jsonb) AS source_refs
+      FROM agent_messages
+      WHERE user_id = $1
+        AND agent_id = $2
+        AND role = 'agent'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [userId, agentId]
+  );
+
+  return {
+    body: rows[0]?.body ?? null,
+    sourceRefs: rows[0]?.source_refs ?? []
+  };
+}
+
+async function recentUserMessageTexts(
+  userId: string,
+  agentId: string,
+  limit: number
+): Promise<string[]> {
+  const { rows } = await pool.query<{ body: string | null }>(
+    `
+      SELECT COALESCE(
+        content #>> '{data,body}',
+        content #>> '{data,text}'
+      ) AS body
+      FROM agent_messages
+      WHERE user_id = $1
+        AND agent_id = $2
+        AND role = 'user'
+      ORDER BY created_at DESC
+      LIMIT $3
+    `,
+    [userId, agentId, limit]
+  );
+
+  return rows
+    .map((row) => row.body)
+    .filter((body): body is string => body !== null && body.trim().length > 0)
+    .reverse();
 }
 
 async function writeUserMessage(

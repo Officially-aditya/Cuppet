@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
+import '../../models/agent.dart';
+import '../../providers/agents_provider.dart';
 import '../../widgets/sydney_primitives.dart';
 
-class AgentPreferencesScreen extends StatefulWidget {
-  const AgentPreferencesScreen({super.key});
+class AgentPreferencesScreen extends ConsumerStatefulWidget {
+  const AgentPreferencesScreen({required this.agent, super.key});
+
+  final Agent agent;
 
   @override
-  State<AgentPreferencesScreen> createState() => _AgentPreferencesScreenState();
+  ConsumerState<AgentPreferencesScreen> createState() => _AgentPreferencesScreenState();
 }
 
-class _AgentPreferencesScreenState extends State<AgentPreferencesScreen> {
+class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen> {
   String _responseTiming = 'real-time';
   double _responseLimit = 2;
   bool _runIndefinitely = false;
@@ -201,6 +206,46 @@ class _AgentPreferencesScreenState extends State<AgentPreferencesScreen> {
                 ],
               ),
             ),
+            if (!widget.agent.isAssistant) ...[
+              const SizedBox(height: SydneySpacing.lg),
+              const SydneySectionLabel('Danger Zone'),
+              SydneyPanel(
+                borderColor: const Color(0xFFFCA5A5),
+                color: const Color(0xFFFEF2F2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Delete agent',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: const Color(0xFF991B1B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Permanently delete this agent and all its messages. This action cannot be undone.',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: const Color(0xFFB91C1C),
+                        fontWeight: FontWeight.w400,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: SydneySpacing.md),
+                    OutlinedButton.icon(
+                      onPressed: _confirmDelete,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                      label: const Text('Delete Agent'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        minimumSize: const Size.fromHeight(40),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -213,6 +258,49 @@ class _AgentPreferencesScreenState extends State<AgentPreferencesScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete agent'),
+        content: Text(
+          'This will permanently delete "${widget.agent.name}" and all its messages. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref.read(agentServiceProvider).archiveAgent(widget.agent.id);
+      ref.invalidate(agentsProvider);
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"${widget.agent.name}" deleted.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
   }
 }
 

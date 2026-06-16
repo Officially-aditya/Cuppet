@@ -1,14 +1,95 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/sydney_primitives.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _pushEnabled = false;
+  bool _pushLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPushStatus();
+  }
+
+  Future<void> _checkPushStatus() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.getNotificationSettings();
+      final token = await messaging.getToken();
+      final enabled =
+          (settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus ==
+                  AuthorizationStatus.provisional) &&
+          token != null &&
+          token.isNotEmpty;
+      if (mounted) {
+        setState(() {
+          _pushEnabled = enabled;
+          _pushLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _pushLoading = false);
+      }
+    }
+  }
+
+  Future<void> _togglePush(bool enable) async {
+    setState(() => _pushLoading = true);
+    try {
+      if (enable) {
+        final result = await ref.read(pushServiceProvider).configure();
+        if (mounted) {
+          setState(() {
+            _pushEnabled = result.isEnabled;
+            _pushLoading = false;
+          });
+        }
+      } else {
+        await FirebaseMessaging.instance.deleteToken();
+        if (mounted) {
+          setState(() {
+            _pushEnabled = false;
+            _pushLoading = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _pushLoading = false);
+      }
+    }
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.asData?.value.user;
+    final displayName = user?.displayName ?? 'Sydney User';
+    final email = user?.email ?? '';
+    final initials = _initials(displayName);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -35,12 +116,12 @@ class SettingsScreen extends StatelessWidget {
             SydneyPanel(
               child: Row(
                 children: [
-                  const SydneyIconBadge(
+                  SydneyIconBadge(
                     size: 48,
                     radius: SydneyRadius.md,
                     color: SydneyColors.primarySoft,
                     foregroundColor: SydneyColors.primary,
-                    child: Text('AU'),
+                    child: Text(initials),
                   ),
                   const SizedBox(width: SydneySpacing.lg),
                   Expanded(
@@ -48,18 +129,20 @@ class SettingsScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Authenticated User',
+                          displayName,
                           style: Theme.of(
                             context,
                           ).textTheme.titleSmall?.copyWith(fontSize: 14),
                         ),
-                        const SizedBox(height: SydneySpacing.xs),
-                        Text(
-                          'user@session.local',
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: SydneyColors.mutedInk),
-                        ),
+                        if (email.isNotEmpty) ...[
+                          const SizedBox(height: SydneySpacing.xs),
+                          Text(
+                            email,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: SydneyColors.mutedInk),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -82,7 +165,9 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Enable message and agent status alerts.',
+                          _pushEnabled
+                              ? 'Message and agent status alerts are active.'
+                              : 'Enable to receive message and agent alerts.',
                           style: Theme.of(
                             context,
                           ).textTheme.labelSmall?.copyWith(
@@ -95,23 +180,22 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: SydneySpacing.md),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: SydneySpacing.xs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: SydneyColors.surface,
-                      borderRadius: BorderRadius.circular(SydneyRadius.full),
-                      border: Border.all(color: SydneyColors.line),
-                    ),
-                    child: Text(
-                      'Not configured',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: SydneyColors.outline,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                  SizedBox(
+                    height: 24,
+                    child: _pushLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: SydneyColors.primary,
+                            ),
+                          )
+                        : Switch.adaptive(
+                            value: _pushEnabled,
+                            activeTrackColor: SydneyColors.primary,
+                            onChanged: _togglePush,
+                          ),
                   ),
                 ],
               ),
@@ -183,10 +267,15 @@ class SettingsScreen extends StatelessWidget {
       ),
       bottomNavigationBar: SydneyFooter(
         child: OutlinedButton.icon(
-          onPressed:
-              () => Navigator.of(
-                context,
-              ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false),
+          onPressed: () async {
+            await ref.read(authControllerProvider.notifier).signOut();
+            if (context.mounted) {
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                AppRoutes.signIn,
+                (route) => false,
+              );
+            }
+          },
           icon: const Icon(Icons.logout_rounded, size: 16),
           label: const Text('Sign out'),
           style: OutlinedButton.styleFrom(

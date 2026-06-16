@@ -8,6 +8,7 @@ import 'design/tokens.dart';
 import 'models/agent.dart';
 import 'providers/auth_provider.dart';
 import 'providers/messages_provider.dart';
+import 'services/push_service.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/sign_up_screen.dart';
 import 'screens/connectors/add_connector_screen.dart';
@@ -43,7 +44,7 @@ class SydneyApp extends ConsumerWidget {
       AppRoutes.addConnector => _route(settings, const AddConnectorScreen()),
       AppRoutes.agentPreferences => _route(
         settings,
-        const AgentPreferencesScreen(),
+        AgentPreferencesScreen(agent: settings.arguments as Agent),
       ),
       AppRoutes.settings => _route(settings, const SettingsScreen()),
       AppRoutes.thread => _threadRoute(settings),
@@ -117,9 +118,21 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
   void initState() {
     super.initState();
     unawaited(
-      Future<void>.microtask(
-        () => ref.read(messageActionsProvider).connectLiveUpdates(),
-      ),
+      Future<void>.microtask(() async {
+        ref.read(messageActionsProvider).connectLiveUpdates();
+        // Initialize push notifications after authentication
+        try {
+          final result = await ref.read(pushServiceProvider).configure();
+          if (result.isEnabled) {
+            print('Push notifications enabled (token: ${result.token != null})');
+          } else {
+            print('Push notifications declined by user');
+          }
+        } on PushSetupException catch (e) {
+          // Firebase not configured or platform not supported — non-fatal
+          print('Push notification setup skipped: $e');
+        }
+      }),
     );
   }
 

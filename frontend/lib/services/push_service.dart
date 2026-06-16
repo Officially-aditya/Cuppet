@@ -58,7 +58,7 @@ class PushService {
         rethrow;
       }
       throw PushSetupException(
-        'Push notifications need Firebase platform configuration before they can be enabled. Error: $e',
+        'Could not configure push notifications. Check that notifications are allowed in your device settings.',
       );
     }
   }

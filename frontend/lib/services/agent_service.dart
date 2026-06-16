@@ -112,6 +112,35 @@ class AgentService {
       throw apiExceptionFrom(error, 'We could not run that agent.');
     }
   }
+
+  Future<void> patchAgent(String agentId, Map<String, dynamic> patch) async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      return;
+    }
+
+    try {
+      await _api.patch<Map<String, dynamic>>(
+        '/agents/$agentId',
+        data: patch,
+      );
+    } catch (error) {
+      throw apiExceptionFrom(error, 'Could not update the agent.');
+    }
+  }
+
+  Future<void> clearChat(String agentId) async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      return;
+    }
+
+    try {
+      await _api.delete<void>('/agents/$agentId/messages');
+    } catch (error) {
+      throw apiExceptionFrom(error, 'Could not clear the chat.');
+    }
+  }
 }
 
 List<Agent> _buildMockAgents() {

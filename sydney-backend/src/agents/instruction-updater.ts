@@ -31,6 +31,7 @@ export type AgentInstructionDecision = {
   reason: string;
   reply: string;
   patch: AgentInstructionPatch;
+  needsLlmReply?: boolean;
   nextPrompt?: string;
   nextParsedIntent?: ParsedIntent;
   nextScheduleCron?: string | null;
@@ -106,7 +107,8 @@ export function decideAgentInstruction(
         confidence: route.confidence,
         reason: route.reason,
         reply: chatReply(agent, route.intent),
-        patch: {}
+        patch: {},
+        needsLlmReply: route.intent === "chat" || route.intent === "ask_capability"
       };
 
     case "delete_agent":
