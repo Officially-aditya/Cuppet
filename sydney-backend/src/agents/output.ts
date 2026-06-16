@@ -128,6 +128,20 @@ export type ComparisonMessageContent = {
   };
 };
 
+export type NewsBriefItem = {
+  headline?: string;
+  summary: string;
+};
+
+export type NewsBriefMessageContent = {
+  template: "news_brief";
+  version: "1.0";
+  data: {
+    title: string;
+    items: NewsBriefItem[];
+  };
+};
+
 export type AgentMessageContent =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -136,7 +150,8 @@ export type AgentMessageContent =
   | ChecklistMessageContent
   | DailyTaskMessageContent
   | StreakCounterMessageContent
-  | ComparisonMessageContent;
+  | ComparisonMessageContent
+  | NewsBriefMessageContent;
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;
@@ -216,6 +231,66 @@ export function renderedComparison(
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("comparison", data, meta);
+}
+
+export function renderedNewsBrief(
+  data: NewsBriefMessageContent["data"],
+  meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
+): RenderedAgentMessage {
+  return rendered("news_brief", data, meta);
+}
+
+export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {
+  const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const items: NewsBriefItem[] = [];
+
+  for (const line of lines) {
+    // Check if it's a numbered or bulleted item like "1. Google Gemini: ..." or "2) ..." or "• ..."
+    const numberedMatch = line.match(/^(\d+|\*|•|-)[.)]?\s+(.+)$/);
+    if (numberedMatch && numberedMatch[2]) {
+      const content = numberedMatch[2].trim();
+      // Look for a colon separator
+      const colonIndex = content.indexOf(":");
+      if (colonIndex !== -1) {
+        const headline = content.substring(0, colonIndex).replace(/^\*\*|\*\*$/g, "").trim();
+        const summary = content.substring(colonIndex + 1).trim();
+        items.push({ headline, summary });
+      } else {
+        // Look for double asterisks formatting, e.g., **Headline** Summary
+        const boldMatch = content.match(/^\*\*(.*?)\*\*\s*(.*)$/);
+        if (boldMatch && boldMatch[1] !== undefined && boldMatch[2] !== undefined) {
+          items.push({ headline: boldMatch[1].trim(), summary: boldMatch[2].trim() });
+        } else {
+          // Fallback: use first 5 words as headline, rest as summary
+          const words = content.split(/\s+/);
+          if (words.length > 5) {
+            const headline = words.slice(0, 5).join(" ");
+            const summary = words.slice(5).join(" ");
+            items.push({ headline, summary });
+          } else {
+            items.push({ summary: content });
+          }
+        }
+      }
+    } else {
+      // It's a non-numbered line. If it's not matching the title, we can treat it as an item with no headline
+      if (line.toLowerCase() === title.toLowerCase()) {
+        continue;
+      }
+      // Clean up markdown headlines if any
+      const cleanedLine = line.replace(/^#{1,6}\s+/, "").replace(/^\*\*|\*\*$/g, "").trim();
+      if (cleanedLine) {
+        items.push({ summary: cleanedLine });
+      }
+    }
+  }
+
+  // Fallback: if no items were parsed, treat the whole body as a single summary item
+  if (items.length === 0 && body.trim()) {
+    items.push({ summary: body.trim() });
+  }
+
+  return { title, items };
 }
 
 function rendered<TTemplate extends AgentMessageContent["template"]>(

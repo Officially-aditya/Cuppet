@@ -6,6 +6,7 @@ import '../templates/checklist_template.dart';
 import '../templates/comparison_template.dart';
 import '../templates/data_summary_template.dart';
 import '../templates/daily_task_template.dart';
+import '../templates/news_brief_template.dart';
 import '../templates/plain_text_template.dart';
 import '../templates/progress_tracker_template.dart';
 import '../templates/streak_counter_template.dart';
@@ -128,6 +129,7 @@ class _TemplateRouter extends StatelessWidget {
       'streak_counter' => StreakCounterTemplate(data: data),
       'comparison' => ComparisonTemplate(data: data),
       'system' => SystemTemplate(data: data),
+      'news_brief' => NewsBriefTemplate(data: data),
       _ => const PlainTextTemplate(
         data: {
           'text':

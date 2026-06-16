@@ -8,7 +8,7 @@ import {
   type AnthropicTextBlock,
   type AnthropicWebSearchToolResultBlock
 } from "./anthropic.js";
-import { renderedPlainText, type RenderedAgentMessage } from "./output.js";
+import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
 
 type NewsBriefOptions = {
   heading?: string;
@@ -103,7 +103,9 @@ async function createWebNewsBrief(input: {
     throw new Error("Anthropic returned no Tech News brief text.");
   }
 
-  return renderedPlainText(withHeading(body, input.options.heading), {
+  const heading = input.options.heading || "News brief";
+  const parsed = parseNewsBriefText(heading, body);
+  return renderedNewsBrief(parsed, {
     sourceRefs: extractSourceRefs(allContent),
     tokensUsed
   });

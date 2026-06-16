@@ -17,8 +17,11 @@ import {
   renderedProgressTracker,
   renderedStreakCounter,
   renderedUrgencyList,
+  renderedNewsBrief,
+  parseNewsBriefText,
   type AgentMessageContent,
-  type RenderedAgentMessage
+  type RenderedAgentMessage,
+  type NewsBriefItem
 } from "../agents/output.js";
 import { pool } from "../db/index.js";
 import {
@@ -439,18 +442,10 @@ async function renderScheduledReminder(
   const includeDsaQuestion = wantsDsaQuestion(combinedText);
   const includeNews = wantsNewsBrief(combinedText);
   const includeTechNews = wantsTechNewsBrief(combinedText);
-  const sections: string[] = [];
   let sourceRefs: unknown[] = [];
   let tokensUsed = 0;
   const reminder = reminderWithoutDynamicRequests(action);
-
-  if (reminder) {
-    sections.push(`Reminder: ${withPeriod(reminder)}`);
-  }
-
-  if (includeDsaQuestion) {
-    sections.push(createDsaQuestionSection({ agentId: agent.id }));
-  }
+  const heading = scheduledIntro(agent, "update");
 
   if (includeNews || includeTechNews) {
     const news = includeTechNews
@@ -461,14 +456,59 @@ async function renderScheduledReminder(
           heading: scheduledIntro(agent, "news")
         });
 
+    if (news.content.template === "news_brief") {
+      const items: NewsBriefItem[] = [];
+      if (reminder) {
+        items.push({ summary: `Reminder: ${withPeriod(reminder)}` });
+      }
+      if (includeDsaQuestion) {
+        items.push({ summary: createDsaQuestionSection({ agentId: agent.id }) });
+      }
+      items.push(...news.content.data.items);
+
+      return renderedNewsBrief({
+        title: news.content.data.title,
+        items
+      }, {
+        sourceRefs: news.sourceRefs,
+        tokensUsed: news.tokensUsed
+      });
+    }
+
+    const sections: string[] = [];
+    if (reminder) {
+      sections.push(`Reminder: ${withPeriod(reminder)}`);
+    }
+    if (includeDsaQuestion) {
+      sections.push(createDsaQuestionSection({ agentId: agent.id }));
+    }
     if (news.content.template === "plain_text") {
       sections.push(news.content.data.body);
     }
     sourceRefs = news.sourceRefs;
     tokensUsed = news.tokensUsed;
+
+    return renderedPlainText(sections.length > 0 ? sections.join("\n\n") : action, {
+      sourceRefs,
+      tokensUsed
+    });
   }
 
-  return renderedPlainText(sections.length > 0 ? sections.join("\n\n") : action, {
+  const items: NewsBriefItem[] = [];
+  if (reminder) {
+    items.push({ summary: `Reminder: ${withPeriod(reminder)}` });
+  }
+  if (includeDsaQuestion) {
+    items.push({ summary: createDsaQuestionSection({ agentId: agent.id }) });
+  }
+  if (items.length === 0) {
+    items.push({ summary: action });
+  }
+
+  return renderedNewsBrief({
+    title: heading,
+    items
+  }, {
     sourceRefs,
     tokensUsed
   });
@@ -559,51 +599,42 @@ function renderLanguageWord(agent: AgentRow): RenderedAgentMessage {
 }
 
 function renderCodingTip(agent: AgentRow): RenderedAgentMessage {
-  return renderedPlainText(
-    [
-      scheduledIntro(agent, "coding tip"),
-      codingTip(agent.prompt)
-    ].join("\n\n")
-  );
+  const heading = scheduledIntro(agent, "coding tip");
+  const body = codingTip(agent.prompt);
+  return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 function renderBookCompanion(agent: AgentRow): RenderedAgentMessage {
-  return renderedPlainText(
-    [
-      scheduledIntro(agent, "book insight"),
-      bookInsight(agent.prompt)
-    ].join("\n\n")
-  );
+  const heading = scheduledIntro(agent, "book insight");
+  const body = bookInsight(agent.prompt);
+  return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 function renderParentingMilestone(agent: AgentRow): RenderedAgentMessage {
-  return renderedPlainText(
-    [
-      scheduledIntro(agent, "development update"),
-      "This week's focus: watch for one new communication cue, one new movement skill, and one new social response.",
-      "If anything concerns you, treat this as a prompt to ask a pediatrician, not medical advice."
-    ].join("\n\n")
-  );
+  const heading = scheduledIntro(agent, "development update");
+  const body = [
+    "This week's focus: watch for one new communication cue, one new movement skill, and one new social response.",
+    "If anything concerns you, treat this as a prompt to ask a pediatrician, not medical advice."
+  ].join("\n\n");
+  return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 function renderRelationshipNudge(agent: AgentRow): RenderedAgentMessage {
-  return renderedPlainText(
-    [
-      scheduledIntro(agent, "relationship nudge"),
-      "Reach out to one person today with a message that is easy to send and easy to answer.",
-      "Prompt: \"Thought of you today. How have you been?\""
-    ].join("\n\n")
-  );
+  const heading = scheduledIntro(agent, "relationship nudge");
+  const body = [
+    "Reach out to one person today with a message that is easy to send and easy to answer.",
+    "Prompt: \"Thought of you today. How have you been?\""
+  ].join("\n\n");
+  return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 function renderGratitudePrompt(agent: AgentRow): RenderedAgentMessage {
-  return renderedPlainText(
-    [
-      scheduledIntro(agent, "gratitude prompt"),
-      "Write three things you are grateful for tonight.",
-      "Keep them specific: one person, one moment, and one thing you are looking forward to."
-    ].join("\n\n")
-  );
+  const heading = scheduledIntro(agent, "gratitude prompt");
+  const body = [
+    "Write three things you are grateful for tonight.",
+    "Keep them specific: one person, one moment, and one thing you are looking forward to."
+  ].join("\n\n");
+  return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 function renderDailyTaskAgent(agent: AgentRow): RenderedAgentMessage {

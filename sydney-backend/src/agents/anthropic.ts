@@ -128,14 +128,28 @@ export async function createAnthropicMessage(input: {
   return payload as AnthropicMessageResponse;
 }
 
+export function cleanReasoning(text: string): string {
+  if (!text) return "";
+  let cleaned = text;
+  cleaned = cleaned.replace(/<thinking>[\s\S]*?<\/thinking>/gi, "");
+  cleaned = cleaned.replace(/<thought>[\s\S]*?<\/thought>/gi, "");
+  cleaned = cleaned.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, "");
+  cleaned = cleaned.replace(/<thinking>[\s\S]*/gi, "");
+  cleaned = cleaned.replace(/<thought>[\s\S]*/gi, "");
+  cleaned = cleaned.replace(/<reasoning>[\s\S]*/gi, "");
+  return cleaned.trim();
+}
+
 export function extractAnthropicText(content: AnthropicContentBlock[]): string {
-  return content
+  const text = content
     .filter((block): block is AnthropicTextBlock => block.type === "text")
     .map((block) => block.text)
     .filter(Boolean)
     .join("")
     .trim();
+  return cleanReasoning(text);
 }
+
 
 export function totalAnthropicTokens(response: AnthropicMessageResponse): number {
   const usage = response.usage;

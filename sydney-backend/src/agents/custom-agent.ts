@@ -4,7 +4,7 @@ import {
   extractAnthropicText,
   totalAnthropicTokens
 } from "./anthropic.js";
-import { renderedPlainText, type RenderedAgentMessage } from "./output.js";
+import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
 
 export async function renderLlmCustomAgent(input: {
   agentName: string;
@@ -42,7 +42,8 @@ export async function renderLlmCustomAgent(input: {
     const body = extractAnthropicText(response.content);
     if (!body) return null;
 
-    return renderedPlainText([input.heading, body].join("\n\n"), {
+    const parsed = parseNewsBriefText(input.heading, body);
+    return renderedNewsBrief(parsed, {
       tokensUsed: totalAnthropicTokens(response)
     });
   } catch {
