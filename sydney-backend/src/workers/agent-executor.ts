@@ -1154,15 +1154,51 @@ function errorMessage(error: unknown): string {
 
 
 function extractNotificationBody(content: AgentMessageContent): string {
-  if (content.template === "plain_text" && content.data.body) {
-    const body = String(content.data.body);
-    // Extract first line or first 100 characters
-    const firstLine = body.split("\n")[0] || "";
-    return firstLine.length > 100 ? firstLine.substring(0, 97) + "..." : firstLine;
+  if (content.template === "news_brief") {
+    const items = content.data.items;
+    if (items && items.length > 0) {
+      const firstWithHeadline = items.find((item) => item.headline && item.headline.trim().length > 0);
+      if (firstWithHeadline) {
+        return `${firstWithHeadline.headline}: ${firstWithHeadline.summary}`.substring(0, 100);
+      }
+      const firstItem = items[0];
+      if (firstItem) {
+        return firstItem.summary.substring(0, 100);
+      }
+    }
+    return content.data.title;
   }
 
-  if (content.template === "data_summary" && content.data.text) {
-    return String(content.data.text).substring(0, 100);
+  if (content.template === "data_summary") {
+    const summary = content.data.summary || content.data.description;
+    if (summary && summary.trim().length > 0) {
+      const cleanSummary = summary.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
+      return cleanSummary.substring(0, 100);
+    }
+    const items = content.data.items as any[];
+    if (items && items.length > 0 && items[0]) {
+      const firstItem = items[0];
+      const label = firstItem.label || firstItem.title || firstItem.subject;
+      if (label) return String(label).substring(0, 100);
+    }
+    if (content.data.text) {
+      const cleanText = content.data.text.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
+      if (cleanText) return cleanText.substring(0, 100);
+    }
+    return content.data.title;
+  }
+
+  if (content.template === "plain_text" && content.data.body) {
+    const body = String(content.data.body);
+    const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+    const firstLine = lines[0] || "";
+    if (lines.length > 1 && /^Here's your/i.test(firstLine)) {
+      const secondLine = lines[1];
+      if (secondLine !== undefined) {
+        return secondLine.length > 100 ? secondLine.substring(0, 97) + "..." : secondLine;
+      }
+    }
+    return firstLine.length > 100 ? firstLine.substring(0, 97) + "..." : firstLine;
   }
 
   if (content.template === "daily_task" && content.data.task) {

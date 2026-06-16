@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +8,7 @@ import 'config/routes.dart';
 import 'design/tokens.dart';
 import 'models/agent.dart';
 import 'providers/auth_provider.dart';
+import 'providers/agents_provider.dart';
 import 'providers/messages_provider.dart';
 import 'services/push_service.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -132,8 +134,66 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
           // Firebase not configured or platform not supported — non-fatal
           print('Push notification setup skipped: $e');
         }
+
+        // Setup click handlers!
+        await _setupNotificationClickHandlers();
       }),
     );
+  }
+
+  Future<void> _setupNotificationClickHandlers() async {
+    // 1. Handle notification that launched the app from a terminated state
+    try {
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        _handleNotificationClick(initialMessage);
+      }
+    } catch (e) {
+      debugPrint('Error getting initial messaging: $e');
+    }
+
+    // 2. Handle notifications clicked while the app is in the background
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _handleNotificationClick(message);
+    });
+  }
+
+  void _handleNotificationClick(RemoteMessage message) async {
+    final data = message.data;
+    final agentId = data['agent_id']?.toString() ?? data['agentId']?.toString();
+    if (agentId == null || agentId.isEmpty) {
+      return;
+    }
+
+    try {
+      // Retrieve the list of agents
+      final agentsList = await ref.read(agentsProvider.future);
+      final agent = agentsList.firstWhere((a) => a.id == agentId);
+
+      if (mounted) {
+        Navigator.of(context).pushNamed(
+          AppRoutes.thread,
+          arguments: agent,
+        );
+      }
+    } catch (_) {
+      // Refresh list if not found
+      try {
+        await ref.read(agentsProvider.notifier).refresh();
+        final agentsList = ref.read(agentsProvider).value;
+        if (agentsList != null) {
+          final agent = agentsList.firstWhere((a) => a.id == agentId);
+          if (mounted) {
+            Navigator.of(context).pushNamed(
+              AppRoutes.thread,
+              arguments: agent,
+            );
+          }
+        }
+      } catch (_) {
+        // Agent not found
+      }
+    }
   }
 
   @override
