@@ -10,6 +10,7 @@ export type RealtimeEventType =
   | "agent.created"
   | "agent.updated"
   | "message.created"
+  | "messages.cleared"
   | "run.queued"
   | "run.started"
   | "run.completed"
