@@ -75,18 +75,32 @@ type AnthropicTool =
     }
   | Record<string, unknown>;
 
-type AnthropicErrorResponse = {
-  error?: {
-    message?: string;
-    type?: string;
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      role?: string;
+      parts?: Array<{ text?: string }>;
+    };
+    finishReason?: string;
+    groundingMetadata?: {
+      webSearchQueries?: string[];
+      groundingChunks?: Array<{
+        web?: {
+          uri?: string;
+          title?: string;
+        };
+      }>;
+    };
+  }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
   };
-};
-
-const anthropicMessagesUrl = "https://api.anthropic.com/v1/messages";
-const anthropicVersion = "2023-06-01";
+}
 
 export function anthropicConfigured(): boolean {
-  return Boolean(config.ANTHROPIC_API_KEY);
+  return Boolean(config.GEMINI_API_KEY);
 }
 
 export async function createAnthropicMessage(input: {
@@ -95,37 +109,106 @@ export async function createAnthropicMessage(input: {
   maxTokens?: number;
   tools?: AnthropicTool[];
 }): Promise<AnthropicMessageResponse> {
-  if (!config.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is required.");
+  if (!config.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is required.");
   }
 
-  const response = await fetch(anthropicMessagesUrl, {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.GEMINI_MODEL}:generateContent?key=${config.GEMINI_API_KEY}`;
+
+  const contents = input.messages.map((msg) => {
+    const role = msg.role === "assistant" ? "model" : "user";
+    const parts = Array.isArray(msg.content)
+      ? msg.content
+          .filter((block) => block.type === "text")
+          .map((block) => ({ text: (block as AnthropicTextBlock).text }))
+      : [{ text: msg.content }];
+    return { role, parts };
+  });
+
+  const hasWebSearch = input.tools?.some((t) => t.name === "web_search");
+  const tools = hasWebSearch ? [{ googleSearch: {} }] : undefined;
+
+  const response = await fetch(url, {
     method: "POST",
     headers: {
-      "content-type": "application/json",
-      "x-api-key": config.ANTHROPIC_API_KEY,
-      "anthropic-version": anthropicVersion
+      "content-type": "application/json"
     },
     body: JSON.stringify({
-      model: config.ANTHROPIC_MODEL,
-      max_tokens: input.maxTokens ?? 800,
-      system: input.system,
-      messages: input.messages,
-      ...(input.tools ? { tools: input.tools } : {})
+      contents,
+      systemInstruction: {
+        parts: [
+          {
+            text: input.system
+          }
+        ]
+      },
+      generationConfig: {
+        maxOutputTokens: input.maxTokens ?? 800
+      },
+      ...(tools ? { tools } : {})
     })
   });
 
-  const payload = (await response.json()) as
-    | AnthropicMessageResponse
-    | AnthropicErrorResponse;
-
   if (!response.ok) {
-    throw new Error(
-      `Anthropic Messages API failed (${response.status}): ${anthropicErrorMessage(payload)}`
-    );
+    const errorText = await response.text();
+    throw new Error(`Gemini API failed (${response.status}): ${errorText}`);
   }
 
-  return payload as AnthropicMessageResponse;
+  const payload = (await response.json()) as GeminiResponse;
+
+  const candidate = payload.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text ?? "";
+  const contentBlocks: AnthropicContentBlock[] = [
+    {
+      type: "text",
+      text: text
+    }
+  ];
+
+  const chunks = candidate?.groundingMetadata?.groundingChunks;
+  if (chunks && chunks.length > 0) {
+    const results = chunks
+      .map((chunk) => {
+        if (chunk.web?.uri) {
+          return {
+            type: "web_search_result" as const,
+            url: chunk.web.uri,
+            title: chunk.web.title ?? null,
+            page_age: undefined
+          };
+        }
+        return null;
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+
+    if (results.length > 0) {
+      contentBlocks.push({
+        type: "web_search_tool_result",
+        tool_use_id: "web_search",
+        content: results
+      });
+    }
+  }
+
+  const stopReason = candidate?.finishReason === "MAX_TOKENS" ? "max_tokens" : "end_turn";
+
+  return {
+    id: "msg_gemini_" + Math.random().toString(36).substring(7),
+    role: "assistant",
+    content: contentBlocks,
+    stop_reason: stopReason,
+    usage: {
+      input_tokens: payload.usageMetadata?.promptTokenCount ?? 0,
+      output_tokens: payload.usageMetadata?.candidatesTokenCount ?? 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+      server_tool_use: hasWebSearch
+        ? {
+            web_search_requests: candidate?.groundingMetadata?.webSearchQueries?.length ?? 0
+          }
+        : undefined
+    }
+  };
 }
 
 export function cleanReasoning(text: string): string {
@@ -150,7 +233,6 @@ export function extractAnthropicText(content: AnthropicContentBlock[]): string {
   return cleanReasoning(text);
 }
 
-
 export function totalAnthropicTokens(response: AnthropicMessageResponse): number {
   const usage = response.usage;
   if (!usage) return 0;
@@ -166,14 +248,4 @@ export function totalAnthropicTokens(response: AnthropicMessageResponse): number
   }
 
   return tokens;
-}
-
-function anthropicErrorMessage(
-  payload: AnthropicMessageResponse | AnthropicErrorResponse
-): string {
-  if ("error" in payload) {
-    return payload.error?.message ?? payload.error?.type ?? "Unknown error";
-  }
-
-  return "Unknown error";
 }
