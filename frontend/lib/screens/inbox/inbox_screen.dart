@@ -85,15 +85,9 @@ class InboxScreen extends ConsumerWidget {
       return;
     }
     if (index == 2) {
-      final agents = ref.read(agentsProvider).asData?.value ?? const <Agent>[];
-      final scout = agents.firstWhere(
-        (agent) => agent.threadId == 'thread_research',
-        orElse: _researchFallback,
-      );
-      Navigator.of(context).pushNamed(AppRoutes.thread, arguments: scout);
+      Navigator.of(context).pushNamed(AppRoutes.settings);
       return;
     }
-    Navigator.of(context).pushNamed(AppRoutes.settings);
   }
 }
 
@@ -105,6 +99,7 @@ class _InboxList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleAgents = agents.isEmpty ? [_assistantFallback()] : agents;
+    final hasCreatedAgent = agents.any((agent) => !agent.isAssistant);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -115,10 +110,12 @@ class _InboxList extends StatelessWidget {
         118,
       ),
       children: [
-        const SydneyNotice(
-          text: 'Assistant is pinned so you always have a place to start.',
-        ),
-        const SizedBox(height: SydneySpacing.lg),
+        if (!hasCreatedAgent) ...[
+          const SydneyNotice(
+            text: 'Assistant is pinned so you always have a place to start.',
+          ),
+          const SizedBox(height: SydneySpacing.lg),
+        ],
         for (final agent in visibleAgents) ...[
           AgentListItem(
             agent: agent,
@@ -129,8 +126,10 @@ class _InboxList extends StatelessWidget {
           ),
           const SizedBox(height: 10),
         ],
-        const SizedBox(height: SydneySpacing.xl),
-        const _StartSentencePrompt(),
+        if (!hasCreatedAgent) ...[
+          const SizedBox(height: SydneySpacing.xl),
+          const _StartSentencePrompt(),
+        ],
       ],
     );
   }
@@ -210,15 +209,3 @@ Agent _assistantFallback() {
   );
 }
 
-Agent _researchFallback() {
-  return Agent(
-    id: 'research-scout',
-    threadId: 'thread_research',
-    name: 'Research Scout',
-    avatarInitials: 'RS',
-    description: 'Collects weekly market notes.',
-    lastMessagePreview: 'I summarized the latest category shifts.',
-    latestMessageAt: DateTime.now().subtract(const Duration(days: 1)),
-    accentColor: 0xFF1E40AF,
-  );
-}

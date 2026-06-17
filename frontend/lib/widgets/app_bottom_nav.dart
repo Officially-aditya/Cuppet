@@ -40,18 +40,11 @@ class AppBottomNav extends StatelessWidget {
                 onPressed: () => onSelected(1),
               ),
               _NavButton(
-                tooltip: 'Scout',
-                icon: Icons.auto_awesome_rounded,
-                label: 'Scout',
-                selected: currentIndex == 2,
-                onPressed: () => onSelected(2),
-              ),
-              _NavButton(
                 tooltip: 'Settings',
                 icon: Icons.settings_outlined,
                 label: 'Settings',
-                selected: currentIndex == 3,
-                onPressed: () => onSelected(3),
+                selected: currentIndex == 2,
+                onPressed: () => onSelected(2),
               ),
             ],
           ),
@@ -87,7 +80,7 @@ class _NavButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           child: SizedBox(
-            width: MediaQuery.sizeOf(context).width / 4,
+            width: MediaQuery.sizeOf(context).width / 3,
             height: SydneySpacing.bottomNavHeight,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

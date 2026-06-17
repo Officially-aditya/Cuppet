@@ -69,39 +69,6 @@ class _CreateScreenState extends State<CreateScreen> {
             104,
           ),
           children: [
-            Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const SydneyIconBadge(
-                    size: 64,
-                    color: SydneyColors.primarySoft,
-                    foregroundColor: SydneyColors.primary,
-                    radius: SydneyRadius.lg,
-                    borderColor: SydneyColors.line,
-                    child: Icon(Icons.smart_toy_outlined, size: 38),
-                  ),
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: SydneyColors.surfaceContainerLowest,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: SydneyColors.line),
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        size: 14,
-                        color: SydneyColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.xl),
             const SydneySectionLabel('What does this agent do?'),
             _PromptEditor(
               controller: _promptController,
