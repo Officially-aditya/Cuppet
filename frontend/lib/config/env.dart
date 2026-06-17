@@ -12,11 +12,7 @@ class Env {
       return _apiBaseUrlOverride;
     }
 
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000';
-    }
-
-    return 'http://localhost:3000';
+    return 'https://sydney-production.up.railway.app';
   }
 
   static const _authOriginOverride = String.fromEnvironment(
@@ -28,12 +24,12 @@ class Env {
       return _authOriginOverride;
     }
 
-    return 'http://localhost:3000';
+    return 'https://sydney-production.up.railway.app';
   }
 
   static const websocketUrl = String.fromEnvironment(
     'SYDNEY_WEBSOCKET_URL',
-    defaultValue: 'wss://api.sydney.local/realtime',
+    defaultValue: 'wss://sydney-production.up.railway.app/realtime',
   );
 
   static const connectorCallbackScheme = String.fromEnvironment(
