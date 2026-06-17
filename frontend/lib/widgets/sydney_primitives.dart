@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../design/tokens.dart';
 
@@ -307,5 +309,154 @@ class SydneyLoadingBlock extends StatelessWidget {
         border: Border.all(color: SydneyColors.line),
       ),
     );
+  }
+}
+
+class MarkdownText extends StatefulWidget {
+  const MarkdownText({
+    required this.text,
+    this.style,
+    this.textColor,
+    this.bold = false,
+    super.key,
+  });
+
+  final String text;
+  final TextStyle? style;
+  final Color? textColor;
+  final bool bold;
+
+  @override
+  State<MarkdownText> createState() => _MarkdownTextState();
+}
+
+class _MarkdownTextState extends State<MarkdownText> {
+  final List<TapGestureRecognizer> _recognizers = [];
+
+  @override
+  void dispose() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+
+    final baseStyle = widget.style ?? Theme.of(context).textTheme.bodyMedium;
+    final color = widget.textColor ?? baseStyle?.color ?? SydneyColors.onSurface;
+
+    return Text.rich(
+      _parseMarkdown(widget.text, context, color, baseStyle),
+    );
+  }
+
+  TextSpan _parseMarkdown(
+    String value,
+    BuildContext context,
+    Color defaultColor,
+    TextStyle? baseStyle,
+  ) {
+    final spans = <InlineSpan>[];
+    
+    // Matches [text](url), **bold**, *italic*, or raw urls
+    final pattern = RegExp(
+      r'\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|(https?://[^\s]+)',
+      caseSensitive: false,
+    );
+
+    var cursor = 0;
+
+    for (final match in pattern.allMatches(value)) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(
+          text: value.substring(cursor, match.start),
+          style: baseStyle?.copyWith(
+            color: defaultColor,
+            fontWeight: widget.bold ? FontWeight.w800 : baseStyle.fontWeight,
+          ),
+        ));
+      }
+
+      if (match.group(1) != null && match.group(2) != null) {
+        final title = match.group(1)!;
+        final url = match.group(2)!;
+        final tapRecognizer = TapGestureRecognizer()
+          ..onTap = () async {
+            final uri = Uri.tryParse(url);
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          };
+        _recognizers.add(tapRecognizer);
+
+        spans.add(TextSpan(
+          text: title,
+          style: baseStyle?.copyWith(
+            color: SydneyColors.primary,
+            fontWeight: FontWeight.w700,
+            decoration: TextDecoration.underline,
+          ),
+          recognizer: tapRecognizer,
+        ));
+      } else if (match.group(3) != null) {
+        final text = match.group(3)!;
+        spans.add(TextSpan(
+          text: text,
+          style: baseStyle?.copyWith(
+            color: defaultColor,
+            fontWeight: FontWeight.w800,
+          ),
+        ));
+      } else if (match.group(4) != null) {
+        final text = match.group(4)!;
+        spans.add(TextSpan(
+          text: text,
+          style: baseStyle?.copyWith(
+            color: defaultColor,
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (match.group(5) != null) {
+        final url = match.group(5)!;
+        final tapRecognizer = TapGestureRecognizer()
+          ..onTap = () async {
+            final uri = Uri.tryParse(url);
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          };
+        _recognizers.add(tapRecognizer);
+
+        spans.add(TextSpan(
+          text: url,
+          style: baseStyle?.copyWith(
+            color: SydneyColors.primary,
+            fontWeight: FontWeight.w700,
+            decoration: TextDecoration.underline,
+          ),
+          recognizer: tapRecognizer,
+        ));
+      }
+
+      cursor = match.end;
+    }
+
+    if (cursor < value.length) {
+      spans.add(TextSpan(
+        text: value.substring(cursor),
+        style: baseStyle?.copyWith(
+          color: defaultColor,
+          fontWeight: widget.bold ? FontWeight.w800 : baseStyle.fontWeight,
+        ),
+      ));
+    }
+
+    return TextSpan(children: spans);
   }
 }

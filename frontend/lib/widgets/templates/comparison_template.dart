@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class ComparisonTemplate extends StatelessWidget {
   const ComparisonTemplate({required this.data, super.key});
@@ -64,8 +65,8 @@ class ComparisonTemplate extends StatelessWidget {
             ),
         if (insight != null && insight.isNotEmpty) ...[
           const Divider(height: SydneySpacing.lg, color: SydneyColors.line),
-          Text(
-            insight,
+          MarkdownText(
+            text: insight,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.onSurface,
               fontWeight: FontWeight.w600,
@@ -75,8 +76,8 @@ class ComparisonTemplate extends StatelessWidget {
         ],
         if (narrative != null && narrative.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.sm),
-          Text(
-            narrative,
+          MarkdownText(
+            text: narrative,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.onSurfaceVariant,
               height: 1.35,
@@ -126,8 +127,8 @@ class _ComparisonRow extends StatelessWidget {
                 for (final change in changes)
                   Padding(
                     padding: const EdgeInsets.only(bottom: SydneySpacing.xs),
-                    child: Text(
-                      change,
+                    child: MarkdownText(
+                      text: change,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: SydneyColors.onSurfaceVariant,
                         height: 1.3,

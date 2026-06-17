@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class UrgencyListTemplate extends StatelessWidget {
   const UrgencyListTemplate({required this.data, super.key});
@@ -37,13 +38,13 @@ class UrgencyListTemplate extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          item['label']?.toString() ?? 'Untitled item',
+                        MarkdownText(
+                          text: item['label']?.toString() ?? 'Untitled item',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         if (item['preview'] != null)
-                          Text(
-                            item['preview'].toString(),
+                          MarkdownText(
+                            text: item['preview'].toString(),
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(
@@ -52,8 +53,8 @@ class UrgencyListTemplate extends StatelessWidget {
                             ),
                           ),
                         if (item['due'] != null)
-                          Text(
-                            item['due'].toString(),
+                          MarkdownText(
+                            text: item['due'].toString(),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                       ],

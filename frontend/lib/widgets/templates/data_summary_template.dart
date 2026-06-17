@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class DataSummaryTemplate extends StatelessWidget {
   const DataSummaryTemplate({required this.data, super.key});
@@ -21,8 +22,8 @@ class DataSummaryTemplate extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (intro != null && intro.isNotEmpty) ...[
-          Text(
-            intro,
+          MarkdownText(
+            text: intro,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: SydneyColors.onSurface,
               height: 1.45,
@@ -176,8 +177,8 @@ class _SummaryLine extends StatelessWidget {
         ),
         const SizedBox(width: SydneySpacing.sm),
         Expanded(
-          child: Text(
-            text,
+          child: MarkdownText(
+            text: text,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.onSurface,
               height: 1.35,
@@ -248,8 +249,8 @@ class _ItemRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _cleanInline(label),
+              MarkdownText(
+                text: _cleanInline(label),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: SydneyColors.onSurface,
                   fontWeight: FontWeight.w700,
@@ -258,8 +259,8 @@ class _ItemRow extends StatelessWidget {
               ),
               if (preview != null && preview.isNotEmpty) ...[
                 const SizedBox(height: SydneySpacing.xs),
-                Text(
-                  _cleanInline(preview),
+                MarkdownText(
+                  text: _cleanInline(preview),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: SydneyColors.onSurfaceVariant,
                     height: 1.3,
@@ -376,8 +377,6 @@ String _cleanInline(String value) {
       .trim()
       .replaceFirst(RegExp(r'^#{1,6}\s*'), '')
       .replaceFirst(RegExp(r'^[•*\-]\s*'), '')
-      .replaceAllMapped(RegExp(r'\*\*([^*]+)\*\*'), (match) => match[1] ?? '')
-      .replaceAllMapped(RegExp(r'__([^_]+)__'), (match) => match[1] ?? '')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 }

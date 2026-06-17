@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class ProgressTrackerTemplate extends StatelessWidget {
   const ProgressTrackerTemplate({required this.data, super.key});
@@ -35,8 +36,8 @@ class ProgressTrackerTemplate extends StatelessWidget {
           ],
         ),
         const SizedBox(height: SydneySpacing.md),
-        Text(
-          data['text']?.toString() ??
+        MarkdownText(
+          text: data['text']?.toString() ??
               "I'm ready to help. Let's finish setting up your workflow.",
           style: Theme.of(
             context,
@@ -83,8 +84,8 @@ class ProgressTrackerTemplate extends StatelessWidget {
                   _StepMarker(done: step['done'] == true),
                   const SizedBox(width: SydneySpacing.sm),
                   Expanded(
-                    child: Text(
-                      step['label']?.toString() ?? 'Untitled step',
+                    child: MarkdownText(
+                      text: step['label']?.toString() ?? 'Untitled step',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color:
                             step['done'] == true

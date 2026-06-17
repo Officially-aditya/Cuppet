@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class SystemTemplate extends StatelessWidget {
   const SystemTemplate({required this.data, super.key});
@@ -13,9 +14,8 @@ class SystemTemplate extends StatelessWidget {
         data['text']?.toString() ??
         data['message']?.toString() ??
         'System update';
-    return Text(
-      text,
-      textAlign: TextAlign.left,
+    return MarkdownText(
+      text: text,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: SydneyColors.onSurfaceVariant,
         fontWeight: FontWeight.w500,

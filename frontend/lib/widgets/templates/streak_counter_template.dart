@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class StreakCounterTemplate extends StatelessWidget {
   const StreakCounterTemplate({required this.data, super.key});
@@ -42,8 +43,8 @@ class StreakCounterTemplate extends StatelessWidget {
                 ),
                 if (definition != null && definition.isNotEmpty) ...[
                   const SizedBox(height: SydneySpacing.xs),
-                  Text(
-                    definition,
+                  MarkdownText(
+                    text: definition,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: SydneyColors.onSurface,
                       height: 1.35,
@@ -52,8 +53,8 @@ class StreakCounterTemplate extends StatelessWidget {
                 ],
                 if (example != null && example.isNotEmpty) ...[
                   const SizedBox(height: SydneySpacing.sm),
-                  Text(
-                    example,
+                  MarkdownText(
+                    text: example,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: SydneyColors.onSurfaceVariant,
                       fontStyle: FontStyle.italic,
@@ -62,8 +63,8 @@ class StreakCounterTemplate extends StatelessWidget {
                   ),
                 ],
                 if (translation != null && translation.isNotEmpty)
-                  Text(
-                    translation,
+                  MarkdownText(
+                    text: translation,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: SydneyColors.mutedInk,
                       height: 1.35,
@@ -78,7 +79,10 @@ class StreakCounterTemplate extends StatelessWidget {
                 ).textTheme.bodyMedium?.copyWith(color: SydneyColors.mutedInk),
               ),
               if (caption != null && caption.isNotEmpty)
-                Text(caption, style: Theme.of(context).textTheme.bodySmall),
+                MarkdownText(
+                  text: caption,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
             ],
           ),
         ),

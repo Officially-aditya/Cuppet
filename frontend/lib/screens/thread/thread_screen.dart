@@ -199,8 +199,17 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (agent.parsedIntent?['intent'] == 'study_plan')
-              SydneyHeatmap(history: agent.parsedIntent?['history'] ?? const {}),
+            if (const {
+              'study_plan',
+              'interview_prep',
+              'language_word',
+              'coding_tip',
+              'book_companion',
+            }.contains(agent.parsedIntent?['intent']))
+              SydneyHeatmap(
+                history: agent.parsedIntent?['history'] ?? const {},
+                intent: agent.parsedIntent?['intent']?.toString(),
+              ),
             Expanded(
               child: messages.when(
                 data: (items) {

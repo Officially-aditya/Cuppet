@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 
 class SydneyHeatmap extends StatefulWidget {
-  const SydneyHeatmap({required this.history, super.key});
+  const SydneyHeatmap({required this.history, this.intent, super.key});
 
   final Map<String, dynamic> history;
+  final String? intent;
 
   @override
   State<SydneyHeatmap> createState() => _SydneyHeatmapState();
@@ -96,14 +97,14 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.school_rounded,
+                  Icon(
+                    _getIcon(widget.intent),
                     color: SydneyColors.primary,
                     size: 16,
                   ),
                   const SizedBox(width: SydneySpacing.sm),
                   Text(
-                    'STUDY PROGRESS',
+                    _getTitle(widget.intent),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: SydneyColors.primary,
                       fontWeight: FontWeight.w800,
@@ -112,7 +113,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
                   ),
                   const Spacer(),
                   Text(
-                    '${widget.history.values.where((v) => v == true).length} days learned',
+                    '${widget.history.values.where((v) => v == true).length} ${_getSuffix(widget.intent)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: SydneyColors.onSurfaceVariant,
                       fontSize: 10,
@@ -183,6 +184,39 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
         ),
       ),
     );
+  }
+
+  IconData _getIcon(String? intent) {
+    return switch (intent) {
+      'study_plan' => Icons.school_rounded,
+      'interview_prep' => Icons.work_outline_rounded,
+      'language_word' => Icons.translate_rounded,
+      'coding_tip' => Icons.code_rounded,
+      'book_companion' => Icons.menu_book_rounded,
+      _ => Icons.trending_up_rounded,
+    };
+  }
+
+  String _getTitle(String? intent) {
+    return switch (intent) {
+      'study_plan' => 'STUDY PROGRESS',
+      'interview_prep' => 'INTERVIEW PREP PROGRESS',
+      'language_word' => 'VOCABULARY PROGRESS',
+      'coding_tip' => 'CODING PROGRESS',
+      'book_companion' => 'READING PROGRESS',
+      _ => 'ACTIVITY HISTORY',
+    };
+  }
+
+  String _getSuffix(String? intent) {
+    return switch (intent) {
+      'study_plan' => 'days learned',
+      'interview_prep' => 'days prepared',
+      'language_word' => 'words learned',
+      'coding_tip' => 'days coded',
+      'book_companion' => 'days read',
+      _ => 'days active',
+    };
   }
 
   String _pad(int val) {

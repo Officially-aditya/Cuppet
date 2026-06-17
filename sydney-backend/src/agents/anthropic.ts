@@ -220,6 +220,11 @@ export function cleanReasoning(text: string): string {
   cleaned = cleaned.replace(/<thinking>[\s\S]*/gi, "");
   cleaned = cleaned.replace(/<thought>[\s\S]*/gi, "");
   cleaned = cleaned.replace(/<reasoning>[\s\S]*/gi, "");
+  
+  // Clean up LLM connector setup explanations / reasoning blocks
+  cleaned = cleaned.replace(/(?:\*?\*?\bAction Required\b\*?\*?:?|Action Required\*\*)[\s\S]*$/gi, "");
+  cleaned = cleaned.replace(/(?:To deliver these updates automatically)[\s\S]*$/gi, "");
+  
   return cleaned.trim();
 }
 

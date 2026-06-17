@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class StudyGuideTemplate extends StatelessWidget {
   const StudyGuideTemplate({required this.data, this.onAction, super.key});
@@ -46,8 +47,8 @@ class StudyGuideTemplate extends StatelessWidget {
           ],
         ),
         const SizedBox(height: SydneySpacing.md),
-        Text(
-          definition,
+        MarkdownText(
+          text: definition,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             height: 1.4,
             color: SydneyColors.onSurface,

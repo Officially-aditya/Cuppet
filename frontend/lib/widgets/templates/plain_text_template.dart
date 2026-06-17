@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class PlainTextTemplate extends StatelessWidget {
   const PlainTextTemplate({required this.data, this.textColor, super.key});
@@ -58,17 +59,16 @@ class _PlainTextBlockView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (block.type) {
-      _PlainTextBlockType.heading => Text.rich(
-        _inlineSpans(block.text, context, textColor, bold: true),
-        style: Theme.of(
-          context,
-        ).textTheme.titleSmall?.copyWith(color: textColor, height: 1.25),
+      _PlainTextBlockType.heading => MarkdownText(
+        text: block.text,
+        textColor: textColor,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(height: 1.25),
+        bold: true,
       ),
-      _PlainTextBlockType.paragraph => Text.rich(
-        _inlineSpans(block.text, context, textColor),
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.38),
+      _PlainTextBlockType.paragraph => MarkdownText(
+        text: block.text,
+        textColor: textColor,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.38),
       ),
       _PlainTextBlockType.bullet => _IndentedLine(
         marker: '•',
@@ -112,11 +112,10 @@ class _IndentedLine extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Text.rich(
-            _inlineSpans(text, context, textColor),
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.35),
+          child: MarkdownText(
+            text: text,
+            textColor: textColor,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
           ),
         ),
       ],
@@ -204,39 +203,7 @@ String? _headingText(String value) {
   return null;
 }
 
-TextSpan _inlineSpans(
-  String value,
-  BuildContext context,
-  Color color, {
-  bool bold = false,
-}) {
-  final baseStyle = TextStyle(
-    color: color,
-    fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
-  );
-  final spans = <TextSpan>[];
-  final pattern = RegExp(r'\*\*([^*]+)\*\*|__([^_]+)__');
-  var cursor = 0;
 
-  for (final match in pattern.allMatches(value)) {
-    if (match.start > cursor) {
-      spans.add(TextSpan(text: value.substring(cursor, match.start)));
-    }
-    spans.add(
-      TextSpan(
-        text: match.group(1) ?? match.group(2) ?? '',
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
-    );
-    cursor = match.end;
-  }
-
-  if (cursor < value.length) {
-    spans.add(TextSpan(text: value.substring(cursor)));
-  }
-
-  return TextSpan(style: baseStyle, children: spans);
-}
 
 String _cleanInline(String value) {
   return value

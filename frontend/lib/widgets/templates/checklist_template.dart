@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class ChecklistTemplate extends StatelessWidget {
   const ChecklistTemplate({required this.data, super.key});
@@ -21,8 +22,8 @@ class ChecklistTemplate extends StatelessWidget {
         Text(title, style: Theme.of(context).textTheme.titleMedium),
         if (subtitle != null && subtitle.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.xs),
-          Text(
-            subtitle,
+          MarkdownText(
+            text: subtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.onSurfaceVariant,
               height: 1.35,
@@ -31,8 +32,8 @@ class ChecklistTemplate extends StatelessWidget {
         ],
         if (message != null && message.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.sm),
-          Text(
-            message,
+          MarkdownText(
+            text: message,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.onSurface,
               height: 1.35,
@@ -64,8 +65,8 @@ class ChecklistTemplate extends StatelessWidget {
                   ),
                   const SizedBox(width: SydneySpacing.sm),
                   Expanded(
-                    child: Text(
-                      item['label']?.toString() ?? 'Untitled item',
+                    child: MarkdownText(
+                      text: item['label']?.toString() ?? 'Untitled item',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -74,8 +75,8 @@ class ChecklistTemplate extends StatelessWidget {
             ),
         if (footer != null && footer.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.sm),
-          Text(
-            footer,
+          MarkdownText(
+            text: footer,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.mutedInk,
               height: 1.35,

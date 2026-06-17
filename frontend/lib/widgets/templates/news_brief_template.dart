@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class NewsBriefTemplate extends StatelessWidget {
   const NewsBriefTemplate({required this.data, super.key});
@@ -86,8 +87,8 @@ class _NewsItemCardState extends State<_NewsItemCard> {
           horizontal: SydneySpacing.xs,
           vertical: SydneySpacing.xs,
         ),
-        child: Text(
-          summary,
+        child: MarkdownText(
+          text: summary,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: SydneyColors.onSurfaceVariant,
             height: 1.4,
@@ -127,8 +128,8 @@ class _NewsItemCardState extends State<_NewsItemCard> {
                   ),
                 ),
                 Expanded(
-                  child: Text(
-                    headline,
+                  child: MarkdownText(
+                    text: headline,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: SydneyColors.onSurface,
                       fontWeight: FontWeight.w700,
@@ -152,8 +153,8 @@ class _NewsItemCardState extends State<_NewsItemCard> {
               firstChild: const SizedBox(width: double.infinity),
               secondChild: Padding(
                 padding: const EdgeInsets.only(top: SydneySpacing.xs, left: 14),
-                child: Text(
-                  summary,
+                child: MarkdownText(
+                  text: summary,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: SydneyColors.onSurfaceVariant,
                     height: 1.35,

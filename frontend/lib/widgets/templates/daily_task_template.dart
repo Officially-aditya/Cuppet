@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../sydney_primitives.dart';
 
 class DailyTaskTemplate extends StatelessWidget {
   const DailyTaskTemplate({required this.data, this.onAction, super.key});
@@ -34,14 +35,14 @@ class DailyTaskTemplate extends StatelessWidget {
           ],
         ),
         const SizedBox(height: SydneySpacing.md),
-        Text(
-          task,
+        MarkdownText(
+          text: task,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
         ),
         if (contextText != null && contextText.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.sm),
-          Text(
-            contextText,
+          MarkdownText(
+            text: contextText,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SydneyColors.onSurfaceVariant,
               height: 1.35,
