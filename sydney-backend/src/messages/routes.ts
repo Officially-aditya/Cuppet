@@ -581,18 +581,104 @@ async function handleAgentTextMessage(
   }
 }
 
+function extractBodyFromContent(content: any): string | null {
+  if (!content) return null;
+  if (typeof content === "string") return content;
+
+  const template = content.template;
+  const data = content.data;
+  if (!data) return null;
+
+  if (template === "plain_text") {
+    return data.body || data.text || data.headline || "";
+  }
+
+  if (template === "news_brief") {
+    const title = data.title ? `${data.title}\n` : "";
+    const items = Array.isArray(data.items)
+      ? data.items
+          .map((item: any) => {
+            const headline = item.headline ? `Headline: ${item.headline}\n` : "";
+            const summary = item.summary ? `Summary: ${item.summary}` : "";
+            return `${headline}${summary}`;
+          })
+          .join("\n\n")
+      : "";
+    return `${title}\n${items}`.trim();
+  }
+
+  if (template === "data_summary") {
+    const title = data.title ? `${data.title}\n` : "";
+    const summary = data.summary ? `Summary: ${data.summary}\n` : "";
+    const desc = data.description ? `Description: ${data.description}\n` : "";
+    const footer = data.footer ? `\n${data.footer}` : "";
+    return `${title}${summary}${desc}${footer}`.trim();
+  }
+
+  if (template === "urgency_list") {
+    const title = data.title ? `${data.title}\n` : "";
+    const items = Array.isArray(data.items)
+      ? data.items
+          .map((item: any) => `- ${item.label} (Urgency: ${item.urgency ?? "none"}, Due: ${item.due ?? "N/A"}): ${item.preview ?? ""}`)
+          .join("\n")
+      : "";
+    return `${title}\n${items}`.trim();
+  }
+
+  if (template === "progress_tracker") {
+    const title = data.title ? `${data.title}\n` : "";
+    const text = data.text ? `${data.text}\n` : "";
+    const progress = `Progress: ${data.current}/${data.total}\n`;
+    const steps = Array.isArray(data.steps)
+      ? data.steps.map((s: any) => `[${s.done ? "x" : " "}] ${s.label}`).join("\n")
+      : "";
+    return `${title}${text}${progress}\n${steps}`.trim();
+  }
+
+  if (template === "checklist") {
+    const title = data.title ? `${data.title}\n` : "";
+    const subtitle = data.subtitle ? `${data.subtitle}\n` : "";
+    const msg = data.message ? `${data.message}\n` : "";
+    const items = Array.isArray(data.items)
+      ? data.items.map((item: any) => `[${item.checked ? "x" : " "}] ${item.label}`).join("\n")
+      : "";
+    return `${title}${subtitle}${msg}\n${items}`.trim();
+  }
+
+  if (template === "daily_task") {
+    const title = data.title ? `${data.title}\n` : "";
+    const task = data.task ? `Task: ${data.task}\n` : "";
+    const context = data.context ? `Context: ${data.context}` : "";
+    return `${title}${task}${context}`.trim();
+  }
+
+  if (template === "streak_counter") {
+    const label = data.label ? `${data.label}: ` : "";
+    const count = `${data.count} ${data.unit}\n`;
+    const caption = data.caption ? `${data.caption}\n` : "";
+    return `${label}${count}${caption}`.trim();
+  }
+
+  if (template === "comparison") {
+    const title = data.title ? `${data.title}\n` : "";
+    const narrative = data.trending_narrative ? `${data.trending_narrative}\n` : "";
+    const rows = Array.isArray(data.rows)
+      ? data.rows.map((row: any) => `${row.label}: ${Array.isArray(row.changes) ? row.changes.join(", ") : ""}`).join("\n")
+      : "";
+    const insight = data.insight ? `\nInsight: ${data.insight}` : "";
+    return `${title}${narrative}\n${rows}${insight}`.trim();
+  }
+
+  return data.body || data.text || data.message || data.summary || JSON.stringify(data);
+}
+
 async function latestAgentReplyText(
   userId: string,
   agentId: string
 ): Promise<string | null> {
-  const { rows } = await pool.query<{ body: string | null }>(
+  const { rows } = await pool.query<{ content: any }>(
     `
-      SELECT COALESCE(
-        content #>> '{data,body}',
-        content #>> '{data,text}',
-        content #>> '{data,message}',
-        content #>> '{data,summary}'
-      ) AS body
+      SELECT content
       FROM agent_messages
       WHERE user_id = $1
         AND agent_id = $2
@@ -603,21 +689,16 @@ async function latestAgentReplyText(
     [userId, agentId]
   );
 
-  return rows[0]?.body ?? null;
+  return rows[0] ? extractBodyFromContent(rows[0].content) : null;
 }
 
 async function latestAgentReply(
   userId: string,
   agentId: string
 ): Promise<{ body: string | null; sourceRefs: unknown[] }> {
-  const { rows } = await pool.query<{ body: string | null; source_refs: unknown[] }>(
+  const { rows } = await pool.query<{ content: any; source_refs: unknown[] }>(
     `
-      SELECT COALESCE(
-        content #>> '{data,body}',
-        content #>> '{data,text}',
-        content #>> '{data,message}',
-        content #>> '{data,summary}'
-      ) AS body,
+      SELECT content,
       COALESCE(source_refs, '[]'::jsonb) AS source_refs
       FROM agent_messages
       WHERE user_id = $1
@@ -629,9 +710,13 @@ async function latestAgentReply(
     [userId, agentId]
   );
 
+  if (!rows[0]) {
+    return { body: null, sourceRefs: [] };
+  }
+
   return {
-    body: rows[0]?.body ?? null,
-    sourceRefs: rows[0]?.source_refs ?? []
+    body: extractBodyFromContent(rows[0].content),
+    sourceRefs: rows[0].source_refs
   };
 }
 
