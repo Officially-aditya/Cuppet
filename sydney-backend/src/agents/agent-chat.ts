@@ -6,10 +6,12 @@ import {
   type AnthropicTextMessage
 } from "./anthropic.js";
 import type { ParsedIntent } from "./parser.js";
+import { fetchSourceReferenceDetail } from "../connectors/google-workspace.js";
 
 const maxContinuationTurns = 2;
 
 export type AgentChatContext = {
+  userId?: string;
   agent: { name: string; prompt: string; parsed_intent: ParsedIntent };
   latestAgentOutput: string;
   sourceRefs: unknown[];
@@ -26,8 +28,29 @@ export async function createAgentChatReply(
 
   try {
     const useWebSearch = shouldUseWebSearch(context.userText);
+    
+    // Proactively fetch full body/details of referenced documents/emails
+    let fetchedReferencesText = "";
+    if (context.userId && Array.isArray(context.sourceRefs) && context.sourceRefs.length > 0) {
+      const fetchPromises = context.sourceRefs.slice(0, 3).map(async (ref: any) => {
+        try {
+          const detailText = await fetchSourceReferenceDetail(context.userId!, ref);
+          if (detailText) {
+            const label = ref.label || ref.name || ref.subject || ref.id || "Reference";
+            return `Reference [${label}]:\n${detailText.slice(0, 2000)}`;
+          }
+        } catch {
+          // Ignore and continue without detail
+        }
+        return null;
+      });
+
+      const results = await Promise.all(fetchPromises);
+      fetchedReferencesText = results.filter(Boolean).join("\n\n---\n\n");
+    }
+
     const messages = buildMessages(context);
-    const system = agentChatSystemPrompt(context, useWebSearch);
+    const system = agentChatSystemPrompt(context, useWebSearch, fetchedReferencesText);
     let response = await createAnthropicMessage({
       maxTokens: useWebSearch ? 1100 : 700,
       system,
@@ -107,7 +130,11 @@ function buildMessages(context: AgentChatContext): AnthropicTextMessage[] {
   return messages;
 }
 
-function agentChatSystemPrompt(context: AgentChatContext, useWebSearch: boolean): string {
+function agentChatSystemPrompt(
+  context: AgentChatContext,
+  useWebSearch: boolean,
+  fetchedReferencesText?: string
+): string {
   const { agent, sourceRefs } = context;
   const parts = [
     `You are ${agent.name}, a specialized agent inside the Sydney app.`,
@@ -120,7 +147,7 @@ function agentChatSystemPrompt(context: AgentChatContext, useWebSearch: boolean)
     "4. Summarize subsets — condense parts of the output on request.",
     useWebSearch
       ? "5. Use the web_search tool to find more details, background, or latest updates regarding topics mentioned in the output when the user asks for more information."
-      : "5. Stay grounded — ONLY reference data that actually appears in your output. If the user asks about something not in the output, say you don't have that information and suggest running the agent again.",
+      : "5. Stay grounded — ONLY reference data that actually appears in your output or the fetched reference contents below.",
     "",
     "Keep replies concise, practical, and scannable. Use short bullets when listing items."
   ];
@@ -130,6 +157,14 @@ function agentChatSystemPrompt(context: AgentChatContext, useWebSearch: boolean)
       "",
       "Source references (URLs, email IDs, links from your output):",
       JSON.stringify(sourceRefs, null, 2)
+    );
+  }
+
+  if (fetchedReferencesText) {
+    parts.push(
+      "",
+      "Fetched full contents of referenced documents/emails:",
+      fetchedReferencesText
     );
   }
 

@@ -457,6 +457,7 @@ async function handleAgentTextMessage(
       const agentOutput = await latestAgentReply(userId, agent.id);
       const recentUserMsgs = await recentUserMessageTexts(userId, agent.id, 2);
       chatReplyText = await createAgentChatReply({
+        userId,
         agent: {
           name: agent.name,
           prompt: agent.prompt,

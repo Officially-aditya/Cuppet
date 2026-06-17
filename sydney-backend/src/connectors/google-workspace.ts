@@ -1391,3 +1391,84 @@ type OAuthState = {
   iat: number;
   exp: number;
 };
+
+export async function fetchSourceReferenceDetail(
+  userId: string,
+  sourceRef: any
+): Promise<string> {
+  const isGmail = sourceRef.type === "gmail_message" || String(sourceRef.id || "").startsWith("gmail_");
+
+  if (isGmail) {
+    const token = await googleAccessToken(userId, "gmail");
+    if (!token) throw new Error("Gmail connector is not connected.");
+
+    const rawId = String(sourceRef.id || "").replace(/^gmail_/, "");
+    return await fetchGmailMessageBody(token, rawId);
+  }
+
+  // Google Drive / Google Docs
+  const token = await googleAccessToken(userId, "drive");
+  if (!token) throw new Error("Google Drive connector is not connected.");
+
+  // MimeType is often not in sourceRef, so try to resolve it from the file metadata if missing
+  let mimeType = sourceRef.mimeType;
+  if (!mimeType && sourceRef.id) {
+    try {
+      const url = new URL(`${driveApiBase}/files/${sourceRef.id}`);
+      url.searchParams.set("fields", "mimeType,name");
+      const metadata = await googleJson<{ mimeType?: string, name?: string }>(url, token);
+      mimeType = metadata.mimeType;
+    } catch {
+      // Ignore and fallback
+    }
+  }
+
+  return await fetchDriveFileContent(token, sourceRef.id, mimeType || "", sourceRef.name || sourceRef.title || "");
+}
+
+async function fetchGmailMessageBody(accessToken: string, id: string): Promise<string> {
+  const url = new URL(`${gmailApiBase}/users/me/messages/${id}`);
+  url.searchParams.set("format", "full");
+  const message = await googleJson<any>(url, accessToken);
+
+  let bodyText = "";
+  if (message.payload) {
+    bodyText = parseGmailBody(message.payload);
+    if (!bodyText && message.payload.body?.data) {
+      bodyText = Buffer.from(message.payload.body.data, "base64").toString("utf-8");
+    }
+  }
+  return bodyText || message.snippet || "";
+}
+
+function parseGmailBody(part: any): string {
+  let bodyText = "";
+  if (part.mimeType === "text/plain" && part.body?.data) {
+    bodyText += Buffer.from(part.body.data, "base64").toString("utf-8");
+  }
+  if (Array.isArray(part.parts)) {
+    for (const subPart of part.parts) {
+      bodyText += parseGmailBody(subPart);
+    }
+  }
+  return bodyText;
+}
+
+async function fetchDriveFileContent(
+  accessToken: string,
+  id: string,
+  mimeType: string,
+  name: string
+): Promise<string> {
+  if (mimeType === "application/vnd.google-apps.document") {
+    const url = new URL(`${driveApiBase}/files/${id}/export`);
+    url.searchParams.set("mimeType", "text/plain");
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (response.ok) {
+      return await response.text();
+    }
+  }
+  return `File name: ${name} (MimeType: ${mimeType})`;
+}
