@@ -241,7 +241,32 @@ export function renderedNewsBrief(
 }
 
 export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {
-  const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const rawLines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines: string[] = [];
+
+  for (const line of rawLines) {
+    // Detect inline numbered or bulleted items after an intro, e.g.:
+    // "Tech news brief for today: 1. AI infrastructure race..."
+    const inlineMatch = line.match(/^(.*?):\s*(?:(\d+)[.)]|(\*|•|-))\s+(.+)$/);
+    if (inlineMatch) {
+      const intro = inlineMatch[1]?.trim() ?? "";
+      const num = inlineMatch[2];
+      const bullet = inlineMatch[3];
+      const rest = inlineMatch[4]?.trim() ?? "";
+
+      if (intro) {
+        lines.push(intro + ":");
+      }
+      if (num) {
+        lines.push(`${num}. ${rest}`);
+      } else if (bullet) {
+        lines.push(`${bullet} ${rest}`);
+      }
+    } else {
+      lines.push(line);
+    }
+  }
+
   const items: NewsBriefItem[] = [];
 
   for (const line of lines) {
