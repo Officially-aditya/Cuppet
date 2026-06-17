@@ -25,12 +25,24 @@ export async function createAgentChatReply(
   }
 
   try {
+    const useWebSearch = shouldUseWebSearch(context.userText);
     const messages = buildMessages(context);
-    const system = agentChatSystemPrompt(context);
+    const system = agentChatSystemPrompt(context, useWebSearch);
     let response = await createAnthropicMessage({
-      maxTokens: 700,
+      maxTokens: useWebSearch ? 1100 : 700,
       system,
-      messages
+      messages,
+      ...(useWebSearch
+        ? {
+            tools: [
+              {
+                type: "web_search_20250305",
+                name: "web_search",
+                max_uses: 3
+              }
+            ]
+          }
+        : {})
     });
     const allContent: AnthropicContentBlock[] = [...response.content];
 
@@ -40,9 +52,20 @@ export async function createAgentChatReply(
       }
       messages.push({ role: "assistant", content: response.content });
       response = await createAnthropicMessage({
-        maxTokens: 700,
+        maxTokens: useWebSearch ? 1100 : 700,
         system,
-        messages
+        messages,
+        ...(useWebSearch
+          ? {
+              tools: [
+                {
+                  type: "web_search_20250305",
+                  name: "web_search",
+                  max_uses: 3
+                }
+              ]
+            }
+          : {})
       });
       allContent.push(...response.content);
     }
@@ -84,7 +107,7 @@ function buildMessages(context: AgentChatContext): AnthropicTextMessage[] {
   return messages;
 }
 
-function agentChatSystemPrompt(context: AgentChatContext): string {
+function agentChatSystemPrompt(context: AgentChatContext, useWebSearch: boolean): string {
   const { agent, sourceRefs } = context;
   const parts = [
     `You are ${agent.name}, a specialized agent inside the Sydney app.`,
@@ -95,7 +118,9 @@ function agentChatSystemPrompt(context: AgentChatContext): string {
     "2. Filter/skim — extract specific items the user asks for (e.g. \"show only urgent ones\").",
     "3. Find/open — when the user says \"open\", \"find\", or \"give me the link\", return the relevant URL or reference from the source references below.",
     "4. Summarize subsets — condense parts of the output on request.",
-    "5. Stay grounded — ONLY reference data that actually appears in your output. If the user asks about something not in the output, say you don't have that information and suggest running the agent again.",
+    useWebSearch
+      ? "5. Use the web_search tool to find more details, background, or latest updates regarding topics mentioned in the output when the user asks for more information."
+      : "5. Stay grounded — ONLY reference data that actually appears in your output. If the user asks about something not in the output, say you don't have that information and suggest running the agent again.",
     "",
     "Keep replies concise, practical, and scannable. Use short bullets when listing items."
   ];
@@ -109,6 +134,14 @@ function agentChatSystemPrompt(context: AgentChatContext): string {
   }
 
   return parts.join("\n");
+}
+
+function shouldUseWebSearch(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web|more|detail|explain|background|why|how)\b/.test(lower) ||
+    /\b(?:is|are|was|were)\b.*\b(?:announced|released|launched|confirmed|delayed|cancelled)\b/.test(lower)
+  );
 }
 
 function fallbackAgentReply(context: AgentChatContext): string {
