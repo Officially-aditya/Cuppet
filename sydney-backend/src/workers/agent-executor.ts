@@ -18,11 +18,18 @@ import {
   renderedStreakCounter,
   renderedUrgencyList,
   renderedNewsBrief,
+  renderedStudyGuide,
   parseNewsBriefText,
   type AgentMessageContent,
   type RenderedAgentMessage,
   type NewsBriefItem
 } from "../agents/output.js";
+import {
+  anthropicConfigured,
+  createAnthropicMessage,
+  extractAnthropicText,
+  totalAnthropicTokens
+} from "../agents/anthropic.js";
 import { pool } from "../db/index.js";
 import {
   agentExecutorQueueName,
@@ -150,7 +157,7 @@ const renderers: Record<string, AgentRenderer> = {
     }),
   scheduled_reminder: ({ agent, trigger }) =>
     renderScheduledReminder(agent, trigger),
-  study_plan: ({ agent }) => renderStudyPlan(agent),
+  study_plan: ({ agent, trigger }) => renderStudyGuideAgent({ agent, trigger }),
   interview_prep: ({ agent }) => renderDailyTaskAgent(agent),
   procrastination_breaker: ({ agent }) => renderDailyTaskAgent(agent),
   daily_task: ({ agent }) => renderDailyTaskAgent(agent),
@@ -204,6 +211,18 @@ async function executeAgentJob(
   try {
     const rendered = await renderAgentMessage(agent, job.data.trigger);
     const message = await writeAgentMessage(agent, rendered.content, rendered.sourceRefs);
+
+    if (rendered.content.template === "study_guide") {
+      const newTopic = rendered.content.data.topic;
+      await pool.query(
+        `
+          UPDATE agents
+          SET parsed_intent = jsonb_set(parsed_intent, '{topics_covered}', coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb)
+          WHERE id = $2
+        `,
+        [JSON.stringify(newTopic), agent.id]
+      );
+    }
 
     await pool.query(
       `
@@ -557,6 +576,87 @@ async function renderCustomAgent(
       "This agent does not require an external connector, so this run delivered the saved instruction directly."
     ].join("\n")
   );
+}
+
+async function renderStudyGuideAgent(context: {
+  agent: AgentRow;
+  trigger: AgentExecutorJobData["trigger"];
+}): Promise<RenderedAgentMessage> {
+  const { agent } = context;
+  const parsedIntent = agent.parsed_intent || {};
+  const topicsCovered = Array.isArray(parsedIntent.topics_covered)
+    ? parsedIntent.topics_covered
+    : [];
+
+  if (!anthropicConfigured()) {
+    return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
+  }
+
+  try {
+    const response = await createAnthropicMessage({
+      maxTokens: 1000,
+      system: [
+        "You run a Sydney custom study guide agent.",
+        "Your task is to generate the next daily study topic/lesson based on the user's course request.",
+        "Check the list of previously covered topics and generate a new, logical, and progressive topic that has NOT been covered yet.",
+        "Ensure the references are valid clickable markdown reference URLs.",
+        "Return ONLY a valid JSON object matching this structure:",
+        "{",
+        '  "topic": "Topic Name",',
+        '  "definition": "Clear, concise definition and explanation in markdown.",',
+        '  "references": [',
+        '    { "title": "Reference Resource Name", "url": "https://example.com" }',
+        "  ]",
+        "}"
+      ].join(" "),
+      messages: [
+        {
+          role: "user",
+          content: [
+            `Course Prompt: ${agent.prompt}`,
+            `Previously Covered Topics: ${JSON.stringify(topicsCovered)}`,
+            `Generate the next unique lesson.`
+          ].join("\n")
+        }
+      ]
+    });
+
+    const body = extractAnthropicText(response.content);
+    const match = body.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error("Invalid LLM response format: No JSON object found.");
+    }
+    const data = JSON.parse(match[0]);
+
+    const completed = false;
+    const actions = [
+      { id: "done", label: "Done", style: "primary" },
+      { id: "snooze", label: "Snooze 30min", style: "secondary" },
+      { id: "skip", label: "Skip today", style: "ghost" }
+    ] as const;
+
+    return renderedStudyGuide(
+      {
+        topic: data.topic || "Daily Lesson",
+        definition: data.definition || "No definition was generated.",
+        references: Array.isArray(data.references) ? data.references : [],
+        completed,
+        actions: actions as any
+      },
+      {
+        tokensUsed: totalAnthropicTokens(response)
+      }
+    );
+  } catch (error) {
+    console.error("Study Guide generation failed:", error);
+    return renderedPlainText(
+      [
+        scheduledIntro(agent, "study session"),
+        "Failed to generate study guide lesson. Please try running the agent again.",
+        `Details: ${error instanceof Error ? error.message : String(error)}`
+      ].join("\n")
+    );
+  }
 }
 
 function renderStudyPlan(

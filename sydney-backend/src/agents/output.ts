@@ -142,6 +142,25 @@ export type NewsBriefMessageContent = {
   };
 };
 
+export type StudyGuideMessageContent = {
+  template: "study_guide";
+  version: "1.0";
+  data: {
+    topic: string;
+    definition: string;
+    references: Array<{
+      title: string;
+      url: string;
+    }>;
+    completed: boolean;
+    actions: Array<{
+      id: "done" | "snooze" | "skip";
+      label: string;
+      style?: "primary" | "secondary" | "ghost";
+    }>;
+  };
+};
+
 export type AgentMessageContent =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -151,7 +170,8 @@ export type AgentMessageContent =
   | DailyTaskMessageContent
   | StreakCounterMessageContent
   | ComparisonMessageContent
-  | NewsBriefMessageContent;
+  | NewsBriefMessageContent
+  | StudyGuideMessageContent;
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;
@@ -238,6 +258,13 @@ export function renderedNewsBrief(
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("news_brief", data, meta);
+}
+
+export function renderedStudyGuide(
+  data: StudyGuideMessageContent["data"],
+  meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
+): RenderedAgentMessage {
+  return rendered("study_guide", data, meta);
 }
 
 export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {

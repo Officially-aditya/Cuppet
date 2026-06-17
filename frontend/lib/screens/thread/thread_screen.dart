@@ -10,6 +10,7 @@ import '../../providers/connectors_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../config/routes.dart';
 import '../../widgets/thread/message_card.dart';
+import '../../widgets/thread/sydney_heatmap.dart';
 import '../../widgets/thread/reply_bar.dart';
 import '../../widgets/thread/typing_indicator.dart';
 import '../../widgets/sydney_primitives.dart';
@@ -41,6 +42,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(messagesProvider(widget.agent.threadId));
+    final agentsAsync = ref.watch(agentsProvider);
+    final agent = agentsAsync.maybeWhen(
+      data: (list) => list.firstWhere((a) => a.id == widget.agent.id, orElse: () => widget.agent),
+      orElse: () => widget.agent,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -61,12 +67,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: Color(widget.agent.accentColor),
+                color: Color(agent.accentColor),
                 borderRadius: BorderRadius.circular(SydneyRadius.sm),
               ),
               alignment: Alignment.center,
               child: Text(
-                widget.agent.avatarInitials,
+                agent.avatarInitials,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -79,7 +85,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.agent.name,
+                    agent.name,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(
                       context,
@@ -100,7 +106,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        widget.agent.availability == AgentAvailability.paused
+                        agent.availability == AgentAvailability.paused
                             ? 'PAUSED'
                             : 'ACTIVE',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -137,13 +143,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
-                    widget.agent.availability == AgentAvailability.paused
+                    agent.availability == AgentAvailability.paused
                         ? Icons.play_arrow_rounded
                         : Icons.pause_rounded,
                     size: 20,
                   ),
                   title: Text(
-                    widget.agent.availability == AgentAvailability.paused
+                    agent.availability == AgentAvailability.paused
                         ? 'Resume agent'
                         : 'Pause agent',
                   ),
@@ -168,21 +174,21 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   title: Text('Agent preferences'),
                 ),
               ),
-              if (!widget.agent.isAssistant)
+              if (!agent.isAssistant)
                 const PopupMenuItem(
                   value: 'delete',
                   child: ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.delete_outline_rounded,
-                      size: 20,
-                      color: Color(0xFFDC2626),
-                    ),
-                    title: Text(
-                      'Delete agent',
-                      style: TextStyle(color: Color(0xFFDC2626)),
-                    ),
+                     dense: true,
+                     contentPadding: EdgeInsets.zero,
+                     leading: Icon(
+                       Icons.delete_outline_rounded,
+                       size: 20,
+                       color: Color(0xFFDC2626),
+                     ),
+                     title: Text(
+                       'Delete agent',
+                       style: TextStyle(color: Color(0xFFDC2626)),
+                     ),
                   ),
                 ),
             ],
@@ -193,6 +199,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            if (agent.parsedIntent?['intent'] == 'study_plan')
+              SydneyHeatmap(history: agent.parsedIntent?['history'] ?? const {}),
             Expanded(
               child: messages.when(
                 data: (items) {
@@ -287,6 +295,39 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final actionType = action['type']?.toString();
     final actionId = action['id']?.toString() ?? '';
     final connectorId = _connectorIdFromAction(action);
+
+    if (actionId == 'done' || actionId == 'snooze' || actionId == 'skip') {
+      final messageId = action['messageId']?.toString();
+      if (messageId == null || messageId.isEmpty) {
+        return;
+      }
+      try {
+        final actionText = actionId == 'done'
+            ? "Completing today's study..."
+            : actionId == 'skip'
+                ? "Skipping today's study..."
+                : "Snoozing study for 30 minutes...";
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(actionText)),
+        );
+
+        await ref.read(agentServiceProvider).executeMessageAction(
+              widget.agent.id,
+              messageId,
+              actionId,
+            );
+
+        ref.invalidate(messagesProvider(widget.agent.threadId));
+        ref.invalidate(agentsProvider);
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+      return;
+    }
 
     if (connectorId == null) {
       if (actionType == 'open_connectors' || actionId == 'connect') {

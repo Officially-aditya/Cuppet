@@ -129,6 +129,53 @@ class AgentService {
     }
   }
 
+  Future<Map<String, dynamic>> parseAgentPrompt(String prompt) async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      return {
+        'action': 'Reviews and tracks your study topics.',
+        'permissions_needed': ['Google Drive Access'],
+        'output_template': 'study_guide',
+        'schedule_cron': '0 9 * * *',
+      };
+    }
+    try {
+      final response = await _api.post<Map<String, dynamic>>(
+        '/agents/parse',
+        data: {'prompt': prompt},
+      );
+      final data = response.data?['parsed_intent'];
+      if (data is! Map) {
+        throw const ApiException('The server did not return the parsed intent.');
+      }
+      return Map<String, dynamic>.from(data);
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not analyze that prompt. Please try again.',
+      );
+    }
+  }
+
+  Future<void> executeMessageAction(
+    String agentId,
+    String messageId,
+    String action,
+  ) async {
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      return;
+    }
+    try {
+      await _api.post<void>(
+        '/agents/$agentId/messages/$messageId/action',
+        data: {'action': action},
+      );
+    } catch (error) {
+      throw apiExceptionFrom(error, 'Could not complete the study action.');
+    }
+  }
+
   Future<void> clearChat(String agentId) async {
     if (Env.useMockData) {
       await Future<void>.delayed(const Duration(milliseconds: 200));

@@ -18,9 +18,82 @@ class ConfirmScreen extends ConsumerStatefulWidget {
 
 class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   bool _creating = false;
+  bool _loading = true;
+  Map<String, dynamic>? _parsedIntent;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadParsedIntent();
+  }
+
+  Future<void> _loadParsedIntent() async {
+    try {
+      final parsed = await ref.read(agentServiceProvider).parseAgentPrompt(widget.draft.prompt);
+      if (mounted) {
+        setState(() {
+          _parsedIntent = parsed;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  String _describeTiming(Map<String, dynamic>? parsed) {
+    final cron = parsed?['schedule_cron']?.toString();
+    if (cron == null) return 'Whenever you message it';
+    if (cron.contains('0 9 * * *')) return 'Daily at 9:00 AM';
+    if (cron.contains('0 8 * * *')) return 'Daily at 8:00 AM';
+    if (cron.contains('0 7 * * *')) return 'Daily at 7:00 AM';
+    if (cron.contains('0 6 * * *')) return 'Daily at 6:00 AM';
+    if (cron.contains('0 8 * * 1')) return 'Weekly on Mondays at 8:00 AM';
+    if (cron.contains('0 9 * * 1')) return 'Weekly on Mondays at 9:00 AM';
+    if (cron.contains('0 20 * * *')) return 'Daily at 8:00 PM';
+    if (cron.contains('0 21 * * *')) return 'Daily at 9:00 PM';
+    if (cron.contains('0 16 * * *')) return 'Daily at 4:00 PM';
+    if (cron.contains('0 17 * * 5')) return 'Weekly on Fridays at 5:00 PM';
+    return 'Runs on schedule: $cron';
+  }
+
+  IconData _permissionIcon(String perm) {
+    final lower = perm.toLowerCase();
+    if (lower.contains('calendar')) return Icons.calendar_month_outlined;
+    if (lower.contains('gmail') || lower.contains('email')) return Icons.mail_outline_rounded;
+    if (lower.contains('drive')) return Icons.description_outlined;
+    if (lower.contains('web')) return Icons.search_rounded;
+    return Icons.security_outlined;
+  }
+
+  String _describeOutput(Map<String, dynamic>? parsed) {
+    final template = parsed?['output_template']?.toString();
+    return switch (template) {
+      'plain_text' => 'A custom formatted text report',
+      'checklist' => 'An interactive checklist of action items',
+      'urgency_list' => 'A prioritized list of urgent updates',
+      'data_summary' => 'A structured data summary report',
+      'daily_task' => 'A daily practice task breakdown',
+      'streak_counter' => 'A tracker counting streak milestones',
+      'comparison' => 'A structured comparison overview',
+      'news_brief' => 'A summarized brief of recent articles',
+      'study_guide' => 'A study topic, explanation, and reference links',
+      _ => 'A detailed summary report',
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final permissions = _parsedIntent?['permissions_needed'] is List
+        ? List<String>.from(_parsedIntent?['permissions_needed'])
+        : const <String>[];
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -36,97 +109,115 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       ),
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            SydneySpacing.page,
-            SydneySpacing.lg,
-            SydneySpacing.page,
-            140,
-          ),
-          children: [
-            SydneyPanel(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const SydneyIconBadge(
-                    size: 48,
-                    color: SydneyColors.primarySoft,
-                    foregroundColor: SydneyColors.primary,
-                    radius: SydneyRadius.full,
-                    child: Text('M'),
-                  ),
-                  const SizedBox(height: SydneySpacing.md),
-                  Text(
-                    _agentName(widget.draft),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: SydneySpacing.md),
-                  Text(
-                    '"${widget.draft.prompt}"',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurfaceVariant,
-                      height: 1.45,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(SydneySpacing.lg),
+                      child: Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: SydneyColors.danger),
+                      ),
                     ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      SydneySpacing.page,
+                      SydneySpacing.lg,
+                      SydneySpacing.page,
+                      140,
+                    ),
+                    children: [
+                      SydneyPanel(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            const SydneyIconBadge(
+                              size: 48,
+                              color: SydneyColors.primarySoft,
+                              foregroundColor: SydneyColors.primary,
+                              radius: SydneyRadius.full,
+                              child: Text('M'),
+                            ),
+                            const SizedBox(height: SydneySpacing.md),
+                            Text(
+                              _parsedIntent?['name']?.toString() ?? _agentName(widget.draft),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: SydneySpacing.md),
+                            Text(
+                              '"${widget.draft.prompt}"',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: SydneyColors.onSurfaceVariant,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: SydneySpacing.md),
+                      _InfoCard(
+                        icon: Icons.assignment_outlined,
+                        title: 'What it does',
+                        child: Text(
+                          _parsedIntent?['action']?.toString() ?? 'No description generated.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SydneyColors.onSurfaceVariant,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: SydneySpacing.md),
+                      _InfoCard(
+                        icon: Icons.schedule_rounded,
+                        title: 'When it runs',
+                        child: Text(
+                          _describeTiming(_parsedIntent),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SydneyColors.onSurfaceVariant,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: SydneySpacing.md),
+                      _InfoCard(
+                        icon: Icons.lock_outline_rounded,
+                        title: 'What it needs',
+                        child: permissions.isEmpty
+                            ? Text(
+                                'No external permissions required.',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: SydneyColors.onSurfaceVariant,
+                                  height: 1.35,
+                                ),
+                              )
+                            : Wrap(
+                                spacing: SydneySpacing.sm,
+                                runSpacing: SydneySpacing.sm,
+                                children: [
+                                  for (final perm in permissions)
+                                    _AccessPill(icon: _permissionIcon(perm), label: perm),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: SydneySpacing.md),
+                      _InfoCard(
+                        icon: Icons.send_rounded,
+                        title: 'What it sends',
+                        child: Text(
+                          _describeOutput(_parsedIntent),
+                          style: const TextStyle(
+                            color: SydneyColors.onSurfaceVariant,
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            const _InfoCard(
-              icon: Icons.assignment_outlined,
-              title: 'What it does',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Bullet('Reviews recent calendar events'),
-                  _Bullet('Extracts key discussion points'),
-                  _Bullet('Drafts a structured agenda for upcoming meetings'),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            _InfoCard(
-              icon: Icons.schedule_rounded,
-              title: 'When it runs',
-              child: Text(
-                widget.draft.responseTiming == 'daily'
-                    ? 'A consolidated digest each day'
-                    : 'Whenever you message it',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SydneyColors.onSurfaceVariant,
-                  height: 1.35,
-                ),
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            _InfoCard(
-              icon: Icons.lock_outline_rounded,
-              title: 'What it needs',
-              child: Wrap(
-                spacing: SydneySpacing.sm,
-                runSpacing: SydneySpacing.sm,
-                children: [
-                  for (final tool in widget.draft.connectedTools)
-                    _AccessPill(icon: _toolIcon(tool), label: '$tool Access'),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            const _InfoCard(
-              icon: Icons.send_rounded,
-              title: 'What it sends',
-              child: Text(
-                'A draft agenda and summary message',
-                style: TextStyle(
-                  color: SydneyColors.onSurfaceVariant,
-                  fontSize: 12,
-                  height: 1.35,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
       bottomNavigationBar: SydneyFooter(
         child: Column(
@@ -227,37 +318,6 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-class _Bullet extends StatelessWidget {
-  const _Bullet(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Icon(Icons.circle, size: 4, color: SydneyColors.mutedInk),
-          ),
-          const SizedBox(width: SydneySpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _AccessPill extends StatelessWidget {
   const _AccessPill({required this.icon, required this.label});
@@ -300,12 +360,4 @@ String _agentName(AgentCreationDraft draft) {
   return draft.templateLabel;
 }
 
-IconData _toolIcon(String tool) {
-  if (tool.toLowerCase().contains('calendar')) {
-    return Icons.calendar_month_outlined;
-  }
-  if (tool.toLowerCase().contains('gmail')) {
-    return Icons.mail_outline_rounded;
-  }
-  return Icons.description_outlined;
-}
+

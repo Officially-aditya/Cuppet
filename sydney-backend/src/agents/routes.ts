@@ -3,7 +3,7 @@ import { z } from "zod";
 import { isUuid } from "../api/ids.js";
 import { pool } from "../db/index.js";
 import { requireAuth } from "../auth/middleware.js";
-import { enqueueAgentRun } from "../queue/index.js";
+import { enqueueAgentRun, agentExecutorQueue, agentExecutorJobName } from "../queue/index.js";
 import { ensureAssistantContact } from "./assistant.js";
 import { parseIntentHybrid } from "./llm-intent.js";
 import type { ParsedIntent } from "./parser.js";
@@ -326,6 +326,77 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return reply.code(204).send();
+  });
+
+  app.post("/agents/parse", { preHandler: requireAuth }, async (request, reply) => {
+    const body = createAgentSchema.safeParse(request.body);
+
+    if (!body.success) {
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_AGENT_PROMPT",
+          message: body.error.issues[0]?.message ?? "Invalid prompt."
+        }
+      });
+    }
+
+    const parsedIntent = await parseIntentHybrid(body.data.prompt);
+    return reply.send({ parsed_intent: parsedIntent });
+  });
+
+  app.post("/agents/:agentId/messages/:messageId/action", { preHandler: requireAuth }, async (request, reply) => {
+    const { agentId, messageId } = request.params as { agentId: string; messageId: string };
+    const { action } = request.body as { action: "done" | "snooze" | "skip" };
+    const userId = request.auth!.userId;
+
+    if (!isUuid(agentId) || !isUuid(messageId)) {
+      return reply.code(400).send({ error: "Invalid agent or message ID." });
+    }
+
+    // Verify ownership of agent
+    const agent = await getAgent(userId, agentId);
+    if (!agent) {
+      return agentNotFound(reply);
+    }
+
+    const dateString = new Date().toISOString().split("T")[0];
+
+    if (action === "done") {
+      // 1. Mark current card as completed
+      await pool.query(
+        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'true'::jsonb) WHERE id = $1`,
+        [messageId]
+      );
+      // 2. Append completed day to history heatmap
+      await pool.query(
+        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'true'::jsonb) WHERE id = $1`,
+        [agentId]
+      );
+    } else if (action === "skip") {
+      await pool.query(
+        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'false'::jsonb) WHERE id = $1`,
+        [messageId]
+      );
+      await pool.query(
+        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'false'::jsonb) WHERE id = $1`,
+        [agentId]
+      );
+    } else if (action === "snooze") {
+      // bullmq enqueue with delay of 30 minutes
+      await agentExecutorQueue.add(
+        agentExecutorJobName,
+        { agentId, trigger: "schedule" },
+        {
+          delay: 30 * 60 * 1000,
+          attempts: 2,
+          backoff: { type: "exponential", delay: 3000 },
+          removeOnComplete: { count: 1000 },
+          removeOnFail: { count: 1000 }
+        }
+      );
+    }
+
+    return reply.send({ success: true });
   });
 }
 

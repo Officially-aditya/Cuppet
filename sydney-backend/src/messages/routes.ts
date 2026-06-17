@@ -813,9 +813,8 @@ type AssistantMessageMode = "create_agent" | "chat";
 function classifyAssistantMessage(text: string): AssistantMessageMode {
   const lower = text.trim().toLowerCase();
   const explicitlyCreatesAgent =
-    /\b(?:create|make|build)\s+(?:a|an|new|the)?\s*agent\b/.test(lower) ||
-    /\bset\s+up\s+(?:a|an|new|the)?\s*agent\b/.test(lower) ||
-    /\bsetup\s+(?:a|an|new|the)?\s*agent\b/.test(lower);
+    /\b(?:create|make|build|setup)\b.*\bagent\b/.test(lower) ||
+    /\bset\s+up\b.*\bagent\b/.test(lower);
 
   if (explicitlyCreatesAgent) {
     return "create_agent";

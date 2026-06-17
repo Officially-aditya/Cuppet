@@ -14,6 +14,7 @@ class Agent {
     this.isPinned = false,
     this.availability = AgentAvailability.ready,
     this.accentColor = 0xFF1D7A5C,
+    this.parsedIntent,
   });
 
   final String id;
@@ -28,6 +29,7 @@ class Agent {
   final bool isPinned;
   final AgentAvailability availability;
   final int accentColor;
+  final Map<String, dynamic>? parsedIntent;
 
   bool get hasUnread => unreadCount > 0;
 
@@ -44,6 +46,7 @@ class Agent {
     bool? isPinned,
     AgentAvailability? availability,
     int? accentColor,
+    Map<String, dynamic>? parsedIntent,
   }) {
     return Agent(
       id: id ?? this.id,
@@ -58,10 +61,15 @@ class Agent {
       isPinned: isPinned ?? this.isPinned,
       availability: availability ?? this.availability,
       accentColor: accentColor ?? this.accentColor,
+      parsedIntent: parsedIntent ?? this.parsedIntent,
     );
   }
 
   factory Agent.fromJson(Map<String, dynamic> json) {
+    final parsedMap = json['parsed_intent'] != null && json['parsed_intent'] is Map
+        ? Map<String, dynamic>.from(json['parsed_intent'])
+        : null;
+
     return Agent(
       id: json['id']?.toString() ?? '',
       threadId:
@@ -110,6 +118,7 @@ class Agent {
         json['accentColor'] ?? json['accent_color'],
         fallback: 0xFF1D7A5C,
       ),
+      parsedIntent: parsedMap,
     );
   }
 
@@ -127,6 +136,7 @@ class Agent {
       'isPinned': isPinned,
       'availability': availability.name,
       'accentColor': accentColor,
+      'parsed_intent': parsedIntent,
     };
   }
 
