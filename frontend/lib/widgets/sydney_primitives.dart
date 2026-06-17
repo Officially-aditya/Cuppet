@@ -364,6 +364,28 @@ class _MarkdownTextState extends State<MarkdownText> {
   ) {
     final spans = <InlineSpan>[];
     
+    // Sanitize markdown before parsing (unmatched asterisks, nested spaces, etc.)
+    var cleaned = value.trim();
+    cleaned = cleaned.replaceFirst(RegExp(r'^\*\*\s+\*'), '*');
+    cleaned = cleaned.replaceFirst(RegExp(r'^\*\*\s+\*\*'), '**');
+    cleaned = cleaned.replaceFirst(RegExp(r'^\*\s+\*'), '*');
+
+    if (cleaned.startsWith('**') && !cleaned.substring(2).contains('**')) {
+      cleaned = cleaned.replaceFirst(RegExp(r'^\*\*\s*'), '');
+    }
+    if (cleaned.startsWith('*') && !cleaned.substring(1).contains('*')) {
+      cleaned = cleaned.replaceFirst(RegExp(r'^\*\s*'), '');
+    }
+    if (cleaned.endsWith('**') && !cleaned.substring(0, cleaned.length - 2).contains('**')) {
+      cleaned = cleaned.replaceFirst(RegExp(r'\*\*\s*$'), '');
+    }
+    if (cleaned.endsWith('*') && !cleaned.substring(0, cleaned.length - 1).contains('*')) {
+      cleaned = cleaned.replaceFirst(RegExp(r'\*\s*$'), '');
+    }
+
+    cleaned = cleaned.replaceAllMapped(RegExp(r'\*\*\s+([^*]+)\s+\*\*'), (m) => '**${m[1]}**');
+    cleaned = cleaned.replaceAllMapped(RegExp(r'\*\s+([^*]+)\s+\*'), (m) => '*${m[1]}*');
+
     // Matches [text](url), **bold**, *italic*, or raw urls
     final pattern = RegExp(
       r'\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|(https?://[^\s]+)',
@@ -372,10 +394,10 @@ class _MarkdownTextState extends State<MarkdownText> {
 
     var cursor = 0;
 
-    for (final match in pattern.allMatches(value)) {
+    for (final match in pattern.allMatches(cleaned)) {
       if (match.start > cursor) {
         spans.add(TextSpan(
-          text: value.substring(cursor, match.start),
+          text: cleaned.substring(cursor, match.start),
           style: baseStyle?.copyWith(
             color: defaultColor,
             fontWeight: widget.bold ? FontWeight.w800 : baseStyle.fontWeight,
@@ -447,9 +469,9 @@ class _MarkdownTextState extends State<MarkdownText> {
       cursor = match.end;
     }
 
-    if (cursor < value.length) {
+    if (cursor < cleaned.length) {
       spans.add(TextSpan(
-        text: value.substring(cursor),
+        text: cleaned.substring(cursor),
         style: baseStyle?.copyWith(
           color: defaultColor,
           fontWeight: widget.bold ? FontWeight.w800 : baseStyle.fontWeight,

@@ -63,8 +63,8 @@ class DataSummaryTemplate extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title.toUpperCase(),
+              MarkdownText(
+                text: title.toUpperCase(),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: SydneyColors.onSurface,
                   letterSpacing: 0.5,
@@ -134,8 +134,8 @@ class _SummaryBlockView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (block.title != null && block.title!.isNotEmpty) ...[
-            Text(
-              block.title!,
+            MarkdownText(
+              text: block.title!,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: SydneyColors.primary,
                 fontWeight: FontWeight.w800,
