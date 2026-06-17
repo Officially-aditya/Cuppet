@@ -27,6 +27,7 @@ class ThreadScreen extends ConsumerStatefulWidget {
 class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   final _scrollController = ScrollController();
   int _lastRenderedMessageCount = -1;
+  AgentAvailability? _lastAvailability;
 
   @override
   void initState() {
@@ -213,8 +214,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             Expanded(
               child: messages.when(
                 data: (items) {
-                  if (_lastRenderedMessageCount != items.length) {
+                  if (_lastRenderedMessageCount != items.length ||
+                      _lastAvailability != widget.agent.availability) {
                     _lastRenderedMessageCount = items.length;
+                    _lastAvailability = widget.agent.availability;
                     _scrollToBottomSoon();
                   }
 
@@ -293,6 +296,18 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         return;
       }
       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+
+      // Perform secondary jumps to handle layout changes of lazy-loaded items
+      Future.delayed(const Duration(milliseconds: 60), () {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
+      Future.delayed(const Duration(milliseconds: 180), () {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
     });
   }
 
