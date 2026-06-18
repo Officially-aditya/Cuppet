@@ -147,7 +147,7 @@ function agentChatSystemPrompt(
     "4. Summarize subsets — condense parts of the output on request.",
     useWebSearch
       ? "5. Use the web_search tool to find more details, background, or latest updates regarding topics mentioned in the output when the user asks for more information."
-      : "5. Stay grounded — ONLY reference data that actually appears in your output or the fetched reference contents below.",
+      : "5. Stay grounded — ONLY reference data that actually appears in your output or the fetched reference contents below. If the user asks for sources, links, or new information not present in the output or fetched references, politely explain that you cannot browse the web or provide new sources in this mode, rather than fabricating or defaulting to unrelated news topics.",
     "",
     "Keep replies concise, practical, and scannable. Use short bullets when listing items."
   ];
@@ -174,7 +174,7 @@ function agentChatSystemPrompt(
 function shouldUseWebSearch(text: string): boolean {
   const lower = text.toLowerCase();
   return (
-    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web|more|detail|explain|background|why|how)\b/.test(lower) ||
+    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web|more|detail|explain|background|why|how|source|sources|link|links|reference|references|citation|citations|article|articles|website|websites|url|urls)\b/.test(lower) ||
     /\b(?:is|are|was|were)\b.*\b(?:announced|released|launched|confirmed|delayed|cancelled)\b/.test(lower)
   );
 }
