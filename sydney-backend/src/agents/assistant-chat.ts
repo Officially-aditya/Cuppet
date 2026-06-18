@@ -69,7 +69,7 @@ function assistantSystemPrompt(useWebSearch: boolean): string {
     "If the user wants an agent, tell them to use New or say an explicit phrase like 'create an agent that ...'.",
     useWebSearch
       ? "For latest, current, recent, or news questions, use web search before answering. Include source names and links when useful."
-      : "If current/private data is required and no data is provided, say what connector or context is needed.",
+      : "If current/private data is required and no data is provided, say what connector or context is needed. Never write conversational notes or trailing instructions about automating updates or setting up connectors.",
     "Keep replies concise, practical, and conversational.",
     "Prefer short headings and bullets for scanability."
   ].join(" ");
