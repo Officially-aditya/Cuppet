@@ -353,7 +353,7 @@ export function parseNewsBriefText(title: string, body: string): NewsBriefMessag
         continue;
       }
       // Clean up markdown headlines if any
-      const cleanedLine = line.replace(/^#{1,6}\s+/, "").replace(/^\*\*|\*\*$/g, "").trim();
+      const cleanedLine = line.replace(/^#{1,6}\s+/, "").trim();
       if (cleanedLine) {
         items.push({ summary: cleanedLine });
       }

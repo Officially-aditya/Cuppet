@@ -38,7 +38,7 @@ export async function renderLlmCustomAgent(input: {
         ? "Use the web_search tool to find the required information (such as research papers, articles, latest updates, or web data) requested in the user's prompt. Provide real, accurate information retrieved from the search results."
         : "Use only the user's saved prompt and action. Do not claim to have checked external services, files, email, web, Slack, calendar, or private data.",
       "If external data is required (like email, Slack, private documents) that cannot be retrieved via web search, state which connector is needed instead of inventing results. Never write conversational notes, summaries, or call-to-actions about automating updates or setting up connectors (e.g. do not say 'To automate these updates...').",
-      "Return a concise useful message for this run."
+      "Return a detailed, structured, and useful message for this run."
     ].join(" ");
 
     const messages: AnthropicTextMessage[] = [

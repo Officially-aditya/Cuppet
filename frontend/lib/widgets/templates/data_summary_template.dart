@@ -376,7 +376,7 @@ String _cleanInline(String value) {
   return value
       .trim()
       .replaceFirst(RegExp(r'^#{1,6}\s*'), '')
-      .replaceFirst(RegExp(r'^[•*\-]\s*'), '')
+      .replaceFirst(RegExp(r'^[•*\-](?!\*)\s*'), '')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 }
