@@ -15,7 +15,11 @@ export function initializeFirebase(): App | null {
   }
 
   try {
-    const serviceAccount = JSON.parse(config.FIREBASE_SERVICE_ACCOUNT);
+    let raw = config.FIREBASE_SERVICE_ACCOUNT.trim();
+    if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) {
+      raw = raw.slice(1, -1).trim();
+    }
+    const serviceAccount = JSON.parse(raw);
     
     firebaseApp = initializeApp({
       credential: cert(serviceAccount),
