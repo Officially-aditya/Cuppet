@@ -78,7 +78,7 @@ function assistantSystemPrompt(useWebSearch: boolean): string {
 function shouldUseWebSearch(text: string): boolean {
   const lower = text.toLowerCase();
   return (
-    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web)\b/.test(lower) ||
+    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web|research|paper|papers|arxiv)\b/.test(lower) ||
     /\b(?:is|are|was|were)\b.*\b(?:announced|released|launched|confirmed|delayed|cancelled)\b/.test(lower)
   );
 }

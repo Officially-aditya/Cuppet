@@ -174,7 +174,7 @@ function agentChatSystemPrompt(
 function shouldUseWebSearch(text: string): boolean {
   const lower = text.toLowerCase();
   return (
-    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web|more|detail|explain|background|why|how|source|sources|link|links|reference|references|citation|citations|article|articles|website|websites|url|urls)\b/.test(lower) ||
+    /\b(?:latest|current|recent|today|news|headline|update|what happened|pull up|look up|search|web|more|detail|explain|background|why|how|source|sources|link|links|reference|references|citation|citations|article|articles|website|websites|url|urls|research|paper|papers|arxiv)\b/.test(lower) ||
     /\b(?:is|are|was|were)\b.*\b(?:announced|released|launched|confirmed|delayed|cancelled)\b/.test(lower)
   );
 }

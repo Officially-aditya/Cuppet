@@ -128,7 +128,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     outputTemplate: "plain_text",
     permissionsNeeded: ["Web search (no login needed)"],
     priority: 22,
-    match: { any: [/\bsearch(?:es|ing)?\b/, /\blook\s+up\b/] }
+    match: { any: [/\bsearch(?:es|ing)?\b/, /\blook\s+up\b/, /\bresearch\b/, /\bpaper[s]?\b/, /\barxiv\b/] }
   },
   {
     name: "Weekly Progress",
@@ -555,7 +555,7 @@ export function parseIntent(prompt: string): ParsedIntent {
     });
   }
 
-  if (/\bsearch(?:es|ing)?\b/.test(lower) || /\blook\s+up\b/.test(lower)) {
+  if (/\bsearch(?:es|ing)?\b/.test(lower) || /\blook\s+up\b/.test(lower) || /\bresearch\b/.test(lower) || /\bpaper[s]?\b/.test(lower) || /\barxiv\b/.test(lower)) {
     return baseIntent(prompt, {
       name: "Web Search",
       avatar: "search",
