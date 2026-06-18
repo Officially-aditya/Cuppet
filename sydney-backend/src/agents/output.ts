@@ -421,12 +421,26 @@ function normalizeSummarySection(value: string): string {
     return lines[0] ?? "";
   }
 
-  const [first, ...rest] = lines;
+  let [first, ...rest] = lines;
   if (!first) {
     return "";
   }
 
-  if (first.endsWith(":")) {
+  // Normalize markdown headings or bold headers to end with a colon so they are treated as block titles
+  const isHeading =
+    first.startsWith("#") ||
+    (first.startsWith("**") && first.endsWith("**")) ||
+    first.endsWith(":");
+
+  if (isHeading) {
+    first = first
+      .replace(/^#{1,6}\s*/, "")
+      .replace(/^\*\*|\*\*$/g, "")
+      .trim();
+    if (!first.endsWith(":")) {
+      first = first + ":";
+    }
+
     return [
       first,
       ...rest.map((line) => (line.startsWith("• ") ? line : `• ${line}`))
