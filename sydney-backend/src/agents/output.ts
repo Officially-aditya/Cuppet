@@ -301,8 +301,31 @@ export function parseNewsBriefText(title: string, body: string): NewsBriefMessag
     const numberedMatch = line.match(/^(\d+|\*|•|-)[.)]?\s+(.+)$/);
     if (numberedMatch && numberedMatch[2]) {
       const content = numberedMatch[2].trim();
-      // Look for a colon separator
-      const colonIndex = content.indexOf(":");
+      // Look for a colon separator, skipping any colons inside brackets/parentheses or before double slashes (e.g. in URL protocols)
+      let colonIndex = -1;
+      let bracketDepth = 0;
+      let parenDepth = 0;
+      for (let i = 0; i < content.length; i += 1) {
+        const char = content[i];
+        if (char === "[") {
+          bracketDepth += 1;
+        } else if (char === "]") {
+          bracketDepth = Math.max(0, bracketDepth - 1);
+        } else if (char === "(") {
+          parenDepth += 1;
+        } else if (char === ")") {
+          parenDepth = Math.max(0, parenDepth - 1);
+        } else if (char === ":") {
+          if (bracketDepth === 0 && parenDepth === 0) {
+            const nextTwo = content.substring(i + 1, i + 3);
+            if (nextTwo !== "//") {
+              colonIndex = i;
+              break;
+            }
+          }
+        }
+      }
+
       if (colonIndex !== -1) {
         const headline = content.substring(0, colonIndex).replace(/^\*\*|\*\*$/g, "").trim();
         const summary = content.substring(colonIndex + 1).trim();
