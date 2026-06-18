@@ -222,7 +222,7 @@ export function cleanReasoning(text: string): string {
   cleaned = cleaned.replace(/<reasoning>[\s\S]*/gi, "");
   
   // Clean up LLM connector setup explanations / reasoning blocks
-  cleaned = cleaned.replace(/(?:\*?\*?\bAction Required\b\*?\*?:?|Action Required\*\*)[\s\S]*$/gi, "");
+  cleaned = cleaned.replace(/(?:\*?\*?\bAction Required\b\*?\*?:?|Action Required\*\*)\s*(?:Please\s+)?(?:to\s+)?(?:connect|reconnect|setup|configure|enable|authorization|link|connector)\b[\s\S]*$/gi, "");
   cleaned = cleaned.replace(/(?:To deliver these updates automatically)[\s\S]*$/gi, "");
   
   return cleaned.trim();
