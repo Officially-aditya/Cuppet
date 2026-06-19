@@ -144,6 +144,9 @@ class Agent {
   static List<Agent> sortForInbox(List<Agent> agents) {
     final sorted = [...agents];
     sorted.sort((a, b) {
+      if (a.isAssistant != b.isAssistant) {
+        return a.isAssistant ? -1 : 1;
+      }
       if (a.hasUnread != b.hasUnread) {
         return a.hasUnread ? -1 : 1;
       }
@@ -156,9 +159,6 @@ class Agent {
       }
       if (a.isPinned != b.isPinned) {
         return a.isPinned ? -1 : 1;
-      }
-      if (a.isAssistant != b.isAssistant) {
-        return a.isAssistant ? -1 : 1;
       }
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });

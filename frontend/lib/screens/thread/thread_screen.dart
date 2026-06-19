@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
+import '../../models/message.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/connectors_provider.dart';
 import '../../providers/messages_provider.dart';
@@ -28,6 +29,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   final _scrollController = ScrollController();
   int _lastRenderedMessageCount = -1;
   AgentAvailability? _lastAvailability;
+  String? _lastReadSyncedMessageId;
 
   @override
   void initState() {
@@ -45,7 +47,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final messages = ref.watch(messagesProvider(widget.agent.threadId));
     final agentsAsync = ref.watch(agentsProvider);
     final agent = agentsAsync.maybeWhen(
-      data: (list) => list.firstWhere((a) => a.id == widget.agent.id, orElse: () => widget.agent),
+      data:
+          (list) => list.firstWhere(
+            (a) => a.id == widget.agent.id,
+            orElse: () => widget.agent,
+          ),
       orElse: () => widget.agent,
     );
 
@@ -128,71 +134,72 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             icon: const Icon(Icons.more_vert_rounded, size: 20),
             tooltip: 'More options',
             onSelected: (value) => _handleMenuAction(value),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'clear_chat',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.delete_sweep_rounded, size: 20),
-                  title: Text('Clear chat'),
-                ),
-              ),
-              PopupMenuItem(
-                value: 'toggle_pause',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    agent.availability == AgentAvailability.paused
-                        ? Icons.play_arrow_rounded
-                        : Icons.pause_rounded,
-                    size: 20,
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'clear_chat',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.delete_sweep_rounded, size: 20),
+                      title: Text('Clear chat'),
+                    ),
                   ),
-                  title: Text(
-                    agent.availability == AgentAvailability.paused
-                        ? 'Resume agent'
-                        : 'Pause agent',
+                  PopupMenuItem(
+                    value: 'toggle_pause',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        agent.availability == AgentAvailability.paused
+                            ? Icons.play_arrow_rounded
+                            : Icons.pause_rounded,
+                        size: 20,
+                      ),
+                      title: Text(
+                        agent.availability == AgentAvailability.paused
+                            ? 'Resume agent'
+                            : 'Pause agent',
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'mute',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.notifications_off_outlined, size: 20),
-                  title: Text('Mute agent'),
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'preferences',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.settings_outlined, size: 20),
-                  title: Text('Agent preferences'),
-                ),
-              ),
-              if (!agent.isAssistant)
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: ListTile(
-                     dense: true,
-                     contentPadding: EdgeInsets.zero,
-                     leading: Icon(
-                       Icons.delete_outline_rounded,
-                       size: 20,
-                       color: Color(0xFFDC2626),
-                     ),
-                     title: Text(
-                       'Delete agent',
-                       style: TextStyle(color: Color(0xFFDC2626)),
-                     ),
+                  const PopupMenuItem(
+                    value: 'mute',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.notifications_off_outlined, size: 20),
+                      title: Text('Mute agent'),
+                    ),
                   ),
-                ),
-            ],
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'preferences',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.settings_outlined, size: 20),
+                      title: Text('Agent preferences'),
+                    ),
+                  ),
+                  if (!agent.isAssistant)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 20,
+                          color: Color(0xFFDC2626),
+                        ),
+                        title: Text(
+                          'Delete agent',
+                          style: TextStyle(color: Color(0xFFDC2626)),
+                        ),
+                      ),
+                    ),
+                ],
           ),
           const SizedBox(width: SydneySpacing.xs),
         ],
@@ -214,6 +221,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             Expanded(
               child: messages.when(
                 data: (items) {
+                  _syncReadStateWithInbox(items);
                   if (_lastRenderedMessageCount != items.length ||
                       _lastAvailability != widget.agent.availability) {
                     _lastRenderedMessageCount = items.length;
@@ -311,6 +319,29 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     });
   }
 
+  void _syncReadStateWithInbox(List<Message> items) {
+    String? latestVisibleMessageId;
+    for (final message in items.reversed) {
+      if (message.sender == MessageSender.agent ||
+          message.sender == MessageSender.system) {
+        latestVisibleMessageId = message.id;
+        break;
+      }
+    }
+
+    if (latestVisibleMessageId == null ||
+        latestVisibleMessageId == _lastReadSyncedMessageId) {
+      return;
+    }
+
+    _lastReadSyncedMessageId = latestVisibleMessageId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(agentsProvider);
+      }
+    });
+  }
+
   void _handleMessageAction(Map<String, dynamic> action) {
     unawaited(_handleMessageActionAsync(action));
   }
@@ -326,29 +357,28 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         return;
       }
       try {
-        final actionText = actionId == 'done'
-            ? "Completing today's study..."
-            : actionId == 'skip'
+        final actionText =
+            actionId == 'done'
+                ? "Completing today's study..."
+                : actionId == 'skip'
                 ? "Skipping today's study..."
                 : "Snoozing study for 30 minutes...";
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(actionText)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(actionText)));
 
-        await ref.read(agentServiceProvider).executeMessageAction(
-              widget.agent.id,
-              messageId,
-              actionId,
-            );
+        await ref
+            .read(agentServiceProvider)
+            .executeMessageAction(widget.agent.id, messageId, actionId);
 
         ref.invalidate(messagesProvider(widget.agent.threadId));
         ref.invalidate(agentsProvider);
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
       }
       return;
     }
@@ -419,10 +449,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       case 'mute':
         _toggleMute();
       case 'preferences':
-        Navigator.of(context).pushNamed(
-          AppRoutes.agentPreferences,
-          arguments: widget.agent,
-        );
+        Navigator.of(
+          context,
+        ).pushNamed(AppRoutes.agentPreferences, arguments: widget.agent);
       case 'delete':
         _confirmDelete();
     }
@@ -431,25 +460,26 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   Future<void> _confirmClearChat() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Clear chat'),
-        content: const Text(
-          'This will permanently delete all messages in this conversation.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Clear chat'),
+            content: const Text(
+              'This will permanently delete all messages in this conversation.',
             ),
-            child: const Text('Clear'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                ),
+                child: const Text('Clear'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (confirmed != true || !mounted) return;
 
@@ -457,15 +487,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       await ref.read(agentServiceProvider).clearChat(widget.agent.id);
       ref.invalidate(messagesProvider(widget.agent.threadId));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Chat cleared.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Chat cleared.')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -474,9 +504,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final isPaused = widget.agent.availability == AgentAvailability.paused;
     final nextStatus = isPaused ? 'active' : 'paused';
     try {
-      await ref
-          .read(agentServiceProvider)
-          .patchAgent(widget.agent.id, {'status': nextStatus});
+      await ref.read(agentServiceProvider).patchAgent(widget.agent.id, {
+        'status': nextStatus,
+      });
       ref.invalidate(agentsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -487,9 +517,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -497,32 +527,37 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   void _toggleMute() {
     // Mute is a local preference — show confirmation for now.
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Agent muted. You won\'t receive notifications for this agent.')),
+      const SnackBar(
+        content: Text(
+          'Agent muted. You won\'t receive notifications for this agent.',
+        ),
+      ),
     );
   }
 
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete agent'),
-        content: Text(
-          'This will permanently delete "${widget.agent.name}" and all its messages. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete agent'),
+            content: Text(
+              'This will permanently delete "${widget.agent.name}" and all its messages. This cannot be undone.',
             ),
-            child: const Text('Delete'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (confirmed != true || !mounted) return;
 
@@ -537,9 +572,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }

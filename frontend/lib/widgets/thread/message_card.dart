@@ -84,10 +84,30 @@ class MessageCard extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: isUser ? SydneyColors.ink : SydneyColors.onSurface,
         ),
-        child: _TemplateRouter(
-          message: message,
-          isUser: isUser,
-          onAction: onAction,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _TemplateRouter(
+              message: message,
+              isUser: isUser,
+              onAction: onAction,
+            ),
+            const SizedBox(height: SydneySpacing.sm),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                _formatMessageTime(message.createdAt),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: (isUser ? SydneyColors.ink : SydneyColors.mutedInk)
+                      .withValues(alpha: 0.68),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -100,6 +120,19 @@ class MessageCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatMessageTime(DateTime value) {
+  final local = value.toLocal();
+  final hour =
+      local.hour == 0
+          ? 12
+          : local.hour > 12
+          ? local.hour - 12
+          : local.hour;
+  final minute = local.minute.toString().padLeft(2, '0');
+  final period = local.hour >= 12 ? 'PM' : 'AM';
+  return '$hour:$minute $period';
 }
 
 class _TemplateRouter extends StatelessWidget {
@@ -135,10 +168,7 @@ class _TemplateRouter extends StatelessWidget {
         data: data,
         onAction: (actionData) {
           if (onAction != null) {
-            onAction!({
-              ...actionData,
-              'messageId': message.id,
-            });
+            onAction!({...actionData, 'messageId': message.id});
           }
         },
       ),

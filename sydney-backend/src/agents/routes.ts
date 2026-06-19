@@ -86,6 +86,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         ) unread_messages ON TRUE
         WHERE a.user_id = $1
         ORDER BY
+          a.is_assistant DESC,
           (COALESCE(unread_messages.unread_count, 0) > 0) DESC,
           COALESCE(unread_messages.unread_count, 0) DESC,
           latest_message_at DESC NULLS LAST,

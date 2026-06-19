@@ -101,6 +101,18 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
+    await pool.query(
+      `
+        UPDATE agent_messages
+        SET read_at = COALESCE(read_at, NOW())
+        WHERE user_id = $1
+          AND agent_id = $2
+          AND role IN ('agent', 'system')
+          AND read_at IS NULL
+      `,
+      [userId, agentId]
+    );
+
     const { rows } = await pool.query(
       `
         SELECT id, agent_id, user_id, role, content, source_refs, read_at, created_at
