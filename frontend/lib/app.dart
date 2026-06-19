@@ -127,13 +127,15 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
         try {
           final result = await ref.read(pushServiceProvider).configure();
           if (result.isEnabled) {
-            print('Push notifications enabled (token: ${result.token != null})');
+            debugPrint(
+              'Push notifications enabled (token: ${result.token != null})',
+            );
           } else {
-            print('Push notifications declined by user');
+            debugPrint('Push notifications declined by user');
           }
         } on PushSetupException catch (e) {
           // Firebase not configured or platform not supported — non-fatal
-          print('Push notification setup skipped: $e');
+          debugPrint('Push notification setup skipped: $e');
         }
 
         // Setup click handlers!
@@ -144,13 +146,16 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
 
   Future<void> _setupNotificationClickHandlers() async {
     if (Firebase.apps.isEmpty) {
-      debugPrint('Firebase not initialized. Skipping notification click handlers.');
+      debugPrint(
+        'Firebase not initialized. Skipping notification click handlers.',
+      );
       return;
     }
 
     // 1. Handle notification that launched the app from a terminated state
     try {
-      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
         _handleNotificationClick(initialMessage);
       }
@@ -177,10 +182,7 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
       final agent = agentsList.firstWhere((a) => a.id == agentId);
 
       if (mounted) {
-        Navigator.of(context).pushNamed(
-          AppRoutes.thread,
-          arguments: agent,
-        );
+        Navigator.of(context).pushNamed(AppRoutes.thread, arguments: agent);
       }
     } catch (_) {
       // Refresh list if not found
@@ -190,10 +192,7 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
         if (agentsList != null) {
           final agent = agentsList.firstWhere((a) => a.id == agentId);
           if (mounted) {
-            Navigator.of(context).pushNamed(
-              AppRoutes.thread,
-              arguments: agent,
-            );
+            Navigator.of(context).pushNamed(AppRoutes.thread, arguments: agent);
           }
         }
       } catch (_) {

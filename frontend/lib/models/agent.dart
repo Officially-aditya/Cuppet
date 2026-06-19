@@ -66,9 +66,10 @@ class Agent {
   }
 
   factory Agent.fromJson(Map<String, dynamic> json) {
-    final parsedMap = json['parsed_intent'] != null && json['parsed_intent'] is Map
-        ? Map<String, dynamic>.from(json['parsed_intent'])
-        : null;
+    final parsedMap =
+        json['parsed_intent'] != null && json['parsed_intent'] is Map
+            ? Map<String, dynamic>.from(json['parsed_intent'])
+            : null;
 
     return Agent(
       id: json['id']?.toString() ?? '',
@@ -143,13 +144,23 @@ class Agent {
   static List<Agent> sortForInbox(List<Agent> agents) {
     final sorted = [...agents];
     sorted.sort((a, b) {
-      if (a.isAssistant != b.isAssistant) {
-        return a.isAssistant ? -1 : 1;
+      if (a.hasUnread != b.hasUnread) {
+        return a.hasUnread ? -1 : 1;
+      }
+      if (a.unreadCount != b.unreadCount) {
+        return b.unreadCount.compareTo(a.unreadCount);
+      }
+      final latestComparison = b.latestMessageAt.compareTo(a.latestMessageAt);
+      if (latestComparison != 0) {
+        return latestComparison;
       }
       if (a.isPinned != b.isPinned) {
         return a.isPinned ? -1 : 1;
       }
-      return b.latestMessageAt.compareTo(a.latestMessageAt);
+      if (a.isAssistant != b.isAssistant) {
+        return a.isAssistant ? -1 : 1;
+      }
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
     return sorted;
   }

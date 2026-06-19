@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,20 +21,20 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 final pushServiceProvider = Provider<PushService>((ref) {
   final api = ref.watch(apiClientProvider);
-  
+
   return PushService(
     onTokenRegistered: (token) async {
       try {
-        await api.post('/notifications/register', data: {
-          'token': token,
-          'device_info': {
-            'platform': 'android',
-            'app_version': '0.1.0',
+        await api.post(
+          '/notifications/register',
+          data: {
+            'token': token,
+            'device_info': {'platform': 'android', 'app_version': '0.1.0'},
           },
-        });
-        print('FCM token registered successfully');
+        );
+        debugPrint('FCM token registered successfully');
       } catch (e) {
-        print('Failed to register FCM token: $e');
+        debugPrint('Failed to register FCM token: $e');
         rethrow;
       }
     },

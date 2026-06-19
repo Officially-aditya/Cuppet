@@ -349,11 +349,10 @@ class _MarkdownTextState extends State<MarkdownText> {
     _recognizers.clear();
 
     final baseStyle = widget.style ?? Theme.of(context).textTheme.bodyMedium;
-    final color = widget.textColor ?? baseStyle?.color ?? SydneyColors.onSurface;
+    final color =
+        widget.textColor ?? baseStyle?.color ?? SydneyColors.onSurface;
 
-    return Text.rich(
-      _parseMarkdown(widget.text, context, color, baseStyle),
-    );
+    return Text.rich(_parseMarkdown(widget.text, context, color, baseStyle));
   }
 
   TextSpan _parseMarkdown(
@@ -363,32 +362,13 @@ class _MarkdownTextState extends State<MarkdownText> {
     TextStyle? baseStyle,
   ) {
     final spans = <InlineSpan>[];
-    
-    // Sanitize markdown before parsing (unmatched asterisks, nested spaces, etc.)
-    var cleaned = value.trim();
-    cleaned = cleaned.replaceFirst(RegExp(r'^\*\*\s+\*'), '*');
-    cleaned = cleaned.replaceFirst(RegExp(r'^\*\*\s+\*\*'), '**');
-    cleaned = cleaned.replaceFirst(RegExp(r'^\*\s+\*'), '*');
 
-    if (cleaned.startsWith('**') && !cleaned.substring(2).contains('**')) {
-      cleaned = cleaned.replaceFirst(RegExp(r'^\*\*\s*'), '');
-    }
-    if (cleaned.startsWith('*') && !cleaned.substring(1).contains('*')) {
-      cleaned = cleaned.replaceFirst(RegExp(r'^\*\s*'), '');
-    }
-    if (cleaned.endsWith('**') && !cleaned.substring(0, cleaned.length - 2).contains('**')) {
-      cleaned = cleaned.replaceFirst(RegExp(r'\*\*\s*$'), '');
-    }
-    if (cleaned.endsWith('*') && !cleaned.substring(0, cleaned.length - 1).contains('*')) {
-      cleaned = cleaned.replaceFirst(RegExp(r'\*\s*$'), '');
-    }
+    final cleaned = _normalizeMarkdown(value);
 
-    cleaned = cleaned.replaceAllMapped(RegExp(r'\*\*\s+([^*]+)\s+\*\*'), (m) => '**${m[1]}**');
-    cleaned = cleaned.replaceAllMapped(RegExp(r'\*\s+([^*]+)\s+\*'), (m) => '*${m[1]}*');
-
-    // Matches [text](url), **bold**, *italic*, or raw urls
+    // Matches [text](url) or raw urls. Formatting markers are handled by the
+    // inline scanner so unmatched ** never leak into visible text.
     final pattern = RegExp(
-      r'\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|(https?://[^\s]+)',
+      r'\[([^\]]+)\]\(([^)]+)\)|(https?://[^\s]+)',
       caseSensitive: false,
     );
 
@@ -396,89 +376,160 @@ class _MarkdownTextState extends State<MarkdownText> {
 
     for (final match in pattern.allMatches(cleaned)) {
       if (match.start > cursor) {
-        spans.add(TextSpan(
-          text: cleaned.substring(cursor, match.start),
-          style: baseStyle?.copyWith(
-            color: defaultColor,
-            fontWeight: widget.bold ? FontWeight.w800 : baseStyle.fontWeight,
+        spans.addAll(
+          _parseInlineFormatting(
+            cleaned.substring(cursor, match.start),
+            defaultColor,
+            baseStyle,
           ),
-        ));
+        );
       }
 
       if (match.group(1) != null && match.group(2) != null) {
         final title = match.group(1)!;
         final url = match.group(2)!;
-        final tapRecognizer = TapGestureRecognizer()
-          ..onTap = () async {
-            final uri = Uri.tryParse(url);
-            if (uri != null && await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          };
+        final tapRecognizer =
+            TapGestureRecognizer()
+              ..onTap = () async {
+                final uri = Uri.tryParse(url);
+                if (uri != null && await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              };
         _recognizers.add(tapRecognizer);
 
-        spans.add(TextSpan(
-          text: title,
-          style: baseStyle?.copyWith(
-            color: SydneyColors.primary,
-            fontWeight: FontWeight.w700,
-            decoration: TextDecoration.underline,
+        spans.add(
+          TextSpan(
+            text: title,
+            style: baseStyle?.copyWith(
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.underline,
+            ),
+            recognizer: tapRecognizer,
           ),
-          recognizer: tapRecognizer,
-        ));
+        );
       } else if (match.group(3) != null) {
-        final text = match.group(3)!;
-        spans.add(TextSpan(
-          text: text,
-          style: baseStyle?.copyWith(
-            color: defaultColor,
-            fontWeight: FontWeight.w800,
-          ),
-        ));
-      } else if (match.group(4) != null) {
-        final text = match.group(4)!;
-        spans.add(TextSpan(
-          text: text,
-          style: baseStyle?.copyWith(
-            color: defaultColor,
-            fontStyle: FontStyle.italic,
-          ),
-        ));
-      } else if (match.group(5) != null) {
-        final url = match.group(5)!;
-        final tapRecognizer = TapGestureRecognizer()
-          ..onTap = () async {
-            final uri = Uri.tryParse(url);
-            if (uri != null && await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          };
+        final url = match.group(3)!;
+        final tapRecognizer =
+            TapGestureRecognizer()
+              ..onTap = () async {
+                final uri = Uri.tryParse(url);
+                if (uri != null && await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              };
         _recognizers.add(tapRecognizer);
 
-        spans.add(TextSpan(
-          text: url,
-          style: baseStyle?.copyWith(
-            color: SydneyColors.primary,
-            fontWeight: FontWeight.w700,
-            decoration: TextDecoration.underline,
+        spans.add(
+          TextSpan(
+            text: url,
+            style: baseStyle?.copyWith(
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.underline,
+            ),
+            recognizer: tapRecognizer,
           ),
-          recognizer: tapRecognizer,
-        ));
+        );
       }
 
       cursor = match.end;
     }
 
     if (cursor < cleaned.length) {
-      spans.add(TextSpan(
-        text: cleaned.substring(cursor),
-        style: baseStyle?.copyWith(
-          color: defaultColor,
-          fontWeight: widget.bold ? FontWeight.w800 : baseStyle.fontWeight,
+      spans.addAll(
+        _parseInlineFormatting(
+          cleaned.substring(cursor),
+          defaultColor,
+          baseStyle,
         ),
-      ));
+      );
     }
 
     return TextSpan(children: spans);
+  }
+
+  List<InlineSpan> _parseInlineFormatting(
+    String value,
+    Color defaultColor,
+    TextStyle? baseStyle,
+  ) {
+    final spans = <InlineSpan>[];
+    final buffer = StringBuffer();
+    var bold = false;
+    var italic = false;
+
+    void flush() {
+      if (buffer.isEmpty) return;
+      spans.add(
+        TextSpan(
+          text: buffer.toString(),
+          style: baseStyle?.copyWith(
+            color: defaultColor,
+            fontWeight:
+                bold || widget.bold ? FontWeight.w800 : baseStyle.fontWeight,
+            fontStyle: italic ? FontStyle.italic : baseStyle.fontStyle,
+          ),
+        ),
+      );
+      buffer.clear();
+    }
+
+    var index = 0;
+    while (index < value.length) {
+      if (value.startsWith('**', index)) {
+        final hasClosingMarker = value.indexOf('**', index + 2) != -1;
+        if (!bold && !hasClosingMarker) {
+          if (buffer.isNotEmpty &&
+              !_endsWithWhitespace(buffer.toString()) &&
+              index > 0 &&
+              value[index - 1].trim().isEmpty) {
+            buffer.write(' ');
+          }
+          index += 2;
+          continue;
+        }
+        flush();
+        bold = !bold;
+        index += 2;
+        continue;
+      }
+
+      if (value[index] == '*') {
+        final hasClosingMarker = value.indexOf('*', index + 1) != -1;
+        if (!italic && !hasClosingMarker) {
+          if (buffer.isNotEmpty &&
+              !_endsWithWhitespace(buffer.toString()) &&
+              index > 0 &&
+              value[index - 1].trim().isEmpty) {
+            buffer.write(' ');
+          }
+          index += 1;
+          continue;
+        }
+        flush();
+        italic = !italic;
+        index += 1;
+        continue;
+      }
+
+      buffer.write(value[index]);
+      index += 1;
+    }
+
+    flush();
+    return spans;
+  }
+
+  bool _endsWithWhitespace(String value) {
+    return value.isNotEmpty && value.codeUnitAt(value.length - 1) <= 32;
+  }
+
+  String _normalizeMarkdown(String value) {
+    return value
+        .trim()
+        .replaceFirst(RegExp(r'^\*{1,2}\s+'), '')
+        .replaceFirst(RegExp(r'\s+\*{1,2}$'), '');
   }
 }

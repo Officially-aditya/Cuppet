@@ -59,7 +59,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
               ELSE COALESCE(NULLIF(a.parsed_intent->>'action', ''), a.prompt)
             END
           ) AS last_message_preview,
-          COALESCE(latest_message.created_at, a.last_message_at, a.updated_at, a.created_at) AS latest_message_at
+          COALESCE(latest_message.created_at, a.last_message_at, a.updated_at, a.created_at) AS latest_message_at,
+          COALESCE(unread_messages.unread_count, 0)::int AS unread_count
         FROM agents a
         LEFT JOIN LATERAL (
           SELECT id, role, content, created_at
@@ -75,8 +76,20 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
             END ASC
           LIMIT 1
         ) latest_message ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) AS unread_count
+          FROM agent_messages
+          WHERE agent_id = a.id
+            AND user_id = a.user_id
+            AND role IN ('agent', 'system')
+            AND read_at IS NULL
+        ) unread_messages ON TRUE
         WHERE a.user_id = $1
-        ORDER BY a.is_assistant DESC, latest_message_at DESC NULLS LAST, a.created_at DESC
+        ORDER BY
+          (COALESCE(unread_messages.unread_count, 0) > 0) DESC,
+          COALESCE(unread_messages.unread_count, 0) DESC,
+          latest_message_at DESC NULLS LAST,
+          a.created_at DESC
       `,
       [userId]
     );

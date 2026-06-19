@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -33,22 +34,22 @@ class PushService {
           'Firebase not initialized. Cannot enable push notifications.',
         );
       }
-      
+
       final settings = await FirebaseMessaging.instance.requestPermission();
       final token = await FirebaseMessaging.instance.getToken();
-      
+
       if (token != null) {
         // Register token with backend
         await onTokenRegistered(token);
-        
+
         // Listen for token refreshes
         FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
           onTokenRegistered(newToken).catchError((error) {
-            print('Failed to refresh FCM token: $error');
+            debugPrint('Failed to refresh FCM token: $error');
           });
         });
       }
-      
+
       return PushSetupResult(
         permissionStatus: settings.authorizationStatus,
         token: token,
@@ -57,7 +58,7 @@ class PushService {
       if (e is PushSetupException) {
         rethrow;
       }
-      throw PushSetupException(
+      throw const PushSetupException(
         'Could not configure push notifications. Check that notifications are allowed in your device settings.',
       );
     }
