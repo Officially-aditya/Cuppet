@@ -148,6 +148,7 @@ CREATE INDEX idx_messages_user_unread
 CREATE TABLE agent_runs (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id       UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  queue_job_id   TEXT UNIQUE,
   started_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at   TIMESTAMPTZ,
   status         TEXT NOT NULL

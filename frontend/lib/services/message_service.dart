@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../config/env.dart';
 import '../models/message.dart';
 import 'api.dart';
@@ -20,12 +22,15 @@ class MessageService {
         '/agents/$threadId/messages',
       );
       final rawMessages = response.data?['messages'];
-      return (rawMessages is List ? rawMessages : const [])
-          .whereType<Map>()
-          .map(
-            (message) => Message.fromJson(Map<String, dynamic>.from(message)),
-          )
-          .toList();
+      final messages =
+          (rawMessages is List ? rawMessages : const [])
+              .whereType<Map>()
+              .map(
+                (message) =>
+                    Message.fromJson(Map<String, dynamic>.from(message)),
+              )
+              .toList();
+      return deduplicateMessages(messages);
     } catch (error) {
       throw apiExceptionFrom(
         error,
@@ -93,6 +98,30 @@ class MessageService {
       );
     }
   }
+}
+
+List<Message> deduplicateMessages(
+  List<Message> messages, {
+  Duration window = const Duration(minutes: 10),
+}) {
+  final result = <Message>[];
+
+  for (final message in messages) {
+    final previous = result.isEmpty ? null : result.last;
+    final isAdjacentAgentDuplicate =
+        previous != null &&
+        message.sender == MessageSender.agent &&
+        previous.sender == MessageSender.agent &&
+        message.threadId == previous.threadId &&
+        message.createdAt.difference(previous.createdAt).abs() <= window &&
+        jsonEncode(message.content) == jsonEncode(previous.content);
+
+    if (!isAdjacentAgentDuplicate) {
+      result.add(message);
+    }
+  }
+
+  return result;
 }
 
 List<Message> _mockThread(String threadId) {

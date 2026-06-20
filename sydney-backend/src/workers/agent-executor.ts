@@ -1,4 +1,5 @@
 import { Worker, type Job } from "bullmq";
+import { z } from "zod";
 import {
   createDsaQuestionSection,
   wantsDsaQuestion
@@ -40,6 +41,7 @@ import { isConnectorAuthRequiredError } from "../connectors/errors.js";
 import { renderGoogleWorkspaceAgent } from "../connectors/google-workspace.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
+import { agentExecutionKey } from "./execution-key.js";
 
 type AgentRow = {
   id: string;
@@ -53,6 +55,19 @@ type AgentRow = {
   status: "active" | "paused" | "error";
   safety_level: "read" | "suggest" | "act";
 };
+
+const studyGuideResponseSchema = z.object({
+  topic: z.string().trim().min(1),
+  definition: z.string().trim().min(1),
+  references: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1),
+        url: z.string().url().refine((value) => /^https?:\/\//i.test(value))
+      })
+    )
+    .default([])
+});
 
 type AgentRenderer = (context: {
   agent: AgentRow;
@@ -199,8 +214,19 @@ async function executeAgentJob(
     return { skipped: "agent_not_active" };
   }
 
-  const run = await createRun(agent.id);
-  await publishRealtimeEvent({
+  const executionKey = agentExecutionKey({
+    agentId: agent.id,
+    trigger: job.data.trigger,
+    jobId: job.id,
+    timestamp: job.timestamp,
+    delay: typeof job.opts.delay === "number" ? job.opts.delay : undefined
+  });
+  const run = await createRun(agent.id, executionKey);
+  if (!run) {
+    return { skipped: "duplicate_execution" };
+  }
+
+  await publishRealtimeEventsSafely({
     type: "run.started",
     user_id: agent.user_id,
     agent_id: agent.id,
@@ -210,45 +236,33 @@ async function executeAgentJob(
 
   try {
     const rendered = await renderAgentMessage(agent, job.data.trigger);
-    const message = await writeAgentMessage(agent, rendered.content, rendered.sourceRefs);
+    const message = await persistRunMessage({
+      agent,
+      runId: run.id,
+      content: rendered.content,
+      sourceRefs: rendered.sourceRefs,
+      tokensUsed: rendered.tokensUsed,
+      status: "success"
+    });
 
-    if (rendered.content.template === "study_guide") {
-      const newTopic = rendered.content.data.topic;
-      await pool.query(
-        `
-          UPDATE agents
-          SET parsed_intent = jsonb_set(parsed_intent, '{topics_covered}', coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb)
-          WHERE id = $2
-        `,
-        [JSON.stringify(newTopic), agent.id]
-      );
-    }
-
-    await pool.query(
-      `
-        UPDATE agent_runs
-        SET status = 'success', completed_at = NOW(), message_id = $1, tokens_used = $2
-        WHERE id = $3
-      `,
-      [message.id, rendered.tokensUsed, run.id]
+    await publishRealtimeEventsSafely(
+      {
+        type: "message.created",
+        user_id: agent.user_id,
+        agent_id: agent.id,
+        message_id: message.id,
+        run_id: run.id,
+        data: { role: "agent", trigger: job.data.trigger }
+      },
+      {
+        type: "run.completed",
+        user_id: agent.user_id,
+        agent_id: agent.id,
+        message_id: message.id,
+        run_id: run.id,
+        data: { trigger: job.data.trigger, tokens_used: rendered.tokensUsed }
+      }
     );
-
-    await publishRealtimeEvent({
-      type: "message.created",
-      user_id: agent.user_id,
-      agent_id: agent.id,
-      message_id: message.id,
-      run_id: run.id,
-      data: { role: "agent", trigger: job.data.trigger }
-    });
-    await publishRealtimeEvent({
-      type: "run.completed",
-      user_id: agent.user_id,
-      agent_id: agent.id,
-      message_id: message.id,
-      run_id: run.id,
-      data: { trigger: job.data.trigger, tokens_used: rendered.tokensUsed }
-    });
 
     // Send push notification
     await sendPushNotification(pool, agent.user_id, {
@@ -271,56 +285,49 @@ async function executeAgentJob(
         connectorId: error.connectorId,
         connectorName: error.connectorName
       });
-      const message = await writeAgentMessage(
+      const message = await persistRunMessage({
         agent,
-        rendered.content,
-        rendered.sourceRefs
-      );
-
-      await pool.query(
-        `
-          UPDATE agent_runs
-          SET status = 'partial',
-              completed_at = NOW(),
-              message_id = $1,
-              error_message = $2,
-              tokens_used = $3
-          WHERE id = $4
-        `,
-        [message.id, error.reason, rendered.tokensUsed, run.id]
-      );
-
-      await publishRealtimeEvent({
-        type: "message.created",
-        user_id: agent.user_id,
-        agent_id: agent.id,
-        message_id: message.id,
-        run_id: run.id,
-        data: {
-          role: "agent",
-          trigger: job.data.trigger,
-          connector_id: error.connectorId,
-          action_required: true
-        }
+        runId: run.id,
+        content: rendered.content,
+        sourceRefs: rendered.sourceRefs,
+        tokensUsed: rendered.tokensUsed,
+        status: "partial",
+        errorMessage: error.reason
       });
-      await publishRealtimeEvent({
-        type: "run.completed",
-        user_id: agent.user_id,
-        agent_id: agent.id,
-        message_id: message.id,
-        run_id: run.id,
-        data: {
-          trigger: job.data.trigger,
-          status: "partial",
-          connector_id: error.connectorId
+
+      await publishRealtimeEventsSafely(
+        {
+          type: "message.created",
+          user_id: agent.user_id,
+          agent_id: agent.id,
+          message_id: message.id,
+          run_id: run.id,
+          data: {
+            role: "agent",
+            trigger: job.data.trigger,
+            connector_id: error.connectorId,
+            action_required: true
+          }
+        },
+        {
+          type: "run.completed",
+          user_id: agent.user_id,
+          agent_id: agent.id,
+          message_id: message.id,
+          run_id: run.id,
+          data: {
+            trigger: job.data.trigger,
+            status: "partial",
+            connector_id: error.connectorId
+          }
         }
-      });
+      );
 
       return { runId: run.id, messageId: message.id };
     }
 
     await markRunFailed(run.id, error);
-    await publishRealtimeEvent({
+    await publishRealtimeEventsSafely({
       type: "run.failed",
       user_id: agent.user_id,
       agent_id: agent.id,
@@ -379,45 +386,112 @@ async function loadAgent(agentId: string): Promise<AgentRow | null> {
   return rows[0] ?? null;
 }
 
-async function createRun(agentId: string): Promise<{ id: string }> {
+async function createRun(
+  agentId: string,
+  executionKey: string | null
+): Promise<{ id: string } | null> {
   const { rows } = await pool.query<{ id: string }>(
     `
-      INSERT INTO agent_runs (agent_id, status)
-      VALUES ($1, 'running')
+      INSERT INTO agent_runs (agent_id, queue_job_id, status)
+      VALUES ($1, $2, 'running')
+      ON CONFLICT (queue_job_id)
+      DO UPDATE SET
+        status = 'running',
+        started_at = NOW(),
+        completed_at = NULL,
+        message_id = NULL,
+        error_message = NULL,
+        tokens_used = 0
+      WHERE agent_runs.status = 'failed'
       RETURNING id
     `,
-    [agentId]
+    [agentId, executionKey]
   );
 
-  return rows[0]!;
+  return rows[0] ?? null;
 }
 
-async function writeAgentMessage(
-  agent: AgentRow,
-  content: AgentMessageContent,
-  sourceRefs: unknown[]
+async function persistRunMessage(
+  input: {
+    agent: AgentRow;
+    runId: string;
+    content: AgentMessageContent;
+    sourceRefs: unknown[];
+    tokensUsed: number;
+    status: "success" | "partial";
+    errorMessage?: string;
+  }
 ): Promise<{ id: string }> {
-  const { rows } = await pool.query<{ id: string }>(
-    `
-      INSERT INTO agent_messages
-        (agent_id, user_id, role, content, source_refs)
-      VALUES ($1, $2, 'agent', $3, $4)
-      RETURNING id
-    `,
-    [
-      agent.id,
-      agent.user_id,
-      JSON.stringify(content),
-      JSON.stringify(sourceRefs)
-    ]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query<{ id: string }>(
+      `
+        INSERT INTO agent_messages
+          (agent_id, user_id, role, content, source_refs)
+        VALUES ($1, $2, 'agent', $3, $4)
+        RETURNING id
+      `,
+      [
+        input.agent.id,
+        input.agent.user_id,
+        JSON.stringify(input.content),
+        JSON.stringify(input.sourceRefs)
+      ]
+    );
+    const message = rows[0]!;
 
-  await pool.query(
-    "UPDATE agents SET last_message_at = NOW() WHERE id = $1",
-    [agent.id]
-  );
+    if (input.content.template === "study_guide") {
+      await client.query(
+        `
+          UPDATE agents
+          SET last_message_at = NOW(),
+              parsed_intent = jsonb_set(
+                parsed_intent,
+                '{topics_covered}',
+                coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb
+              )
+          WHERE id = $2
+        `,
+        [JSON.stringify(input.content.data.topic), input.agent.id]
+      );
+    } else {
+      await client.query(
+        "UPDATE agents SET last_message_at = NOW() WHERE id = $1",
+        [input.agent.id]
+      );
+    }
 
-  return rows[0]!;
+    const runUpdate = await client.query(
+      `
+        UPDATE agent_runs
+        SET status = $1,
+            completed_at = NOW(),
+            message_id = $2,
+            error_message = $3,
+            tokens_used = $4
+        WHERE id = $5 AND status = 'running'
+      `,
+      [
+        input.status,
+        message.id,
+        input.errorMessage ?? null,
+        input.tokensUsed,
+        input.runId
+      ]
+    );
+    if (runUpdate.rowCount !== 1) {
+      throw new Error("Agent run was already completed by another worker.");
+    }
+
+    await client.query("COMMIT");
+    return message;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function markRunFailed(runId: string, error: unknown): Promise<void> {
@@ -425,10 +499,21 @@ async function markRunFailed(runId: string, error: unknown): Promise<void> {
     `
       UPDATE agent_runs
       SET status = 'failed', completed_at = NOW(), error_message = $1
-      WHERE id = $2
+      WHERE id = $2 AND status = 'running'
     `,
     [errorMessage(error), runId]
   );
+}
+
+async function publishRealtimeEventsSafely(
+  ...events: Array<Parameters<typeof publishRealtimeEvent>[0]>
+): Promise<void> {
+  const results = await Promise.allSettled(events.map(publishRealtimeEvent));
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("Failed to publish realtime event:", result.reason);
+    }
+  }
 }
 
 async function renderAgentMessage(
@@ -600,6 +685,7 @@ async function renderStudyGuideAgent(context: {
         "Your task is to generate the next daily study topic/lesson based on the user's course request.",
         "Check the list of previously covered topics and generate a new, logical, and progressive topic that has NOT been covered yet.",
         "Ensure the references are valid clickable markdown reference URLs.",
+        "Do not return empty strings. Topic and definition must both contain useful content; omit references when none are available.",
         "Return ONLY a valid JSON object matching this structure:",
         "{",
         '  "topic": "Topic Name",',
@@ -626,7 +712,7 @@ async function renderStudyGuideAgent(context: {
     if (!match) {
       throw new Error("Invalid LLM response format: No JSON object found.");
     }
-    const data = JSON.parse(match[0]);
+    const data = studyGuideResponseSchema.parse(JSON.parse(match[0]));
 
     const completed = false;
     const actions = [
@@ -637,9 +723,9 @@ async function renderStudyGuideAgent(context: {
 
     return renderedStudyGuide(
       {
-        topic: data.topic || "Daily Lesson",
-        definition: data.definition || "No definition was generated.",
-        references: Array.isArray(data.references) ? data.references : [],
+        topic: data.topic,
+        definition: data.definition,
+        references: data.references,
         completed,
         actions: actions as any
       },

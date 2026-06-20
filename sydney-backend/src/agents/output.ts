@@ -295,46 +295,45 @@ export function parseNewsBriefText(title: string, body: string): NewsBriefMessag
   }
 
   const items: NewsBriefItem[] = [];
+  let pendingHeadline: string | null = null;
 
   for (const line of lines) {
     // Check if it's a numbered or bulleted item like "1. Google Gemini: ..." or "2) ..." or "• ..."
     const numberedMatch = line.match(/^(\d+|\*|•|-)[.)]?\s+(.+)$/);
     if (numberedMatch && numberedMatch[2]) {
       const content = numberedMatch[2].trim();
-      // Look for a colon separator, skipping any colons inside brackets/parentheses or before double slashes (e.g. in URL protocols)
-      let colonIndex = -1;
-      let bracketDepth = 0;
-      let parenDepth = 0;
-      for (let i = 0; i < content.length; i += 1) {
-        const char = content[i];
-        if (char === "[") {
-          bracketDepth += 1;
-        } else if (char === "]") {
-          bracketDepth = Math.max(0, bracketDepth - 1);
-        } else if (char === "(") {
-          parenDepth += 1;
-        } else if (char === ")") {
-          parenDepth = Math.max(0, parenDepth - 1);
-        } else if (char === ":") {
-          if (bracketDepth === 0 && parenDepth === 0) {
-            const nextTwo = content.substring(i + 1, i + 3);
-            if (nextTwo !== "//") {
-              colonIndex = i;
-              break;
-            }
-          }
+
+      if (pendingHeadline) {
+        const startsNewNumberedSection = /^\d+$/.test(numberedMatch[1] ?? "");
+        const explicitItem = splitBriefHeadline(content);
+        if (!startsNewNumberedSection && !explicitItem && hasVisibleBriefText(content)) {
+          items.push({ headline: pendingHeadline, summary: content });
+          pendingHeadline = null;
+          continue;
         }
+
+        items.push({ summary: pendingHeadline });
+        pendingHeadline = null;
       }
 
-      if (colonIndex !== -1) {
-        const headline = content.substring(0, colonIndex).replace(/^\*\*|\*\*$/g, "").trim();
-        const summary = content.substring(colonIndex + 1).trim();
-        items.push({ headline, summary });
+      const explicitItem = splitBriefHeadline(content);
+      if (explicitItem) {
+        if (hasVisibleBriefText(explicitItem.summary)) {
+          items.push(explicitItem);
+        } else if (hasVisibleBriefText(explicitItem.headline)) {
+          pendingHeadline = explicitItem.headline;
+        }
       } else {
         // Look for double asterisks formatting, e.g., **Headline** Summary
         const boldMatch = content.match(/^\*\*(.*?)\*\*\s*(.*)$/);
         if (boldMatch && boldMatch[1] !== undefined && boldMatch[2] !== undefined) {
-          items.push({ headline: boldMatch[1].trim(), summary: boldMatch[2].trim() });
+          const headline = cleanBriefHeadline(boldMatch[1]);
+          const summary = boldMatch[2].trim();
+          if (hasVisibleBriefText(summary)) {
+            items.push({ headline, summary });
+          } else if (hasVisibleBriefText(headline)) {
+            pendingHeadline = headline;
+          }
         } else {
           // Fallback: use first 5 words as headline, rest as summary
           const words = content.split(/\s+/);
@@ -348,6 +347,11 @@ export function parseNewsBriefText(title: string, body: string): NewsBriefMessag
         }
       }
     } else {
+      if (pendingHeadline) {
+        items.push({ summary: pendingHeadline });
+        pendingHeadline = null;
+      }
+
       // It's a non-numbered line. If it's not matching the title, we can treat it as an item with no headline
       if (line.toLowerCase() === title.toLowerCase()) {
         continue;
@@ -360,12 +364,72 @@ export function parseNewsBriefText(title: string, body: string): NewsBriefMessag
     }
   }
 
+  if (pendingHeadline) {
+    items.push({ summary: pendingHeadline });
+  }
+
   // Fallback: if no items were parsed, treat the whole body as a single summary item
   if (items.length === 0 && body.trim()) {
     items.push({ summary: body.trim() });
   }
 
-  return { title, items };
+  return {
+    title,
+    items: items.filter(
+      (item) =>
+        hasVisibleBriefText(item.headline ?? "") ||
+        hasVisibleBriefText(item.summary)
+    )
+  };
+}
+
+function splitBriefHeadline(
+  content: string
+): { headline: string; summary: string } | null {
+  let bracketDepth = 0;
+  let parenDepth = 0;
+
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i];
+    if (char === "[") {
+      bracketDepth += 1;
+    } else if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+    } else if (char === "(") {
+      parenDepth += 1;
+    } else if (char === ")") {
+      parenDepth = Math.max(0, parenDepth - 1);
+    } else if (char === ":" && bracketDepth === 0 && parenDepth === 0) {
+      if (content.substring(i + 1, i + 3) === "//") {
+        continue;
+      }
+
+      const rawHeadline = content.substring(0, i);
+      let summary = content.substring(i + 1).trim();
+      const openBoldMarkers = rawHeadline.match(/\*\*/g)?.length ?? 0;
+      if (openBoldMarkers % 2 === 1) {
+        summary = summary.replace(/^\*\*\s*/, "");
+      }
+
+      return {
+        headline: cleanBriefHeadline(rawHeadline),
+        summary
+      };
+    }
+  }
+
+  return null;
+}
+
+function cleanBriefHeadline(value: string): string {
+  return value.trim().replace(/^\*+|\*+$/g, "").replace(/:$/, "").trim();
+}
+
+function hasVisibleBriefText(value: string): boolean {
+  return value
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[*_`#>~\s:.-]+/g, "")
+    .length > 0;
 }
 
 function rendered<TTemplate extends AgentMessageContent["template"]>(

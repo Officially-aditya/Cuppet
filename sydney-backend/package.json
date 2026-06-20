@@ -9,6 +9,7 @@
     "build": "tsc",
     "start:api": "node dist/src/index.js",
     "start:worker": "node dist/worker.js",
+    "test": "tsx --test src/**/*.test.ts",
     "migrate": "node-pg-migrate --envPath .env -m src/db/migrations up",
     "migrate:down": "node-pg-migrate --envPath .env -m src/db/migrations down",
     "migrate:create": "node-pg-migrate --envPath .env -m src/db/migrations create",

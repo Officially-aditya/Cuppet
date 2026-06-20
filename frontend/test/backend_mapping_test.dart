@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
+import 'package:sydney/services/message_service.dart';
 
 void main() {
   test('agent maps Sydney backend fields', () {
@@ -42,5 +43,24 @@ void main() {
     expect(message.sender, MessageSender.agent);
     expect(message.template, 'plain_text');
     expect(message.preview, 'Tech news brief for today.');
+  });
+
+  test('adjacent duplicate agent deliveries are collapsed', () {
+    final first = Message.plainText(
+      id: 'message_1',
+      threadId: 'agent_1',
+      sender: MessageSender.agent,
+      text: 'Daily goal',
+      createdAt: DateTime.utc(2026, 6, 20, 9),
+    );
+    final duplicate = Message.plainText(
+      id: 'message_2',
+      threadId: 'agent_1',
+      sender: MessageSender.agent,
+      text: 'Daily goal',
+      createdAt: DateTime.utc(2026, 6, 20, 9, 1),
+    );
+
+    expect(deduplicateMessages([first, duplicate]), [first]);
   });
 }

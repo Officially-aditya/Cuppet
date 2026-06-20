@@ -12,7 +12,7 @@ class NewsBriefTemplate extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = data['title']?.toString() ?? 'Update';
     final itemsList = data['items'];
-    final items = _maps(itemsList);
+    final items = _normalizedItems(itemsList);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,15 +52,81 @@ class NewsBriefTemplate extends StatelessWidget {
     );
   }
 
-  List<Map<String, dynamic>> _maps(Object? value) {
+  List<Map<String, dynamic>> _normalizedItems(Object? value) {
     if (value is! List) {
       return const [];
     }
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
+
+    final rawItems =
+        value
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+    final items = <Map<String, dynamic>>[];
+
+    for (var index = 0; index < rawItems.length; index++) {
+      final item = rawItems[index];
+      final headline = item['headline']?.toString().trim() ?? '';
+      final summary = item['summary']?.toString().trim() ?? '';
+      final hasHeadline = _hasVisibleText(headline);
+      final hasSummary = _hasVisibleText(summary);
+
+      if (!hasHeadline && !hasSummary) {
+        continue;
+      }
+
+      if (hasHeadline && !hasSummary && _isDetailLabel(headline)) {
+        final next = index + 1 < rawItems.length ? rawItems[index + 1] : null;
+        if (next != null) {
+          final nextHeadline = next['headline']?.toString().trim() ?? '';
+          final nextSummary = next['summary']?.toString().trim() ?? '';
+          final detail =
+              [
+                if (_hasVisibleText(nextHeadline)) nextHeadline,
+                if (_hasVisibleText(nextSummary)) nextSummary,
+              ].join(' ').trim();
+
+          if (_hasVisibleText(detail)) {
+            items.add({...item, 'headline': headline, 'summary': detail});
+            index += 1;
+            continue;
+          }
+        }
+      }
+
+      if (hasHeadline && !hasSummary) {
+        items.add({'summary': headline});
+        continue;
+      }
+
+      items.add({...item, 'headline': headline, 'summary': summary});
+    }
+
+    return items;
   }
+}
+
+bool _hasVisibleText(String value) {
+  return value
+      .replaceAll(RegExp(r'\[([^\]]+)\]\([^)]+\)'), r'$1')
+      .replaceAll(RegExp(r'[*_`#>~\s:.-]+'), '')
+      .isNotEmpty;
+}
+
+bool _isDetailLabel(String value) {
+  final normalized =
+      value.toLowerCase().replaceAll(RegExp(r'[*_`#>:.-]+'), '').trim();
+  return const {
+    'focus',
+    'hint',
+    'target',
+    'goal',
+    'approach',
+    'example',
+    'complexity',
+    'practice',
+    'why it matters',
+  }.contains(normalized);
 }
 
 class _NewsItemCard extends StatefulWidget {
@@ -79,16 +145,17 @@ class _NewsItemCardState extends State<_NewsItemCard> {
   Widget build(BuildContext context) {
     final headline = widget.item['headline']?.toString();
     final summary = widget.item['summary']?.toString() ?? '';
+    final hasSummary = _hasVisibleText(summary);
 
     // If there is no headline, render it as a simple text block (intro/outro) - always visible
-    if (headline == null || headline.isEmpty) {
+    if (headline == null || headline.isEmpty || !hasSummary) {
       return Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: SydneySpacing.xs,
           vertical: SydneySpacing.xs,
         ),
         child: MarkdownText(
-          text: summary,
+          text: hasSummary ? summary : (headline ?? ''),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: SydneyColors.onSurfaceVariant,
             height: 1.4,
@@ -121,7 +188,10 @@ class _NewsItemCardState extends State<_NewsItemCard> {
                 Container(
                   width: 6,
                   height: 6,
-                  margin: const EdgeInsets.only(top: 6, right: SydneySpacing.sm),
+                  margin: const EdgeInsets.only(
+                    top: 6,
+                    right: SydneySpacing.sm,
+                  ),
                   decoration: const BoxDecoration(
                     color: SydneyColors.primary,
                     shape: BoxShape.circle,
@@ -161,9 +231,10 @@ class _NewsItemCardState extends State<_NewsItemCard> {
                   ),
                 ),
               ),
-              crossFadeState: _isExpanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
+              crossFadeState:
+                  _isExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 200),
               sizeCurve: Curves.easeInOut,
             ),
