@@ -92,6 +92,8 @@ New users automatically get the pre-installed Assistant contact and welcome mess
 
 Scheduled agents are registered in BullMQ when they are created or updated. The API also resyncs active schedules from Postgres on startup, so Redis resets do not permanently drop schedules.
 
+Google Workspace OAuth supports Gmail, Drive, and Calendar as separate read-only connectors. Enable the Gmail API, Google Drive API, and Google Calendar API for the configured Google Cloud project. Calendar uses the `calendar.events.readonly` scope and reads upcoming events from the user's primary calendar without creating or changing events.
+
 ## Week 3 Tech News Agent
 
 The Tech News agent uses Anthropic Messages API server-side web search, so it only needs `ANTHROPIC_API_KEY`; there is no separate Brave Search key.

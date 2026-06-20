@@ -16,6 +16,7 @@ type ConnectorDefinition = {
   name: string;
   description: string;
   icon_name: string;
+  category: string;
   required_scopes: string[];
   auth_configured: boolean;
 };
@@ -43,6 +44,7 @@ const connectors: ConnectorDefinition[] = [
     name: "Web Search",
     description: "Search the web without a user login",
     icon_name: "search",
+    category: "WEB & RESEARCH",
     required_scopes: [],
     auth_configured: true
   },
@@ -50,7 +52,8 @@ const connectors: ConnectorDefinition[] = [
     id: "gmail",
     name: "Gmail",
     description: "Read approved Gmail context and prepare summaries",
-    icon_name: "mail",
+    icon_name: "Mail",
+    category: "EMAIL & COMMUNICATION",
     required_scopes: ["Read Gmail messages and metadata"],
     auth_configured: googleWorkspaceAuthConfigured()
   },
@@ -58,7 +61,8 @@ const connectors: ConnectorDefinition[] = [
     id: "slack",
     name: "Slack",
     description: "Read selected channels and prepare updates",
-    icon_name: "tag",
+    icon_name: "MessageSquare",
+    category: "EMAIL & COMMUNICATION",
     required_scopes: ["Read selected channels", "Post drafts for approval"],
     auth_configured: false
   },
@@ -66,8 +70,18 @@ const connectors: ConnectorDefinition[] = [
     id: "drive",
     name: "Google Drive",
     description: "Read selected files and summarize documents",
-    icon_name: "file-text",
+    icon_name: "HardDrive",
+    category: "PRODUCTIVITY & DOCS",
     required_scopes: ["Read Google Drive files"],
+    auth_configured: googleWorkspaceAuthConfigured()
+  },
+  {
+    id: "calendar",
+    name: "Google Calendar",
+    description: "Read upcoming events and prepare agenda summaries",
+    icon_name: "Calendar",
+    category: "CALENDAR & SCHEDULING",
+    required_scopes: ["Read upcoming calendar events"],
     auth_configured: googleWorkspaceAuthConfigured()
   }
 ];
@@ -368,6 +382,7 @@ function connectorPayload(
     name: connector.name,
     description: connector.description,
     icon_name: connector.icon_name,
+    category: connector.category,
     required_scopes: connector.required_scopes,
     status,
     auth_configured: connector.auth_configured

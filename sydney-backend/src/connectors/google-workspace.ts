@@ -12,7 +12,7 @@ import {
 import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
 
-export type GoogleWorkspaceConnectorId = "gmail" | "drive";
+export type GoogleWorkspaceConnectorId = "gmail" | "drive" | "calendar";
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -64,7 +64,7 @@ type GmailDigestItem = {
   subject: string;
   sender: string;
   snippet: string;
-  category: "attention" | "finance" | "system" | "update";
+  category: "attention" | "reply" | "finance" | "system" | "update";
   line: string;
 };
 
@@ -78,23 +78,52 @@ type DriveFile = {
   size?: string;
 };
 
+type CalendarEventDate = {
+  date?: string;
+  dateTime?: string;
+  timeZone?: string;
+};
+
+type CalendarEvent = {
+  id: string;
+  status?: string;
+  summary?: string;
+  description?: string;
+  location?: string;
+  htmlLink?: string;
+  start?: CalendarEventDate;
+  end?: CalendarEventDate;
+  organizer?: { displayName?: string; email?: string };
+  attendees?: Array<{
+    displayName?: string;
+    email?: string;
+    responseStatus?: string;
+    self?: boolean;
+  }>;
+};
+
 const googleAuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth";
 const googleTokenEndpoint = "https://oauth2.googleapis.com/token";
 const gmailApiBase = "https://gmail.googleapis.com/gmail/v1";
 const driveApiBase = "https://www.googleapis.com/drive/v3";
+const calendarApiBase = "https://www.googleapis.com/calendar/v3";
 
 const gmailScopes = ["https://www.googleapis.com/auth/gmail.readonly"];
 const driveScopes = ["https://www.googleapis.com/auth/drive.readonly"];
+const calendarScopes = [
+  "https://www.googleapis.com/auth/calendar.events.readonly"
+];
 
 const connectorScopes: Record<GoogleWorkspaceConnectorId, string[]> = {
   gmail: gmailScopes,
-  drive: driveScopes
+  drive: driveScopes,
+  calendar: calendarScopes
 };
 
 export function isGoogleWorkspaceConnector(
   connectorId: string
 ): connectorId is GoogleWorkspaceConnectorId {
-  return connectorId === "gmail" || connectorId === "drive";
+  return connectorId === "gmail" || connectorId === "drive" || connectorId === "calendar";
 }
 
 export function googleWorkspaceAuthConfigured(): boolean {
@@ -244,6 +273,12 @@ export async function renderGoogleWorkspaceAgent(
     return renderDriveAgent(agent, token, options);
   }
 
+  if (calendarIntent(intent)) {
+    const token = await googleAccessToken(agent.user_id, "calendar");
+    if (!token) return null;
+    return renderCalendarAgent(agent, token, options);
+  }
+
   return null;
 }
 
@@ -387,7 +422,7 @@ async function renderGmailAgent(
   const synthesized = await synthesizeConnectorDigest({
     connectorName: "Gmail",
     agentName: agent.name,
-    userPrompt: agent.prompt,
+    userPrompt: gmailOnlyDigestPrompt(agent.prompt),
     records: messages.map(gmailDigestRecord)
   });
 
@@ -483,6 +518,60 @@ async function renderDriveAgent(
       footer: "Based on Google Drive file metadata."
     },
     { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
+  );
+}
+
+async function renderCalendarAgent(
+  agent: WorkspaceAgent,
+  accessToken: string,
+  options: WorkspaceRenderOptions
+): Promise<RenderedAgentMessage> {
+  const now = new Date();
+  const through = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const events = await fetchCalendarEvents(accessToken, now, through, 12);
+  const sourceRefs = events.map((event) => ({
+    type: "calendar_event",
+    source: "Google Calendar",
+    id: event.id,
+    title: calendarEventTitle(event),
+    url: event.htmlLink,
+    start: event.start,
+    end: event.end
+  }));
+
+  if (events.length === 0) {
+    return renderedDataSummary(
+      {
+        title: options.scheduledTitle(agent, "calendar agenda"),
+        text: options.scheduledIntro(agent, "calendar agenda"),
+        summary: "No upcoming events were found on the primary calendar for the next 7 days.",
+        metrics: [
+          { label: "Events", value: "0" },
+          { label: "Window", value: "7 days" },
+          { label: "Source", value: "Calendar" }
+        ],
+        footer: "Read from Google Calendar. No events were created or changed."
+      },
+      { sourceRefs }
+    );
+  }
+
+  return renderedDataSummary(
+    {
+      title: options.scheduledTitle(agent, "calendar agenda"),
+      text: options.scheduledIntro(agent, "calendar agenda"),
+      summary: digestSection(
+        "Upcoming events",
+        events.map(calendarEventLine)
+      ),
+      metrics: [
+        { label: "Events", value: String(events.length) },
+        { label: "Window", value: "7 days" },
+        { label: "Source", value: "Calendar" }
+      ],
+      footer: "Read-only agenda from the primary Google Calendar."
+    },
+    { sourceRefs }
   );
 }
 
@@ -791,6 +880,26 @@ async function fetchDriveDocExcerpts(
   return excerpts;
 }
 
+async function fetchCalendarEvents(
+  accessToken: string,
+  timeMin: Date,
+  timeMax: Date,
+  maxResults: number
+): Promise<CalendarEvent[]> {
+  const url = new URL(`${calendarApiBase}/calendars/primary/events`);
+  url.searchParams.set("timeMin", timeMin.toISOString());
+  url.searchParams.set("timeMax", timeMax.toISOString());
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("orderBy", "startTime");
+  url.searchParams.set("showDeleted", "false");
+  url.searchParams.set("maxResults", String(maxResults));
+
+  const response = await googleJson<{ items?: CalendarEvent[] }>(url, accessToken);
+  return (response.items ?? []).filter(
+    (event): event is CalendarEvent => Boolean(event.id) && event.status !== "cancelled"
+  );
+}
+
 async function googleJson<T>(url: URL, accessToken: string): Promise<T> {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` }
@@ -893,11 +1002,20 @@ function connectorAuthRequired(
 }
 
 function googleConnectorName(connectorId: GoogleWorkspaceConnectorId): string {
-  return connectorId === "gmail" ? "Gmail" : "Google Drive";
+  switch (connectorId) {
+    case "gmail":
+      return "Gmail";
+    case "calendar":
+      return "Google Calendar";
+    default:
+      return "Google Drive";
+  }
 }
 
 function googleConnectorIdFromUrl(url: URL): GoogleWorkspaceConnectorId {
-  return url.host.includes("gmail") ? "gmail" : "drive";
+  if (url.host.includes("gmail")) return "gmail";
+  if (url.pathname.includes("/calendar/")) return "calendar";
+  return "drive";
 }
 
 function gmailIntent(intent: string): boolean {
@@ -917,6 +1035,10 @@ function driveIntent(intent: string): boolean {
     "pdf_summary",
     "meeting_recap"
   ].includes(intent);
+}
+
+function calendarIntent(intent: string): boolean {
+  return intent === "calendar_agenda";
 }
 
 function gmailQuery(intent: string): string {
@@ -975,6 +1097,45 @@ function driveOutputLabel(intent: string): string {
   }
 }
 
+function calendarEventTitle(event: CalendarEvent): string {
+  return event.summary?.trim() || "Untitled event";
+}
+
+function calendarEventLine(event: CalendarEvent): string {
+  const start = calendarEventStart(event);
+  const location = event.location?.trim();
+  return [start, calendarEventTitle(event), location ? `at ${location}` : null]
+    .filter(Boolean)
+    .join(" — ");
+}
+
+function calendarEventStart(event: CalendarEvent): string {
+  if (event.start?.dateTime) {
+    return new Intl.DateTimeFormat("en-IN", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: config.AGENT_SCHEDULE_TIME_ZONE
+    }).format(new Date(event.start.dateTime));
+  }
+
+  if (event.start?.date) {
+    const [year, month, day] = event.start.date.split("-").map(Number);
+    if (year && month && day) {
+      return new Intl.DateTimeFormat("en-IN", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC"
+      }).format(new Date(Date.UTC(year, month - 1, day)));
+    }
+  }
+
+  return "Time unavailable";
+}
+
 function coveredConnectors(
   scopes: string[],
   fallback: GoogleWorkspaceConnectorId
@@ -1017,6 +1178,7 @@ function compactMessageLine(message: GmailMessage): string {
 function buildEmailDigestSummary(messages: GmailMessage[]): string {
   const items = messages.map(gmailDigestItem);
   const attention = items.filter((item) => item.category === "attention");
+  const replies = items.filter((item) => item.category === "reply");
   const finance = items.filter((item) => item.category === "finance");
   const updates = items.filter(
     (item) => item.category === "update" || item.category === "system"
@@ -1032,6 +1194,15 @@ function buildEmailDigestSummary(messages: GmailMessage[]): string {
     );
   }
 
+  if (replies.length > 0) {
+    sections.push(
+      digestSection(
+        "Replies to consider",
+        replies.slice(0, 3).map((item) => item.line)
+      )
+    );
+  }
+
   if (finance.length > 0) {
     sections.push(
       digestSection(
@@ -1042,8 +1213,16 @@ function buildEmailDigestSummary(messages: GmailMessage[]): string {
   }
 
   const remaining = updates
-    .filter((item) => !attention.includes(item) && !finance.includes(item))
-    .slice(0, Math.max(2, 5 - attention.length - finance.length));
+    .filter(
+      (item) =>
+        !attention.includes(item) &&
+        !replies.includes(item) &&
+        !finance.includes(item)
+    )
+    .slice(
+      0,
+      Math.max(2, 6 - attention.length - replies.length - finance.length)
+    );
   if (remaining.length > 0) {
     sections.push(
       digestSection(
@@ -1057,6 +1236,7 @@ function buildEmailDigestSummary(messages: GmailMessage[]): string {
     .filter(
       (item) =>
         !attention.includes(item) &&
+        !replies.includes(item) &&
         !finance.includes(item) &&
         !remaining.includes(item)
     )
@@ -1078,7 +1258,9 @@ function buildEmailDigestSummary(messages: GmailMessage[]): string {
 
 function reviewCount(messages: GmailMessage[]): number {
   return messages.filter((message) =>
-    ["attention", "finance"].includes(gmailDigestItem(message).category)
+    ["attention", "reply", "finance"].includes(
+      gmailDigestItem(message).category
+    )
   ).length;
 }
 
@@ -1113,6 +1295,22 @@ function gmailDigestRecord(message: GmailMessage): string {
     .join(" | ");
 }
 
+function gmailOnlyDigestPrompt(prompt: string): string {
+  const sanitized = prompt
+    .replace(/,?\s*calendar-related updates,?/gi, ",")
+    .replace(/\s+,/g, ",")
+    .replace(/,{2,}/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return [
+    sanitized,
+    "Data boundary: use only the supplied Gmail message metadata and snippets. Do not infer events or information from external services."
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function gmailDigestCategory(
   subject: string,
   sender: string,
@@ -1124,6 +1322,13 @@ function gmailDigestCategory(
   }
   if (/\b(invoice|receipt|payment|paid|bill|e-bill|renewal|subscription|due)\b/.test(text)) {
     return "finance";
+  }
+  if (
+    /\?|\b(?:please (?:reply|confirm|review|send)|can you|could you|let me know|following up|waiting for your)\b/.test(
+      text
+    )
+  ) {
+    return "reply";
   }
   if (/\b(build|deploy|system|notification|alert)\b/.test(text)) {
     return "system";
@@ -1145,6 +1350,8 @@ function categoryHint(category: GmailDigestItem["category"]): string | null {
       return "check this first";
     case "finance":
       return "review if payment or records matter";
+    case "reply":
+      return "reply or follow up";
     default:
       return null;
   }
@@ -1404,6 +1611,25 @@ export async function fetchSourceReferenceDetail(
 
     const rawId = String(sourceRef.id || "").replace(/^gmail_/, "");
     return await fetchGmailMessageBody(token, rawId);
+  }
+
+  const isCalendar =
+    sourceRef.type === "calendar_event" || sourceRef.source === "Google Calendar";
+  if (isCalendar) {
+    const token = await googleAccessToken(userId, "calendar");
+    if (!token) throw new Error("Google Calendar connector is not connected.");
+
+    const eventId = encodeURIComponent(String(sourceRef.id || ""));
+    const url = new URL(`${calendarApiBase}/calendars/primary/events/${eventId}`);
+    const event = await googleJson<CalendarEvent>(url, token);
+    return [
+      `Event: ${calendarEventTitle(event)}`,
+      `Starts: ${calendarEventStart(event)}`,
+      event.location ? `Location: ${event.location}` : null,
+      event.description ? `Description: ${event.description}` : null
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   // Google Drive / Google Docs

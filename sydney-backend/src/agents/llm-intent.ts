@@ -19,7 +19,7 @@ export async function parseIntentHybrid(prompt: string): Promise<ParsedIntent> {
         "Return only compact JSON.",
         "Prefer supported intents only.",
         "Do not invent connector capabilities.",
-        "Supported connectors: gmail, drive, web_search, or null.",
+        "Supported connectors: gmail, drive, calendar, web_search, or null.",
         "Supported output_template: plain_text, data_summary, checklist, urgency_list, daily_task, progress_tracker."
       ].join(" "),
       maxTokens: 500,
@@ -46,6 +46,9 @@ export async function parseIntentHybrid(prompt: string): Promise<ParsedIntent> {
 
 function shouldRefineIntent(prompt: string, parsed: ParsedIntent): boolean {
   const lower = prompt.toLowerCase();
+  if (parsed.connector === "gmail") {
+    return false;
+  }
   const explicitlyCreatesAgent =
     /\b(?:create|make|build|setup)\b.*\bagent\b/.test(lower) ||
     /\bset\s+up\b.*\bagent\b/.test(lower);

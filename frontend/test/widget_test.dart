@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/widgets/templates/plain_text_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/sydney_primitives.dart';
+import 'package:sydney/screens/create/create_screen.dart';
 
 void main() {
   testWidgets('plain text template renders message text', (tester) async {
@@ -75,5 +76,21 @@ void main() {
         .map((widget) => widget.text.toPlainText())
         .join('\n');
     expect(visibleText, contains('Using a Hash Set to track seen elements.'));
+  });
+
+  testWidgets('email template remains Gmail-only', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: CreateScreen()));
+
+    await tester.ensureVisible(find.text('Email agent'));
+    await tester.tap(find.text('Email agent'));
+    await tester.pump();
+
+    await tester.fling(find.byType(ListView), const Offset(0, 1000), 1000);
+    await tester.pumpAndSettle();
+
+    final editor = tester.widget<TextField>(find.byType(TextField).first);
+    final prompt = editor.controller!.text;
+    expect(prompt, contains('Use only Gmail data'));
+    expect(prompt.toLowerCase(), isNot(contains('calendar')));
   });
 }

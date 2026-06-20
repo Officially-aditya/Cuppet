@@ -316,7 +316,18 @@ Keep the language plain, conversational, and accessible. Pull facts from reliabl
     prompt: '''
 Create a Gmail digest agent that summarizes my inbox every day at 6 PM.
 
-Focus on messages that need attention, bills or receipts, calendar-related updates, and anything time-sensitive. Group the output into clear sections, keep it concise, and include sender names only when useful. End with a short action list of what I should reply to or handle first.''',
+Focus on unread or important messages, direct questions awaiting a reply, bills or receipts, account and security alerts, and time-sensitive messages. Use only Gmail data. Group the output into clear sections, keep it concise, and include sender names only when useful. End with a short action list of what I should reply to or handle first.''',
+  ),
+  _AgentTemplate(
+    id: 'calendar',
+    label: 'Calendar agent',
+    description: 'Turns upcoming Google Calendar events into a concise agenda.',
+    icon: Icons.calendar_month_outlined,
+    connectedTools: ['Google Calendar'],
+    prompt: '''
+Create a Google Calendar agenda agent that summarizes my upcoming events every morning at 7 AM.
+
+Show the event time, title, and location when available. Keep the agenda concise, use only Google Calendar data, and do not create, edit, or delete events.''',
   ),
   _AgentTemplate(
     id: 'reminder',

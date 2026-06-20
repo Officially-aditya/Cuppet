@@ -150,6 +150,11 @@ const connectorPendingConfigs: Record<string, ConnectorPendingConfig> = {
     connectorName: "Gmail + Google Drive",
     outputName: "deadline checklist",
     expectedAction: "find deadline mentions and build a weekly action checklist"
+  },
+  calendar_agenda: {
+    connectorName: "Google Calendar",
+    outputName: "calendar agenda",
+    expectedAction: "read upcoming events and prepare a concise agenda"
   }
 };
 

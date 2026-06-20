@@ -21,7 +21,6 @@ const UNSUPPORTED_CONNECTORS = [
   "linkedin",
   "google fit",
   "fitbit",
-  "calendar",
   "notion"
 ];
 
@@ -45,6 +44,26 @@ type CapabilityDefinition = {
 };
 
 const CAPABILITIES: CapabilityDefinition[] = [
+  {
+    name: "Calendar Agenda",
+    avatar: "calendar",
+    intent: "calendar_agenda",
+    connector: "calendar",
+    connectorIds: ["calendar"],
+    action: "Reads upcoming Google Calendar events and prepares a concise agenda.",
+    defaultSchedule: "0 7 * * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Google Calendar event read access"],
+    priority: 64,
+    match: {
+      any: [
+        /\bcalendar\b/,
+        /\b(?:daily|weekly|today'?s|tomorrow'?s) agenda\b/,
+        /\bupcoming (?:meetings|appointments|events)\b/
+      ],
+      not: [/\b(?:e-?mail|gmail|inbox|mailbox)\b/]
+    }
+  },
   {
     name: "Competitor Watch",
     avatar: "binoculars",
@@ -565,6 +584,27 @@ export function parseIntent(prompt: string): ParsedIntent {
       schedule_cron: parseSchedule(lower),
       output_template: "plain_text",
       permissions_needed: ["Web search (no login needed)"]
+    });
+  }
+
+  if (
+    !/\b(?:e-?mail|gmail|inbox|mailbox)\b/.test(lower) &&
+    (
+      lower.includes("calendar") ||
+      /\b(?:daily|weekly|today'?s|tomorrow'?s) agenda\b/.test(lower) ||
+      /\bupcoming (?:meetings|appointments|events)\b/.test(lower)
+    )
+  ) {
+    return baseIntent(prompt, {
+      name: "Calendar Agenda",
+      avatar: "calendar",
+      intent: "calendar_agenda",
+      connector: "calendar",
+      connector_ids: ["calendar"],
+      action: "Reads upcoming Google Calendar events and prepares a concise agenda.",
+      schedule_cron: parseSchedule(lower) ?? "0 7 * * *",
+      output_template: "data_summary",
+      permissions_needed: ["Google Calendar event read access"]
     });
   }
 

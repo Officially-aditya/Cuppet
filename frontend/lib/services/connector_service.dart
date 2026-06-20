@@ -176,13 +176,14 @@ List<Connector> _mockConnectorList() {
       requiredScopes: ['Read selected email metadata', 'Draft replies'],
     ),
     Connector(
-      id: 'gcal',
+      id: 'calendar',
       name: 'Google Calendar',
       description: 'Use availability and upcoming events when you approve it.',
-      status: ConnectorStatus.oauth,
+      status: ConnectorStatus.disconnected,
       category: 'CALENDAR & SCHEDULING',
       iconName: 'Calendar',
-      requiredScopes: ['Read events', 'Create reminders'],
+      requiredScopes: ['Read upcoming events'],
+      authConfigured: true,
     ),
     Connector(
       id: 'slack',

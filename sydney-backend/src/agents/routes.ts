@@ -118,7 +118,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           code: "UNSUPPORTED_CONNECTOR",
           message: `I can't access ${parsedIntent.unsupported_connector} yet. I can monitor Gmail, Slack, Drive, or web search instead.`,
           unsupported_connector: parsedIntent.unsupported_connector,
-          alternatives: ["gmail", "slack", "drive", "web_search"]
+          alternatives: ["gmail", "calendar", "slack", "drive", "web_search"]
         }
       });
     }
