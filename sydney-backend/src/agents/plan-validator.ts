@@ -29,7 +29,13 @@ export type ValidatedAgentPlan = {
   warnings: string[];
 };
 
-const supportedConnectors = new Set(["gmail", "drive", "calendar", "web_search"]);
+const supportedConnectors = new Set([
+  "gmail",
+  "drive",
+  "calendar",
+  "github",
+  "web_search"
+]);
 const supportedTemplates = new Set([
   "plain_text",
   "data_summary",
@@ -200,6 +206,7 @@ function connectorPermissions(
   if (connectors.includes("gmail")) return ["Gmail read access"];
   if (connectors.includes("drive")) return ["Google Drive read access"];
   if (connectors.includes("calendar")) return ["Google Calendar event read access"];
+  if (connectors.includes("github")) return ["GitHub profile and repository read access"];
   if (connectors.includes("web_search")) return ["Web search (no login needed)"];
   return fallback;
 }

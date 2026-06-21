@@ -45,6 +45,26 @@ type CapabilityDefinition = {
 
 const CAPABILITIES: CapabilityDefinition[] = [
   {
+    name: "GitHub Activity",
+    avatar: "github",
+    intent: "github_activity_digest",
+    connector: "github",
+    connectorIds: ["github"],
+    action: "Summarizes recently updated repositories, open issues, and pull requests.",
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["GitHub profile and repository read access"],
+    priority: 65,
+    match: {
+      any: [
+        /\bgithub\b/,
+        /\bpull requests?\b/,
+        /\brepositor(?:y|ies)\b/,
+        /\bprs?\b.*\b(?:review|open|merged|activity|digest)\b/
+      ]
+    }
+  },
+  {
     name: "Calendar Agenda",
     avatar: "calendar",
     intent: "calendar_agenda",

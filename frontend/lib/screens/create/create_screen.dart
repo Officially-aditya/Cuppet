@@ -330,6 +330,17 @@ Create a Google Calendar agenda agent that summarizes my upcoming events every m
 Show the event time, title, and location when available. Keep the agenda concise, use only Google Calendar data, and do not create, edit, or delete events.''',
   ),
   _AgentTemplate(
+    id: 'github',
+    label: 'GitHub agent',
+    description: 'Summarizes repository, issue, and pull-request activity.',
+    icon: Icons.code_rounded,
+    connectedTools: ['GitHub'],
+    prompt: '''
+Create a GitHub activity agent that sends me a concise digest every morning at 9 AM.
+
+Show recently updated repositories, open issues involving me, and open pull requests involving me. Use only GitHub data, include repository names, and do not create, edit, merge, or close anything.''',
+  ),
+  _AgentTemplate(
     id: 'reminder',
     label: 'Reminder agent',
     description: 'A simple scheduled nudge for habits, tasks, or follow-ups.',

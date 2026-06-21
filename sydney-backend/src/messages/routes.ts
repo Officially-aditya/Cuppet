@@ -1061,7 +1061,7 @@ function unsupportedConnectorContent(parsedIntent: ParsedIntent) {
     template: "plain_text",
     version: "1.0",
     data: {
-      body: `I can't create that yet because ${parsedIntent.unsupported_connector} is not supported. I can create agents for Gmail, Google Calendar, Slack, Drive, web search, reminders, and study plans.`
+      body: `I can't create that yet because ${parsedIntent.unsupported_connector} is not supported. I can create agents for Gmail, Google Calendar, GitHub, Slack, Drive, web search, reminders, and study plans.`
     }
   };
 }

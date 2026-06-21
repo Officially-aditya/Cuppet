@@ -23,3 +23,16 @@ test("keeps email digests Gmail-only even when an old prompt mentions calendar",
   assert.deepEqual(parsed.connector_ids, ["gmail"]);
   assert.deepEqual(parsed.permissions_needed, ["Gmail read access"]);
 });
+
+test("classifies GitHub repository activity as a GitHub connector agent", () => {
+  const parsed = parseIntent(
+    "Send me a daily GitHub digest of repositories, open issues, and pull requests."
+  );
+
+  assert.equal(parsed.intent, "github_activity_digest");
+  assert.equal(parsed.connector, "github");
+  assert.deepEqual(parsed.connector_ids, ["github"]);
+  assert.deepEqual(parsed.permissions_needed, [
+    "GitHub profile and repository read access"
+  ]);
+});

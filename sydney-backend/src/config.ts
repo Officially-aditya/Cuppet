@@ -34,6 +34,10 @@ const envSchema = z.object({
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
   SLACK_REDIRECT_URI: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  GITHUB_REDIRECT_URI: z.string().url().optional(),
+  GITHUB_OAUTH_SCOPES: z.string().default("read:user"),
   FIREBASE_SERVICE_ACCOUNT: z.string().optional()
 });
 

@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import {
@@ -11,6 +11,10 @@ import {
 } from "../agents/output.js";
 import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
+import {
+  decryptConnectorSecret,
+  encryptConnectorSecret
+} from "./token-vault.js";
 
 export type GoogleWorkspaceConnectorId = "gmail" | "drive" | "calendar";
 
@@ -677,7 +681,7 @@ async function refreshGoogleToken(
     [
       userId,
       connectorId,
-      encryptSecret(body.access_token),
+      encryptConnectorSecret(body.access_token),
       tokenExpiry(body.expires_in),
       parseScopes(body.scope)
     ]
@@ -724,8 +728,8 @@ async function storeGoogleWorkspaceToken(input: {
       [
         input.userId,
         connectorId,
-        encryptSecret(input.token.access_token),
-        encryptSecret(refreshToken),
+        encryptConnectorSecret(input.token.access_token),
+        encryptConnectorSecret(refreshToken),
         tokenExpiry(input.token.expires_in),
         grantedScopes
       ]
@@ -763,8 +767,8 @@ async function googleAccessToken(
   let accessToken: string;
   let refreshToken: string;
   try {
-    accessToken = decryptSecret(token.access_token_enc);
-    refreshToken = decryptSecret(token.refresh_token_enc);
+    accessToken = decryptConnectorSecret(token.access_token_enc);
+    refreshToken = decryptConnectorSecret(token.refresh_token_enc);
   } catch {
     await markConnectorActionRequired(
       userId,
@@ -800,7 +804,7 @@ async function existingGoogleRefreshToken(
     [userId, Object.keys(connectorScopes), requestedConnectorId]
   );
 
-  return rows[0] ? decryptSecret(rows[0].refresh_token_enc) : null;
+  return rows[0] ? decryptConnectorSecret(rows[0].refresh_token_enc) : null;
 }
 
 async function fetchGmailMessages(
@@ -1535,44 +1539,6 @@ function mobileConnectorRedirect(
     url.searchParams.set(key, value);
   }
   return url;
-}
-
-function encryptSecret(value: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", vaultKey(), iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(value, "utf8"),
-    cipher.final()
-  ]);
-  const tag = cipher.getAuthTag();
-  return [
-    "v1",
-    iv.toString("base64url"),
-    tag.toString("base64url"),
-    ciphertext.toString("base64url")
-  ].join(":");
-}
-
-function decryptSecret(value: string): string {
-  const [version, iv, tag, ciphertext] = value.split(":");
-  if (version !== "v1" || !iv || !tag || !ciphertext) {
-    throw new Error("Invalid encrypted connector token.");
-  }
-
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    vaultKey(),
-    Buffer.from(iv, "base64url")
-  );
-  decipher.setAuthTag(Buffer.from(tag, "base64url"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(ciphertext, "base64url")),
-    decipher.final()
-  ]).toString("utf8");
-}
-
-function vaultKey(): Buffer {
-  return Buffer.from(config.VAULT_ENCRYPTION_KEY, "hex");
 }
 
 function ensureGoogleWorkspaceAuthConfigured(): void {

@@ -131,7 +131,7 @@ export function routeAgentMessage(
       reason: "requested_unsupported_connector",
       slots: { connectorId: unsupported },
       patch: {},
-      reply: `I can't add ${unsupported} access yet. I can work with the current setup, or you can use Gmail, Slack, Drive, web search, reminders, and study-plan style agents as they become available.`
+      reply: `I can't add ${unsupported} access yet. I can work with the current setup, or you can use Gmail, Calendar, Drive, GitHub, Slack, web search, reminders, and study-plan style agents as they become available.`
     };
   }
 

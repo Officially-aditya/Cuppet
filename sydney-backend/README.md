@@ -94,6 +94,18 @@ Scheduled agents are registered in BullMQ when they are created or updated. The 
 
 Google Workspace OAuth supports Gmail, Drive, and Calendar as separate read-only connectors. Enable the Gmail API, Google Drive API, and Google Calendar API for the configured Google Cloud project. Calendar uses the `calendar.events.readonly` scope and reads upcoming events from the user's primary calendar without creating or changing events.
 
+GitHub OAuth uses `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and
+`GITHUB_REDIRECT_URI`. Configure the production OAuth callback as:
+
+```text
+https://sydney-production.up.railway.app/connectors/github/callback
+```
+
+`GITHUB_OAUTH_SCOPES` defaults to `read:user`, which limits the connector to
+profile information and public repository activity. Add `repo` only when
+private repository access is required; GitHub OAuth defines `repo` as a broad
+scope. GitHub access tokens are encrypted with the existing connector vault.
+
 ## Week 3 Tech News Agent
 
 The Tech News agent uses Anthropic Messages API server-side web search, so it only needs `ANTHROPIC_API_KEY`; there is no separate Brave Search key.

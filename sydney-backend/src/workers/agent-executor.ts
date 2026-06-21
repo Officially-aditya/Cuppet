@@ -39,6 +39,7 @@ import {
 } from "../queue/index.js";
 import { isConnectorAuthRequiredError } from "../connectors/errors.js";
 import { renderGoogleWorkspaceAgent } from "../connectors/google-workspace.js";
+import { renderGitHubAgent } from "../connectors/github.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
 import { agentExecutionKey } from "./execution-key.js";
@@ -155,6 +156,11 @@ const connectorPendingConfigs: Record<string, ConnectorPendingConfig> = {
     connectorName: "Google Calendar",
     outputName: "calendar agenda",
     expectedAction: "read upcoming events and prepare a concise agenda"
+  },
+  github_activity_digest: {
+    connectorName: "GitHub",
+    outputName: "GitHub activity digest",
+    expectedAction: "summarize recently updated repositories, open issues, and pull requests"
   }
 };
 
@@ -533,6 +539,14 @@ async function renderAgentMessage(
     });
     if (googleWorkspaceMessage) {
       return googleWorkspaceMessage;
+    }
+
+    const githubMessage = await renderGitHubAgent(agent, {
+      scheduledIntro,
+      scheduledTitle
+    });
+    if (githubMessage) {
+      return githubMessage;
     }
 
     return renderConnectorPending(agent, connectorPending);

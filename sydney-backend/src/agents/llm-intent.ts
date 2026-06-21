@@ -19,7 +19,7 @@ export async function parseIntentHybrid(prompt: string): Promise<ParsedIntent> {
         "Return only compact JSON.",
         "Prefer supported intents only.",
         "Do not invent connector capabilities.",
-        "Supported connectors: gmail, drive, calendar, web_search, or null.",
+        "Supported connectors: gmail, drive, calendar, github, web_search, or null.",
         "Supported output_template: plain_text, data_summary, checklist, urgency_list, daily_task, progress_tracker."
       ].join(" "),
       maxTokens: 500,

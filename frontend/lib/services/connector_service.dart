@@ -250,6 +250,11 @@ List<Connector> _mockConnectorList() {
       status: ConnectorStatus.disconnected,
       category: 'DEVELOPER TOOLS',
       iconName: 'Github',
+      requiredScopes: [
+        'Read GitHub profile',
+        'Read public repository activity',
+      ],
+      authConfigured: true,
     ),
     Connector(
       id: 'gdrive',

@@ -93,4 +93,27 @@ void main() {
     expect(prompt, contains('Use only Gmail data'));
     expect(prompt.toLowerCase(), isNot(contains('calendar')));
   });
+
+  testWidgets('GitHub template is read-only and GitHub-specific', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: CreateScreen()));
+
+    await tester.scrollUntilVisible(
+      find.text('GitHub agent'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GitHub agent'));
+    await tester.pump();
+
+    await tester.fling(find.byType(ListView), const Offset(0, 1000), 1000);
+    await tester.pumpAndSettle();
+
+    final editor = tester.widget<TextField>(find.byType(TextField).first);
+    final prompt = editor.controller!.text.toLowerCase();
+    expect(prompt, contains('use only github data'));
+    expect(prompt, contains('do not create, edit, merge, or close anything'));
+  });
 }

@@ -10,6 +10,14 @@ import {
   isGoogleWorkspaceConnector,
   parseGoogleWorkspaceCallbackUrl
 } from "./google-workspace.js";
+import {
+  createGitHubAuthUrl,
+  githubAuthConfigured,
+  githubPrivateRepositoryAccessEnabled,
+  handleGitHubOAuthCallback,
+  hasUsableGitHubToken,
+  parseGitHubCallbackUrl
+} from "./github.js";
 
 type ConnectorDefinition = {
   id: string;
@@ -83,6 +91,17 @@ const connectors: ConnectorDefinition[] = [
     category: "CALENDAR & SCHEDULING",
     required_scopes: ["Read upcoming calendar events"],
     auth_configured: googleWorkspaceAuthConfigured()
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    description: "Monitor repositories, issues, and pull requests",
+    icon_name: "Github",
+    category: "DEVELOPER TOOLS",
+    required_scopes: githubPrivateRepositoryAccessEnabled()
+      ? ["Read GitHub profile", "Access public and private repositories"]
+      : ["Read GitHub profile", "Read public repository activity"],
+    auth_configured: githubAuthConfigured()
   }
 ];
 
@@ -103,6 +122,28 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         error: {
           code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
           message: "Invalid Google Workspace OAuth callback."
+        }
+      });
+    }
+  });
+
+  app.get("/connectors/github/callback", async (request, reply) => {
+    const query = request.query as {
+      code?: string;
+      state?: string;
+      error?: string;
+      error_description?: string;
+    };
+
+    try {
+      const redirectUrl = await handleGitHubOAuthCallback(query);
+      return reply.redirect(redirectUrl.toString());
+    } catch (error) {
+      request.log.warn({ error }, "Invalid GitHub OAuth callback");
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+          message: "Invalid GitHub OAuth callback."
         }
       });
     }
@@ -156,6 +197,21 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
+      if (
+        status === "connected" &&
+        connector.id === "github" &&
+        !(await hasUsableGitHubToken(request.auth!.userId))
+      ) {
+        return reply.code(409).send({
+          error: {
+            code: "CONNECTOR_OAUTH_REQUIRED",
+            message:
+              "GitHub authorization is required before this connector can be marked connected.",
+            connector_id: connector.id
+          }
+        });
+      }
+
       await setConnectorStatus(request.auth!.userId, connector.id, status);
       return connectorPayload(connector, status);
     }
@@ -184,7 +240,7 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
 
       if (isGoogleWorkspaceConnector(connector.id)) {
         if (!googleWorkspaceAuthConfigured()) {
-          return connectorOAuthNotConfigured(reply, connector.id);
+          return connectorOAuthNotConfigured(reply, connector.id, "Google Workspace");
         }
 
         const session = await createGoogleWorkspaceAuthUrl({
@@ -193,6 +249,21 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
           callbackScheme: body.data.callbackScheme
         });
 
+        return {
+          authUrl: session.authUrl,
+          callbackScheme: session.callbackScheme
+        };
+      }
+
+      if (connector.id === "github") {
+        if (!githubAuthConfigured()) {
+          return connectorOAuthNotConfigured(reply, connector.id, "GitHub");
+        }
+
+        const session = await createGitHubAuthUrl({
+          userId: request.auth!.userId,
+          callbackScheme: body.data.callbackScheme
+        });
         return {
           authUrl: session.authUrl,
           callbackScheme: session.callbackScheme
@@ -270,6 +341,44 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
+      if (connector.id === "github") {
+        try {
+          const callback = parseGitHubCallbackUrl(body.data.callbackUrl);
+          if (callback.connectorId !== connector.id) {
+            return reply.code(400).send({
+              error: {
+                code: "CONNECTOR_CALLBACK_MISMATCH",
+                message: "The OAuth callback does not match this connector.",
+                connector_id: connector.id
+              }
+            });
+          }
+          if (callback.error) {
+            return reply.code(400).send({
+              error: {
+                code: "CONNECTOR_OAUTH_FAILED",
+                message: `GitHub authorization failed: ${callback.error}`,
+                connector_id: connector.id
+              }
+            });
+          }
+
+          const statuses = await connectorStatuses(request.auth!.userId);
+          return connectorPayload(connector, connectorStatus(connector, statuses));
+        } catch (error) {
+          return reply.code(400).send({
+            error: {
+              code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Invalid OAuth callback.",
+              connector_id: connector.id
+            }
+          });
+        }
+      }
+
       return reply.code(501).send({
         error: {
           code: "CONNECTOR_OAUTH_NOT_CONFIGURED",
@@ -318,7 +427,7 @@ async function connectorStatuses(userId: string): Promise<Map<string, string>> {
   }
   for (const row of stateResult.rows) {
     if (
-      isGoogleWorkspaceConnector(row.connector_id) &&
+      isTokenBackedConnector(row.connector_id) &&
       row.status === "connected" &&
       !tokenBackedConnectors.has(row.connector_id)
     ) {
@@ -402,13 +511,21 @@ function connectorNotFound(reply: FastifyReply) {
   });
 }
 
-function connectorOAuthNotConfigured(reply: FastifyReply, connectorId: string) {
+function connectorOAuthNotConfigured(
+  reply: FastifyReply,
+  connectorId: string,
+  providerName: string
+) {
   return reply.code(501).send({
     error: {
       code: "CONNECTOR_OAUTH_NOT_CONFIGURED",
       message:
-        "Google Workspace OAuth is not configured on this backend. Set Google client credentials and redirect URI first.",
+        `${providerName} OAuth is not configured on this backend. Set its client credentials and redirect URI first.`,
       connector_id: connectorId
     }
   });
+}
+
+function isTokenBackedConnector(connectorId: string): boolean {
+  return isGoogleWorkspaceConnector(connectorId) || connectorId === "github";
 }
