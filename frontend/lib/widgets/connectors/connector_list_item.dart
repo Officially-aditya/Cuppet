@@ -114,7 +114,8 @@ class _CompactConnector extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (connector.isConnected || connector.status == ConnectorStatus.actionRequired)
+                  if (connector.isConnected ||
+                      connector.status == ConnectorStatus.actionRequired)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -175,14 +176,21 @@ class _ConnectorStatusLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final connected = connector.isConnected;
     final actionRequired = connector.status == ConnectorStatus.actionRequired;
+    final linking =
+        connector.status == ConnectorStatus.linking ||
+        connector.status == ConnectorStatus.connecting;
     final label =
-        connected
+        linking
+            ? 'CONNECTING'
+            : connected
             ? 'CONNECTED'
             : actionRequired
             ? 'RECONNECT REQUIRED'
             : 'DISCONNECTED';
     final statusColor =
-        connected
+        linking
+            ? SydneyColors.info
+            : connected
             ? SydneyColors.primary
             : actionRequired
             ? SydneyColors.warning
@@ -191,13 +199,17 @@ class _ConnectorStatusLine extends StatelessWidget {
     return Row(
       children: [
         Icon(
-          connected
+          linking
+              ? Icons.hourglass_top_rounded
+              : connected
               ? Icons.radio_button_checked_rounded
               : actionRequired
               ? Icons.error_outline_rounded
               : Icons.radio_button_unchecked_rounded,
           color:
-              connected
+              linking
+                  ? SydneyColors.info
+                  : connected
                   ? SydneyColors.primary
                   : actionRequired
                   ? SydneyColors.warning
@@ -218,7 +230,9 @@ class _ConnectorStatusLine extends StatelessWidget {
         Semantics(
           label: '${connector.name} connector',
           value:
-              connected
+              linking
+                  ? 'Connecting'
+                  : connected
                   ? 'Connected'
                   : actionRequired
                   ? 'Reconnect required'
@@ -229,7 +243,7 @@ class _ConnectorStatusLine extends StatelessWidget {
             activeTrackColor: SydneyColors.primary,
             inactiveThumbColor: SydneyColors.onPrimary,
             inactiveTrackColor: SydneyColors.surfaceDim,
-            onChanged: onConnectedChanged,
+            onChanged: linking ? null : onConnectedChanged,
           ),
         ),
       ],

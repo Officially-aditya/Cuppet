@@ -6,6 +6,8 @@ import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/daily_task_template.dart';
 import 'package:sydney/widgets/sydney_primitives.dart';
 import 'package:sydney/screens/create/create_screen.dart';
+import 'package:sydney/models/connector.dart';
+import 'package:sydney/widgets/connectors/connector_list_item.dart';
 
 void main() {
   testWidgets('plain text template renders message text', (tester) async {
@@ -154,5 +156,29 @@ void main() {
 
     expect(selectedAction?['connector_id'], 'github');
     expect(selectedAction?['type'], 'connector_connect');
+  });
+
+  testWidgets('connector switch is disabled while OAuth is opening', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ConnectorListItem(
+            connector: const Connector(
+              id: 'github',
+              name: 'GitHub',
+              description: 'Repository activity',
+              status: ConnectorStatus.linking,
+            ),
+            onConnectedChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('CONNECTING'), findsOneWidget);
+    final toggle = tester.widget<Switch>(find.byType(Switch));
+    expect(toggle.onChanged, isNull);
   });
 }

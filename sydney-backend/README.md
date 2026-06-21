@@ -106,6 +106,24 @@ profile information and public repository activity. Add `repo` only when
 private repository access is required; GitHub OAuth defines `repo` as a broad
 scope. GitHub access tokens are encrypted with the existing connector vault.
 
+## LLM and Input Security
+
+Sydney treats connector records, fetched document/email contents, source
+metadata, web results, and prior generated output as untrusted data. These
+values are normalized, secret-redacted, prompt-injection screened, XML-escaped,
+and placed behind explicit prompt trust boundaries before reaching Gemini.
+
+User-created prompts and thread messages use strict schemas with length,
+control-character, and instruction-override validation. LLM-produced JSON is
+schema validated before it can affect an agent plan or instruction update.
+Gemini requests use explicit safety thresholds, bounded context/output sizes,
+and timeouts. Model output is secret-redacted before persistence or delivery.
+
+These controls reduce prompt-injection risk but do not prove that arbitrary LLM
+behavior is safe. Keep connector permissions read-only, require deterministic
+authorization checks for every state-changing action, and maintain adversarial
+tests as connector capabilities expand.
+
 ## Week 3 Tech News Agent
 
 The Tech News agent uses Anthropic Messages API server-side web search, so it only needs `ANTHROPIC_API_KEY`; there is no separate Brave Search key.

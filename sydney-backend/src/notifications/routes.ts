@@ -4,14 +4,27 @@ import { requireAuth } from "../auth/middleware.js";
 import { pool } from "../db/index.js";
 import { registerFCMToken, unregisterFCMToken } from "./push.js";
 
-const registerTokenSchema = z.object({
-  token: z.string().min(1),
-  device_info: z.record(z.unknown()).optional(),
-});
+const deviceInfoSchema = z
+  .object({
+    platform: z.enum(["android", "ios", "web"]).optional(),
+    app_version: z.string().trim().min(1).max(40).optional(),
+    model: z.string().trim().min(1).max(120).optional(),
+    os_version: z.string().trim().min(1).max(80).optional()
+  })
+  .strict();
 
-const unregisterTokenSchema = z.object({
-  token: z.string().min(1),
-});
+const registerTokenSchema = z
+  .object({
+    token: z.string().trim().min(1).max(4096),
+    device_info: deviceInfoSchema.optional()
+  })
+  .strict();
+
+const unregisterTokenSchema = z
+  .object({
+    token: z.string().trim().min(1).max(4096)
+  })
+  .strict();
 
 export async function notificationRoutes(app: FastifyInstance): Promise<void> {
   app.post(

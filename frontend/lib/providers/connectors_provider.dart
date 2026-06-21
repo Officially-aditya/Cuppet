@@ -28,16 +28,30 @@ class ConnectorsController extends AsyncNotifier<List<Connector>> {
             : connector,
     ]);
 
-    state = await AsyncValue.guard(() async {
-      final linked = await ref
+    late final Connector linked;
+    try {
+      linked = await ref
           .read(connectorServiceProvider)
           .linkConnector(connectorId);
+    } catch (error) {
+      state = AsyncValue.data(current);
+      rethrow;
+    }
+
+    state = AsyncValue.data([
+      for (final connector in current)
+        connector.id == linked.id ? linked : connector,
+    ]);
+
+    try {
       final latest = await ref.read(connectorServiceProvider).listConnectors();
-      return [
+      state = AsyncValue.data([
         for (final connector in latest)
           connector.id == linked.id ? linked : connector,
-      ];
-    });
+      ]);
+    } catch (_) {
+      // OAuth succeeded. Keep the linked state even if the follow-up refresh fails.
+    }
   }
 
   void toggle(String connectorId) {
@@ -99,7 +113,7 @@ class ConnectorsController extends AsyncNotifier<List<Connector>> {
       ]);
     } catch (error, stackTrace) {
       state = AsyncValue.data(current);
-      state = AsyncValue.error(error, stackTrace);
+      Error.throwWithStackTrace(error, stackTrace);
     }
   }
 }

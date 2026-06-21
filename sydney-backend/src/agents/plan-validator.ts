@@ -1,4 +1,9 @@
 import type { ParsedIntent } from "./parser.js";
+import {
+  hasForbiddenTextControls,
+  isPromptInjectionAttempt,
+  normalizeSecurityText
+} from "../security/prompt-guard.js";
 
 export type AgentPlanProposal = {
   name?: string;
@@ -232,13 +237,25 @@ function cleanIntent(value: string | undefined): string | undefined {
 }
 
 function cleanShortText(value: string | undefined): string | undefined {
-  const text = value?.trim();
-  return text && text.length <= 80 ? text : undefined;
+  const text = value ? normalizeSecurityText(value) : undefined;
+  return text &&
+    text.length <= 80 &&
+    !hasForbiddenTextControls(text) &&
+    !isPromptInjectionAttempt(text)
+    ? text
+    : undefined;
 }
 
 function cleanLongText(value: string | undefined): string | undefined {
-  const text = value?.replace(/\s+/g, " ").trim();
-  return text && text.length <= 500 ? text : undefined;
+  const text = value
+    ? normalizeSecurityText(value).replace(/\s+/g, " ")
+    : undefined;
+  return text &&
+    text.length <= 500 &&
+    !hasForbiddenTextControls(text) &&
+    !isPromptInjectionAttempt(text)
+    ? text
+    : undefined;
 }
 
 function validCron(value: string): boolean {

@@ -29,7 +29,10 @@ class Connector {
   final bool authConfigured;
 
   bool get isConnected => status == ConnectorStatus.connected;
-  bool get shouldUseOAuth => authConfigured && requiredScopes.isNotEmpty;
+  bool get shouldUseOAuth =>
+      (authConfigured ||
+          const {'gmail', 'drive', 'calendar', 'github'}.contains(id)) &&
+      requiredScopes.isNotEmpty;
 
   Connector copyWith({
     String? id,

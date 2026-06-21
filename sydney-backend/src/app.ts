@@ -5,6 +5,7 @@ import { registerApi } from "./api/index.js";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
+    bodyLimit: 64 * 1024,
     logger:
       config.NODE_ENV === "development"
         ? {

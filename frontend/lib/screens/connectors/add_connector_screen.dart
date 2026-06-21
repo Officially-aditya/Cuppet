@@ -127,14 +127,21 @@ class _DirectoryList extends ConsumerWidget {
             ConnectorListItem(
               connector: connector,
               compact: true,
-              onConnectedChanged: (connected) {
+              onConnectedChanged: (connected) async {
                 if (connector.name == 'Outlook') {
                   Navigator.of(context).maybePop();
                   return;
                 }
-                ref
-                    .read(connectorsProvider.notifier)
-                    .setConnected(connector.id, connected: connected);
+                try {
+                  await ref
+                      .read(connectorsProvider.notifier)
+                      .setConnected(connector.id, connected: connected);
+                } catch (error) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error.toString())));
+                }
               },
             ),
             const SizedBox(height: 6),

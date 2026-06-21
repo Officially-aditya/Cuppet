@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
+import 'package:sydney/models/connector.dart';
 import 'package:sydney/services/message_service.dart';
 
 void main() {
@@ -63,4 +64,20 @@ void main() {
 
     expect(deduplicateMessages([first, duplicate]), [first]);
   });
+
+  test(
+    'known GitHub connector always uses OAuth instead of a status toggle',
+    () {
+      const connector = Connector(
+        id: 'github',
+        name: 'GitHub',
+        description: 'Repository activity',
+        status: ConnectorStatus.disconnected,
+        requiredScopes: ['Read GitHub profile'],
+        authConfigured: false,
+      );
+
+      expect(connector.shouldUseOAuth, isTrue);
+    },
+  );
 }

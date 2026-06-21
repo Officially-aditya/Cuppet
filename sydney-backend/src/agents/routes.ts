@@ -11,18 +11,35 @@ import { removeScheduleForAgent, syncAgentSchedule } from "./scheduler.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
 import { agentCreationThreadMessage } from "./creation-message.js";
+import {
+  cronSchema,
+  hasSecurityValidationIssue,
+  shortLabelSchema,
+  validatedTextSchema
+} from "../security/input-validation.js";
 
-const createAgentSchema = z.object({
-  prompt: z.string().trim().min(3).max(4000)
-});
+const createAgentSchema = z
+  .object({
+    prompt: validatedTextSchema({ field: "Prompt", min: 3, max: 4000 })
+  })
+  .strict();
 
-const updateAgentSchema = z.object({
-  name: z.string().trim().min(1).max(80).optional(),
-  schedule_cron: z.string().trim().min(1).max(120).nullable().optional(),
-  status: z.enum(["active", "paused", "error"]).optional()
-}).refine((body) => Object.keys(body).length > 0, {
-  message: "At least one field is required."
-});
+const updateAgentSchema = z
+  .object({
+    name: shortLabelSchema.optional(),
+    schedule_cron: cronSchema.nullable().optional(),
+    status: z.enum(["active", "paused", "error"]).optional()
+  })
+  .strict()
+  .refine((body) => Object.keys(body).length > 0, {
+    message: "At least one field is required."
+  });
+
+const agentMessageActionSchema = z
+  .object({
+    action: z.enum(["done", "snooze", "skip"])
+  })
+  .strict();
 
 export async function agentRoutes(app: FastifyInstance): Promise<void> {
   app.get("/agents", { preHandler: requireAuth }, async (request) => {
@@ -105,9 +122,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     const body = createAgentSchema.safeParse(request.body);
 
     if (!body.success) {
+      if (hasSecurityValidationIssue(body.error)) {
+        request.log.warn(
+          { userId, route: "create_agent" },
+          "Rejected unsafe agent input"
+        );
+      }
       return reply.code(400).send({
         error: {
-          code: "INVALID_AGENT_PROMPT",
+          code: hasSecurityValidationIssue(body.error)
+            ? "UNSAFE_INPUT"
+            : "INVALID_AGENT_PROMPT",
           message: body.error.issues[0]?.message ?? "Invalid prompt."
         }
       });
@@ -348,9 +373,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     const body = createAgentSchema.safeParse(request.body);
 
     if (!body.success) {
+      if (hasSecurityValidationIssue(body.error)) {
+        request.log.warn(
+          { userId: request.auth!.userId, route: "parse_agent" },
+          "Rejected unsafe agent input"
+        );
+      }
       return reply.code(400).send({
         error: {
-          code: "INVALID_AGENT_PROMPT",
+          code: hasSecurityValidationIssue(body.error)
+            ? "UNSAFE_INPUT"
+            : "INVALID_AGENT_PROMPT",
           message: body.error.issues[0]?.message ?? "Invalid prompt."
         }
       });
@@ -362,12 +395,21 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/agents/:agentId/messages/:messageId/action", { preHandler: requireAuth }, async (request, reply) => {
     const { agentId, messageId } = request.params as { agentId: string; messageId: string };
-    const { action } = request.body as { action: "done" | "snooze" | "skip" };
     const userId = request.auth!.userId;
+    const body = agentMessageActionSchema.safeParse(request.body);
 
     if (!isUuid(agentId) || !isUuid(messageId)) {
       return reply.code(400).send({ error: "Invalid agent or message ID." });
     }
+    if (!body.success) {
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_MESSAGE_ACTION",
+          message: body.error.issues[0]?.message ?? "Invalid message action."
+        }
+      });
+    }
+    const { action } = body.data;
 
     // Verify ownership of agent
     const agent = await getAgent(userId, agentId);
@@ -375,27 +417,45 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
+    const ownedMessage = await pool.query(
+      `
+        SELECT 1
+        FROM agent_messages
+        WHERE id = $1 AND agent_id = $2 AND user_id = $3
+        LIMIT 1
+      `,
+      [messageId, agentId, userId]
+    );
+    if (!ownedMessage.rows[0]) {
+      return reply.code(404).send({
+        error: {
+          code: "MESSAGE_NOT_FOUND",
+          message: "Message not found."
+        }
+      });
+    }
+
     const dateString = new Date().toISOString().split("T")[0];
 
     if (action === "done") {
       // 1. Mark current card as completed
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'true'::jsonb) WHERE id = $1`,
-        [messageId]
+        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'true'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
+        [messageId, agentId, userId]
       );
       // 2. Append completed day to history heatmap
       await pool.query(
-        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'true'::jsonb) WHERE id = $1`,
-        [agentId]
+        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'true'::jsonb) WHERE id = $1 AND user_id = $2`,
+        [agentId, userId]
       );
     } else if (action === "skip") {
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'false'::jsonb) WHERE id = $1`,
-        [messageId]
+        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'false'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
+        [messageId, agentId, userId]
       );
       await pool.query(
-        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'false'::jsonb) WHERE id = $1`,
-        [agentId]
+        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'false'::jsonb) WHERE id = $1 AND user_id = $2`,
+        [agentId, userId]
       );
     } else if (action === "snooze") {
       // bullmq enqueue with delay of 30 minutes

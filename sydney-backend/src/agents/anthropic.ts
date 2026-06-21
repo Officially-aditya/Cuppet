@@ -1,4 +1,8 @@
 import { config } from "../config.js";
+import {
+  PROMPT_SECURITY_SYSTEM,
+  sanitizeModelOutput
+} from "../security/prompt-guard.js";
 
 export type AnthropicTextMessage = {
   role: "user" | "assistant";
@@ -76,12 +80,20 @@ type AnthropicTool =
   | Record<string, unknown>;
 
 interface GeminiResponse {
+  promptFeedback?: {
+    blockReason?: string;
+  };
   candidates?: Array<{
     content?: {
       role?: string;
       parts?: Array<{ text?: string }>;
     };
     finishReason?: string;
+    safetyRatings?: Array<{
+      category?: string;
+      probability?: string;
+      blocked?: boolean;
+    }>;
     groundingMetadata?: {
       webSearchQueries?: string[];
       groundingChunks?: Array<{
@@ -115,13 +127,15 @@ export async function createAnthropicMessage(input: {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.GEMINI_MODEL}:generateContent?key=${config.GEMINI_API_KEY}`;
 
-  const contents = input.messages.map((msg) => {
+  const contents = input.messages.slice(-20).map((msg) => {
     const role = msg.role === "assistant" ? "model" : "user";
     const parts = Array.isArray(msg.content)
       ? msg.content
           .filter((block) => block.type === "text")
-          .map((block) => ({ text: (block as AnthropicTextBlock).text }))
-      : [{ text: msg.content }];
+          .map((block) => ({
+            text: (block as AnthropicTextBlock).text.slice(0, 24_000)
+          }))
+      : [{ text: msg.content.slice(0, 24_000) }];
     return { role, parts };
   });
 
@@ -130,6 +144,7 @@ export async function createAnthropicMessage(input: {
 
   const response = await fetch(url, {
     method: "POST",
+    signal: AbortSignal.timeout(45_000),
     headers: {
       "content-type": "application/json"
     },
@@ -138,26 +153,57 @@ export async function createAnthropicMessage(input: {
       systemInstruction: {
         parts: [
           {
-            text: input.system
+            text: [PROMPT_SECURITY_SYSTEM, input.system.slice(0, 20_000)].join(
+              "\n\n"
+            )
           }
         ]
       },
       generationConfig: {
         maxOutputTokens: input.maxTokens ?? 800
       },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ],
       ...(tools ? { tools } : {})
     })
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API failed (${response.status}): ${errorText}`);
+    throw new Error(`Gemini API failed (${response.status}).`);
   }
 
   const payload = (await response.json()) as GeminiResponse;
+  if (payload.promptFeedback?.blockReason) {
+    throw new Error("Gemini blocked the prompt for safety reasons.");
+  }
 
   const candidate = payload.candidates?.[0];
-  const text = candidate?.content?.parts?.[0]?.text ?? "";
+  if (
+    candidate?.finishReason === "SAFETY" ||
+    candidate?.safetyRatings?.some((rating) => rating.blocked === true)
+  ) {
+    throw new Error("Gemini blocked the response for safety reasons.");
+  }
+  const text = (candidate?.content?.parts ?? [])
+    .map((part) => part.text ?? "")
+    .join("")
+    .slice(0, 50_000);
   const contentBlocks: AnthropicContentBlock[] = [
     {
       type: "text",
@@ -225,7 +271,7 @@ export function cleanReasoning(text: string): string {
   cleaned = cleaned.replace(/(?:\*?\*?\bAction Required\b\*?\*?:?|Action Required\*\*)\s*(?:Please\s+)?(?:to\s+)?(?:connect|reconnect|setup|configure|enable|authorization|link|connector)\b[\s\S]*$/gi, "");
   cleaned = cleaned.replace(/(?:To deliver these updates automatically)[\s\S]*$/gi, "");
   
-  return cleaned.trim();
+  return sanitizeModelOutput(cleaned);
 }
 
 export function extractAnthropicText(content: AnthropicContentBlock[]): string {

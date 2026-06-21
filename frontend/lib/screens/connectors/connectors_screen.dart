@@ -8,22 +8,11 @@ import '../../providers/connectors_provider.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 
-class ConnectorsScreen extends ConsumerStatefulWidget {
+class ConnectorsScreen extends ConsumerWidget {
   const ConnectorsScreen({super.key});
 
   @override
-  ConsumerState<ConnectorsScreen> createState() => _ConnectorsScreenState();
-}
-
-class _ConnectorsScreenState extends ConsumerState<ConnectorsScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.invalidate(connectorsProvider));
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final connectors = ref.watch(connectorsProvider);
 
     return Scaffold(
@@ -166,10 +155,18 @@ class _ConnectorList extends ConsumerWidget {
           for (final connector in connectors) ...[
             ConnectorListItem(
               connector: connector,
-              onConnectedChanged:
-                  (connected) => ref
+              onConnectedChanged: (connected) async {
+                try {
+                  await ref
                       .read(connectorsProvider.notifier)
-                      .setConnected(connector.id, connected: connected),
+                      .setConnected(connector.id, connected: connected);
+                } catch (error) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error.toString())));
+                }
+              },
             ),
             const SizedBox(height: SydneySpacing.md),
           ],

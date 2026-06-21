@@ -19,14 +19,27 @@ import { enqueueAgentRun } from "../queue/index.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
 import { agentCreationThreadMessage } from "../agents/creation-message.js";
+import {
+  hasSecurityValidationIssue,
+  validatedTextSchema
+} from "../security/input-validation.js";
 
-const sendMessageSchema = z.object({
-  text: z.string().trim().min(1).max(8000).optional(),
-  action: z.string().trim().min(1).max(200).optional(),
-  payload: z.record(z.unknown()).optional()
-}).refine((body) => body.text || body.action, {
-  message: "Either text or action is required."
-});
+const sendMessageSchema = z
+  .object({
+    text: validatedTextSchema({ field: "Message", min: 1, max: 8000 }).optional(),
+    action: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .regex(/^[a-z0-9_.:-]+$/i, "Invalid action identifier.")
+      .optional(),
+    payload: z.record(z.unknown()).optional()
+  })
+  .strict()
+  .refine((body) => body.text || body.action, {
+    message: "Either text or action is required."
+  });
 
 type AgentRow = {
   id: string;
@@ -103,6 +116,15 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
+    try {
+      await ensureGitHubSetupMessage(userId, agent);
+    } catch (error) {
+      request.log.error(
+        { error, userId, agentId },
+        "Failed to ensure GitHub setup message"
+      );
+    }
+
     await pool.query(
       `
         UPDATE agent_messages
@@ -174,9 +196,17 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (!body.success) {
+      if (hasSecurityValidationIssue(body.error)) {
+        request.log.warn(
+          { userId, agentId, route: "send_message" },
+          "Rejected unsafe message input"
+        );
+      }
       return reply.code(400).send({
         error: {
-          code: "INVALID_MESSAGE",
+          code: hasSecurityValidationIssue(body.error)
+            ? "UNSAFE_INPUT"
+            : "INVALID_MESSAGE",
           message: body.error.issues[0]?.message ?? "Invalid message."
         }
       });
@@ -1036,6 +1066,68 @@ async function writeAgentCreatedMessage(
     role: message.role,
     content: message.content
   });
+}
+
+async function ensureGitHubSetupMessage(
+  userId: string,
+  agent: AgentRow
+): Promise<void> {
+  if (!agent.connector_ids.includes("github")) return;
+
+  try {
+    if (await hasUsableGitHubToken(userId)) return;
+  } catch {
+    // Keep the thread usable and surface the reconnect action if status lookup fails.
+  }
+
+  const message = agentCreationThreadMessage({
+    parsedIntent: agent.parsed_intent,
+    githubConnected: false,
+    readyDetail: "GitHub authorization is required."
+  });
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+      [userId, agent.id]
+    );
+    const existing = await client.query<{ exists: boolean }>(
+      `
+        SELECT EXISTS (
+          SELECT 1
+          FROM agent_messages
+          WHERE user_id = $1
+            AND agent_id = $2
+            AND content->'data'->'actions' @> $3::jsonb
+        ) AS exists
+      `,
+      [userId, agent.id, JSON.stringify([{ connector_id: "github" }])]
+    );
+
+    if (!existing.rows[0]?.exists) {
+      await client.query(
+        `
+          INSERT INTO agent_messages
+            (agent_id, user_id, role, content, source_refs)
+          VALUES ($1, $2, $3, $4, '[]'::jsonb)
+        `,
+        [agent.id, userId, message.role, JSON.stringify(message.content)]
+      );
+      await client.query(
+        "UPDATE agents SET last_message_at = NOW() WHERE id = $1 AND user_id = $2",
+        [agent.id, userId]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function touchAgent(userId: string, agentId: string): Promise<void> {

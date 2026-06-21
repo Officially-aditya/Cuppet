@@ -18,6 +18,7 @@ import {
   hasUsableGitHubToken,
   parseGitHubCallbackUrl
 } from "./github.js";
+import { callbackSchemeSchema } from "../security/input-validation.js";
 
 type ConnectorDefinition = {
   id: string;
@@ -34,17 +35,23 @@ export type ConnectorStatus =
   | "disconnected"
   | "action_required";
 
-const connectorStatusSchema = z.object({
-  connected: z.boolean()
-});
+const connectorStatusSchema = z
+  .object({
+    connected: z.boolean()
+  })
+  .strict();
 
-const oauthStartSchema = z.object({
-  callbackScheme: z.string().trim().min(1).max(80).default("sydney")
-});
+const oauthStartSchema = z
+  .object({
+    callbackScheme: callbackSchemeSchema.default("sydney")
+  })
+  .strict();
 
-const oauthCompleteSchema = z.object({
-  callbackUrl: z.string().trim().min(1).max(2048)
-});
+const oauthCompleteSchema = z
+  .object({
+    callbackUrl: z.string().trim().url().max(2048)
+  })
+  .strict();
 
 const connectors: ConnectorDefinition[] = [
   {
@@ -150,7 +157,15 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/connectors", { preHandler: requireAuth }, async (request) => {
-    const statuses = await connectorStatuses(request.auth!.userId);
+    let statuses = new Map<string, string>();
+    try {
+      statuses = await connectorStatuses(request.auth!.userId);
+    } catch (error) {
+      request.log.error(
+        { error, userId: request.auth!.userId },
+        "Failed to load connector statuses"
+      );
+    }
 
     return connectors.map((connector) =>
       connectorPayload(connector, connectorStatus(connector, statuses))
@@ -325,8 +340,7 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
             });
           }
 
-          const statuses = await connectorStatuses(request.auth!.userId);
-          return connectorPayload(connector, connectorStatus(connector, statuses));
+          return connectorPayload(connector, "connected");
         } catch (error) {
           return reply.code(400).send({
             error: {
@@ -363,8 +377,7 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
             });
           }
 
-          const statuses = await connectorStatuses(request.auth!.userId);
-          return connectorPayload(connector, connectorStatus(connector, statuses));
+          return connectorPayload(connector, "connected");
         } catch (error) {
           return reply.code(400).send({
             error: {

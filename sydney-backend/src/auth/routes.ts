@@ -9,10 +9,12 @@ import {
   NativeGoogleAuthError
 } from "./google-native.js";
 
-const nativeGoogleBodySchema = z.object({
-  idToken: z.string().min(1).optional(),
-  id_token: z.string().min(1).optional()
-});
+const nativeGoogleBodySchema = z
+  .object({
+    idToken: z.string().min(1).max(20_000).optional(),
+    id_token: z.string().min(1).max(20_000).optional()
+  })
+  .strict();
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/mobile/google", async (request, reply) => {

@@ -9,6 +9,7 @@ import {
   type AnthropicWebSearchToolResultBlock
 } from "./anthropic.js";
 import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
+import { userInstructionBlock } from "../security/prompt-guard.js";
 
 type NewsBriefOptions = {
   heading?: string;
@@ -41,7 +42,8 @@ export async function createTechNewsBrief(
     systemPrompt: buildNewsSystemPrompt({
       agentName: "Tech News Agent",
       focus:
-        "Prefer AI, developer platforms, consumer tech, security, and policy stories."
+        "Prefer AI, developer platforms, consumer tech, security, and policy stories.",
+      userPrompt
     }),
     userMessage: buildTechNewsPrompt(userPrompt, trigger)
   });
@@ -57,7 +59,8 @@ export async function createGeneralNewsBrief(
     systemPrompt: buildNewsSystemPrompt({
       agentName: "News Agent",
       focus:
-        "Prefer high-impact world, business, technology, policy, science, and India-relevant stories."
+        "Prefer high-impact world, business, technology, policy, science, and India-relevant stories.",
+      userPrompt
     }),
     userMessage: buildGeneralNewsPrompt(userPrompt, trigger)
   });
@@ -132,6 +135,7 @@ async function createNewsMessage(
 function buildNewsSystemPrompt(input: {
   agentName: string;
   focus: string;
+  userPrompt: string;
 }): string {
   return [
     `You are Sydney's ${input.agentName}.`,
@@ -139,7 +143,8 @@ function buildNewsSystemPrompt(input: {
     "Return only the final digest. Do not mention that you searched.",
     "Keep it concise: one short headline sentence, then three numbered items.",
     "Each numbered item should include why it matters in one sentence.",
-    input.focus,
+    "CRITICAL: Analyze the user's original request. If the user asks for news about a specific topic, theme, exam, company, technology, or interest (for example, 'UGC NET exam' or 'React updates'), you MUST restrict all search queries and all final news digest items to be ONLY about that specific topic. Do NOT include any general, world, political, tech, or unrelated news in this case.",
+    `Otherwise, default to this general focus: ${input.focus}`,
     "Avoid rumors, minor product updates, duplicate stories, and market-price-only items.",
     "Do not insert line breaks inside a numbered item."
   ].join(" ");
@@ -148,9 +153,10 @@ function buildNewsSystemPrompt(input: {
 function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
   return [
     "Create today's technology news brief.",
-    `Original user request: ${userPrompt}`,
+    userInstructionBlock("original_user_request", userPrompt, 4000),
     `Run trigger: ${trigger}.`,
-    "Search the web for recent, high-signal technology news from reputable sources.",
+    "Search the web for recent, high-signal technology news from reputable sources that are directly relevant to the user's original request.",
+    "If the request specifies a topic, focus your search and all 3 news brief items exclusively on that topic.",
     "Use this exact output shape:",
     "Tech news brief for today:",
     "1. <headline>: <summary and why it matters>",
@@ -162,10 +168,10 @@ function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): stri
 function buildGeneralNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
   return [
     "Create today's news brief.",
-    `Original user request: ${userPrompt}`,
+    userInstructionBlock("original_user_request", userPrompt, 4000),
     `Run trigger: ${trigger}.`,
-    "Search the web for recent, high-signal news from reputable sources.",
-    "Prioritize stories a busy user should know before starting the day.",
+    "Search the web for recent, high-signal news from reputable sources that are directly relevant to the user's original request.",
+    "If the request specifies a topic, focus your search and all 3 news brief items exclusively on that topic.",
     "Use this exact output shape:",
     "News brief for today:",
     "1. <headline>: <summary and why it matters>",
