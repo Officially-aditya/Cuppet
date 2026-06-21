@@ -31,6 +31,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   AgentAvailability? _lastAvailability;
   String? _lastReadSyncedMessageId;
 
+  Agent get _activeAgent {
+    return ref.read(agentsProvider).maybeWhen(
+      data: (list) => list.firstWhere(
+        (a) => a.id == widget.agent.id,
+        orElse: () => widget.agent,
+      ),
+      orElse: () => widget.agent,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +54,6 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final messages = ref.watch(messagesProvider(widget.agent.threadId));
     final agentsAsync = ref.watch(agentsProvider);
     final agent = agentsAsync.maybeWhen(
       data:
@@ -54,6 +63,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
           ),
       orElse: () => widget.agent,
     );
+    final messages = ref.watch(messagesProvider(agent.threadId));
 
     return Scaffold(
       appBar: AppBar(
@@ -184,6 +194,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   ),
                   if (!agent.isAssistant)
                     const PopupMenuItem(
+                      value: 'run_now',
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.play_circle_outline_rounded, size: 20),
+                        title: Text('Run agent now'),
+                      ),
+                    ),
+                  if (!agent.isAssistant)
+                    const PopupMenuItem(
                       value: 'delete',
                       child: ListTile(
                         dense: true,
@@ -215,7 +235,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               'book_companion',
             }.contains(agent.parsedIntent?['intent']))
               SydneyHeatmap(
-                history: agent.parsedIntent?['history'] ?? const {},
+                history: agent.parsedIntent?['history'] is Map
+                    ? Map<String, dynamic>.from(agent.parsedIntent?['history'] as Map)
+                    : const {},
                 intent: agent.parsedIntent?['intent']?.toString(),
               ),
             Expanded(
@@ -223,9 +245,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 data: (items) {
                   _syncReadStateWithInbox(items);
                   if (_lastRenderedMessageCount != items.length ||
-                      _lastAvailability != widget.agent.availability) {
+                      _lastAvailability != agent.availability) {
                     _lastRenderedMessageCount = items.length;
-                    _lastAvailability = widget.agent.availability;
+                    _lastAvailability = agent.availability;
                     _scrollToBottomSoon();
                   }
 
@@ -244,7 +266,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       }
                       final messageIndex = index - 1;
                       if (messageIndex == items.length) {
-                        return widget.agent.availability ==
+                        return agent.availability ==
                                 AgentAvailability.thinking
                             ? const TypingIndicator()
                             : const SizedBox.shrink();
@@ -263,7 +285,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       message: error.toString(),
                       onRetry:
                           () => ref.invalidate(
-                            messagesProvider(widget.agent.threadId),
+                            messagesProvider(_activeAgent.threadId),
                           ),
                     ),
               ),
@@ -279,7 +301,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     try {
       await ref
           .read(messageActionsProvider)
-          .sendReply(threadId: widget.agent.threadId, text: text);
+          .sendReply(threadId: _activeAgent.threadId, text: text);
       await Future<void>.delayed(const Duration(milliseconds: 80));
       if (_scrollController.hasClients) {
         await _scrollController.animateTo(
@@ -370,9 +392,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
         await ref
             .read(agentServiceProvider)
-            .executeMessageAction(widget.agent.id, messageId, actionId);
+            .executeMessageAction(_activeAgent.id, messageId, actionId);
 
-        ref.invalidate(messagesProvider(widget.agent.threadId));
+        ref.invalidate(messagesProvider(_activeAgent.threadId));
         ref.invalidate(agentsProvider);
       } catch (error) {
         if (!mounted) return;
@@ -403,8 +425,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
       final runAfterConnect = action['run_after_connect'] != false;
       if (runAfterConnect) {
-        await ref.read(agentServiceProvider).runAgent(widget.agent.id);
-        ref.invalidate(messagesProvider(widget.agent.threadId));
+        await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
+        ref.invalidate(messagesProvider(_activeAgent.threadId));
         ref.invalidate(agentsProvider);
         _scheduleThreadRefresh(const Duration(seconds: 2));
         _scheduleThreadRefresh(const Duration(seconds: 6));
@@ -435,7 +457,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   void _scheduleThreadRefresh(Duration delay) {
     Future<void>.delayed(delay, () {
       if (mounted) {
-        ref.invalidate(messagesProvider(widget.agent.threadId));
+        ref.invalidate(messagesProvider(_activeAgent.threadId));
       }
     });
   }
@@ -451,9 +473,30 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       case 'preferences':
         Navigator.of(
           context,
-        ).pushNamed(AppRoutes.agentPreferences, arguments: widget.agent);
+        ).pushNamed(AppRoutes.agentPreferences, arguments: _activeAgent);
+      case 'run_now':
+        _runAgentNow();
       case 'delete':
         _confirmDelete();
+    }
+  }
+
+  Future<void> _runAgentNow() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Starting agent run...')),
+      );
+      await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
+      ref.invalidate(messagesProvider(_activeAgent.threadId));
+      ref.invalidate(agentsProvider);
+      _scheduleThreadRefresh(const Duration(seconds: 2));
+      _scheduleThreadRefresh(const Duration(seconds: 6));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to run agent: $e')),
+        );
+      }
     }
   }
 
@@ -484,8 +527,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await ref.read(agentServiceProvider).clearChat(widget.agent.id);
-      ref.invalidate(messagesProvider(widget.agent.threadId));
+      await ref.read(agentServiceProvider).clearChat(_activeAgent.id);
+      ref.invalidate(messagesProvider(_activeAgent.threadId));
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -501,10 +544,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   }
 
   Future<void> _togglePause() async {
-    final isPaused = widget.agent.availability == AgentAvailability.paused;
+    final isPaused = _activeAgent.availability == AgentAvailability.paused;
     final nextStatus = isPaused ? 'active' : 'paused';
     try {
-      await ref.read(agentServiceProvider).patchAgent(widget.agent.id, {
+      await ref.read(agentServiceProvider).patchAgent(_activeAgent.id, {
         'status': nextStatus,
       });
       ref.invalidate(agentsProvider);
@@ -542,7 +585,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
           (ctx) => AlertDialog(
             title: const Text('Delete agent'),
             content: Text(
-              'This will permanently delete "${widget.agent.name}" and all its messages. This cannot be undone.',
+              'This will permanently delete "${_activeAgent.name}" and all its messages. This cannot be undone.',
             ),
             actions: [
               TextButton(
@@ -562,12 +605,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await ref.read(agentServiceProvider).archiveAgent(widget.agent.id);
+      await ref.read(agentServiceProvider).archiveAgent(_activeAgent.id);
       ref.invalidate(agentsProvider);
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${widget.agent.name}" deleted.')),
+          SnackBar(content: Text('"${_activeAgent.name}" deleted.')),
         );
       }
     } catch (e) {

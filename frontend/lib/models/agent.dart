@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum AgentAvailability { ready, thinking, paused }
 
 class Agent {
@@ -66,10 +68,20 @@ class Agent {
   }
 
   factory Agent.fromJson(Map<String, dynamic> json) {
-    final parsedMap =
-        json['parsed_intent'] != null && json['parsed_intent'] is Map
-            ? Map<String, dynamic>.from(json['parsed_intent'])
-            : null;
+    Map<String, dynamic>? parsedMap;
+    final rawParsed = json['parsed_intent'];
+    if (rawParsed != null) {
+      if (rawParsed is Map) {
+        parsedMap = Map<String, dynamic>.from(rawParsed);
+      } else if (rawParsed is String) {
+        try {
+          final decoded = jsonDecode(rawParsed);
+          if (decoded is Map) {
+            parsedMap = Map<String, dynamic>.from(decoded);
+          }
+        } catch (_) {}
+      }
+    }
 
     return Agent(
       id: json['id']?.toString() ?? '',
