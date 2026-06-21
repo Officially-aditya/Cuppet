@@ -445,8 +445,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       );
       // 2. Append completed day to history heatmap
       await pool.query(
-        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'true'::jsonb) WHERE id = $1 AND user_id = $2`,
-        [agentId, userId]
+        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history}', coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, true)) WHERE id = $2 AND user_id = $3`,
+        [dateString, agentId, userId]
       );
     } else if (action === "skip") {
       await pool.query(
@@ -454,8 +454,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         [messageId, agentId, userId]
       );
       await pool.query(
-        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history,${dateString}}', 'false'::jsonb) WHERE id = $1 AND user_id = $2`,
-        [agentId, userId]
+        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history}', coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, false)) WHERE id = $2 AND user_id = $3`,
+        [dateString, agentId, userId]
       );
     } else if (action === "snooze") {
       // bullmq enqueue with delay of 30 minutes
