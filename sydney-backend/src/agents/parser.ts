@@ -481,7 +481,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     connector: null,
     action: "Creates a study plan and sends daily progress updates.",
     defaultSchedule: "0 8 * * *",
-    outputTemplate: "progress_tracker",
+    outputTemplate: "study_guide",
     permissionsNeeded: [],
     priority: 34,
     match: { any: [/\bstudy\b/, /\bjee\b/, /\bneet\b/, /\bexam\b/] }
@@ -937,7 +937,7 @@ export function parseIntent(prompt: string): ParsedIntent {
       connector: null,
       action: "Creates a study plan and sends daily progress updates.",
       schedule_cron: parseSchedule(lower) ?? "0 8 * * *",
-      output_template: "progress_tracker",
+      output_template: "study_guide",
       permissions_needed: []
     });
   }
@@ -1001,7 +1001,8 @@ function templateConfig(template: string): Record<string, boolean> {
       "progress_tracker",
       "checklist",
       "daily_task",
-      "streak_counter"
+      "streak_counter",
+      "study_guide"
     ].includes(template),
     has_checklist: template === "checklist"
   };
