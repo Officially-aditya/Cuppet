@@ -65,6 +65,28 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const _PanelTitle(
+                    icon: Icons.info_outline_rounded,
+                    title: 'Agent Description',
+                  ),
+                  const SizedBox(height: SydneySpacing.xs),
+                  Text(
+                    widget.agent.description.isNotEmpty
+                        ? widget.agent.description
+                        : 'No description available for this agent.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SydneyColors.onSurfaceVariant,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.md),
+            SydneyPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _PanelTitle(
                     icon: Icons.tune_rounded,
                     title: 'Response Timing',
                   ),
