@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sydney/widgets/templates/plain_text_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
+import 'package:sydney/widgets/templates/daily_task_template.dart';
 import 'package:sydney/widgets/sydney_primitives.dart';
 import 'package:sydney/screens/create/create_screen.dart';
 
@@ -115,5 +116,43 @@ void main() {
     final prompt = editor.controller!.text.toLowerCase();
     expect(prompt, contains('use only github data'));
     expect(prompt, contains('do not create, edit, merge, or close anything'));
+  });
+
+  testWidgets('GitHub setup message exposes the connector action', (
+    tester,
+  ) async {
+    Map<String, dynamic>? selectedAction;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DailyTaskTemplate(
+            data: const {
+              'title': 'Connect GitHub to run this agent',
+              'task': 'To run this agent, you need to connect GitHub.',
+              'actions': [
+                {
+                  'id': 'connect_github',
+                  'type': 'connector_connect',
+                  'connector_id': 'github',
+                  'label': 'Connect GitHub',
+                  'style': 'primary',
+                },
+              ],
+            },
+            onAction: (action) => selectedAction = action,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.text('To run this agent, you need to connect GitHub.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Connect GitHub'));
+    await tester.pump();
+
+    expect(selectedAction?['connector_id'], 'github');
+    expect(selectedAction?['type'], 'connector_connect');
   });
 }

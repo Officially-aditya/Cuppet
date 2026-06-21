@@ -17,6 +17,8 @@ import { requireAuth } from "../auth/middleware.js";
 import { pool } from "../db/index.js";
 import { enqueueAgentRun } from "../queue/index.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
+import { hasUsableGitHubToken } from "../connectors/github.js";
+import { agentCreationThreadMessage } from "../agents/creation-message.js";
 
 const sendMessageSchema = z.object({
   text: z.string().trim().min(1).max(8000).optional(),
@@ -1018,23 +1020,21 @@ async function writeAgentCreatedMessage(
   agentId: string,
   parsedIntent: ParsedIntent
 ): Promise<void> {
+  const githubConnected = !parsedIntent.connector_ids.includes("github") ||
+    await hasUsableGitHubToken(userId);
+  const message = agentCreationThreadMessage({
+    parsedIntent,
+    githubConnected,
+    readyDetail: parsedIntent.schedule_cron
+      ? `It will run ${describeSchedule(parsedIntent.schedule_cron)}.`
+      : "It is ready for on-demand replies."
+  });
+
   await insertMessage(client, {
     agentId,
     userId,
-    role: "system",
-    content: {
-      template: "system",
-      version: "1.0",
-      data: {
-        type: "agent_created",
-        icon: "check",
-        message: `${parsedIntent.name} is ready.`,
-        detail: parsedIntent.schedule_cron
-          ? `It will run ${describeSchedule(parsedIntent.schedule_cron)}.`
-          : "It is ready for on-demand replies.",
-        action: null
-      }
-    }
+    role: message.role,
+    content: message.content
   });
 }
 

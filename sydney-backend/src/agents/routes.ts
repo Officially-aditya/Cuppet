@@ -9,6 +9,8 @@ import { parseIntentHybrid } from "./llm-intent.js";
 import type { ParsedIntent } from "./parser.js";
 import { removeScheduleForAgent, syncAgentSchedule } from "./scheduler.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
+import { hasUsableGitHubToken } from "../connectors/github.js";
+import { agentCreationThreadMessage } from "./creation-message.js";
 
 const createAgentSchema = z.object({
   prompt: z.string().trim().min(3).max(4000)
@@ -454,26 +456,22 @@ async function writeAgentCreatedMessage(
   agentId: string,
   parsedIntent: ParsedIntent
 ): Promise<void> {
-  const content = {
-    template: "system",
-    version: "1.0",
-    data: {
-      type: "agent_created",
-      icon: "check",
-      message: `${parsedIntent.name} is ready.`,
-      detail: parsedIntent.schedule_cron
-        ? `It will run on schedule ${parsedIntent.schedule_cron}.`
-        : "It is ready for on-demand replies.",
-      action: null
-    }
-  };
+  const githubConnected = !parsedIntent.connector_ids.includes("github") ||
+    await hasUsableGitHubToken(userId);
+  const message = agentCreationThreadMessage({
+    parsedIntent,
+    githubConnected,
+    readyDetail: parsedIntent.schedule_cron
+      ? `It will run on schedule ${parsedIntent.schedule_cron}.`
+      : "It is ready for on-demand replies."
+  });
 
   await pool.query(
     `
       INSERT INTO agent_messages
         (agent_id, user_id, role, content, source_refs)
-      VALUES ($1, $2, 'system', $3, '[]'::jsonb)
+      VALUES ($1, $2, $3, $4, '[]'::jsonb)
     `,
-    [agentId, userId, JSON.stringify(content)]
+    [agentId, userId, message.role, JSON.stringify(message.content)]
   );
 }
