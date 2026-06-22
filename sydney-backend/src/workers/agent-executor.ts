@@ -692,6 +692,14 @@ async function renderStudyGuideAgent(context: {
   trigger: AgentExecutorJobData["trigger"];
 }): Promise<RenderedAgentMessage> {
   const { agent } = context;
+
+  // DSA agents classified as study_plan should use the curated static
+  // question bank rather than generating dynamic content via the LLM.
+  const combinedText = [actionText(agent), agent.prompt].join("\n");
+  if (wantsDsaQuestion(combinedText)) {
+    return renderedStudyGuide(renderDsaQuestionStudyGuide({ agentId: agent.id }));
+  }
+
   const parsedIntent = agent.parsed_intent || {};
   const topicsCovered = Array.isArray(parsedIntent.topics_covered)
     ? parsedIntent.topics_covered
