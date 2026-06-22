@@ -147,6 +147,48 @@ export function createDsaQuestionSection(params: {
   ].join("\n");
 }
 
+export function renderDsaQuestionStudyGuide(params: {
+  agentId: string;
+  now?: Date;
+}) {
+  const date = dateKey(params.now ?? new Date());
+  const question = questionForDate(date, params.agentId);
+  const slug = question.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const leetcodeUrl = `https://leetcode.com/problems/${slug}/`;
+
+  const definition = [
+    `### Problem Statement`,
+    question.prompt,
+    ``,
+    `### Target`,
+    question.target,
+    ``,
+    `### Hint`,
+    question.hint
+  ].join("\n");
+
+  return {
+    topic: `${question.difficulty}: ${question.title}`,
+    definition,
+    references: [
+      {
+        title: `LeetCode: ${question.title}`,
+        url: leetcodeUrl
+      }
+    ],
+    completed: false,
+    actions: [
+      { id: "done", label: "Done", style: "primary" },
+      { id: "snooze", label: "Snooze 30min", style: "secondary" },
+      { id: "skip", label: "Skip today", style: "ghost" }
+    ] as Array<{
+      id: "done" | "snooze" | "skip";
+      label: string;
+      style?: "primary" | "secondary" | "ghost";
+    }>
+  };
+}
+
 function questionForDate(date: string, agentId: string): DsaQuestion {
   const index = Math.abs(hash(`${date}:${agentId}`)) % dsaQuestions.length;
   return dsaQuestions[index]!;
