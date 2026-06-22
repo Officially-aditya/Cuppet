@@ -20,6 +20,20 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
     service: "sydney-backend"
   }));
 
+  app.get("/debug-db", async () => {
+    const { pool } = await import("../db/index.js");
+    const agents = await pool.query("SELECT id, name, prompt, parsed_intent, status FROM agents ORDER BY created_at DESC");
+    const messages = [];
+    for (const agent of agents.rows) {
+      const msgs = await pool.query(
+        "SELECT id, role, content, created_at FROM agent_messages WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 3",
+        [agent.id]
+      );
+      messages.push({ agentName: agent.name, agentId: agent.id, messages: msgs.rows });
+    }
+    return { agents: agents.rows, messages };
+  });
+
   app.get("/users/me", { preHandler: requireAuth }, async (request) => ({
     user: request.auth!.user,
     session: request.auth!.session
