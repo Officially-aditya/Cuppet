@@ -484,7 +484,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     outputTemplate: "study_guide",
     permissionsNeeded: [],
     priority: 34,
-    match: { any: [/\bstudy\b/, /\bjee\b/, /\bneet\b/, /\bexam\b/] }
+    match: { any: [/\bstudy\b/, /\bjee\b/, /\bneet\b/, /\bexam\b/, /\bdsa\b/] }
   },
   {
     name: "Reminder",
@@ -928,7 +928,8 @@ export function parseIntent(prompt: string): ParsedIntent {
     lower.includes("study") ||
     lower.includes("jee") ||
     lower.includes("neet") ||
-    lower.includes("exam")
+    lower.includes("exam") ||
+    lower.includes("dsa")
   ) {
     return baseIntent(prompt, {
       name: "Study Plan",
