@@ -51,7 +51,8 @@ const supportedTemplates = new Set([
   "streak_counter",
   "comparison",
   "system",
-  "study_guide"
+  "study_guide",
+  "dsa_question"
 ]);
 const supportedSafetyLevels = new Set(["read", "suggest", "act"]);
 
@@ -227,7 +228,8 @@ function templateConfig(template: string): Record<string, boolean> {
       "checklist",
       "daily_task",
       "streak_counter",
-      "study_guide"
+      "study_guide",
+      "dsa_question"
     ].includes(template),
     has_checklist: template === "checklist"
   };

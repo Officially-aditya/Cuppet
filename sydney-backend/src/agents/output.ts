@@ -161,6 +161,34 @@ export type StudyGuideMessageContent = {
   };
 };
 
+export type DsaQuestionMessageContent = {
+  template: "dsa_question";
+  version: "1.0";
+  data: {
+    title: string;
+    difficulty: "Easy" | "Medium" | "Hard";
+    problem: string;
+    input_format?: string;
+    output_format?: string;
+    constraints?: string;
+    examples: Array<{
+      input: string;
+      output: string;
+      explanation?: string;
+    }>;
+    hint?: string;
+    references: Array<{
+      title: string;
+      url: string;
+    }>;
+    actions: Array<{
+      id: "done" | "snooze" | "skip";
+      label: string;
+      style?: "primary" | "secondary" | "ghost";
+    }>;
+  };
+};
+
 export type AgentMessageContent =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -171,7 +199,8 @@ export type AgentMessageContent =
   | StreakCounterMessageContent
   | ComparisonMessageContent
   | NewsBriefMessageContent
-  | StudyGuideMessageContent;
+  | StudyGuideMessageContent
+  | DsaQuestionMessageContent;
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;
@@ -265,6 +294,13 @@ export function renderedStudyGuide(
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("study_guide", data, meta);
+}
+
+export function renderedDsaQuestion(
+  data: DsaQuestionMessageContent["data"],
+  meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
+): RenderedAgentMessage {
+  return rendered("dsa_question", data, meta);
 }
 
 export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {

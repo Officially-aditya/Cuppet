@@ -13,6 +13,7 @@ import '../templates/streak_counter_template.dart';
 import '../templates/system_template.dart';
 import '../templates/urgency_list_template.dart';
 import '../templates/study_guide_template.dart';
+import '../templates/dsa_question_template.dart';
 
 class MessageCard extends StatelessWidget {
   const MessageCard({required this.message, this.onAction, super.key});
@@ -165,6 +166,14 @@ class _TemplateRouter extends StatelessWidget {
       'system' => SystemTemplate(data: data),
       'news_brief' => NewsBriefTemplate(data: data),
       'study_guide' => StudyGuideTemplate(
+        data: data,
+        onAction: (actionData) {
+          if (onAction != null) {
+            onAction!({...actionData, 'messageId': message.id});
+          }
+        },
+      ),
+      'dsa_question' => DsaQuestionTemplate(
         data: data,
         onAction: (actionData) {
           if (onAction != null) {

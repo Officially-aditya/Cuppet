@@ -484,7 +484,19 @@ const CAPABILITIES: CapabilityDefinition[] = [
     outputTemplate: "study_guide",
     permissionsNeeded: [],
     priority: 34,
-    match: { any: [/\bstudy\b/, /\bjee\b/, /\bneet\b/, /\bexam\b/, /\bdsa\b/] }
+    match: { any: [/\bstudy\b/, /\bjee\b/, /\bneet\b/, /\bexam\b/] }
+  },
+  {
+    name: "DSA Practice",
+    avatar: "code",
+    intent: "dsa_question",
+    connector: null,
+    action: "Sends a daily DSA problem with examples, constraints, and hints.",
+    defaultSchedule: "0 21 * * *",
+    outputTemplate: "dsa_question",
+    permissionsNeeded: [],
+    priority: 36,
+    match: { any: [/\bdsa\b/, /\bdata structures?\s*(?:and|&)\s*algorithms?\b/i, /\bleetcode\b/] }
   },
   {
     name: "Reminder",
@@ -925,11 +937,27 @@ export function parseIntent(prompt: string): ParsedIntent {
   }
 
   if (
+    lower.includes("dsa") ||
+    lower.includes("leetcode") ||
+    /data structures?\s*(?:and|&)\s*algorithms?/i.test(lower)
+  ) {
+    return baseIntent(prompt, {
+      name: "DSA Practice",
+      avatar: "code",
+      intent: "dsa_question",
+      connector: null,
+      action: "Sends a daily DSA problem with examples, constraints, and hints.",
+      schedule_cron: parseSchedule(lower) ?? "0 21 * * *",
+      output_template: "dsa_question",
+      permissions_needed: []
+    });
+  }
+
+  if (
     lower.includes("study") ||
     lower.includes("jee") ||
     lower.includes("neet") ||
-    lower.includes("exam") ||
-    lower.includes("dsa")
+    lower.includes("exam")
   ) {
     return baseIntent(prompt, {
       name: "Study Plan",
@@ -1003,7 +1031,8 @@ function templateConfig(template: string): Record<string, boolean> {
       "checklist",
       "daily_task",
       "streak_counter",
-      "study_guide"
+      "study_guide",
+      "dsa_question"
     ].includes(template),
     has_checklist: template === "checklist"
   };

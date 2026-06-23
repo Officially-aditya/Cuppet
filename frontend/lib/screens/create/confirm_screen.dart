@@ -84,6 +84,8 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       'comparison' => 'A structured comparison overview',
       'news_brief' => 'A summarized brief of recent articles',
       'study_guide' => 'A study topic, explanation, and reference links',
+      'dsa_question' =>
+          'A daily practice DSA coding problem with examples and hints',
       _ => 'A detailed summary report',
     };
   }
