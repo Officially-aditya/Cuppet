@@ -496,6 +496,20 @@ async function persistRunMessage(
         `,
         [JSON.stringify(input.content.data.topic), input.agent.id]
       );
+    } else if (input.content.template === "dsa_question") {
+      await client.query(
+        `
+          UPDATE agents
+          SET last_message_at = NOW(),
+              parsed_intent = jsonb_set(
+                parsed_intent,
+                '{topics_covered}',
+                coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb
+              )
+          WHERE id = $2
+        `,
+        [JSON.stringify(input.content.data.title), input.agent.id]
+      );
     } else {
       await client.query(
         "UPDATE agents SET last_message_at = NOW() WHERE id = $1",

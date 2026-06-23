@@ -921,6 +921,12 @@ async function updateAgentInstructions(
     status: "active" | "paused" | "error";
   }
 ): Promise<UpdatedAgentRow> {
+  const mergedIntent = {
+    ...update.parsedIntent,
+    topics_covered: (agent.parsed_intent as any)?.topics_covered ?? [],
+    history: (agent.parsed_intent as any)?.history ?? {}
+  };
+
   const { rows } = await client.query<UpdatedAgentRow>(
     `
       UPDATE agents
@@ -947,7 +953,7 @@ async function updateAgentInstructions(
     `,
     [
       update.prompt,
-      JSON.stringify(update.parsedIntent),
+      JSON.stringify(mergedIntent),
       update.scheduleCron,
       update.status,
       agent.id,

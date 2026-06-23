@@ -192,6 +192,24 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       title: Text('Agent preferences'),
                     ),
                   ),
+                  if (const {
+                    'study_plan',
+                    'interview_prep',
+                    'language_word',
+                    'coding_tip',
+                    'book_companion',
+                    'dsa_question',
+                    'habit_tracker',
+                  }.contains(agent.parsedIntent?['intent']))
+                    const PopupMenuItem(
+                      value: 'view_heatmap',
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.calendar_month_rounded, size: 20),
+                        title: Text('View progress heatmap'),
+                      ),
+                    ),
                   if (!agent.isAssistant)
                     const PopupMenuItem(
                       value: 'run_now',
@@ -227,20 +245,6 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            if (const {
-              'study_plan',
-              'interview_prep',
-              'language_word',
-              'coding_tip',
-              'book_companion',
-              'dsa_question',
-            }.contains(agent.parsedIntent?['intent']))
-              SydneyHeatmap(
-                history: agent.parsedIntent?['history'] is Map
-                    ? Map<String, dynamic>.from(agent.parsedIntent?['history'] as Map)
-                    : const {},
-                intent: agent.parsedIntent?['intent']?.toString(),
-              ),
             Expanded(
               child: messages.when(
                 data: (items) {
@@ -475,11 +479,30 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         Navigator.of(
           context,
         ).pushNamed(AppRoutes.agentPreferences, arguments: _activeAgent);
+      case 'view_heatmap':
+        _showProgressHeatmap(_activeAgent);
       case 'run_now':
         _runAgentNow();
       case 'delete':
         _confirmDelete();
     }
+  }
+
+  void _showProgressHeatmap(Agent agent) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return SydneyHeatmapSheet(
+          agentName: agent.name,
+          history: agent.parsedIntent?['history'] is Map
+              ? Map<String, dynamic>.from(agent.parsedIntent?['history'] as Map)
+              : const {},
+          intent: agent.parsedIntent?['intent']?.toString(),
+        );
+      },
+    );
   }
 
   Future<void> _runAgentNow() async {
