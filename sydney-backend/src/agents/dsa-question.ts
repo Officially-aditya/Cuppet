@@ -147,7 +147,7 @@ export function createDsaQuestionSection(params: {
   ].join("\n");
 }
 
-export function renderDsaQuestionStudyGuide(params: {
+export function renderDsaQuestion(params: {
   agentId: string;
   now?: Date;
 }) {
@@ -156,20 +156,13 @@ export function renderDsaQuestionStudyGuide(params: {
   const slug = question.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   const leetcodeUrl = `https://leetcode.com/problems/${slug}/`;
 
-  const definition = [
-    `### Problem Statement`,
-    question.prompt,
-    ``,
-    `### Target`,
-    question.target,
-    ``,
-    `### Hint`,
-    question.hint
-  ].join("\n");
-
   return {
-    topic: `${question.difficulty}: ${question.title}`,
-    definition,
+    title: question.title,
+    difficulty: question.difficulty,
+    problem: question.prompt,
+    constraints: question.target,
+    examples: [],
+    hint: question.hint,
     references: [
       {
         title: `LeetCode: ${question.title}`,

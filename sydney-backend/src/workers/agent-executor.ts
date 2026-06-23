@@ -2,7 +2,7 @@ import { Worker, type Job } from "bullmq";
 import { z } from "zod";
 import {
   createDsaQuestionSection,
-  renderDsaQuestionStudyGuide,
+  renderDsaQuestion,
   wantsDsaQuestion
 } from "../agents/dsa-question.js";
 import {
@@ -689,7 +689,7 @@ async function renderCustomAgent(
   }
 
   if (wantsDsaQuestion(text)) {
-    return renderedStudyGuide(renderDsaQuestionStudyGuide({ agentId: agent.id }));
+    return renderedDsaQuestion(renderDsaQuestion({ agentId: agent.id }));
   }
 
   const llmRendered = await renderLlmCustomAgent({

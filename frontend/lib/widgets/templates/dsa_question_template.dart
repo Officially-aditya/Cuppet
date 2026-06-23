@@ -205,37 +205,50 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                         ),
                   ),
                   const SizedBox(height: SydneySpacing.xs),
-                  RichText(
-                    text: TextSpan(
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontFamily: 'Courier',
-                            height: 1.4,
-                          ),
-                      children: [
-                        const TextSpan(
-                          text: 'Input: ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: SydneyColors.mutedInk,
-                          ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Input: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: SydneyColors.mutedInk,
+                              fontFamily: 'Courier',
+                            ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          examples[i]['input']?.toString() ?? '',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: SydneyColors.onSurface,
+                                fontFamily: 'Courier',
+                              ),
                         ),
-                        TextSpan(
-                          text: '${examples[i]['input']}\n',
-                          style: const TextStyle(color: SydneyColors.onSurface),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Output: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: SydneyColors.mutedInk,
+                              fontFamily: 'Courier',
+                            ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          examples[i]['output']?.toString() ?? '',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: SydneyColors.onSurface,
+                                fontFamily: 'Courier',
+                              ),
                         ),
-                        const TextSpan(
-                          text: 'Output: ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: SydneyColors.mutedInk,
-                          ),
-                        ),
-                        TextSpan(
-                          text: '${examples[i]['output']}',
-                          style: const TextStyle(color: SydneyColors.onSurface),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   if (examples[i]['explanation'] != null &&
                       examples[i]['explanation'].toString().isNotEmpty) ...[

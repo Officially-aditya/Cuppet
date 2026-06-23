@@ -537,7 +537,12 @@ class _MarkdownTextState extends State<MarkdownText> {
       if (value.startsWith('**', index)) {
         final hasClosingMarker = value.indexOf('**', index + 2) != -1;
         if (!bold && !hasClosingMarker) {
-          if (buffer.isNotEmpty &&
+          final remaining = value.substring(index + 2).trim();
+          if (remaining.isEmpty || remaining == '**' || remaining == '*') {
+            final str = buffer.toString();
+            buffer.clear();
+            buffer.write(str.trimRight());
+          } else if (buffer.isNotEmpty &&
               !_endsWithWhitespace(buffer.toString()) &&
               index > 0 &&
               value[index - 1].trim().isEmpty) {
@@ -555,7 +560,12 @@ class _MarkdownTextState extends State<MarkdownText> {
       if (value[index] == '*') {
         final hasClosingMarker = value.indexOf('*', index + 1) != -1;
         if (!italic && !hasClosingMarker) {
-          if (buffer.isNotEmpty &&
+          final remaining = value.substring(index + 1).trim();
+          if (remaining.isEmpty || remaining == '**' || remaining == '*') {
+            final str = buffer.toString();
+            buffer.clear();
+            buffer.write(str.trimRight());
+          } else if (buffer.isNotEmpty &&
               !_endsWithWhitespace(buffer.toString()) &&
               index > 0 &&
               value[index - 1].trim().isEmpty) {
