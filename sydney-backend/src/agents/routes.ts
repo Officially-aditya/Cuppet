@@ -37,7 +37,8 @@ const updateAgentSchema = z
 
 const agentMessageActionSchema = z
   .object({
-    action: z.enum(["done", "snooze", "skip"])
+    action: z.enum(["done", "snooze", "skip"]),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()
   })
   .strict();
 
@@ -409,7 +410,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         }
       });
     }
-    const { action } = body.data;
+    const { action, date } = body.data;
 
     // Verify ownership of agent
     const agent = await getAgent(userId, agentId);
@@ -435,7 +436,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const dateString = new Date().toISOString().split("T")[0];
+    const dateString = date ?? new Date().toISOString().split("T")[0];
 
     if (action === "done") {
       // 1. Mark current card as completed

@@ -233,6 +233,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               'language_word',
               'coding_tip',
               'book_companion',
+              'dsa_question',
             }.contains(agent.parsedIntent?['intent']))
               SydneyHeatmap(
                 history: agent.parsedIntent?['history'] is Map

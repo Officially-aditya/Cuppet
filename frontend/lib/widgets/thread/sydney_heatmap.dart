@@ -13,7 +13,7 @@ class SydneyHeatmap extends StatefulWidget {
 }
 
 class _SydneyHeatmapState extends State<SydneyHeatmap> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +45,12 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
 
         weekDays.add(
           Container(
-            width: 10,
-            height: 10,
-            margin: const EdgeInsets.only(bottom: 2),
+            width: 11,
+            height: 11,
+            margin: const EdgeInsets.only(bottom: 3),
             decoration: BoxDecoration(
               color: cellColor,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(2.5),
               border: isFuture
                   ? null
                   : Border.all(color: SydneyColors.line.withValues(alpha: 0.3), width: 0.5),
@@ -61,7 +61,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
 
       columns.add(
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 1.5),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: weekDays,
@@ -134,32 +134,65 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
           if (_isExpanded) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Day of week labels
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _dayLabel('M'),
-                      const SizedBox(height: 10),
-                      _dayLabel('W'),
-                      const SizedBox(height: 10),
-                      _dayLabel('F'),
+                      // Day of week labels
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14), // Sunday gap
+                          _dayLabel('M'),
+                          const SizedBox(height: 14), // Tuesday gap
+                          _dayLabel('W'),
+                          const SizedBox(height: 14), // Thursday gap
+                          _dayLabel('F'),
+                        ],
+                      ),
+                      const SizedBox(width: SydneySpacing.sm),
+                      // Heatmap Grid
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          reverse: true,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: columns,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(width: SydneySpacing.sm),
-                  // Heatmap Grid
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      reverse: true,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: columns,
+                  const SizedBox(height: SydneySpacing.sm),
+                  // Legend
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Less',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SydneyColors.mutedInk,
+                              fontSize: 9,
+                            ),
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      _legendBox(SydneyColors.surfaceContainerHigh),
+                      const SizedBox(width: 2),
+                      _legendBox(SydneyColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'More',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SydneyColors.mutedInk,
+                              fontSize: 9,
+                            ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -171,16 +204,30 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
   }
 
   Widget _dayLabel(String label) {
-    return SizedBox(
+    return Container(
+      height: 14,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 8,
+          color: SydneyColors.mutedInk,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _legendBox(Color color) {
+    return Container(
+      width: 10,
       height: 10,
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 8,
-            color: SydneyColors.mutedInk,
-            fontWeight: FontWeight.bold,
-          ),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(
+          color: SydneyColors.line.withValues(alpha: 0.3),
+          width: 0.5,
         ),
       ),
     );
@@ -193,6 +240,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       'language_word' => Icons.translate_rounded,
       'coding_tip' => Icons.code_rounded,
       'book_companion' => Icons.menu_book_rounded,
+      'dsa_question' => Icons.code_rounded,
       _ => Icons.trending_up_rounded,
     };
   }
@@ -204,6 +252,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       'language_word' => 'VOCABULARY PROGRESS',
       'coding_tip' => 'CODING PROGRESS',
       'book_companion' => 'READING PROGRESS',
+      'dsa_question' => 'DSA PRACTICE PROGRESS',
       _ => 'ACTIVITY HISTORY',
     };
   }
@@ -215,6 +264,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       'language_word' => 'words learned',
       'coding_tip' => 'days coded',
       'book_companion' => 'days read',
+      'dsa_question' => 'problems solved',
       _ => 'days active',
     };
   }

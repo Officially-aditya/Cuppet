@@ -887,6 +887,7 @@ async function renderDsaQuestionAgent(context: {
         examples: data.examples,
         hint: data.hint,
         references: data.references,
+        completed: false,
         actions
       },
       {

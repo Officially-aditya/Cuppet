@@ -20,6 +20,7 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
   @override
   Widget build(BuildContext context) {
     final title = widget.data['title']?.toString() ?? 'DSA Question';
+    final completed = widget.data['completed'] == true;
     final difficulty = widget.data['difficulty']?.toString() ?? 'Medium';
     final problem = widget.data['problem']?.toString() ?? '';
     final inputFormat = widget.data['input_format']?.toString();
@@ -81,11 +82,26 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
             ),
             const SizedBox(width: SydneySpacing.sm),
             Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
+                  ),
+                  if (completed) ...[
+                    const SizedBox(width: SydneySpacing.xs),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: SydneyColors.primary,
+                      size: 16,
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(width: SydneySpacing.sm),

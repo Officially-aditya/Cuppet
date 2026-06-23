@@ -181,6 +181,7 @@ export type DsaQuestionMessageContent = {
       title: string;
       url: string;
     }>;
+    completed: boolean;
     actions: Array<{
       id: "done" | "snooze" | "skip";
       label: string;

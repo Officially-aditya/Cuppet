@@ -167,9 +167,15 @@ class AgentService {
       return;
     }
     try {
+      final now = DateTime.now();
+      final dateString =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       await _api.post<void>(
         '/agents/$agentId/messages/$messageId/action',
-        data: {'action': action},
+        data: {
+          'action': action,
+          'date': dateString,
+        },
       );
     } catch (error) {
       throw apiExceptionFrom(error, 'Could not complete the study action.');
