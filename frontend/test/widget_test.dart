@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/widgets/templates/plain_text_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/daily_task_template.dart';
+import 'package:sydney/widgets/templates/study_guide_template.dart';
+import 'package:sydney/widgets/templates/dsa_question_template.dart';
 import 'package:sydney/widgets/sydney_primitives.dart';
 import 'package:sydney/screens/create/create_screen.dart';
 import 'package:sydney/models/connector.dart';
@@ -180,5 +182,169 @@ void main() {
     expect(find.text('CONNECTING'), findsOneWidget);
     final toggle = tester.widget<Switch>(find.byType(Switch));
     expect(toggle.onChanged, isNull);
+  });
+
+  testWidgets('StudyGuideTemplate shows/hides action buttons based on status', (
+    tester,
+  ) async {
+    // 1. Not completed, action_taken is null -> should show actions
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StudyGuideTemplate(
+            data: const {
+              'topic': 'Recursion',
+              'definition': 'Recursion is self-reference.',
+              'completed': false,
+              'action_taken': null,
+              'actions': [
+                {'id': 'done', 'label': 'Done', 'style': 'primary'},
+                {'id': 'snooze', 'label': 'Snooze 30min', 'style': 'secondary'},
+                {'id': 'skip', 'label': 'Skip today', 'style': 'ghost'}
+              ],
+            },
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Snooze 30min'), findsOneWidget);
+    expect(find.text('Skip today'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+
+    // 2. Completed is true -> should hide actions and show completed checkmark
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StudyGuideTemplate(
+            data: const {
+              'topic': 'Recursion',
+              'definition': 'Recursion is self-reference.',
+              'completed': true,
+              'action_taken': null,
+              'actions': [
+                {'id': 'done', 'label': 'Done', 'style': 'primary'},
+                {'id': 'snooze', 'label': 'Snooze 30min', 'style': 'secondary'},
+                {'id': 'skip', 'label': 'Skip today', 'style': 'ghost'}
+              ],
+            },
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Snooze 30min'), findsNothing);
+    expect(find.text('Skip today'), findsNothing);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+
+    // 3. Action taken is set -> should hide actions
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StudyGuideTemplate(
+            data: const {
+              'topic': 'Recursion',
+              'definition': 'Recursion is self-reference.',
+              'completed': false,
+              'action_taken': 'skip',
+              'actions': [
+                {'id': 'done', 'label': 'Done', 'style': 'primary'},
+                {'id': 'snooze', 'label': 'Snooze 30min', 'style': 'secondary'},
+                {'id': 'skip', 'label': 'Skip today', 'style': 'ghost'}
+              ],
+            },
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Snooze 30min'), findsNothing);
+    expect(find.text('Skip today'), findsNothing);
+    expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+  });
+
+  testWidgets('DsaQuestionTemplate shows/hides action buttons based on status', (
+    tester,
+  ) async {
+    // 1. Not completed, action_taken is null -> should show actions
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DsaQuestionTemplate(
+            data: const {
+              'title': 'Two Sum',
+              'difficulty': 'Easy',
+              'problem': 'Find two numbers that add up to target.',
+              'completed': false,
+              'action_taken': null,
+              'actions': [
+                {'id': 'done', 'label': 'Done', 'style': 'primary'},
+                {'id': 'snooze', 'label': 'Snooze 30min', 'style': 'secondary'},
+                {'id': 'skip', 'label': 'Skip today', 'style': 'ghost'}
+              ],
+            },
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Snooze 30min'), findsOneWidget);
+    expect(find.text('Skip today'), findsOneWidget);
+
+    // 2. Completed is true -> should hide actions
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DsaQuestionTemplate(
+            data: const {
+              'title': 'Two Sum',
+              'difficulty': 'Easy',
+              'problem': 'Find two numbers that add up to target.',
+              'completed': true,
+              'action_taken': null,
+              'actions': [
+                {'id': 'done', 'label': 'Done', 'style': 'primary'},
+                {'id': 'snooze', 'label': 'Snooze 30min', 'style': 'secondary'},
+                {'id': 'skip', 'label': 'Skip today', 'style': 'ghost'}
+              ],
+            },
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Snooze 30min'), findsNothing);
+    expect(find.text('Skip today'), findsNothing);
+
+    // 3. Action taken is set -> should hide actions
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DsaQuestionTemplate(
+            data: const {
+              'title': 'Two Sum',
+              'difficulty': 'Easy',
+              'problem': 'Find two numbers that add up to target.',
+              'completed': false,
+              'action_taken': 'snooze',
+              'actions': [
+                {'id': 'done', 'label': 'Done', 'style': 'primary'},
+                {'id': 'snooze', 'label': 'Snooze 30min', 'style': 'secondary'},
+                {'id': 'skip', 'label': 'Skip today', 'style': 'ghost'}
+              ],
+            },
+            onAction: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Snooze 30min'), findsNothing);
+    expect(find.text('Skip today'), findsNothing);
   });
 }

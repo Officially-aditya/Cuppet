@@ -439,9 +439,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     const dateString = date ?? new Date().toISOString().split("T")[0];
 
     if (action === "done") {
-      // 1. Mark current card as completed
+      // 1. Mark current card as completed and set action_taken to "done"
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'true'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
+        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'true'::jsonb), '{data,action_taken}', '"done"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
         [messageId, agentId, userId]
       );
       // 2. Append completed day to history heatmap
@@ -450,8 +450,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         [dateString, agentId, userId]
       );
     } else if (action === "skip") {
+      // Mark card as not completed and set action_taken to "skip"
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(content, '{data,completed}', 'false'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
+        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'false'::jsonb), '{data,action_taken}', '"skip"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
         [messageId, agentId, userId]
       );
       await pool.query(
@@ -459,6 +460,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         [dateString, agentId, userId]
       );
     } else if (action === "snooze") {
+      // Set action_taken to "snooze"
+      await pool.query(
+        `UPDATE agent_messages SET content = jsonb_set(content, '{data,action_taken}', '"snooze"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,
+        [messageId, agentId, userId]
+      );
       // bullmq enqueue with delay of 30 minutes
       await agentExecutorQueue.add(
         agentExecutorJobName,

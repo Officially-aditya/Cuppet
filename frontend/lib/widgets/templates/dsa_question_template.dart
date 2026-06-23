@@ -21,6 +21,8 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
   Widget build(BuildContext context) {
     final title = widget.data['title']?.toString() ?? 'DSA Question';
     final completed = widget.data['completed'] == true;
+    final actionTaken = widget.data['action_taken']?.toString();
+    final showActions = !completed && actionTaken == null;
     final difficulty = widget.data['difficulty']?.toString() ?? 'Medium';
     final problem = widget.data['problem']?.toString() ?? '';
     final inputFormat = widget.data['input_format']?.toString();
@@ -356,10 +358,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
             ],
           ),
         ],
-        const SizedBox(height: SydneySpacing.md),
-        const Divider(height: 1, color: SydneyColors.line),
-        const SizedBox(height: SydneySpacing.md),
-        if (actions.isNotEmpty)
+        if (showActions && actions.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.md),
+          const Divider(height: 1, color: SydneyColors.line),
+          const SizedBox(height: SydneySpacing.md),
           Wrap(
             spacing: SydneySpacing.sm,
             runSpacing: SydneySpacing.sm,
@@ -374,6 +376,7 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                 ),
             ],
           ),
+        ],
       ],
     );
   }

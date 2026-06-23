@@ -15,6 +15,8 @@ class StudyGuideTemplate extends StatelessWidget {
     final topic = data['topic']?.toString() ?? 'Daily Topic';
     final definition = data['definition']?.toString() ?? 'No description was provided.';
     final completed = data['completed'] == true;
+    final actionTaken = data['action_taken']?.toString();
+    final showActions = !completed && actionTaken == null;
     final references = _maps(data['references']);
     final actions = _maps(data['actions']);
 
@@ -75,10 +77,10 @@ class StudyGuideTemplate extends StatelessWidget {
             ],
           ),
         ],
-        const SizedBox(height: SydneySpacing.md),
-        const Divider(height: 1, color: SydneyColors.line),
-        const SizedBox(height: SydneySpacing.md),
-        if (actions.isNotEmpty)
+        if (showActions && actions.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.md),
+          const Divider(height: 1, color: SydneyColors.line),
+          const SizedBox(height: SydneySpacing.md),
           Wrap(
             spacing: SydneySpacing.sm,
             runSpacing: SydneySpacing.sm,
@@ -91,6 +93,7 @@ class StudyGuideTemplate extends StatelessWidget {
                 ),
             ],
           ),
+        ],
       ],
     );
   }
