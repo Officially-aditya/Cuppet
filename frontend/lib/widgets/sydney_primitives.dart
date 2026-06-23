@@ -361,12 +361,68 @@ class _MarkdownTextState extends State<MarkdownText> {
     Color defaultColor,
     TextStyle? baseStyle,
   ) {
+    final children = <InlineSpan>[];
+    final lines = value.split('\n');
+
+    for (var i = 0; i < lines.length; i++) {
+      final rawLine = lines[i];
+      final trimmed = rawLine.trim();
+
+      // Check for headings
+      final headingMatch = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(trimmed);
+      if (headingMatch != null) {
+        final level = headingMatch.group(1)!.length;
+        final headingText = headingMatch.group(2)!;
+
+        // Heading size multiplier
+        double sizeScale = 1.0;
+        switch (level) {
+          case 1:
+            sizeScale = 1.35;
+            break;
+          case 2:
+            sizeScale = 1.25;
+            break;
+          case 3:
+            sizeScale = 1.15;
+            break;
+          case 4:
+          default:
+            sizeScale = 1.08;
+            break;
+        }
+
+        final headingStyle = (baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
+          fontWeight: FontWeight.w800,
+          fontSize: baseStyle?.fontSize != null ? baseStyle!.fontSize! * sizeScale : null,
+          color: SydneyColors.onSurface,
+        );
+
+        children.add(
+          TextSpan(
+            children: _parseLineSegments(headingText, defaultColor, headingStyle),
+          ),
+        );
+      } else {
+        children.addAll(
+          _parseLineSegments(rawLine, defaultColor, baseStyle),
+        );
+      }
+
+      if (i < lines.length - 1) {
+        children.add(const TextSpan(text: '\n'));
+      }
+    }
+
+    return TextSpan(children: children);
+  }
+
+  List<InlineSpan> _parseLineSegments(
+    String line,
+    Color defaultColor,
+    TextStyle? baseStyle,
+  ) {
     final spans = <InlineSpan>[];
-
-    final cleaned = _normalizeMarkdown(value);
-
-    // Matches [text](url) or raw urls. Formatting markers are handled by the
-    // inline scanner so unmatched ** never leak into visible text.
     final pattern = RegExp(
       r'\[([^\]]+)\]\(([^)]+)\)|(https?://[^\s]+)',
       caseSensitive: false,
@@ -374,11 +430,11 @@ class _MarkdownTextState extends State<MarkdownText> {
 
     var cursor = 0;
 
-    for (final match in pattern.allMatches(cleaned)) {
+    for (final match in pattern.allMatches(line)) {
       if (match.start > cursor) {
         spans.addAll(
           _parseInlineFormatting(
-            cleaned.substring(cursor, match.start),
+            line.substring(cursor, match.start),
             defaultColor,
             baseStyle,
           ),
@@ -437,17 +493,17 @@ class _MarkdownTextState extends State<MarkdownText> {
       cursor = match.end;
     }
 
-    if (cursor < cleaned.length) {
+    if (cursor < line.length) {
       spans.addAll(
         _parseInlineFormatting(
-          cleaned.substring(cursor),
+          line.substring(cursor),
           defaultColor,
           baseStyle,
         ),
       );
     }
 
-    return TextSpan(children: spans);
+    return spans;
   }
 
   List<InlineSpan> _parseInlineFormatting(
@@ -524,12 +580,5 @@ class _MarkdownTextState extends State<MarkdownText> {
 
   bool _endsWithWhitespace(String value) {
     return value.isNotEmpty && value.codeUnitAt(value.length - 1) <= 32;
-  }
-
-  String _normalizeMarkdown(String value) {
-    return value
-        .trim()
-        .replaceFirst(RegExp(r'^\*{1,2}\s+'), '')
-        .replaceFirst(RegExp(r'\s+\*{1,2}$'), '');
   }
 }
