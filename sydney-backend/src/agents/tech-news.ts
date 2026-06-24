@@ -141,8 +141,9 @@ function buildNewsSystemPrompt(input: {
     `You are Sydney's ${input.agentName}.`,
     "Use web search for current information.",
     "Return only the final digest. Do not mention that you searched.",
-    "Keep it concise: one short headline sentence, then three numbered items.",
-    "Each numbered item should include why it matters in one sentence.",
+    "Keep it concise: one short headline sentence, then exactly 6 to 7 numbered items.",
+    "Each numbered item must be a clear, concise TLDR; style summary of the news, explaining the event, context, and why it matters in 2-3 sentences.",
+    "Do NOT include any other sections, tables, headers (like 'The Two Sides', 'Why It Matters'), debates, or extra analysis. The output must consist ONLY of the intro sentence and the 6-7 numbered news items.",
     "CRITICAL: Analyze the user's original request. If the user asks for news about a specific topic, theme, exam, company, technology, or interest (for example, 'UGC NET exam' or 'React updates'), you MUST restrict all search queries and all final news digest items to be ONLY about that specific topic. Do NOT include any general, world, political, tech, or unrelated news in this case.",
     `Otherwise, default to this general focus: ${input.focus}`,
     "Avoid rumors, minor product updates, duplicate stories, and market-price-only items.",
@@ -156,12 +157,16 @@ function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): stri
     userInstructionBlock("original_user_request", userPrompt, 4000),
     `Run trigger: ${trigger}.`,
     "Search the web for recent, high-signal technology news from reputable sources that are directly relevant to the user's original request.",
-    "If the request specifies a topic, focus your search and all 3 news brief items exclusively on that topic.",
+    "If the request specifies a topic, focus your search and all news brief items exclusively on that topic.",
     "Use this exact output shape:",
     "Tech news brief for today:",
-    "1. <headline>: <summary and why it matters>",
-    "2. <headline>: <summary and why it matters>",
-    "3. <headline>: <summary and why it matters>"
+    "1. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "2. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "3. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "4. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "5. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "6. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "7. <headline>: <TLDR; style summary explaining the news and why it matters>"
   ].join("\n");
 }
 
@@ -171,12 +176,16 @@ function buildGeneralNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): s
     userInstructionBlock("original_user_request", userPrompt, 4000),
     `Run trigger: ${trigger}.`,
     "Search the web for recent, high-signal news from reputable sources that are directly relevant to the user's original request.",
-    "If the request specifies a topic, focus your search and all 3 news brief items exclusively on that topic.",
+    "If the request specifies a topic, focus your search and all news brief items exclusively on that topic.",
     "Use this exact output shape:",
     "News brief for today:",
-    "1. <headline>: <summary and why it matters>",
-    "2. <headline>: <summary and why it matters>",
-    "3. <headline>: <summary and why it matters>"
+    "1. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "2. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "3. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "4. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "5. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "6. <headline>: <TLDR; style summary explaining the news and why it matters>",
+    "7. <headline>: <TLDR; style summary explaining the news and why it matters>"
   ].join("\n");
 }
 
