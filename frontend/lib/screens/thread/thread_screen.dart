@@ -64,7 +64,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     }.contains(template);
 
     final nameLower = agent.name.toLowerCase();
-    final promptLower = agent.prompt.toLowerCase();
+    final descriptionLower = agent.description.toLowerCase();
     final containsTrackableKeywords = nameLower.contains('study') ||
         nameLower.contains('practice') ||
         nameLower.contains('streak') ||
@@ -72,13 +72,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         nameLower.contains('dsa') ||
         nameLower.contains('leetcode') ||
         nameLower.contains('learn') ||
-        promptLower.contains('study') ||
-        promptLower.contains('practice') ||
-        promptLower.contains('streak') ||
-        promptLower.contains('habit') ||
-        promptLower.contains('dsa') ||
-        promptLower.contains('leetcode') ||
-        promptLower.contains('learn');
+        descriptionLower.contains('study') ||
+        descriptionLower.contains('practice') ||
+        descriptionLower.contains('streak') ||
+        descriptionLower.contains('habit') ||
+        descriptionLower.contains('dsa') ||
+        descriptionLower.contains('leetcode') ||
+        descriptionLower.contains('learn');
 
     return isKnownIntent || isTrackableTemplate || hasHistory || containsTrackableKeywords;
   }
