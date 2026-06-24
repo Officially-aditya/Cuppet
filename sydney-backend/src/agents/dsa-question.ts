@@ -116,6 +116,7 @@ export function createDsaReminderBody(params: {
   action: string;
   agentId: string;
   now?: Date;
+  topicsCovered?: string[];
 }): string {
   const reminder = reminderWithoutDsaRequest(params.action);
   const sections = [];
@@ -132,9 +133,10 @@ export function createDsaReminderBody(params: {
 export function createDsaQuestionSection(params: {
   agentId: string;
   now?: Date;
+  topicsCovered?: string[];
 }): string {
   const date = dateKey(params.now ?? new Date());
-  const question = questionForDate(date, params.agentId);
+  const question = questionForDate(date, params.agentId, params.topicsCovered);
 
   return [
     `DSA question of the day (${date}): ${question.title}`,
@@ -150,9 +152,10 @@ export function createDsaQuestionSection(params: {
 export function renderDsaQuestion(params: {
   agentId: string;
   now?: Date;
+  topicsCovered?: string[];
 }) {
   const date = dateKey(params.now ?? new Date());
-  const question = questionForDate(date, params.agentId);
+  const question = questionForDate(date, params.agentId, params.topicsCovered);
   const slug = question.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   const leetcodeUrl = `https://leetcode.com/problems/${slug}/`;
 
@@ -182,9 +185,13 @@ export function renderDsaQuestion(params: {
   };
 }
 
-function questionForDate(date: string, agentId: string): DsaQuestion {
-  const index = Math.abs(hash(`${date}:${agentId}`)) % dsaQuestions.length;
-  return dsaQuestions[index]!;
+function questionForDate(date: string, agentId: string, topicsCovered?: string[]): DsaQuestion {
+  const pool = dsaQuestions.filter(
+    (q) => !topicsCovered?.map((t) => t.toLowerCase()).includes(q.title.toLowerCase())
+  );
+  const questionPool = pool.length > 0 ? pool : dsaQuestions;
+  const index = Math.abs(hash(`${date}:${agentId}`)) % questionPool.length;
+  return questionPool[index]!;
 }
 
 function dateKey(date: Date): string {

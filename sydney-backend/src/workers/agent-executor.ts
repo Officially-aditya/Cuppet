@@ -604,6 +604,13 @@ async function renderScheduledReminder(
   agent: AgentRow,
   trigger: AgentExecutorJobData["trigger"]
 ): Promise<RenderedAgentMessage> {
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  const topicsCovered = Array.isArray(parsedIntent.topics_covered)
+    ? parsedIntent.topics_covered
+    : [];
+
   const action = actionText(agent);
   const combinedText = [action, agent.prompt].join("\n");
   const includeDsaQuestion = wantsDsaQuestion(combinedText);
@@ -629,7 +636,10 @@ async function renderScheduledReminder(
         items.push({ summary: `Reminder: ${withPeriod(reminder)}` });
       }
       if (includeDsaQuestion) {
-        items.push({ summary: createDsaQuestionSection({ agentId: agent.id }) });
+        console.log("[renderScheduledReminder] wantsDsaQuestion (news_brief). topicsCovered:", topicsCovered);
+        const dsaSec = createDsaQuestionSection({ agentId: agent.id, topicsCovered });
+        console.log("[renderScheduledReminder] generated static DSA question section (news_brief):", dsaSec.split("\n")[0]);
+        items.push({ summary: dsaSec });
       }
       items.push(...news.content.data.items);
 
@@ -647,7 +657,10 @@ async function renderScheduledReminder(
       sections.push(`Reminder: ${withPeriod(reminder)}`);
     }
     if (includeDsaQuestion) {
-      sections.push(createDsaQuestionSection({ agentId: agent.id }));
+      console.log("[renderScheduledReminder] wantsDsaQuestion (plain_text). topicsCovered:", topicsCovered);
+      const dsaSec = createDsaQuestionSection({ agentId: agent.id, topicsCovered });
+      console.log("[renderScheduledReminder] generated static DSA question section (plain_text):", dsaSec.split("\n")[0]);
+      sections.push(dsaSec);
     }
     if (news.content.template === "plain_text") {
       sections.push(news.content.data.body);
@@ -666,7 +679,10 @@ async function renderScheduledReminder(
     items.push({ summary: `Reminder: ${withPeriod(reminder)}` });
   }
   if (includeDsaQuestion) {
-    items.push({ summary: createDsaQuestionSection({ agentId: agent.id }) });
+    console.log("[renderScheduledReminder] wantsDsaQuestion (no news). topicsCovered:", topicsCovered);
+    const dsaSec = createDsaQuestionSection({ agentId: agent.id, topicsCovered });
+    console.log("[renderScheduledReminder] generated static DSA question section (no news):", dsaSec.split("\n")[0]);
+    items.push({ summary: dsaSec });
   }
   if (items.length === 0) {
     items.push({ summary: action });
@@ -688,6 +704,13 @@ async function renderCustomAgent(
   }
 ): Promise<RenderedAgentMessage> {
   const { agent, trigger } = context;
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  const topicsCovered = Array.isArray(parsedIntent.topics_covered)
+    ? parsedIntent.topics_covered
+    : [];
+
   const text = [actionText(agent), agent.prompt].join("\n");
 
   if (wantsTechNewsBrief(text)) {
@@ -703,7 +726,10 @@ async function renderCustomAgent(
   }
 
   if (wantsDsaQuestion(text)) {
-    return renderedDsaQuestion(renderDsaQuestion({ agentId: agent.id }));
+    console.log("[renderCustomAgent] wantsDsaQuestion. topicsCovered:", topicsCovered);
+    const dsaQuestion = renderDsaQuestion({ agentId: agent.id, topicsCovered });
+    console.log("[renderCustomAgent] generated static DSA question:", dsaQuestion.title);
+    return renderedDsaQuestion(dsaQuestion);
   }
 
   const llmRendered = await renderLlmCustomAgent({
@@ -1236,15 +1262,24 @@ function singleConnectorId(connectorIds: string[]): string | null {
 }
 
 function intentName(agent: AgentRow): string {
-  return String(agent.parsed_intent.intent ?? "");
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  return String(parsedIntent.intent ?? "");
 }
 
 function actionText(agent: AgentRow): string {
-  return String(agent.parsed_intent.action ?? agent.prompt).trim();
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  return String(parsedIntent.action ?? agent.prompt).trim();
 }
 
 function outputTemplate(agent: AgentRow): string {
-  return String(agent.parsed_intent.output_template ?? "plain_text");
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  return String(parsedIntent.output_template ?? "plain_text");
 }
 
 function scheduledIntro(agent: AgentRow, label: string): string {
