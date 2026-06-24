@@ -61,6 +61,13 @@ class AgentService {
         lastMessagePreview: 'Setup checklist finalized.',
         latestMessageAt: DateTime.now(),
         accentColor: 0xFF006046,
+        parsedIntent: request.templateId == 'tracker'
+            ? const {
+                'intent': 'habit_tracker',
+                'output_template': 'streak_counter',
+                'history': {},
+              }
+            : null,
       );
       _mockAgents = Agent.sortForInbox([..._mockAgents!, created]);
       return created;
@@ -198,6 +205,9 @@ class AgentService {
 
 List<Agent> _buildMockAgents() {
   final now = DateTime.now();
+  final yesterday = now.subtract(const Duration(days: 1));
+  final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final yesterdayStr = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
   final todayAt941 = DateTime(now.year, now.month, now.day, 9, 41);
   return [
     Agent(
@@ -235,6 +245,24 @@ List<Agent> _buildMockAgents() {
       lastMessagePreview: 'I summarized the latest category shifts.',
       latestMessageAt: now.subtract(const Duration(days: 1)),
       accentColor: 0xFF1E40AF,
+    ),
+    Agent(
+      id: 'dsa-practice',
+      threadId: 'thread_dsa_practice',
+      name: 'DSA Daily Practice',
+      avatarInitials: 'DP',
+      description: 'Sends a daily DSA problem and tracks streak progress.',
+      lastMessagePreview: 'Problem of the day: Two Sum.',
+      latestMessageAt: now.subtract(const Duration(minutes: 10)),
+      accentColor: 0xFF0D9488,
+      parsedIntent: {
+        'intent': 'dsa_question',
+        'output_template': 'dsa_question',
+        'history': {
+          todayStr: true,
+          yesterdayStr: true,
+        }
+      },
     ),
   ];
 }

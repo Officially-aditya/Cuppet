@@ -41,6 +41,48 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
   }
 
+  bool _shouldShowHeatmap(Agent agent) {
+    final intent = agent.parsedIntent?['intent']?.toString();
+    final template = agent.parsedIntent?['output_template']?.toString();
+    final hasHistory = agent.parsedIntent?['history'] != null;
+
+    final isKnownIntent = const {
+      'study_plan',
+      'interview_prep',
+      'language_word',
+      'coding_tip',
+      'book_companion',
+      'dsa_question',
+      'habit_tracker',
+    }.contains(intent);
+
+    final isTrackableTemplate = const {
+      'study_guide',
+      'dsa_question',
+      'streak_counter',
+      'daily_task',
+    }.contains(template);
+
+    final nameLower = agent.name.toLowerCase();
+    final promptLower = agent.prompt.toLowerCase();
+    final containsTrackableKeywords = nameLower.contains('study') ||
+        nameLower.contains('practice') ||
+        nameLower.contains('streak') ||
+        nameLower.contains('habit') ||
+        nameLower.contains('dsa') ||
+        nameLower.contains('leetcode') ||
+        nameLower.contains('learn') ||
+        promptLower.contains('study') ||
+        promptLower.contains('practice') ||
+        promptLower.contains('streak') ||
+        promptLower.contains('habit') ||
+        promptLower.contains('dsa') ||
+        promptLower.contains('leetcode') ||
+        promptLower.contains('learn');
+
+    return isKnownIntent || isTrackableTemplate || hasHistory || containsTrackableKeywords;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -192,15 +234,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       title: Text('Agent preferences'),
                     ),
                   ),
-                  if (const {
-                    'study_plan',
-                    'interview_prep',
-                    'language_word',
-                    'coding_tip',
-                    'book_companion',
-                    'dsa_question',
-                    'habit_tracker',
-                  }.contains(agent.parsedIntent?['intent']))
+                  if (_shouldShowHeatmap(agent))
                     const PopupMenuItem(
                       value: 'view_heatmap',
                       child: ListTile(
