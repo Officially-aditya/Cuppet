@@ -19,17 +19,21 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // Go back 16 weeks (16 * 7 days) and align with Sunday
-    final startDay = today.subtract(const Duration(days: 16 * 7));
-    final alignOffset = startDay.weekday % 7; // Sunday = 0, Monday = 1...
-    final sundayStart = startDay.subtract(Duration(days: alignOffset));
+    // Align with Sunday of the current week, then go back 15 weeks
+    final alignOffset = today.weekday % 7; // Sunday = 0, Monday = 1...
+    final sundayCurrentWeek = today.subtract(Duration(days: alignOffset));
+    final sundayStart = sundayCurrentWeek.subtract(const Duration(days: 15 * 7));
 
     final columns = <Widget>[];
 
     for (int week = 0; week < 16; week++) {
       final weekDays = <Widget>[];
       for (int day = 0; day < 7; day++) {
-        final currentDate = sundayStart.add(Duration(days: week * 7 + day));
+        final currentDate = DateTime(
+          sundayStart.year,
+          sundayStart.month,
+          sundayStart.day + (week * 7 + day),
+        );
         final dateKey = '${currentDate.year}-${_pad(currentDate.month)}-${_pad(currentDate.day)}';
         final isCompleted = widget.history[dateKey] == true;
         final isFuture = currentDate.isAfter(today);
@@ -312,15 +316,19 @@ class SydneyHeatmapSheet extends StatelessWidget {
     }
 
     // 2. Generate columns for the 16-week grid
-    final startDay = today.subtract(const Duration(days: 16 * 7));
-    final alignOffset = startDay.weekday % 7; 
-    final sundayStart = startDay.subtract(Duration(days: alignOffset));
+    final alignOffset = today.weekday % 7; // Sunday = 0, Monday = 1...
+    final sundayCurrentWeek = today.subtract(Duration(days: alignOffset));
+    final sundayStart = sundayCurrentWeek.subtract(const Duration(days: 15 * 7));
 
     final columns = <Widget>[];
     for (int week = 0; week < 16; week++) {
       final weekDays = <Widget>[];
       for (int day = 0; day < 7; day++) {
-        final currentDate = sundayStart.add(Duration(days: week * 7 + day));
+        final currentDate = DateTime(
+          sundayStart.year,
+          sundayStart.month,
+          sundayStart.day + (week * 7 + day),
+        );
         final dateKey = '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
         final isCompleted = history[dateKey] == true;
         final isFuture = currentDate.isAfter(today);
