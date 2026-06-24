@@ -517,6 +517,23 @@ async function persistRunMessage(
       );
     }
 
+    const isInteractive = ["study_guide", "dsa_question", "daily_task"].includes(input.content.template);
+    if (!isInteractive) {
+      const dateString = new Date().toISOString().split("T")[0];
+      await client.query(
+        `
+          UPDATE agents
+          SET parsed_intent = jsonb_set(
+                parsed_intent,
+                '{history}',
+                coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, true)
+              )
+          WHERE id = $2
+        `,
+        [dateString, input.agent.id]
+      );
+    }
+
     const runUpdate = await client.query(
       `
         UPDATE agent_runs

@@ -921,10 +921,13 @@ async function updateAgentInstructions(
     status: "active" | "paused" | "error";
   }
 ): Promise<UpdatedAgentRow> {
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
   const mergedIntent = {
     ...update.parsedIntent,
-    topics_covered: (agent.parsed_intent as any)?.topics_covered ?? [],
-    history: (agent.parsed_intent as any)?.history ?? {}
+    topics_covered: parsedIntent.topics_covered ?? [],
+    history: parsedIntent.history ?? {}
   };
 
   const { rows } = await client.query<UpdatedAgentRow>(
