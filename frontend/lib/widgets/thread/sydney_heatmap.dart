@@ -19,10 +19,10 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // Align with Sunday of the current week, then go back 15 weeks
-    final alignOffset = today.weekday % 7; // Sunday = 0, Monday = 1...
-    final sundayCurrentWeek = today.subtract(Duration(days: alignOffset));
-    final sundayStart = sundayCurrentWeek.subtract(const Duration(days: 15 * 7));
+    final startWeekday = _getStartWeekday(widget.history);
+    final alignOffset = (today.weekday - startWeekday + 7) % 7;
+    final startOfWeek = today.subtract(Duration(days: alignOffset));
+    final gridStart = startOfWeek.subtract(const Duration(days: 15 * 7));
 
     final columns = <Widget>[];
 
@@ -30,9 +30,9 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       final weekDays = <Widget>[];
       for (int day = 0; day < 7; day++) {
         final currentDate = DateTime(
-          sundayStart.year,
-          sundayStart.month,
-          sundayStart.day + (week * 7 + day),
+          gridStart.year,
+          gridStart.month,
+          gridStart.day + (week * 7 + day),
         );
         final dateKey = '${currentDate.year}-${_pad(currentDate.month)}-${_pad(currentDate.day)}';
         final isCompleted = widget.history[dateKey] == true;
@@ -149,12 +149,8 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14), // Sunday gap
-                          _dayLabel('M'),
-                          const SizedBox(height: 14), // Tuesday gap
-                          _dayLabel('W'),
-                          const SizedBox(height: 14), // Thursday gap
-                          _dayLabel('F'),
+                          for (int i = 0; i < 7; i++)
+                            _buildDynamicDayLabel(startWeekday, i, 14),
                         ],
                       ),
                       const SizedBox(width: SydneySpacing.sm),
@@ -316,18 +312,19 @@ class SydneyHeatmapSheet extends StatelessWidget {
     }
 
     // 2. Generate columns for the 16-week grid
-    final alignOffset = today.weekday % 7; // Sunday = 0, Monday = 1...
-    final sundayCurrentWeek = today.subtract(Duration(days: alignOffset));
-    final sundayStart = sundayCurrentWeek.subtract(const Duration(days: 15 * 7));
+    final startWeekday = _getStartWeekday(history);
+    final alignOffset = (today.weekday - startWeekday + 7) % 7;
+    final startOfWeek = today.subtract(Duration(days: alignOffset));
+    final gridStart = startOfWeek.subtract(const Duration(days: 15 * 7));
 
     final columns = <Widget>[];
     for (int week = 0; week < 16; week++) {
       final weekDays = <Widget>[];
       for (int day = 0; day < 7; day++) {
         final currentDate = DateTime(
-          sundayStart.year,
-          sundayStart.month,
-          sundayStart.day + (week * 7 + day),
+          gridStart.year,
+          gridStart.month,
+          gridStart.day + (week * 7 + day),
         );
         final dateKey = '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
         final isCompleted = history[dateKey] == true;
@@ -488,12 +485,8 @@ class SydneyHeatmapSheet extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 13), // Sunday gap
-                  _dayLabel('M'),
-                  const SizedBox(height: 13), // Tuesday gap
-                  _dayLabel('W'),
-                  const SizedBox(height: 13), // Thursday gap
-                  _dayLabel('F'),
+                  for (int i = 0; i < 7; i++)
+                    _buildDynamicDayLabel(startWeekday, i, 13),
                 ],
               ),
               const SizedBox(width: SydneySpacing.sm),
@@ -697,4 +690,47 @@ class _StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+int _getStartWeekday(Map<String, dynamic> history) {
+  if (history.isEmpty) {
+    return DateTime.now().weekday;
+  }
+  DateTime? earliest;
+  for (final key in history.keys) {
+    final parts = key.split('-');
+    if (parts.length == 3) {
+      final y = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final d = int.tryParse(parts[2]);
+      if (y != null && m != null && d != null) {
+        final dt = DateTime(y, m, d);
+        if (earliest == null || dt.isBefore(earliest)) {
+          earliest = dt;
+        }
+      }
+    }
+  }
+  return earliest?.weekday ?? DateTime.now().weekday;
+}
+
+Widget _buildDynamicDayLabel(int startWeekday, int row, double height) {
+  final rowWeekday = (startWeekday + row - 1) % 7 + 1;
+  String text = '';
+  if (rowWeekday == 1) text = 'M';
+  else if (rowWeekday == 3) text = 'W';
+  else if (rowWeekday == 5) text = 'F';
+
+  return Container(
+    height: height,
+    alignment: Alignment.centerLeft,
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 8,
+        color: SydneyColors.mutedInk,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
 }
