@@ -18,6 +18,11 @@ import {
 
 // @ts-ignore
 import pdfParse from "pdf-parse";
+import {
+  anthropicConfigured,
+  createAnthropicMessage,
+  extractAnthropicText
+} from "../agents/anthropic.js";
 
 export type GoogleWorkspaceConnectorId = "gmail" | "drive" | "calendar";
 
@@ -131,6 +136,65 @@ export function isGoogleWorkspaceConnector(
   connectorId: string
 ): connectorId is GoogleWorkspaceConnectorId {
   return connectorId === "gmail" || connectorId === "drive" || connectorId === "calendar";
+}
+
+function actionText(agent: WorkspaceAgent): string {
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  return String(parsedIntent.action ?? agent.prompt).trim();
+}
+
+async function buildDynamicGmailQuery(prompt: string, action: string, defaultQuery: string): Promise<string> {
+  if (!anthropicConfigured()) return defaultQuery;
+  try {
+    const response = await createAnthropicMessage({
+      maxTokens: 100,
+      system: "You are a precise search query generator. Based on the user's agent prompt and action instructions, output ONLY the Gmail search query (using standard Gmail search operators like subject:, from:, newer_than:, has:attachment, etc.) that best retrieves the relevant messages. Do not explain, do not add quotes around the whole query unless needed by Gmail, just return the query string.",
+      messages: [
+        {
+          role: "user",
+          content: `Agent Prompt:\n${prompt}\n\nAgent Action:\n${action}\n\nDefault Query:\n${defaultQuery}\n\nGmail Search Query:`
+        }
+      ]
+    });
+    const query = extractAnthropicText(response.content).trim();
+    return query || defaultQuery;
+  } catch {
+    return defaultQuery;
+  }
+}
+
+async function buildDynamicDriveQuery(prompt: string, action: string, defaultQuery: string): Promise<string> {
+  if (!anthropicConfigured()) return defaultQuery;
+  try {
+    const response = await createAnthropicMessage({
+      maxTokens: 150,
+      system: "You are a precise Google Drive API search query generator. Based on the user's agent prompt and action, output ONLY the standard Google Drive API q parameter query string (e.g. name contains 'contract' or mimeType = 'application/pdf' or modifiedTime > '2023-01-01T00:00:00Z'). Do not add any markdown formatting, explanation, or quotes around the outer query. Just output the query string.",
+      messages: [
+        {
+          role: "user",
+          content: `Agent Prompt:\n${prompt}\n\nAgent Action:\n${action}\n\nDefault Query:\n${defaultQuery}\n\nGoogle Drive Query:`
+        }
+      ]
+    });
+    const query = extractAnthropicText(response.content).trim();
+    return query || defaultQuery;
+  } catch {
+    return defaultQuery;
+  }
+}
+
+function calendarWindowInDays(prompt: string, action: string): number {
+  const lower = [prompt, action].join("\n").toLowerCase();
+  if (/\b(?:today|1 day)\b/.test(lower)) return 1;
+  if (/\b(?:tomorrow)\b/.test(lower)) return 2;
+  const match = lower.match(/\b(\d+)\s+days\b/);
+  if (match) {
+    const days = parseInt(match[1]!, 10);
+    if (days > 0 && days <= 30) return days;
+  }
+  return 7; // default
 }
 
 export function googleWorkspaceAuthConfigured(): boolean {
@@ -295,17 +359,17 @@ async function renderProjectDeadlineWatcher(
   driveAccessToken: string,
   options: WorkspaceRenderOptions
 ): Promise<RenderedAgentMessage> {
+  const defaultGmailQuery = "newer_than:30d (deadline OR due OR launch OR milestone)";
+  const defaultDriveQuery = "trashed = false and (name contains 'deadline' or name contains 'plan' or name contains 'roadmap' or name contains 'milestone')";
+
+  const [gmailQueryStr, driveQueryStr] = await Promise.all([
+    buildDynamicGmailQuery(agent.prompt, actionText(agent), defaultGmailQuery),
+    buildDynamicDriveQuery(agent.prompt, actionText(agent), defaultDriveQuery)
+  ]);
+
   const [messages, files] = await Promise.all([
-    fetchGmailMessages(
-      gmailAccessToken,
-      "newer_than:30d (deadline OR due OR launch OR milestone)",
-      5
-    ),
-    fetchDriveFiles(
-      driveAccessToken,
-      "trashed = false and (name contains 'deadline' or name contains 'plan' or name contains 'roadmap' or name contains 'milestone')",
-      5
-    )
+    fetchGmailMessages(gmailAccessToken, gmailQueryStr, 5),
+    fetchDriveFiles(driveAccessToken, driveQueryStr, 5)
   ]);
 
   const emailItems = messages.map((message) => ({
@@ -364,7 +428,9 @@ async function renderGmailAgent(
   options: WorkspaceRenderOptions
 ): Promise<RenderedAgentMessage> {
   const intent = String(agent.parsed_intent.intent ?? "");
-  const messages = await fetchGmailMessages(accessToken, gmailQuery(intent), 8);
+  const defaultQuery = gmailQuery(intent);
+  const query = await buildDynamicGmailQuery(agent.prompt, actionText(agent), defaultQuery);
+  const messages = await fetchGmailMessages(accessToken, query, 8);
   const title = options.scheduledTitle(agent, gmailOutputLabel(intent));
   const sourceRefs = messages.map((message) => ({
     source: "Gmail",
@@ -455,7 +521,9 @@ async function renderDriveAgent(
   options: WorkspaceRenderOptions
 ): Promise<RenderedAgentMessage> {
   const intent = String(agent.parsed_intent.intent ?? "");
-  const files = await fetchDriveFiles(accessToken, driveQuery(intent), 8);
+  const defaultQuery = driveQuery(intent);
+  const query = await buildDynamicDriveQuery(agent.prompt, actionText(agent), defaultQuery);
+  const files = await fetchDriveFiles(accessToken, query, 8);
   const title = options.scheduledTitle(agent, driveOutputLabel(intent));
   const sourceRefs = files.map((file) => ({
     source: "Google Drive",
@@ -559,7 +627,8 @@ async function renderCalendarAgent(
   options: WorkspaceRenderOptions
 ): Promise<RenderedAgentMessage> {
   const now = new Date();
-  const through = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const days = calendarWindowInDays(agent.prompt, actionText(agent));
+  const through = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
   const events = await fetchCalendarEvents(accessToken, now, through, 12);
   const sourceRefs = events.map((event) => ({
     type: "calendar_event",

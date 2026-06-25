@@ -224,6 +224,40 @@ export async function hasUsableGitHubToken(userId: string): Promise<boolean> {
   return rows[0]?.exists === true;
 }
 
+type GitHubCommit = {
+  sha: string;
+  commit: {
+    message: string;
+    author: {
+      name: string;
+      date: string;
+    };
+  };
+  html_url: string;
+};
+
+function checkWantsCommits(prompt: string, action: string): boolean {
+  const lower = [prompt, action].join("\n").toLowerCase();
+  return /\b(commit|commits|push|pushes|code change|code changes)\b/.test(lower);
+}
+
+async function fetchCommits(
+  accessToken: string,
+  userId: string,
+  repoFullName: string,
+  sinceIsoString: string
+): Promise<GitHubCommit[]> {
+  try {
+    const url = new URL(`${githubApiBase}/repos/${repoFullName}/commits`);
+    url.searchParams.set("since", sinceIsoString);
+    url.searchParams.set("per_page", "5");
+    return await githubJson<GitHubCommit[]>(url, accessToken, userId);
+  } catch (error) {
+    console.error(`Failed to fetch commits for ${repoFullName}:`, error);
+    return [];
+  }
+}
+
 export async function renderGitHubAgent(
   agent: GitHubAgent,
   options: GitHubRenderOptions
@@ -247,10 +281,42 @@ export async function renderGitHubAgent(
   ]);
   const issues = issueSearch.items ?? [];
   const pullRequests = pullRequestSearch.items ?? [];
+
+  const promptAction = String(agent.parsed_intent.action ?? agent.prompt).trim();
+  const wantsCommits = checkWantsCommits(agent.prompt, promptAction);
+
+  let commitRecords: string[] = [];
+  const commitSourceRefs: any[] = [];
+  if (wantsCommits) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const commitsLists = await Promise.all(
+      repositories.slice(0, 5).map((repo) =>
+        fetchCommits(accessToken, agent.user_id, repo.full_name, since)
+      )
+    );
+    for (let i = 0; i < commitsLists.length; i++) {
+      const repoCommits = commitsLists[i]!;
+      const repoName = repositories[i]!.full_name;
+      for (const c of repoCommits) {
+        commitRecords.push(
+          `Commit: ${repoName} | Message: ${c.commit.message} | Author: ${c.commit.author.name} | Date: ${c.commit.author.date}`
+        );
+        commitSourceRefs.push({
+          type: "github_commit",
+          source: "GitHub",
+          id: c.sha,
+          name: c.commit.message,
+          url: c.html_url
+        });
+      }
+    }
+  }
+
   const records = [
     ...repositories.map(repositoryRecord),
     ...issues.map((issue) => issueRecord(issue, "Issue")),
-    ...pullRequests.map((issue) => issueRecord(issue, "Pull request"))
+    ...pullRequests.map((issue) => issueRecord(issue, "Pull request")),
+    ...commitRecords
   ];
   const synthesized = await synthesizeConnectorDigest({
     connectorName: "GitHub",
@@ -260,6 +326,9 @@ export async function renderGitHubAgent(
   });
   const fallbackSummary = [
     digestSection("Recently updated repositories", repositories.map(repositoryLine)),
+    wantsCommits && commitRecords.length > 0
+      ? digestSection("Recent commits", commitRecords.map((r) => r.replace(/^Commit:\s*/i, "")))
+      : null,
     digestSection("Open issues involving you", issues.map(issueLine)),
     digestSection("Open pull requests involving you", pullRequests.map(issueLine))
   ]
@@ -274,7 +343,8 @@ export async function renderGitHubAgent(
       url: repository.html_url
     })),
     ...issues.map((issue) => githubIssueSourceRef(issue, "issue")),
-    ...pullRequests.map((issue) => githubIssueSourceRef(issue, "pull_request"))
+    ...pullRequests.map((issue) => githubIssueSourceRef(issue, "pull_request")),
+    ...commitSourceRefs
   ];
 
   return renderedDataSummary(
@@ -291,7 +361,8 @@ export async function renderGitHubAgent(
         {
           label: "Open PRs",
           value: String(pullRequestSearch.total_count ?? pullRequests.length)
-        }
+        },
+        ...(wantsCommits ? [{ label: "Commits", value: String(commitSourceRefs.length) }] : [])
       ],
       footer: githubPrivateRepositoryAccessEnabled()
         ? "Read-only digest generated from repositories available to your GitHub account."
