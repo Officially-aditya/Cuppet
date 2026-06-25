@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import Fastify, { type FastifyInstance } from "fastify";
 import { config } from "./config.js";
 import { registerApi } from "./api/index.js";
@@ -19,6 +20,12 @@ export async function buildApp(): Promise<FastifyInstance> {
             }
           }
         : true
+  });
+
+  await app.register(multipart, {
+    limits: {
+      fileSize: 15 * 1024 * 1024 // 15MB max file size
+    }
   });
 
   await app.register(cors, {

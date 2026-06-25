@@ -16,6 +16,9 @@ import {
   encryptConnectorSecret
 } from "./token-vault.js";
 
+// @ts-ignore
+import pdfParse from "pdf-parse";
+
 export type GoogleWorkspaceConnectorId = "gmail" | "drive" | "calendar";
 
 type GoogleTokenResponse = {
@@ -72,7 +75,7 @@ type GmailDigestItem = {
   line: string;
 };
 
-type DriveFile = {
+export type DriveFile = {
   id: string;
   name: string;
   mimeType?: string;
@@ -492,14 +495,39 @@ async function renderDriveAgent(
   }
 
   if (intent === "pdf_summary") {
-    return renderedPlainText(
-      [
-        options.scheduledIntro(agent, "PDF summary"),
-        ...files.slice(0, 6).map((file) => `- ${driveFileLine(file)}`),
-        "",
-        "PDF text extraction is not enabled yet, so this run lists matching real Drive PDFs without inventing their contents."
-      ].join("\n"),
-      { sourceRefs }
+    const pdfRecords: string[] = [];
+    const pdfFiles = files.filter((file) => file.mimeType === "application/pdf").slice(0, 3);
+
+    for (const file of pdfFiles) {
+      try {
+        const parsed = await downloadAndParsePdf(accessToken, file.id);
+        const snippet = (parsed.text || "").slice(0, 3500).trim() || "Empty PDF file content";
+        pdfRecords.push(`File: ${file.name}\nContent:\n${snippet}`);
+      } catch (err) {
+        console.error(`Failed to parse PDF ${file.name}:`, err);
+        pdfRecords.push(`File: ${file.name}\nStatus: Failed to retrieve content: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    const synthesized = await synthesizeConnectorDigest({
+      connectorName: "Google Drive PDF",
+      agentName: agent.name,
+      userPrompt: agent.prompt,
+      records: pdfRecords.length > 0 ? pdfRecords : files.map(driveDigestRecord)
+    });
+
+    return renderedDataSummary(
+      {
+        title: "PDF Highlights",
+        text: options.scheduledIntro(agent, "PDF summary"),
+        summary: synthesized?.summary ?? "Could not extract or summarize the PDF contents.",
+        metrics: [
+          { label: "Files", value: String(pdfFiles.length) },
+          { label: "Source", value: "Google Drive" }
+        ],
+        footer: "Summarized from PDF text contents."
+      },
+      { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
     );
   }
 
@@ -747,7 +775,7 @@ async function storeGoogleWorkspaceToken(input: {
   }
 }
 
-async function googleAccessToken(
+export async function googleAccessToken(
   userId: string,
   connectorId: GoogleWorkspaceConnectorId
 ): Promise<string | null> {
@@ -840,7 +868,7 @@ async function fetchGmailMessage(
   return googleJson<GmailMessage>(url, accessToken);
 }
 
-async function fetchDriveFiles(
+export async function fetchDriveFiles(
   accessToken: string,
   query: string,
   pageSize: number
@@ -1662,5 +1690,95 @@ async function fetchDriveFileContent(
       return await response.text();
     }
   }
+  if (mimeType === "application/pdf") {
+    try {
+      const parsed = await downloadAndParsePdf(accessToken, id);
+      return parsed.text;
+    } catch (err) {
+      console.error(`Failed to parse PDF ${name}:`, err);
+    }
+  }
   return `File name: ${name} (MimeType: ${mimeType})`;
+}
+
+export async function downloadAndParsePdf(
+  accessToken: string,
+  fileId: string
+): Promise<{ text: string; chunks: string[] }> {
+  const url = new URL(`${driveApiBase}/files/${fileId}`);
+  url.searchParams.set("alt", "media");
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download PDF from Google Drive (${response.status})`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  // @ts-ignore
+  const parsed = await pdfParse(buffer);
+  const fullText = parsed.text || "";
+
+  // Split into chunks of ~4000 characters, with 400 characters overlap
+  const chunks: string[] = [];
+  const chunkSize = 4000;
+  const overlap = 400;
+
+  if (fullText.length <= chunkSize) {
+    chunks.push(fullText);
+  } else {
+    let start = 0;
+    while (start < fullText.length) {
+      const end = Math.min(start + chunkSize, fullText.length);
+      chunks.push(fullText.substring(start, end));
+      start += chunkSize - overlap;
+    }
+  }
+
+  return { text: fullText, chunks };
+}
+
+export async function uploadFileToGoogleDrive(
+  accessToken: string,
+  name: string,
+  mimeType: string,
+  buffer: Buffer
+): Promise<{ id: string; name: string; webViewLink?: string }> {
+  const boundary = "sydney_boundary_" + Math.random().toString(36).substring(7);
+  const metadata = JSON.stringify({
+    name,
+    mimeType
+  });
+
+  const parts = [
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n`,
+    `--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`,
+    buffer,
+    `\r\n--${boundary}--`
+  ];
+
+  const bodyBuffer = Buffer.concat(
+    parts.map((p) => (typeof p === "string" ? Buffer.from(p, "utf-8") : p))
+  );
+
+  const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": `multipart/related; boundary=${boundary}`
+    },
+    body: bodyBuffer
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Google Drive upload failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = (await response.json()) as { id: string; name: string; webViewLink?: string };
+  return result;
 }

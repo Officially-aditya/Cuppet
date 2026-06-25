@@ -6,6 +6,7 @@ import { connectorRoutes } from "../connectors/routes.js";
 import { messageRoutes } from "../messages/routes.js";
 import { notificationRoutes } from "../notifications/routes.js";
 import { realtimeRoutes } from "../realtime/routes.js";
+import { uploadRoutes } from "../uploads/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
@@ -14,6 +15,7 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(messageRoutes);
   await app.register(notificationRoutes);
   await app.register(realtimeRoutes);
+  await app.register(uploadRoutes);
 
   app.get("/health", async () => ({
     status: "ok",

@@ -31,7 +31,7 @@ class PlainTextTemplate extends StatelessWidget {
   }
 }
 
-enum _PlainTextBlockType { heading, paragraph, bullet, numbered }
+enum _PlainTextBlockType { heading, paragraph, bullet, numbered, image }
 
 class _PlainTextBlock {
   const _PlainTextBlock({required this.type, required this.text, this.number});
@@ -46,6 +46,7 @@ class _PlainTextBlock {
       _PlainTextBlockType.paragraph => SydneySpacing.md,
       _PlainTextBlockType.bullet ||
       _PlainTextBlockType.numbered => SydneySpacing.sm,
+      _PlainTextBlockType.image => SydneySpacing.md,
     };
   }
 }
@@ -79,6 +80,40 @@ class _PlainTextBlockView extends StatelessWidget {
         marker: '${block.number ?? '1'}.',
         text: block.text,
         textColor: textColor,
+      ),
+      _PlainTextBlockType.image => Padding(
+        padding: const EdgeInsets.symmetric(vertical: SydneySpacing.sm),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+          child: Image.network(
+            block.text,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                height: 180,
+                color: SydneyColors.surfaceContainerLow,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                height: 100,
+                color: SydneyColors.surfaceContainerLow,
+                alignment: Alignment.center,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.broken_image_outlined, color: SydneyColors.mutedInk),
+                    SizedBox(width: 8),
+                    Text('Failed to load image', style: TextStyle(color: SydneyColors.mutedInk)),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
       ),
     };
   }
@@ -142,6 +177,18 @@ List<_PlainTextBlock> _parseBlocks(String value) {
     final trimmed = rawLine.trim();
     if (trimmed.isEmpty) {
       flushParagraph();
+      continue;
+    }
+
+    final image = RegExp(r'^!\[([^\]]*)\]\(([^)]+)\)$').firstMatch(trimmed);
+    if (image != null) {
+      flushParagraph();
+      blocks.add(
+        _PlainTextBlock(
+          type: _PlainTextBlockType.image,
+          text: image.group(2) ?? '',
+        ),
+      );
       continue;
     }
 

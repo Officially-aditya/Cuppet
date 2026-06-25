@@ -40,12 +40,17 @@ import {
   type AgentExecutorJobData
 } from "../queue/index.js";
 import { isConnectorAuthRequiredError } from "../connectors/errors.js";
-import { renderGoogleWorkspaceAgent } from "../connectors/google-workspace.js";
+import {
+  renderGoogleWorkspaceAgent,
+  googleAccessToken,
+  fetchDriveFiles,
+  downloadAndParsePdf
+} from "../connectors/google-workspace.js";
 import { renderGitHubAgent } from "../connectors/github.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
 import { agentExecutionKey } from "./execution-key.js";
-import { userInstructionBlock } from "../security/prompt-guard.js";
+import { userInstructionBlock, untrustedDataBlock } from "../security/prompt-guard.js";
 
 type AgentRow = {
   id: string;
@@ -788,6 +793,119 @@ async function renderStudyGuideAgent(context: {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
   }
 
+  // 1. Try to get Google Drive access token
+  let driveToken: string | null = null;
+  try {
+    driveToken = await googleAccessToken(agent.user_id, "drive");
+  } catch (err) {
+    console.log("[StudyGuideAgent] Google Drive access token not linked or expired, falling back to standard generation:", err);
+  }
+
+  // 2. If Google Drive token exists, look for PDFs
+  if (driveToken) {
+    try {
+      const files = await fetchDriveFiles(driveToken, "trashed = false and mimeType = 'application/pdf'", 15);
+      // Select file matching prompt, or fallback to most recent
+      let selectedFile = files[0];
+      for (const file of files) {
+        if (agent.prompt.toLowerCase().includes(file.name.toLowerCase())) {
+          selectedFile = file;
+          break;
+        }
+      }
+
+      if (selectedFile) {
+        console.log(`[StudyGuideAgent] Found PDF file to study: ${selectedFile.name} (ID: ${selectedFile.id})`);
+        const { chunks } = await downloadAndParsePdf(driveToken, selectedFile.id);
+        
+        let chunkIdx = typeof parsedIntent.current_chunk === "number" ? parsedIntent.current_chunk : 0;
+        if (chunkIdx >= chunks.length) {
+          chunkIdx = 0; // Wrap around or stop
+        }
+        
+        const currentChunkText = chunks[chunkIdx] || "";
+        console.log(`[StudyGuideAgent] Studying chunk ${chunkIdx + 1}/${chunks.length} of ${selectedFile.name}`);
+
+        const response = await createAnthropicMessage({
+          maxTokens: 1200,
+          system: [
+            "You run a Sydney custom PDF study and revision agent.",
+            "Your task is to generate a structured revision module based on the provided PDF text segment.",
+            "You must smartly integrate both the key theory concepts and any related questions/examples found in the text segment so the user can study and practice.",
+            "Avoid repeating topics that have already been covered: " + JSON.stringify(topicsCovered),
+            "Ensure references (if any) are valid clickable markdown reference URLs.",
+            "Return ONLY a valid JSON object matching this structure:",
+            "{",
+            '  "topic": "Topic Name",',
+            '  "definition": "Clear, concise theory explanation in markdown, followed by integrated questions and/or exercises for practice.",',
+            '  "references": [',
+            '    { "title": "Reference Name", "url": "https://example.com" }',
+            "  ]",
+            "}"
+          ].join(" "),
+          messages: [
+            {
+              role: "user",
+              content: [
+                `Course Prompt: ${agent.prompt}`,
+                `PDF File: ${selectedFile.name}`,
+                `Current PDF Chunk (${chunkIdx + 1}/${chunks.length}):`,
+                untrustedDataBlock("pdf_chunk", currentChunkText, 5000),
+                `Generate the revision module.`
+              ].join("\n")
+            }
+          ]
+        });
+
+        const body = extractAnthropicText(response.content);
+        const match = body.match(/\{[\s\S]*\}/);
+        if (!match) {
+          throw new Error("Invalid LLM response format: No JSON object found.");
+        }
+        const data = studyGuideResponseSchema.parse(JSON.parse(match[0]));
+        console.log("[StudyGuideAgent] generated topic from PDF:", data.topic);
+
+        // Update current_chunk index in the database
+        const nextChunk = chunkIdx + 1;
+        await pool.query(
+          `
+            UPDATE agents
+            SET parsed_intent = jsonb_set(
+                  parsed_intent,
+                  '{current_chunk}',
+                  $1::jsonb
+                )
+            WHERE id = $2
+          `,
+          [nextChunk, agent.id]
+        );
+
+        const completed = false;
+        const actions = [
+          { id: "done", label: "Done", style: "primary" },
+          { id: "snooze", label: "Snooze 30min", style: "secondary" },
+          { id: "skip", label: "Skip today", style: "ghost" }
+        ] as const;
+
+        return renderedStudyGuide(
+          {
+            topic: data.topic,
+            definition: data.definition,
+            references: data.references,
+            completed,
+            actions: actions as any
+          },
+          {
+            tokensUsed: totalAnthropicTokens(response)
+          }
+        );
+      }
+    } catch (err) {
+      console.error("[StudyGuideAgent] PDF study guide generation failed, falling back to standard generation:", err);
+    }
+  }
+
+  // Fallback to standard standard course generator if no Drive PDF is available
   try {
     const response = await createAnthropicMessage({
       maxTokens: 1000,
