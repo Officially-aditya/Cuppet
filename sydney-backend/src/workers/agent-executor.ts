@@ -201,19 +201,19 @@ const connectorPendingConfigs: Record<string, ConnectorPendingConfig> = {
 const renderers: Record<string, AgentRenderer> = {
   tech_news_brief: ({ agent, trigger }) =>
     createTechNewsBrief(agent.prompt, trigger, {
-      heading: scheduledIntro(agent, "tech news")
+      heading: scheduledIntro(agent, "tech news", trigger)
     }),
   news_brief: ({ agent, trigger }) =>
     createGeneralNewsBrief(agent.prompt, trigger, {
-      heading: scheduledIntro(agent, topicLabel(agent.prompt, "news"))
+      heading: scheduledIntro(agent, topicLabel(agent.prompt, "news"), trigger)
     }),
   job_market_radar: ({ agent, trigger }) =>
     createGeneralNewsBrief(agent.prompt, trigger, {
-      heading: scheduledIntro(agent, "job market radar")
+      heading: scheduledIntro(agent, "job market radar", trigger)
     }),
   web_search_agent: ({ agent, trigger }) =>
     createGeneralNewsBrief(agent.prompt, trigger, {
-      heading: scheduledIntro(agent, "web search")
+      heading: scheduledIntro(agent, "web search", trigger)
     }),
   scheduled_reminder: ({ agent, trigger }) =>
     renderScheduledReminder(agent, trigger),
@@ -600,16 +600,16 @@ async function renderAgentMessage(
   const connectorPending = connectorPendingConfigs[intentName(agent)];
   if (connectorPending) {
     const googleWorkspaceMessage = await renderGoogleWorkspaceAgent(agent, {
-      scheduledIntro,
-      scheduledTitle
+      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
+      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
     });
     if (googleWorkspaceMessage) {
       return googleWorkspaceMessage;
     }
 
     const githubMessage = await renderGitHubAgent(agent, {
-      scheduledIntro,
-      scheduledTitle
+      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
+      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
     });
     if (githubMessage) {
       return githubMessage;
@@ -641,15 +641,15 @@ async function renderScheduledReminder(
   let sourceRefs: unknown[] = [];
   let tokensUsed = 0;
   const reminder = reminderWithoutDynamicRequests(action);
-  const heading = scheduledIntro(agent, "update");
+  const heading = scheduledIntro(agent, "update", trigger);
 
   if (includeNews || includeTechNews) {
     const news = includeTechNews
       ? await createTechNewsBrief(agent.prompt, trigger, {
-          heading: scheduledIntro(agent, "tech news")
+          heading: scheduledIntro(agent, "tech news", trigger)
         })
       : await createGeneralNewsBrief(agent.prompt, trigger, {
-          heading: scheduledIntro(agent, "news")
+          heading: scheduledIntro(agent, "news", trigger)
         });
 
     if (news.content.template === "news_brief") {
@@ -758,7 +758,7 @@ async function renderCustomAgent(
     agentName: agent.name,
     prompt: agent.prompt,
     action: actionText(agent),
-    heading: scheduledIntro(agent, "update")
+    heading: scheduledIntro(agent, "update", trigger)
   });
   if (llmRendered) {
     return llmRendered;
@@ -766,7 +766,7 @@ async function renderCustomAgent(
 
   return renderedPlainText(
     [
-      scheduledIntro(agent, "update"),
+      scheduledIntro(agent, "update", trigger),
       actionText(agent),
       "",
       "This agent does not require an external connector, so this run delivered the saved instruction directly."
@@ -1417,11 +1417,14 @@ function outputTemplate(agent: AgentRow): string {
   return String(parsedIntent.output_template ?? "plain_text");
 }
 
-function scheduledIntro(agent: AgentRow, label: string): string {
-  return `${scheduledTitle(agent, label)}.`;
+function scheduledIntro(agent: AgentRow, label: string, trigger?: "schedule" | "manual"): string {
+  return `${scheduledTitle(agent, label, trigger)}.`;
 }
 
-function scheduledTitle(agent: AgentRow, label: string): string {
+function scheduledTitle(agent: AgentRow, label: string, trigger?: "schedule" | "manual"): string {
+  if (trigger === "manual") {
+    return `Here's the ${label} you requested`;
+  }
   const time = scheduleTimeLabel(agent.schedule_cron);
   return time ? `Here's your ${time} ${label}` : `Here's your ${label}`;
 }

@@ -17,11 +17,15 @@ class DataSummaryTemplate extends StatelessWidget {
     final metrics = _maps(data['metrics']);
     final items = _maps(data['items']);
     final blocks = _summaryBlocks(summary, title);
+    final showIntro = intro != null &&
+        intro.isNotEmpty &&
+        intro.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase() !=
+            title.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (intro != null && intro.isNotEmpty) ...[
+        if (showIntro) ...[
           MarkdownText(
             text: intro,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
