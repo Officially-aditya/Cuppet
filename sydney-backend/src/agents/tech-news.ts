@@ -108,7 +108,7 @@ async function createWebNewsBrief(input: {
 
   const heading = input.options.heading || "News brief";
   const parsed = parseNewsBriefText(heading, body);
-  return renderedNewsBrief(parsed, {
+  return renderedNewsBrief({ ...parsed, initialItemCount: 3 }, {
     sourceRefs: extractSourceRefs(allContent),
     tokensUsed
   });
@@ -137,9 +137,17 @@ function buildNewsSystemPrompt(input: {
   focus: string;
   userPrompt: string;
 }): string {
+  const todayStr = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
   return [
     `You are Sydney's ${input.agentName}.`,
+    `Today's date is ${todayStr}.`,
     "Use web search for current information.",
+    "CRITICAL: Search results must be extremely fresh. ONLY include news stories published within the last 24 to 48 hours. Do NOT include search results or news stories older than 2 days.",
     "Return only the final digest. Do not mention that you searched.",
     "Keep it concise: one short headline sentence, then exactly 6 to 7 numbered items.",
     "Each numbered item must be a clear, concise TLDR; style summary of the news, explaining the event, context, and why it matters in 2-3 sentences.",
@@ -152,11 +160,17 @@ function buildNewsSystemPrompt(input: {
 }
 
 function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
+  const todayStr = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
   return [
-    "Create today's technology news brief.",
+    `Create today's technology news brief. Today's date is ${todayStr}.`,
     userInstructionBlock("original_user_request", userPrompt, 4000),
     `Run trigger: ${trigger}.`,
-    "Search the web for recent, high-signal technology news from reputable sources that are directly relevant to the user's original request.",
+    "Search the web for extremely fresh, recent, high-signal technology news (published within the last 24-48 hours) from reputable sources that are directly relevant to the user's original request. Do not return old search results.",
     "If the request specifies a topic, focus your search and all news brief items exclusively on that topic.",
     "Use this exact output shape:",
     "Tech news brief for today:",
@@ -171,11 +185,17 @@ function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): stri
 }
 
 function buildGeneralNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
+  const todayStr = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
   return [
-    "Create today's news brief.",
+    `Create today's news brief. Today's date is ${todayStr}.`,
     userInstructionBlock("original_user_request", userPrompt, 4000),
     `Run trigger: ${trigger}.`,
-    "Search the web for recent, high-signal news from reputable sources that are directly relevant to the user's original request.",
+    "Search the web for extremely fresh, recent, high-signal news (published within the last 24-48 hours) from reputable sources that are directly relevant to the user's original request. Do not return old search results.",
     "If the request specifies a topic, focus your search and all news brief items exclusively on that topic.",
     "Use this exact output shape:",
     "News brief for today:",

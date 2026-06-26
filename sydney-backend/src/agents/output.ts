@@ -139,6 +139,7 @@ export type NewsBriefMessageContent = {
   data: {
     title: string;
     items: NewsBriefItem[];
+    initialItemCount?: number;
   };
 };
 
@@ -158,6 +159,7 @@ export type StudyGuideMessageContent = {
       label: string;
       style?: "primary" | "secondary" | "ghost";
     }>;
+    initiallyCollapsed?: boolean;
   };
 };
 

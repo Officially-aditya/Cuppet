@@ -4,21 +4,36 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
 
-class StudyGuideTemplate extends StatelessWidget {
+class StudyGuideTemplate extends StatefulWidget {
   const StudyGuideTemplate({required this.data, this.onAction, super.key});
 
   final Map<String, dynamic> data;
   final ValueChanged<Map<String, dynamic>>? onAction;
 
   @override
+  State<StudyGuideTemplate> createState() => _StudyGuideTemplateState();
+}
+
+class _StudyGuideTemplateState extends State<StudyGuideTemplate> {
+  bool _isExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final topic = data['topic']?.toString() ?? 'Daily Topic';
-    final definition = data['definition']?.toString() ?? 'No description was provided.';
-    final completed = data['completed'] == true;
-    final actionTaken = data['action_taken']?.toString();
+    final topic = widget.data['topic']?.toString() ?? 'Daily Topic';
+    final definition = widget.data['definition']?.toString() ?? 'No description was provided.';
+    final completed = widget.data['completed'] == true;
+    final actionTaken = widget.data['action_taken']?.toString();
     final showActions = !completed && actionTaken == null;
-    final references = _maps(data['references']);
-    final actions = _maps(data['actions']);
+    final references = _maps(widget.data['references']);
+    final actions = _maps(widget.data['actions']);
+
+    final initiallyCollapsed = widget.data['initially_collapsed'] == true;
+    final shouldCollapse = initiallyCollapsed && !_isExpanded;
+
+    // Truncate definition to first 180 characters if collapsed
+    final displayText = shouldCollapse
+        ? (definition.length > 180 ? '${definition.substring(0, 180)}...' : definition)
+        : definition;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,49 +64,95 @@ class StudyGuideTemplate extends StatelessWidget {
           ],
         ),
         const SizedBox(height: SydneySpacing.md),
-        MarkdownText(
-          text: definition,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            height: 1.4,
-            color: SydneyColors.onSurface,
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MarkdownText(
+                text: displayText,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  height: 1.4,
+                  color: SydneyColors.onSurface,
+                ),
+              ),
+              if (!shouldCollapse && references.isNotEmpty) ...[
+                const SizedBox(height: SydneySpacing.md),
+                Text(
+                  'REFERENCES',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: SydneyColors.primary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: SydneySpacing.xs),
+                Column(
+                  children: [
+                    for (final ref in references)
+                      _ReferenceItem(
+                        title: ref['title']?.toString() ?? 'Learning Resource',
+                        url: ref['url']?.toString() ?? '',
+                      ),
+                  ],
+                ),
+              ],
+              if (!shouldCollapse && showActions && actions.isNotEmpty) ...[
+                const SizedBox(height: SydneySpacing.md),
+                const Divider(height: 1, color: SydneyColors.line),
+                const SizedBox(height: SydneySpacing.md),
+                Wrap(
+                  spacing: SydneySpacing.sm,
+                  runSpacing: SydneySpacing.sm,
+                  children: [
+                    for (final action in actions)
+                      _ActionPill(
+                        label: action['label']?.toString() ?? 'Action',
+                        styleName: action['style']?.toString() ?? 'secondary',
+                        onPressed: widget.onAction == null ? null : () => widget.onAction!(action),
+                      ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
-        if (references.isNotEmpty) ...[
+        if (initiallyCollapsed) ...[
           const SizedBox(height: SydneySpacing.md),
-          Text(
-            'REFERENCES',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
+              },
+              icon: Icon(
+                _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                color: SydneyColors.primary,
+                size: 18,
+              ),
+              label: Text(
+                _isExpanded ? 'Collapse lesson' : 'Read lesson',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: SydneyColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: SydneySpacing.lg,
+                  vertical: SydneySpacing.sm,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(SydneyRadius.full),
+                  side: const BorderSide(color: SydneyColors.line),
+                ),
+                backgroundColor: SydneyColors.surface,
+              ),
             ),
-          ),
-          const SizedBox(height: SydneySpacing.xs),
-          Column(
-            children: [
-              for (final ref in references)
-                _ReferenceItem(
-                  title: ref['title']?.toString() ?? 'Learning Resource',
-                  url: ref['url']?.toString() ?? '',
-                ),
-            ],
-          ),
-        ],
-        if (showActions && actions.isNotEmpty) ...[
-          const SizedBox(height: SydneySpacing.md),
-          const Divider(height: 1, color: SydneyColors.line),
-          const SizedBox(height: SydneySpacing.md),
-          Wrap(
-            spacing: SydneySpacing.sm,
-            runSpacing: SydneySpacing.sm,
-            children: [
-              for (final action in actions)
-                _ActionPill(
-                  label: action['label']?.toString() ?? 'Action',
-                  styleName: action['style']?.toString() ?? 'secondary',
-                  onPressed: onAction == null ? null : () => onAction!(action),
-                ),
-            ],
           ),
         ],
       ],

@@ -3,16 +3,31 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
 
-class NewsBriefTemplate extends StatelessWidget {
+class NewsBriefTemplate extends StatefulWidget {
   const NewsBriefTemplate({required this.data, super.key});
 
   final Map<String, dynamic> data;
 
   @override
+  State<NewsBriefTemplate> createState() => _NewsBriefTemplateState();
+}
+
+class _NewsBriefTemplateState extends State<NewsBriefTemplate> {
+  bool _isExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final title = data['title']?.toString() ?? 'Update';
-    final itemsList = data['items'];
+    final title = widget.data['title']?.toString() ?? 'Update';
+    final itemsList = widget.data['items'];
     final items = _normalizedItems(itemsList);
+
+    final initialCountVal = widget.data['initial_item_count'];
+    final initialCount = initialCountVal is num ? initialCountVal.toInt() : null;
+
+    final shouldTruncate = initialCount != null && items.length > initialCount;
+    final visibleItems = (shouldTruncate && !_isExpanded)
+        ? items.take(initialCount).toList()
+        : items;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,11 +58,62 @@ class NewsBriefTemplate extends StatelessWidget {
               ),
             ),
           )
-        else
-          for (final item in items) ...[
-            _NewsItemCard(item: item),
-            const SizedBox(height: SydneySpacing.sm),
+        else ...[
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final item in visibleItems) ...[
+                  _NewsItemCard(item: item),
+                  const SizedBox(height: SydneySpacing.sm),
+                ],
+              ],
+            ),
+          ),
+          if (shouldTruncate) ...[
+            const SizedBox(height: SydneySpacing.xs),
+            Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = !_isExpanded;
+                  });
+                },
+                icon: Icon(
+                  _isExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: SydneyColors.primary,
+                  size: 18,
+                ),
+                label: Text(
+                  _isExpanded
+                      ? 'Show less'
+                      : 'Show more (${items.length - initialCount} remaining)',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: SydneyColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: SydneySpacing.lg,
+                    vertical: SydneySpacing.sm,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(SydneyRadius.full),
+                    side: const BorderSide(color: SydneyColors.line),
+                  ),
+                  backgroundColor: SydneyColors.surface,
+                ),
+              ),
+            ),
           ],
+        ],
       ],
     );
   }

@@ -667,7 +667,8 @@ async function renderScheduledReminder(
 
       return renderedNewsBrief({
         title: news.content.data.title,
-        items
+        items,
+        initialItemCount: 3
       }, {
         sourceRefs: news.sourceRefs,
         tokensUsed: news.tokensUsed
@@ -893,7 +894,8 @@ async function renderStudyGuideAgent(context: {
             definition: data.definition,
             references: data.references,
             completed,
-            actions: actions as any
+            actions: actions as any,
+            initiallyCollapsed: true
           },
           {
             tokensUsed: totalAnthropicTokens(response)
@@ -964,7 +966,8 @@ async function renderStudyGuideAgent(context: {
         definition: data.definition,
         references: data.references,
         completed,
-        actions: actions as any
+        actions: actions as any,
+        initiallyCollapsed: true
       },
       {
         tokensUsed: totalAnthropicTokens(response)
