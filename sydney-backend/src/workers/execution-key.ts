@@ -1,6 +1,6 @@
 export type ExecutionKeyInput = {
   agentId: string;
-  trigger: "manual" | "schedule";
+  trigger: "manual" | "schedule" | "snooze";
   jobId?: string;
   timestamp: number;
   delay?: number;
@@ -9,6 +9,9 @@ export type ExecutionKeyInput = {
 export function agentExecutionKey(input: ExecutionKeyInput): string | null {
   if (input.trigger === "manual") {
     return input.jobId ? `manual:${input.agentId}:${input.jobId}` : null;
+  }
+  if (input.trigger === "snooze") {
+    return input.jobId ? `snooze:${input.agentId}:${input.jobId}` : null;
   }
 
   const scheduledTimestamp = timestampFromJobId(input.jobId)

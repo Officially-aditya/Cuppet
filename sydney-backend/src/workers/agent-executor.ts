@@ -37,7 +37,8 @@ import { pool } from "../db/index.js";
 import {
   agentExecutorQueueName,
   redisConnection,
-  type AgentExecutorJobData
+  type AgentExecutorJobData,
+  type AgentRunTrigger
 } from "../queue/index.js";
 import { isConnectorAuthRequiredError } from "../connectors/errors.js";
 import {
@@ -281,7 +282,7 @@ async function executeAgentJob(
   });
 
   try {
-    const rendered = await renderAgentMessage(agent, job.data.trigger);
+    const rendered = await renderAgentMessage(agent, job.data.trigger, job.data.snoozedMessageId);
     const message = await persistRunMessage({
       agent,
       runId: run.id,
@@ -595,8 +596,30 @@ async function publishRealtimeEventsSafely(
 
 async function renderAgentMessage(
   agent: AgentRow,
-  trigger: AgentExecutorJobData["trigger"]
+  trigger: AgentExecutorJobData["trigger"],
+  snoozedMessageId?: string
 ): Promise<RenderedAgentMessage> {
+  if (trigger === "snooze" && snoozedMessageId) {
+    const { rows } = await pool.query(
+      "SELECT content, source_refs FROM agent_messages WHERE id = $1 AND agent_id = $2",
+      [snoozedMessageId, agent.id]
+    );
+    const snoozedMsg = rows[0];
+    if (snoozedMsg) {
+      const content = typeof snoozedMsg.content === "string" ? JSON.parse(snoozedMsg.content) : snoozedMsg.content;
+      // Reset action_taken and completed fields so it appears as a fresh active message in the UI
+      if (content && content.data) {
+        delete content.data.action_taken;
+        content.data.completed = false;
+      }
+      return {
+        content,
+        sourceRefs: snoozedMsg.source_refs || [],
+        tokensUsed: 0
+      };
+    }
+  }
+
   const connectorPending = connectorPendingConfigs[intentName(agent)];
   if (connectorPending) {
     const googleWorkspaceMessage = await renderGoogleWorkspaceAgent(agent, {
@@ -1420,13 +1443,16 @@ function outputTemplate(agent: AgentRow): string {
   return String(parsedIntent.output_template ?? "plain_text");
 }
 
-function scheduledIntro(agent: AgentRow, label: string, trigger?: "schedule" | "manual"): string {
+function scheduledIntro(agent: AgentRow, label: string, trigger?: AgentRunTrigger): string {
   return `${scheduledTitle(agent, label, trigger)}.`;
 }
 
-function scheduledTitle(agent: AgentRow, label: string, trigger?: "schedule" | "manual"): string {
+function scheduledTitle(agent: AgentRow, label: string, trigger?: AgentRunTrigger): string {
   if (trigger === "manual") {
     return `Here's the ${label} you requested`;
+  }
+  if (trigger === "snooze") {
+    return `Here's your snoozed ${label}`;
   }
   const time = scheduleTimeLabel(agent.schedule_cron);
   return time ? `Here's your ${time} ${label}` : `Here's your ${label}`;

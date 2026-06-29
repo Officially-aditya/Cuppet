@@ -468,7 +468,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       // bullmq enqueue with delay of 30 minutes
       await agentExecutorQueue.add(
         agentExecutorJobName,
-        { agentId, trigger: "schedule" },
+        { agentId, trigger: "snooze", snoozedMessageId: messageId },
         {
           delay: 30 * 60 * 1000,
           attempts: 2,

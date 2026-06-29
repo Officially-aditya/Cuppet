@@ -10,11 +10,12 @@ const redisUrl = new URL(config.REDIS_URL);
 export const agentExecutorQueueName = "agent-executor";
 export const agentExecutorJobName = "agent.execute";
 
-export type AgentRunTrigger = "manual" | "schedule";
+export type AgentRunTrigger = "manual" | "schedule" | "snooze";
 
 export type AgentExecutorJobData = {
   agentId: string;
   trigger: AgentRunTrigger;
+  snoozedMessageId?: string;
 };
 
 export const redisConnection: ConnectionOptions = {

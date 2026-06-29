@@ -35,3 +35,21 @@ test("manual jobs retain distinct delivery keys", () => {
 
   assert.notEqual(first, second);
 });
+
+test("snooze jobs retain distinct delivery keys", () => {
+  const first = agentExecutionKey({
+    agentId: "agent-1",
+    trigger: "snooze",
+    jobId: "snooze-1",
+    timestamp: 1781965800000
+  });
+  const second = agentExecutionKey({
+    agentId: "agent-1",
+    trigger: "snooze",
+    jobId: "snooze-2",
+    timestamp: 1781965800000
+  });
+
+  assert.notEqual(first, second);
+  assert.match(first!, /^snooze:/);
+});
