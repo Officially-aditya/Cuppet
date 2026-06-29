@@ -26,6 +26,10 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
 
     final columns = <Widget>[];
 
+    const double cellSize = 12.0;
+    const double cellSpacing = 3.0;
+    const double totalHeight = cellSize + cellSpacing; // 15.0
+
     for (int week = 0; week < 16; week++) {
       final weekDays = <Widget>[];
       for (int day = 0; day < 7; day++) {
@@ -49,15 +53,20 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
 
         weekDays.add(
           Container(
-            width: 11,
-            height: 11,
-            margin: const EdgeInsets.only(bottom: 3),
+            width: cellSize,
+            height: cellSize,
+            margin: const EdgeInsets.only(bottom: cellSpacing),
             decoration: BoxDecoration(
               color: cellColor,
-              borderRadius: BorderRadius.circular(2.5),
+              borderRadius: BorderRadius.circular(3),
               border: isFuture
                   ? null
-                  : Border.all(color: SydneyColors.line.withValues(alpha: 0.3), width: 0.5),
+                  : Border.all(
+                      color: isCompleted
+                          ? SydneyColors.primaryDark.withValues(alpha: 0.15)
+                          : SydneyColors.line.withValues(alpha: 0.4),
+                      width: 0.5,
+                    ),
             ),
           ),
         );
@@ -65,7 +74,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
 
       columns.add(
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 1.25),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: weekDays,
@@ -73,6 +82,8 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
         ),
       );
     }
+
+    final totalCompleted = widget.history.values.where((v) => v == true).length;
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -98,49 +109,60 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             borderRadius: BorderRadius.circular(SydneyRadius.md),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  Icon(
-                    _getIcon(widget.intent),
-                    color: SydneyColors.primary,
-                    size: 16,
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: SydneyColors.primarySoft,
+                      borderRadius: BorderRadius.circular(SydneyRadius.sm),
+                    ),
+                    child: Icon(
+                      _getIcon(widget.intent),
+                      color: SydneyColors.primary,
+                      size: 14,
+                    ),
                   ),
-                  const SizedBox(width: SydneySpacing.sm),
+                  const SizedBox(width: SydneySpacing.md),
                   Text(
                     _getTitle(widget.intent),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: SydneyColors.primary,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
+                      letterSpacing: 0.8,
                     ),
                   ),
                   const Spacer(),
                   Text(
-                    '${widget.history.values.where((v) => v == true).length} ${_getSuffix(widget.intent)}',
+                    '$totalCompleted ${_getSuffix(widget.intent)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurfaceVariant,
-                      fontSize: 10,
+                      color: SydneyColors.mutedInk,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
                     ),
                   ),
-                  const SizedBox(width: SydneySpacing.xs),
+                  const SizedBox(width: SydneySpacing.sm),
                   Icon(
                     _isExpanded
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    color: SydneyColors.onSurfaceVariant,
-                    size: 16,
+                    color: SydneyColors.subtleInk,
+                    size: 18,
                   ),
                 ],
               ),
             ),
           ),
-          if (_isExpanded) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Divider(color: SydneyColors.line, height: 16),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -150,10 +172,10 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           for (int i = 0; i < 7; i++)
-                            _buildDynamicDayLabel(startWeekday, i, 14),
+                            _buildDynamicDayLabel(startWeekday, i, totalHeight),
                         ],
                       ),
-                      const SizedBox(width: SydneySpacing.sm),
+                      const SizedBox(width: SydneySpacing.md),
                       // Heatmap Grid
                       Expanded(
                         child: SingleChildScrollView(
@@ -167,28 +189,27 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: SydneySpacing.sm),
+                  const SizedBox(height: SydneySpacing.md),
                   // Legend
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         'Less',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SydneyColors.mutedInk,
+                              color: SydneyColors.subtleInk,
                               fontSize: 9,
                             ),
                       ),
                       const SizedBox(width: 4),
                       _legendBox(SydneyColors.surfaceContainerHigh),
-                      const SizedBox(width: 2),
+                      const SizedBox(width: 2.5),
                       _legendBox(SydneyColors.primary),
                       const SizedBox(width: 4),
                       Text(
                         'More',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SydneyColors.mutedInk,
+                              color: SydneyColors.subtleInk,
                               fontSize: 9,
                             ),
                       ),
@@ -197,23 +218,10 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
                 ],
               ),
             ),
-          ],
+            crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _dayLabel(String label) {
-    return Container(
-      height: 14,
-      alignment: Alignment.centerLeft,
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 8,
-          color: SydneyColors.mutedInk,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
@@ -224,9 +232,9 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       height: 10,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(2.5),
         border: Border.all(
-          color: SydneyColors.line.withValues(alpha: 0.3),
+          color: SydneyColors.line.withValues(alpha: 0.4),
           width: 0.5,
         ),
       ),
@@ -241,6 +249,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       'coding_tip' => Icons.code_rounded,
       'book_companion' => Icons.menu_book_rounded,
       'dsa_question' => Icons.code_rounded,
+      'habit_tracker' => Icons.local_fire_department_rounded,
       _ => Icons.trending_up_rounded,
     };
   }
@@ -248,11 +257,12 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
   String _getTitle(String? intent) {
     return switch (intent) {
       'study_plan' => 'STUDY PROGRESS',
-      'interview_prep' => 'INTERVIEW PREP PROGRESS',
-      'language_word' => 'VOCABULARY PROGRESS',
-      'coding_tip' => 'CODING PROGRESS',
-      'book_companion' => 'READING PROGRESS',
-      'dsa_question' => 'DSA PRACTICE PROGRESS',
+      'interview_prep' => 'INTERVIEW PREP',
+      'language_word' => 'VOCABULARY BUILDER',
+      'coding_tip' => 'CODING PRACTICE',
+      'book_companion' => 'READING LOG',
+      'dsa_question' => 'DSA PRACTICE',
+      'habit_tracker' => 'HABIT TRACKER',
       _ => 'ACTIVITY HISTORY',
     };
   }
@@ -265,6 +275,7 @@ class _SydneyHeatmapState extends State<SydneyHeatmap> {
       'coding_tip' => 'days coded',
       'book_companion' => 'days read',
       'dsa_question' => 'problems solved',
+      'habit_tracker' => 'days active',
       _ => 'days active',
     };
   }
@@ -317,6 +328,10 @@ class SydneyHeatmapSheet extends StatelessWidget {
     final startOfWeek = today.subtract(Duration(days: alignOffset));
     final gridStart = startOfWeek.subtract(const Duration(days: 15 * 7));
 
+    const double cellSize = 12.0;
+    const double cellSpacing = 3.0;
+    const double totalHeight = cellSize + cellSpacing; // 15.0
+
     final columns = <Widget>[];
     for (int week = 0; week < 16; week++) {
       final weekDays = <Widget>[];
@@ -341,16 +356,18 @@ class SydneyHeatmapSheet extends StatelessWidget {
 
         weekDays.add(
           Container(
-            width: 10,
-            height: 10,
-            margin: const EdgeInsets.only(bottom: 3),
+            width: cellSize,
+            height: cellSize,
+            margin: const EdgeInsets.only(bottom: cellSpacing),
             decoration: BoxDecoration(
               color: cellColor,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(3),
               border: isFuture
                   ? null
                   : Border.all(
-                      color: SydneyColors.line.withValues(alpha: 0.15),
+                      color: isCompleted
+                          ? SydneyColors.primaryDark.withValues(alpha: 0.15)
+                          : SydneyColors.line.withValues(alpha: 0.4),
                       width: 0.5,
                     ),
             ),
@@ -360,7 +377,7 @@ class SydneyHeatmapSheet extends StatelessWidget {
 
       columns.add(
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 1.25),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: weekDays,
@@ -452,6 +469,8 @@ class SydneyHeatmapSheet extends StatelessWidget {
                   label: _getSuffix(intent),
                   value: '$totalCompleted',
                   icon: Icons.check_circle_outline_rounded,
+                  color: totalCompleted > 0 ? SydneyColors.primary : SydneyColors.subtleInk,
+                  backgroundColor: totalCompleted > 0 ? SydneyColors.primarySoft : SydneyColors.surfaceContainerLow,
                 ),
               ),
               const SizedBox(width: SydneySpacing.md),
@@ -460,7 +479,8 @@ class SydneyHeatmapSheet extends StatelessWidget {
                   label: 'Current Streak',
                   value: '$currentStreak days',
                   icon: Icons.local_fire_department_rounded,
-                  color: currentStreak > 0 ? const Color(0xFFE25822) : null,
+                  color: currentStreak > 0 ? const Color(0xFFE25822) : SydneyColors.subtleInk,
+                  backgroundColor: currentStreak > 0 ? const Color(0xFFFFF5F0) : SydneyColors.surfaceContainerLow,
                 ),
               ),
             ],
@@ -471,7 +491,7 @@ class SydneyHeatmapSheet extends StatelessWidget {
           Text(
             'LAST 16 WEEKS',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.mutedInk,
+                  color: SydneyColors.subtleInk,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.6,
                 ),
@@ -486,10 +506,10 @@ class SydneyHeatmapSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (int i = 0; i < 7; i++)
-                    _buildDynamicDayLabel(startWeekday, i, 13),
+                    _buildDynamicDayLabel(startWeekday, i, totalHeight),
                 ],
               ),
-              const SizedBox(width: SydneySpacing.sm),
+              const SizedBox(width: SydneySpacing.md),
               // Heatmap Grid
               Expanded(
                 child: SingleChildScrollView(
@@ -527,19 +547,19 @@ class SydneyHeatmapSheet extends StatelessWidget {
                   Text(
                     'Less',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.mutedInk,
+                          color: SydneyColors.subtleInk,
                           fontSize: 9,
                         ),
                   ),
                   const SizedBox(width: 4),
                   _legendBox(SydneyColors.surfaceContainerHigh),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 2.5),
                   _legendBox(SydneyColors.primary),
                   const SizedBox(width: 4),
                   Text(
                     'More',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.mutedInk,
+                          color: SydneyColors.subtleInk,
                           fontSize: 9,
                         ),
                   ),
@@ -552,30 +572,15 @@ class SydneyHeatmapSheet extends StatelessWidget {
     );
   }
 
-  Widget _dayLabel(String label) {
-    return Container(
-      height: 13,
-      alignment: Alignment.centerLeft,
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 8,
-          color: SydneyColors.mutedInk,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _legendBox(Color color) {
     return Container(
-      width: 9,
-      height: 9,
+      width: 10,
+      height: 10,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(2.5),
         border: Border.all(
-          color: SydneyColors.line.withValues(alpha: 0.3),
+          color: SydneyColors.line.withValues(alpha: 0.4),
           width: 0.5,
         ),
       ),
@@ -635,22 +640,29 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     this.color,
+    this.backgroundColor,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final Color? color;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     final themeColor = color ?? SydneyColors.primary;
+    final bg = backgroundColor ?? SydneyColors.surfaceContainerLow;
     return Container(
       padding: const EdgeInsets.all(SydneySpacing.md),
       decoration: BoxDecoration(
-        color: SydneyColors.surfaceContainerLow,
+        color: bg,
         borderRadius: BorderRadius.circular(SydneyRadius.md),
-        border: Border.all(color: SydneyColors.line),
+        border: Border.all(
+          color: bg == SydneyColors.surfaceContainerLow
+              ? SydneyColors.line
+              : themeColor.withValues(alpha: 0.15),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,7 +674,7 @@ class _StatCard extends StatelessWidget {
                 color: themeColor,
                 size: 16,
               ),
-              const SizedBox(width: SydneySpacing.xs),
+              const SizedBox(width: SydneySpacing.sm),
               Expanded(
                 child: Text(
                   label.toUpperCase(),
@@ -678,7 +690,7 @@ class _StatCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: SydneySpacing.xs),
+          const SizedBox(height: SydneySpacing.sm),
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -717,9 +729,13 @@ int _getStartWeekday(Map<String, dynamic> history) {
 Widget _buildDynamicDayLabel(int startWeekday, int row, double height) {
   final rowWeekday = (startWeekday + row - 1) % 7 + 1;
   String text = '';
-  if (rowWeekday == 1) text = 'M';
-  else if (rowWeekday == 3) text = 'W';
-  else if (rowWeekday == 5) text = 'F';
+  if (rowWeekday == 1) {
+    text = 'M';
+  } else if (rowWeekday == 3) {
+    text = 'W';
+  } else if (rowWeekday == 5) {
+    text = 'F';
+  }
 
   return Container(
     height: height,
@@ -728,7 +744,7 @@ Widget _buildDynamicDayLabel(int startWeekday, int row, double height) {
       text,
       style: const TextStyle(
         fontSize: 8,
-        color: SydneyColors.mutedInk,
+        color: SydneyColors.subtleInk,
         fontWeight: FontWeight.bold,
       ),
     ),
