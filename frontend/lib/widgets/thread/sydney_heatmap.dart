@@ -727,13 +727,12 @@ int _getStartWeekday(Map<String, dynamic> history) {
 }
 
 Widget _buildDynamicDayLabel(int startWeekday, int row, double height) {
-  final rowWeekday = (startWeekday + row - 1) % 7 + 1;
   String text = '';
-  if (rowWeekday == 1) {
+  if (row == 1) {
     text = 'M';
-  } else if (rowWeekday == 3) {
+  } else if (row == 3) {
     text = 'W';
-  } else if (rowWeekday == 5) {
+  } else if (row == 5) {
     text = 'F';
   }
 
