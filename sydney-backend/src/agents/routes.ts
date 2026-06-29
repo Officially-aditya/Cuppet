@@ -86,6 +86,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           SELECT id, role, content, created_at
           FROM agent_messages
           WHERE agent_id = a.id AND user_id = a.user_id
+            AND (content->'data'->>'action_taken' IS NULL OR content->'data'->>'action_taken' != 'skip')
           ORDER BY
             created_at DESC,
             CASE role
@@ -450,6 +451,57 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         [dateString, agentId, userId]
       );
     } else if (action === "skip") {
+      // Get the message content to check template and retrieve the topic or title
+      const msgRes = await pool.query(
+        "SELECT content FROM agent_messages WHERE id = $1 AND agent_id = $2 AND user_id = $3",
+        [messageId, agentId, userId]
+      );
+      const msg = msgRes.rows[0];
+      if (msg) {
+        const content = typeof msg.content === "string" ? JSON.parse(msg.content) : msg.content;
+        if (content && content.template === "study_guide" && content.data && content.data.topic) {
+          await pool.query(
+            `
+              UPDATE agents
+              SET parsed_intent = jsonb_set(
+                parsed_intent,
+                '{topics_covered}',
+                coalesce(
+                  (
+                    SELECT jsonb_agg(elem)
+                    FROM jsonb_array_elements(coalesce(parsed_intent->'topics_covered', '[]'::jsonb)) elem
+                    WHERE elem != $1::jsonb
+                  ),
+                  '[]'::jsonb
+                )
+              )
+              WHERE id = $2 AND user_id = $3
+            `,
+            [JSON.stringify(content.data.topic), agentId, userId]
+          );
+        } else if (content && content.template === "dsa_question" && content.data && content.data.title) {
+          await pool.query(
+            `
+              UPDATE agents
+              SET parsed_intent = jsonb_set(
+                parsed_intent,
+                '{topics_covered}',
+                coalesce(
+                  (
+                    SELECT jsonb_agg(elem)
+                    FROM jsonb_array_elements(coalesce(parsed_intent->'topics_covered', '[]'::jsonb)) elem
+                    WHERE elem != $1::jsonb
+                  ),
+                  '[]'::jsonb
+                )
+              )
+              WHERE id = $2 AND user_id = $3
+            `,
+            [JSON.stringify(content.data.title), agentId, userId]
+          );
+        }
+      }
+
       // Mark card as not completed and set action_taken to "skip"
       await pool.query(
         `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'false'::jsonb), '{data,action_taken}', '"skip"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3`,

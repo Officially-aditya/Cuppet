@@ -282,7 +282,32 @@ async function executeAgentJob(
   });
 
   try {
-    const rendered = await renderAgentMessage(agent, job.data.trigger, job.data.snoozedMessageId);
+    let skippedMessageId: string | undefined;
+    if (job.data.trigger === "schedule") {
+      const { rows } = await pool.query<{ id: string; content: any }>(
+        `
+          SELECT id, content
+          FROM agent_messages
+          WHERE agent_id = $1 AND role = 'agent'
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+        [agent.id]
+      );
+      const lastMsg = rows[0];
+      if (lastMsg) {
+        const content = typeof lastMsg.content === "string" ? JSON.parse(lastMsg.content) : lastMsg.content;
+        if (content && content.data && content.data.action_taken === "skip") {
+          skippedMessageId = lastMsg.id;
+        }
+      }
+    }
+
+    const isSnooze = job.data.trigger === "snooze" && job.data.snoozedMessageId;
+    const targetSnoozedId = isSnooze ? job.data.snoozedMessageId : skippedMessageId;
+    const targetTrigger = isSnooze || skippedMessageId ? ("snooze" as const) : job.data.trigger;
+
+    const rendered = await renderAgentMessage(agent, targetTrigger, targetSnoozedId);
     const message = await persistRunMessage({
       agent,
       runId: run.id,

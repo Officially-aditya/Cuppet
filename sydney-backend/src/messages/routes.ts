@@ -142,6 +142,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         SELECT id, agent_id, user_id, role, content, source_refs, read_at, created_at
         FROM agent_messages
         WHERE user_id = $1 AND agent_id = $2
+          AND (content->'data'->>'action_taken' IS NULL OR content->'data'->>'action_taken' != 'skip')
         ORDER BY
           created_at DESC,
           CASE role
