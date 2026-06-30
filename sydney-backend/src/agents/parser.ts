@@ -499,6 +499,18 @@ const CAPABILITIES: CapabilityDefinition[] = [
     match: { any: [/\bdsa\b/, /\bdata structures?\s*(?:and|&)\s*algorithms?\b/i, /\bleetcode\b/] }
   },
   {
+    name: "Content Extractor",
+    avatar: "file-text",
+    intent: "content_extractor",
+    connector: null,
+    action: "Finds latest relevant topics for content creation and generates post drafts.",
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "content_extractor",
+    permissionsNeeded: [],
+    priority: 38,
+    match: { any: [/\bcontent\b/, /\bextractor\b/, /\bpost\b/, /\btwitter\b/, /\blinkedin\b/, /\breddit\b/] }
+  },
+  {
     name: "Reminder",
     avatar: "bell",
     intent: "scheduled_reminder",
@@ -514,9 +526,11 @@ const CAPABILITIES: CapabilityDefinition[] = [
 
 export function parseIntent(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
-  const unsupported =
-    UNSUPPORTED_CONNECTORS.find((connector) => lower.includes(connector)) ??
-    (/\bx\b/.test(lower) ? "x" : undefined);
+  const isContentExtractor = lower.includes("content extractor") || (lower.includes("content") && lower.includes("extractor"));
+  const unsupported = isContentExtractor
+    ? undefined
+    : (UNSUPPORTED_CONNECTORS.find((connector) => lower.includes(connector)) ??
+       (/\bx\b/.test(lower) ? "x" : undefined));
 
   if (unsupported) {
     return baseIntent(prompt, {
@@ -937,6 +951,22 @@ export function parseIntent(prompt: string): ParsedIntent {
   }
 
   if (
+    lower.includes("content extractor") ||
+    (lower.includes("content") && lower.includes("extractor"))
+  ) {
+    return baseIntent(prompt, {
+      name: "Content Extractor",
+      avatar: "file-text",
+      intent: "content_extractor",
+      connector: null,
+      action: "Finds latest relevant topics for content creation and generates post drafts.",
+      schedule_cron: parseSchedule(lower) ?? "0 9 * * *",
+      output_template: "content_extractor",
+      permissions_needed: []
+    });
+  }
+
+  if (
     lower.includes("dsa") ||
     lower.includes("leetcode") ||
     /data structures?\s*(?:and|&)\s*algorithms?/i.test(lower)
@@ -1032,7 +1062,8 @@ function templateConfig(template: string): Record<string, boolean> {
       "daily_task",
       "streak_counter",
       "study_guide",
-      "dsa_question"
+      "dsa_question",
+      "content_extractor"
     ].includes(template),
     has_checklist: template === "checklist"
   };

@@ -22,6 +22,7 @@ import {
   renderedUrgencyList,
   renderedNewsBrief,
   renderedStudyGuide,
+  renderedContentExtractor,
   parseNewsBriefText,
   type AgentMessageContent,
   type RenderedAgentMessage,
@@ -31,7 +32,8 @@ import {
   anthropicConfigured,
   createAnthropicMessage,
   extractAnthropicText,
-  totalAnthropicTokens
+  totalAnthropicTokens,
+  type AnthropicTextMessage
 } from "../agents/anthropic.js";
 import { pool } from "../db/index.js";
 import {
@@ -80,6 +82,15 @@ const studyGuideResponseSchema = z.object({
     )
     .max(8)
     .default([])
+}).strict();
+
+const contentExtractorResponseSchema = z.object({
+  ideas: z.array(
+    z.object({
+      title: z.string().trim().min(1).max(200),
+      hook: z.string().trim().min(1).max(1000)
+    }).strict()
+  ).min(1).max(3)
 }).strict();
 
 const dsaQuestionResponseSchema = z.object({
@@ -231,7 +242,8 @@ const renderers: Record<string, AgentRenderer> = {
   relationship_nudge: ({ agent }) => renderRelationshipNudge(agent),
   gratitude_prompt: ({ agent }) => renderGratitudePrompt(agent),
   portfolio_watch: ({ agent }) => renderPortfolioWatch(agent),
-  competitor_watch: ({ agent }) => renderCompetitorWatch(agent)
+  competitor_watch: ({ agent }) => renderCompetitorWatch(agent),
+  content_extractor: ({ agent, trigger }) => renderContentExtractorAgent({ agent, trigger })
 };
 
 export function createAgentExecutorWorker(): Worker<AgentExecutorJobData> {
@@ -1756,6 +1768,14 @@ function errorMessage(error: unknown): string {
 
 
 function extractNotificationBody(content: AgentMessageContent): string {
+  if (content.template === "content_extractor") {
+    const ideas = content.data.ideas;
+    if (ideas && ideas.length > 0) {
+      return `Trending ideas: ${ideas.map(i => i.title).join(", ")}`.substring(0, 100);
+    }
+    return "Content creation ideas";
+  }
+
   if (content.template === "news_brief") {
     const items = content.data.items;
     if (items && items.length > 0) {
@@ -1816,4 +1836,109 @@ function extractNotificationBody(content: AgentMessageContent): string {
   }
 
   return "New message available";
+}
+
+async function renderContentExtractorAgent(context: {
+  agent: AgentRow;
+  trigger: AgentExecutorJobData["trigger"];
+}): Promise<RenderedAgentMessage> {
+  const { agent } = context;
+
+  if (!anthropicConfigured()) {
+    return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
+  }
+
+  try {
+    const todayStr = new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+
+    const systemPrompt = [
+      "You run a Sydney content extractor agent.",
+      `Today's date is ${todayStr}.`,
+      "Use web search to search the web for the latest, fresh trending news and topics in the user's niche (specified in the user prompt).",
+      "Then, identify exactly 3 distinct content creation ideas.",
+      "Each idea must have a title and a hook/explanation of why it is trending or relevant.",
+      "Return ONLY a valid JSON object matching this structure:",
+      "{",
+      '  "ideas": [',
+      '    {',
+      '      "title": "A short, catchy headline/hook for the content idea",',
+      '      "hook": "A brief explanation of why this topic is trending and how to write about it."',
+      '    }',
+      '  ]',
+      "}"
+    ].join("\n");
+
+    const messages: AnthropicTextMessage[] = [
+      {
+        role: "user",
+        content: [
+          userInstructionBlock("content_niche_prompt", agent.prompt, 4000),
+          "Search the web for the latest trending topics in my niche and return exactly 3 ideas in JSON format."
+        ].join("\n")
+      }
+    ];
+
+    let response = await createAnthropicMessage({
+      maxTokens: 1200,
+      system: systemPrompt,
+      messages,
+      tools: [
+        {
+          type: "web_search_20250305",
+          name: "web_search",
+          max_uses: 3
+        }
+      ]
+    });
+
+    let tokensUsed = totalAnthropicTokens(response);
+    const allContent = [...response.content];
+
+    for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
+      if (i >= 2) {
+        break;
+      }
+      messages.push({ role: "assistant", content: response.content });
+      response = await createAnthropicMessage({
+        maxTokens: 1200,
+        system: systemPrompt,
+        messages,
+        tools: [
+          {
+            type: "web_search_20250305",
+            name: "web_search",
+            max_uses: 3
+          }
+        ]
+      });
+      tokensUsed += totalAnthropicTokens(response);
+      allContent.push(...response.content);
+    }
+
+    const body = extractAnthropicText(response.content) || extractAnthropicText(allContent);
+    const match = body.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error("Invalid LLM response format: No JSON object found.");
+    }
+    const data = contentExtractorResponseSchema.parse(JSON.parse(match[0]));
+
+    return renderedContentExtractor(
+      {
+        ideas: data.ideas
+      },
+      {
+        tokensUsed
+      }
+    );
+  } catch (error: any) {
+    console.error("[ContentExtractorAgent] failed:", error);
+    return renderedPlainText(
+      `Content Extractor run failed: ${error?.message || error}`
+    );
+  }
 }

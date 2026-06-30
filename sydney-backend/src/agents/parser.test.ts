@@ -36,3 +36,12 @@ test("classifies GitHub repository activity as a GitHub connector agent", () => 
     "GitHub profile and repository read access"
   ]);
 });
+
+test("content extractor is not classified as unsupported even when mentioning twitter or linkedin", () => {
+  const parsed = parseIntent(
+    "Create a content extractor agent that searches the web for trending topics and generates Twitter, LinkedIn, or Reddit drafts."
+  );
+
+  assert.equal(parsed.intent, "content_extractor");
+  assert.equal(parsed.output_template, "content_extractor");
+});

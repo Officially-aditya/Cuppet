@@ -482,6 +482,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final actionId = action['id']?.toString() ?? '';
     final connectorId = _connectorIdFromAction(action);
 
+    if (actionType == 'generate_draft') {
+      final title = action['title']?.toString() ?? '';
+      await _sendReply('Generate draft for idea: "$title"');
+      return;
+    }
+
     if (actionId == 'done' || actionId == 'snooze' || actionId == 'skip') {
       final messageId = action['messageId']?.toString();
       if (messageId == null || messageId.isEmpty) {

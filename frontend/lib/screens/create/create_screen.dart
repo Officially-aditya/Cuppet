@@ -467,4 +467,16 @@ Create an agent that watches major updates for my portfolio and gives me a clear
 
 Focus on material price movement, earnings, regulatory updates, major news, and sentiment shifts. Do not invent market data. If a reliable connector or data source is missing, tell me what needs to be connected before running.''',
   ),
+  _AgentTemplate(
+    id: 'content_extractor',
+    label: 'Content extractor',
+    description: 'Finds trending topics and drafts Reddit, LinkedIn, or Twitter posts.',
+    icon: Icons.post_add_rounded,
+    prompt: '''
+Create a content extractor agent that searches the web for the latest trending topics in my niche.
+
+By default, format the output as a Twitter post draft. If I request LinkedIn or Reddit formats, adapt to those styles.
+
+Provide 3 distinct content ideas first. Each idea should have a title and a brief hook. Let me select an idea to generate a complete draft for it.''',
+  ),
 ];

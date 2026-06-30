@@ -192,6 +192,17 @@ export type DsaQuestionMessageContent = {
   };
 };
 
+export type ContentExtractorMessageContent = {
+  template: "content_extractor";
+  version: "1.0";
+  data: {
+    ideas: Array<{
+      title: string;
+      hook: string;
+    }>;
+  };
+};
+
 export type AgentMessageContent =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -203,7 +214,8 @@ export type AgentMessageContent =
   | ComparisonMessageContent
   | NewsBriefMessageContent
   | StudyGuideMessageContent
-  | DsaQuestionMessageContent;
+  | DsaQuestionMessageContent
+  | ContentExtractorMessageContent;
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;
@@ -304,6 +316,13 @@ export function renderedDsaQuestion(
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("dsa_question", data, meta);
+}
+
+export function renderedContentExtractor(
+  data: ContentExtractorMessageContent["data"],
+  meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
+): RenderedAgentMessage {
+  return rendered("content_extractor", data, meta);
 }
 
 export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {

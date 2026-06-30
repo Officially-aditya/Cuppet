@@ -14,6 +14,7 @@ import '../templates/system_template.dart';
 import '../templates/urgency_list_template.dart';
 import '../templates/study_guide_template.dart';
 import '../templates/dsa_question_template.dart';
+import '../templates/content_extractor_template.dart';
 
 class MessageCard extends StatelessWidget {
   const MessageCard({required this.message, this.onAction, super.key});
@@ -174,6 +175,14 @@ class _TemplateRouter extends StatelessWidget {
         },
       ),
       'dsa_question' => DsaQuestionTemplate(
+        data: data,
+        onAction: (actionData) {
+          if (onAction != null) {
+            onAction!({...actionData, 'messageId': message.id});
+          }
+        },
+      ),
+      'content_extractor' => ContentExtractorTemplate(
         data: data,
         onAction: (actionData) {
           if (onAction != null) {
