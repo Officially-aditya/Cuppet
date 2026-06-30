@@ -201,8 +201,8 @@ function agentChatSystemPrompt(
             "- Always wrap post drafts or content outputs in a markdown code block (using ```) so the user can easily copy it from a code window.",
             `- Adapt the writing style specifically for the ${platform.toUpperCase()} platform:`,
             `  * For TWITTER/X: Write the draft in an extremely short, concise manner. It MUST be strictly less than 280 characters in total length (including spaces).`,
-            `  * For LINKEDIN: Professional, paragraph-spaced, storytelling hooks, and business lessons.`,
-            `  * For REDDIT: Detailed, community-centric, formatted in markdown paragraphs.`,
+            `  * For LINKEDIN: Open the post with a concrete claim or number (do NOT open with a story). Keep paragraphs to exactly one line each. Do NOT include any links in the post body.`,
+            `  * For REDDIT: Write a specific or contrarian title. Match the subreddit's existing tone exactly. Use absolutely no corporate voice, no call-to-action (CTA), and no self-promotional text (do NOT write things like 'check out my...').`,
             "- Keep drafts clean, professional, and well-structured."
           ].join("\n");
         })()
