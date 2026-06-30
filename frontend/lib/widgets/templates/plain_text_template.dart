@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
@@ -31,7 +32,7 @@ class PlainTextTemplate extends StatelessWidget {
   }
 }
 
-enum _PlainTextBlockType { heading, paragraph, bullet, numbered, image }
+enum _PlainTextBlockType { heading, paragraph, bullet, numbered, image, code }
 
 class _PlainTextBlock {
   const _PlainTextBlock({required this.type, required this.text, this.number});
@@ -47,6 +48,7 @@ class _PlainTextBlock {
       _PlainTextBlockType.bullet ||
       _PlainTextBlockType.numbered => SydneySpacing.sm,
       _PlainTextBlockType.image => SydneySpacing.md,
+      _PlainTextBlockType.code => SydneySpacing.md,
     };
   }
 }
@@ -81,6 +83,7 @@ class _PlainTextBlockView extends StatelessWidget {
         text: block.text,
         textColor: textColor,
       ),
+      _PlainTextBlockType.code => _CodeBlockView(text: block.text),
       _PlainTextBlockType.image => Padding(
         padding: const EdgeInsets.symmetric(vertical: SydneySpacing.sm),
         child: ClipRRect(
@@ -161,6 +164,8 @@ class _IndentedLine extends StatelessWidget {
 List<_PlainTextBlock> _parseBlocks(String value) {
   final blocks = <_PlainTextBlock>[];
   final paragraphLines = <String>[];
+  final codeLines = <String>[];
+  var inCodeBlock = false;
 
   void flushParagraph() {
     if (paragraphLines.isEmpty) return;
@@ -173,8 +178,36 @@ List<_PlainTextBlock> _parseBlocks(String value) {
     paragraphLines.clear();
   }
 
+  void flushCode() {
+    if (codeLines.isEmpty) return;
+    blocks.add(
+      _PlainTextBlock(
+        type: _PlainTextBlockType.code,
+        text: codeLines.join('\n'),
+      ),
+    );
+    codeLines.clear();
+  }
+
   for (final rawLine in value.split('\n')) {
     final trimmed = rawLine.trim();
+
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        flushCode();
+        inCodeBlock = false;
+      } else {
+        flushParagraph();
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.add(rawLine);
+      continue;
+    }
+
     if (trimmed.isEmpty) {
       flushParagraph();
       continue;
@@ -230,6 +263,8 @@ List<_PlainTextBlock> _parseBlocks(String value) {
   }
 
   flushParagraph();
+  flushCode();
+
   return blocks.isEmpty
       ? [_PlainTextBlock(type: _PlainTextBlockType.paragraph, text: value)]
       : blocks;
@@ -250,11 +285,111 @@ String? _headingText(String value) {
   return null;
 }
 
-
-
 String _cleanInline(String value) {
   return value
       .replaceFirst(RegExp(r'^#{1,6}\s*'), '')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
+}
+
+class _CodeBlockView extends StatelessWidget {
+  const _CodeBlockView({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: SydneyColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SydneyColors.line, width: 0.8),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x04000000),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.md, vertical: 6),
+            decoration: const BoxDecoration(
+              color: SydneyColors.surfaceContainerLow,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              border: Border(
+                bottom: BorderSide(color: SydneyColors.line, width: 0.8),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.description_outlined, size: 14, color: SydneyColors.mutedInk),
+                const SizedBox(width: SydneySpacing.xs),
+                Text(
+                  'DRAFT POST',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: SydneyColors.mutedInk,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                ),
+                const Spacer(),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: text));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Draft copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.copy_rounded, size: 12, color: SydneyColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Copy',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: SydneyColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(SydneySpacing.md),
+            child: SelectionArea(
+              child: Text(
+                text,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: SydneyColors.ink,
+                      fontFamily: 'monospace',
+                      height: 1.4,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
