@@ -18,17 +18,47 @@ class ConnectorListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SydneyPanel(
-      onTap: compact ? () => onConnectedChanged(!connector.isConnected) : null,
-      padding: EdgeInsets.all(compact ? SydneySpacing.md : SydneySpacing.lg),
-      shadow: !compact,
-      child:
-          compact
-              ? _CompactConnector(connector: connector)
-              : _AdvancedConnector(
-                connector: connector,
-                onConnectedChanged: onConnectedChanged,
-              ),
+    final childWidget = compact
+        ? _CompactConnector(connector: connector)
+        : _AdvancedConnector(
+            connector: connector,
+            onConnectedChanged: onConnectedChanged,
+          );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: SydneyColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          // Neumorphic dark shadow (bottom-right)
+          BoxShadow(
+            color: const Color(0xFF17201C).withValues(alpha: 0.05),
+            offset: const Offset(4, 4),
+            blurRadius: 8,
+          ),
+          // Neumorphic light shadow (top-left)
+          const BoxShadow(
+            color: Colors.white,
+            offset: Offset(-4, -4),
+            blurRadius: 8,
+          ),
+        ],
+        border: Border.all(
+          color: SydneyColors.line.withValues(alpha: 0.35),
+          width: 0.8,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: compact ? () => onConnectedChanged(!connector.isConnected) : null,
+          child: Padding(
+            padding: EdgeInsets.all(compact ? SydneySpacing.md : SydneySpacing.lg),
+            child: childWidget,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -59,18 +89,18 @@ class _AdvancedConnector extends StatelessWidget {
                   Text(
                     connector.name,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: SydneyColors.onSurface,
-                      fontWeight: FontWeight.w800,
-                    ),
+                          color: SydneyColors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     connector.description,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: SydneyColors.onSurfaceVariant,
-                      fontWeight: FontWeight.w400,
-                      height: 1.35,
-                    ),
+                          color: SydneyColors.onSurfaceVariant,
+                          fontWeight: FontWeight.w400,
+                          height: 1.35,
+                        ),
                   ),
                 ],
               ),
@@ -109,9 +139,9 @@ class _CompactConnector extends StatelessWidget {
                     child: Text(
                       connector.name,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: SydneyColors.onSurface,
-                        fontWeight: FontWeight.w800,
-                      ),
+                            color: SydneyColors.ink,
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
                   ),
                   if (connector.isConnected ||
@@ -123,24 +153,20 @@ class _CompactConnector extends StatelessWidget {
                           connector.isConnected
                               ? Icons.check_rounded
                               : Icons.error_outline_rounded,
-                          color:
-                              connector.isConnected
-                                  ? SydneyColors.primary
-                                  : SydneyColors.warning,
+                          color: connector.isConnected
+                              ? SydneyColors.primary
+                              : SydneyColors.warning,
                           size: 10,
                         ),
                         const SizedBox(width: 2),
                         Text(
                           connector.isConnected ? 'Active' : 'Reconnect',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelSmall?.copyWith(
-                            color:
-                                connector.isConnected
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: connector.isConnected
                                     ? SydneyColors.primary
                                     : SydneyColors.warning,
-                            fontSize: 9,
-                          ),
+                                fontSize: 9,
+                              ),
                         ),
                       ],
                     ),
@@ -150,10 +176,10 @@ class _CompactConnector extends StatelessWidget {
               Text(
                 connector.description,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.mutedInk,
-                  fontWeight: FontWeight.w400,
-                  height: 1.35,
-                ),
+                      color: SydneyColors.mutedInk,
+                      fontWeight: FontWeight.w400,
+                      height: 1.35,
+                    ),
               ),
             ],
           ),
@@ -176,25 +202,22 @@ class _ConnectorStatusLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final connected = connector.isConnected;
     final actionRequired = connector.status == ConnectorStatus.actionRequired;
-    final linking =
-        connector.status == ConnectorStatus.linking ||
+    final linking = connector.status == ConnectorStatus.linking ||
         connector.status == ConnectorStatus.connecting;
-    final label =
-        linking
-            ? 'CONNECTING'
-            : connected
+    final label = linking
+        ? 'CONNECTING'
+        : connected
             ? 'CONNECTED'
             : actionRequired
-            ? 'RECONNECT REQUIRED'
-            : 'DISCONNECTED';
-    final statusColor =
-        linking
-            ? SydneyColors.info
-            : connected
+                ? 'RECONNECT REQUIRED'
+                : 'DISCONNECTED';
+    final statusColor = linking
+        ? SydneyColors.info
+        : connected
             ? SydneyColors.primary
             : actionRequired
-            ? SydneyColors.warning
-            : SydneyColors.onSurfaceVariant;
+                ? SydneyColors.warning
+                : SydneyColors.onSurfaceVariant;
 
     return Row(
       children: [
@@ -202,18 +225,17 @@ class _ConnectorStatusLine extends StatelessWidget {
           linking
               ? Icons.hourglass_top_rounded
               : connected
-              ? Icons.radio_button_checked_rounded
-              : actionRequired
-              ? Icons.error_outline_rounded
-              : Icons.radio_button_unchecked_rounded,
-          color:
-              linking
-                  ? SydneyColors.info
-                  : connected
+                  ? Icons.radio_button_checked_rounded
+                  : actionRequired
+                      ? Icons.error_outline_rounded
+                      : Icons.radio_button_unchecked_rounded,
+          color: linking
+              ? SydneyColors.info
+              : connected
                   ? SydneyColors.primary
                   : actionRequired
-                  ? SydneyColors.warning
-                  : SydneyColors.outline,
+                      ? SydneyColors.warning
+                      : SydneyColors.outline,
           size: 18,
         ),
         const SizedBox(width: SydneySpacing.sm),
@@ -221,22 +243,21 @@ class _ConnectorStatusLine extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: statusColor,
-              fontWeight: FontWeight.w800,
-            ),
+                  color: statusColor,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
         ),
         const SizedBox(width: SydneySpacing.sm),
         Semantics(
           label: '${connector.name} connector',
-          value:
-              linking
-                  ? 'Connecting'
-                  : connected
+          value: linking
+              ? 'Connecting'
+              : connected
                   ? 'Connected'
                   : actionRequired
-                  ? 'Reconnect required'
-                  : 'Disconnected',
+                      ? 'Reconnect required'
+                      : 'Disconnected',
           child: Switch.adaptive(
             value: connected,
             activeThumbColor: SydneyColors.onPrimary,
@@ -292,69 +313,69 @@ IconData _iconData(String? iconName) {
 ) {
   return switch (iconName) {
     'Mail' => (
-      background: const Color(0xFFFEE2E2),
-      foreground: const Color(0xFFDC2626),
-      border: null,
-    ),
+        background: const Color(0xFFFEE2E2),
+        foreground: const Color(0xFFDC2626),
+        border: null,
+      ),
     'Calendar' => (
-      background: const Color(0xFFDBEAFE),
-      foreground: const Color(0xFF2563EB),
-      border: null,
-    ),
+        background: const Color(0xFFDBEAFE),
+        foreground: const Color(0xFF2563EB),
+        border: null,
+      ),
     'MessageSquare' => (
-      background: const Color(0xFFD1FAE5),
-      foreground: const Color(0xFF047857),
-      border: null,
-    ),
+        background: const Color(0xFFD1FAE5),
+        foreground: const Color(0xFF047857),
+        border: null,
+      ),
     'Layers' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFF4F46E5),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFF4F46E5),
+        border: SydneyColors.line,
+      ),
     'Clock' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFFEA580C),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFFEA580C),
+        border: SydneyColors.line,
+      ),
     'BookOpen' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFFD97706),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFFD97706),
+        border: SydneyColors.line,
+      ),
     'FileText' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFF0EA5E9),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFF0EA5E9),
+        border: SydneyColors.line,
+      ),
     'Trello' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFF9333EA),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFF9333EA),
+        border: SydneyColors.line,
+      ),
     'CheckSquare' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFF059669),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFF059669),
+        border: SydneyColors.line,
+      ),
     'Github' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFF1F2937),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFF1F2937),
+        border: SydneyColors.line,
+      ),
     'HardDrive' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFF2563EB),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFF2563EB),
+        border: SydneyColors.line,
+      ),
     'FolderOpen' => (
-      background: SydneyColors.surface,
-      foreground: const Color(0xFFCA8A04),
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.surface,
+        foreground: const Color(0xFFCA8A04),
+        border: SydneyColors.line,
+      ),
     _ => (
-      background: SydneyColors.primarySoft,
-      foreground: SydneyColors.primary,
-      border: SydneyColors.line,
-    ),
+        background: SydneyColors.primarySoft,
+        foreground: SydneyColors.primary,
+        border: SydneyColors.line,
+      ),
   };
 }

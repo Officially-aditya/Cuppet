@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,39 +10,82 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 
-class InboxScreen extends ConsumerWidget {
+class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InboxScreen> createState() => _InboxScreenState();
+}
+
+class _InboxScreenState extends ConsumerState<InboxScreen> {
+  bool _isExpanded = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _isExpanded = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final agents = ref.watch(agentsProvider);
 
     return Scaffold(
+      backgroundColor: SydneyColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: SydneyColors.surface,
-        title: Text(
-          'Sydney',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 20),
-        ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: SydneyColors.line),
+        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        titleSpacing: SydneySpacing.page,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Sydney',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: SydneyColors.ink,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Your delegation agents',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: SydneyColors.subtleInk,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
         actions: [
-          IconButton(
+          _HeaderActionButton(
+            icon: Icons.public_rounded,
             tooltip: 'Connectors',
-            onPressed:
-                () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-            icon: const Icon(Icons.public_rounded),
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.connectors),
           ),
-          IconButton(
+          const SizedBox(width: SydneySpacing.xs),
+          _HeaderActionButton(
+            icon: Icons.settings_outlined,
             tooltip: 'Settings',
-            onPressed:
-                () => Navigator.of(context).pushNamed(AppRoutes.settings),
-            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.settings),
           ),
-          const SizedBox(width: SydneySpacing.sm),
+          const SizedBox(width: SydneySpacing.page),
         ],
       ),
       body: SafeArea(
@@ -52,31 +96,77 @@ class InboxScreen extends ConsumerWidget {
           child: agents.when(
             data: (items) => _InboxList(agents: items),
             loading: () => const _InboxLoading(),
-            error:
-                (error, _) => SydneyErrorState(
-                  title: 'Messages could not load',
-                  message: error.toString(),
-                  onRetry: () => ref.read(agentsProvider.notifier).refresh(),
-                ),
+            error: (error, _) => SydneyErrorState(
+              title: 'Messages could not load',
+              message: error.toString(),
+              onRetry: () => ref.read(agentsProvider.notifier).refresh(),
+            ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).pushNamed(AppRoutes.create),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New'),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(SydneyRadius.md),
+      floatingActionButton: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        width: _isExpanded ? 132 : 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: SydneyColors.primary,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: SydneyColors.primary.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.create),
+            child: Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                      if (_isExpanded) ...[
+                        const SizedBox(width: 8),
+                        const Text(
+                          'New Agent',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            fontSize: 13,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
-        onSelected: (index) => _handleNav(context, ref, index),
+        onSelected: (index) => _handleNav(index),
       ),
     );
   }
 
-  void _handleNav(BuildContext context, WidgetRef ref, int index) {
+  void _handleNav(int index) {
     if (index == 0) {
       return;
     }
@@ -88,6 +178,48 @@ class InboxScreen extends ConsumerWidget {
       Navigator.of(context).pushNamed(AppRoutes.settings);
       return;
     }
+  }
+}
+
+class _HeaderActionButton extends StatelessWidget {
+  const _HeaderActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: SydneyColors.line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x04000000),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          size: 18,
+          color: SydneyColors.onSurfaceVariant,
+        ),
+      ),
+    );
   }
 }
 
@@ -105,7 +237,7 @@ class _InboxList extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         SydneySpacing.page,
-        SydneySpacing.lg,
+        SydneySpacing.md,
         SydneySpacing.page,
         118,
       ),
@@ -114,17 +246,14 @@ class _InboxList extends StatelessWidget {
           const SydneyNotice(
             text: 'Assistant is pinned so you always have a place to start.',
           ),
-          const SizedBox(height: SydneySpacing.lg),
+          const SizedBox(height: SydneySpacing.md),
         ],
         for (final agent in visibleAgents) ...[
           AgentListItem(
             agent: agent,
-            onTap:
-                () => Navigator.of(
-                  context,
-                ).pushNamed(AppRoutes.thread, arguments: agent),
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.thread, arguments: agent),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
         ],
         if (!hasCreatedAgent) ...[
           const SizedBox(height: SydneySpacing.xl),
@@ -146,9 +275,7 @@ class _StartSentencePrompt extends StatelessWidget {
         children: [
           Text(
             'Start with one sentence',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontSize: 14),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 14),
           ),
           const SizedBox(height: SydneySpacing.xs),
           SizedBox(
@@ -157,9 +284,9 @@ class _StartSentencePrompt extends StatelessWidget {
               'Create an agent for something you want watched, summarized, or prepared.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
-                height: 1.35,
-              ),
+                    color: SydneyColors.mutedInk,
+                    height: 1.35,
+                  ),
             ),
           ),
         ],
@@ -182,7 +309,7 @@ class _InboxLoading extends StatelessWidget {
         118,
       ),
       itemCount: 4,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         if (index == 0) {
           return const SydneyLoadingBlock(height: 44, radius: SydneyRadius.md);
@@ -200,12 +327,10 @@ Agent _assistantFallback() {
     name: 'Assistant',
     avatarInitials: 'S',
     description: 'Your home base for delegation.',
-    lastMessagePreview:
-        'I can help you turn a sentence into a useful micro-agent.',
+    lastMessagePreview: 'I can help you turn a sentence into a useful micro-agent.',
     latestMessageAt: DateTime.now(),
     isAssistant: true,
     isPinned: true,
     accentColor: 0xFF1D7A5C,
   );
 }
-

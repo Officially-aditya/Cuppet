@@ -84,8 +84,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       'comparison' => 'A structured comparison overview',
       'news_brief' => 'A summarized brief of recent articles',
       'study_guide' => 'A study topic, explanation, and reference links',
-      'dsa_question' =>
-          'A daily practice DSA coding problem with examples and hints',
+      'dsa_question' => 'A daily practice DSA coding problem with examples and hints',
       _ => 'A detailed summary report',
     };
   }
@@ -97,16 +96,49 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
         : const <String>[];
 
     return Scaffold(
+      backgroundColor: SydneyColors.surface,
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: _creating ? null : () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        automaticallyImplyLeading: false,
+        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: SydneyColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x04000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: 'Back',
+                onPressed: _creating ? null : () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
+              ),
+            ),
+          ),
         ),
-        title: const Text('Confirm'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: SydneyColors.line),
+        titleSpacing: 12,
+        title: Text(
+          'Confirm',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: SydneyColors.ink,
+                letterSpacing: -0.5,
+              ),
         ),
       ),
       body: SafeArea(
@@ -127,12 +159,32 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(
                       SydneySpacing.page,
-                      SydneySpacing.lg,
+                      SydneySpacing.md,
                       SydneySpacing.page,
                       140,
                     ),
                     children: [
-                      SydneyPanel(
+                      Container(
+                        decoration: BoxDecoration(
+                          color: SydneyColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                              offset: const Offset(4, 4),
+                              blurRadius: 8,
+                            ),
+                            const BoxShadow(
+                              color: Colors.white,
+                              offset: Offset(-4, -4),
+                              blurRadius: 8,
+                            ),
+                          ],
+                          border: Border.all(
+                            color: SydneyColors.line.withValues(alpha: 0.35),
+                            width: 0.8,
+                          ),
+                        ),
                         padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
@@ -146,16 +198,18 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                             const SizedBox(height: SydneySpacing.md),
                             Text(
                               _parsedIntent?['name']?.toString() ?? _agentName(widget.draft),
-                              style: Theme.of(context).textTheme.titleMedium,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             const SizedBox(height: SydneySpacing.md),
                             Text(
                               '"${widget.draft.prompt}"',
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurfaceVariant,
-                                height: 1.45,
-                              ),
+                                    color: SydneyColors.onSurfaceVariant,
+                                    height: 1.45,
+                                  ),
                             ),
                           ],
                         ),
@@ -167,9 +221,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                         child: Text(
                           _parsedIntent?['action']?.toString() ?? 'No description generated.',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SydneyColors.onSurfaceVariant,
-                            height: 1.35,
-                          ),
+                                color: SydneyColors.onSurfaceVariant,
+                                height: 1.35,
+                              ),
                         ),
                       ),
                       const SizedBox(height: SydneySpacing.md),
@@ -179,71 +233,84 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                         child: Text(
                           _describeTiming(_parsedIntent),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SydneyColors.onSurfaceVariant,
-                            height: 1.35,
-                          ),
+                                color: SydneyColors.onSurfaceVariant,
+                                height: 1.35,
+                              ),
                         ),
                       ),
                       const SizedBox(height: SydneySpacing.md),
                       _InfoCard(
-                        icon: Icons.lock_outline_rounded,
-                        title: 'What it needs',
-                        child: permissions.isEmpty
-                            ? Text(
-                                'No external permissions required.',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: SydneyColors.onSurfaceVariant,
-                                  height: 1.35,
-                                ),
-                              )
-                            : Wrap(
-                                spacing: SydneySpacing.sm,
-                                runSpacing: SydneySpacing.sm,
-                                children: [
-                                  for (final perm in permissions)
-                                    _AccessPill(icon: _permissionIcon(perm), label: perm),
-                                ],
-                              ),
-                      ),
-                      const SizedBox(height: SydneySpacing.md),
-                      _InfoCard(
-                        icon: Icons.send_rounded,
-                        title: 'What it sends',
+                        icon: Icons.output_rounded,
+                        title: 'Output layout',
                         child: Text(
                           _describeOutput(_parsedIntent),
-                          style: const TextStyle(
-                            color: SydneyColors.onSurfaceVariant,
-                            fontSize: 12,
-                            height: 1.35,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: SydneyColors.onSurfaceVariant,
+                                height: 1.35,
+                              ),
                         ),
                       ),
+                      if (permissions.isNotEmpty) ...[
+                        const SizedBox(height: SydneySpacing.md),
+                        _InfoCard(
+                          icon: Icons.security_rounded,
+                          title: 'Connected tools required',
+                          child: Wrap(
+                            spacing: SydneySpacing.sm,
+                            runSpacing: SydneySpacing.sm,
+                            children: [
+                              for (final perm in permissions)
+                                _AccessPill(
+                                  icon: _permissionIcon(perm),
+                                  label: perm,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
       ),
       bottomNavigationBar: SydneyFooter(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            FilledButton(
-              onPressed: _creating ? null : _create,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
-              child: Text(_creating ? 'Creating...' : 'Create agent'),
-            ),
-            const SizedBox(height: SydneySpacing.sm),
-            OutlinedButton(
-              onPressed: _creating ? null : () => Navigator.of(context).pop(),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: SydneyColors.onSurface,
-                minimumSize: const Size.fromHeight(44),
-                textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w800,
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _creating ? null : () => Navigator.of(context).maybePop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SydneyColors.ink,
+                  side: const BorderSide(color: SydneyColors.line),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  minimumSize: const Size.fromHeight(48),
                 ),
+                child: const Text('Cancel'),
               ),
-              child: const Text('EDIT SENTENCE'),
+            ),
+            const SizedBox(width: SydneySpacing.md),
+            Expanded(
+              child: FilledButton(
+                onPressed: _creating ? null : _createAgent,
+                style: FilledButton.styleFrom(
+                  backgroundColor: SydneyColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: _creating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Create Agent'),
+              ),
             ),
           ],
         ),
@@ -251,29 +318,23 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     );
   }
 
-  Future<void> _create() async {
+  Future<void> _createAgent() async {
     setState(() => _creating = true);
-    final navigator = Navigator.of(context);
     try {
-      await ref
-          .read(agentsProvider.notifier)
-          .createAgent(
+      await ref.read(agentsProvider.notifier).createAgent(
             CreateAgentRequest(
               prompt: widget.draft.prompt,
               templateId: widget.draft.templateId,
             ),
           );
-      if (!mounted) {
-        return;
-      }
-      navigator.popUntil((route) => route.isFirst);
+
+      if (!mounted) return;
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) {
         setState(() => _creating = false);
@@ -295,7 +356,28 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SydneyPanel(
+    return Container(
+      decoration: BoxDecoration(
+        color: SydneyColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF17201C).withValues(alpha: 0.05),
+            offset: const Offset(4, 4),
+            blurRadius: 8,
+          ),
+          const BoxShadow(
+            color: Colors.white,
+            offset: Offset(-4, -4),
+            blurRadius: 8,
+          ),
+        ],
+        border: Border.all(
+          color: SydneyColors.line.withValues(alpha: 0.35),
+          width: 0.8,
+        ),
+      ),
+      padding: const EdgeInsets.all(SydneySpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -306,9 +388,10 @@ class _InfoCard extends StatelessWidget {
               Text(
                 title.toUpperCase(),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.primary,
-                  letterSpacing: 0.7,
-                ),
+                      color: SydneyColors.primary,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.7,
+                    ),
               ),
             ],
           ),
@@ -319,7 +402,6 @@ class _InfoCard extends StatelessWidget {
     );
   }
 }
-
 
 class _AccessPill extends StatelessWidget {
   const _AccessPill({required this.icon, required this.label});
@@ -344,10 +426,10 @@ class _AccessPill extends StatelessWidget {
           Text(
             label.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.onSurfaceVariant,
-              fontSize: 10,
-              letterSpacing: 0.4,
-            ),
+                  color: SydneyColors.onSurfaceVariant,
+                  fontSize: 10,
+                  letterSpacing: 0.4,
+                ),
           ),
         ],
       ),
@@ -361,5 +443,3 @@ String _agentName(AgentCreationDraft draft) {
   }
   return draft.templateLabel;
 }
-
-

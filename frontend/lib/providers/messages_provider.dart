@@ -21,8 +21,12 @@ final websocketServiceProvider = Provider.autoDispose<WebsocketService>((ref) {
 final messagesProvider = FutureProvider.family<List<Message>, String>((
   ref,
   threadId,
-) {
-  return ref.watch(messageServiceProvider).fetchThread(threadId);
+) async {
+  final messages = await ref.watch(messageServiceProvider).fetchThread(threadId);
+  Future.microtask(() {
+    ref.invalidate(agentsProvider);
+  });
+  return messages;
 });
 
 final liveEventsProvider = StreamProvider<RealtimeEvent>((ref) {

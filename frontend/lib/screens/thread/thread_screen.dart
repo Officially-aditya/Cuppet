@@ -127,7 +127,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               height: 32,
               decoration: BoxDecoration(
                 color: Color(agent.accentColor),
-                borderRadius: BorderRadius.circular(SydneyRadius.sm),
+                shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
               child: Text(
@@ -183,97 +183,167 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         ),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, size: 20),
-            tooltip: 'More options',
-            onSelected: (value) => _handleMenuAction(value),
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'clear_chat',
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.delete_sweep_rounded, size: 20),
-                      title: Text('Clear chat'),
-                    ),
+            icon: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: SydneyColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x04000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
                   ),
-                  PopupMenuItem(
-                    value: 'toggle_pause',
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        agent.availability == AgentAvailability.paused
-                            ? Icons.play_arrow_rounded
-                            : Icons.pause_rounded,
-                        size: 20,
-                      ),
-                      title: Text(
-                        agent.availability == AgentAvailability.paused
-                            ? 'Resume agent'
-                            : 'Pause agent',
-                      ),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'mute',
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.notifications_off_outlined, size: 20),
-                      title: Text('Mute agent'),
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: 'preferences',
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.settings_outlined, size: 20),
-                      title: Text('Agent preferences'),
-                    ),
-                  ),
-                  if (_shouldShowHeatmap(agent))
-                    const PopupMenuItem(
-                      value: 'view_heatmap',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.calendar_month_rounded, size: 20),
-                        title: Text('View progress heatmap'),
-                      ),
-                    ),
-                  if (!agent.isAssistant)
-                    const PopupMenuItem(
-                      value: 'run_now',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.play_circle_outline_rounded, size: 20),
-                        title: Text('Run agent now'),
-                      ),
-                    ),
-                  if (!agent.isAssistant)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          Icons.delete_outline_rounded,
-                          size: 20,
-                          color: Color(0xFFDC2626),
-                        ),
-                        title: Text(
-                          'Delete agent',
-                          style: TextStyle(color: Color(0xFFDC2626)),
-                        ),
-                      ),
-                    ),
                 ],
+              ),
+              child: const Icon(Icons.more_vert_rounded, size: 18, color: SydneyColors.ink),
+            ),
+            tooltip: 'More options',
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: SydneyColors.line, width: 0.8),
+            ),
+            color: Colors.white,
+            elevation: 4,
+            shadowColor: Colors.black.withValues(alpha: 0.1),
+            surfaceTintColor: Colors.transparent,
+            onSelected: (value) => _handleMenuAction(value),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'clear_chat',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_sweep_rounded, size: 18, color: SydneyColors.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Clear chat',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: SydneyColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'toggle_pause',
+                child: Row(
+                  children: [
+                    Icon(
+                      agent.availability == AgentAvailability.paused
+                          ? Icons.play_arrow_rounded
+                          : Icons.pause_rounded,
+                      size: 18,
+                      color: SydneyColors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      agent.availability == AgentAvailability.paused
+                          ? 'Resume agent'
+                          : 'Pause agent',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: SydneyColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'mute',
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_off_outlined, size: 18, color: SydneyColors.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Mute agent',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: SydneyColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(height: 8),
+              PopupMenuItem(
+                value: 'preferences',
+                child: Row(
+                  children: [
+                    const Icon(Icons.settings_outlined, size: 18, color: SydneyColors.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Agent preferences',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: SydneyColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_shouldShowHeatmap(agent))
+                PopupMenuItem(
+                  value: 'view_heatmap',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, size: 18, color: SydneyColors.onSurfaceVariant),
+                      const SizedBox(width: 10),
+                      Text(
+                        'View progress heatmap',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: SydneyColors.ink,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (!agent.isAssistant)
+                PopupMenuItem(
+                  value: 'run_now',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.play_circle_outline_rounded, size: 18, color: SydneyColors.onSurfaceVariant),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Run agent now',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: SydneyColors.ink,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (!agent.isAssistant) ...[
+                const PopupMenuDivider(height: 8),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: Color(0xFFDC2626),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Delete agent',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFFDC2626),
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(width: SydneySpacing.xs),
+          const SizedBox(width: SydneySpacing.sm),
         ],
       ),
       body: SafeArea(

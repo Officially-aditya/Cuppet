@@ -47,16 +47,49 @@ class _CreateScreenState extends State<CreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: SydneyColors.surface,
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        automaticallyImplyLeading: false,
+        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: SydneyColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x04000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
+              ),
+            ),
+          ),
         ),
-        title: const Text('New Agent'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: SydneyColors.line),
+        titleSpacing: 12,
+        title: Text(
+          'New Agent',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: SydneyColors.ink,
+                letterSpacing: -0.5,
+              ),
         ),
       ),
       body: SafeArea(
@@ -64,12 +97,13 @@ class _CreateScreenState extends State<CreateScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
-            SydneySpacing.lg,
+            SydneySpacing.md,
             SydneySpacing.page,
             104,
           ),
           children: [
             const SydneySectionLabel('What does this agent do?'),
+            const SizedBox(height: SydneySpacing.sm),
             _PromptEditor(
               controller: _promptController,
               onChanged: (_) {
@@ -82,13 +116,12 @@ class _CreateScreenState extends State<CreateScreen> {
               const SizedBox(height: SydneySpacing.sm),
               Text(
                 _error!,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: SydneyColors.danger),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: SydneyColors.danger),
               ),
             ],
             const SizedBox(height: SydneySpacing.lg),
             const SydneySectionLabel('Examples'),
+            const SizedBox(height: SydneySpacing.sm),
             Column(
               children: [
                 for (final template in _agentTemplates) ...[
@@ -111,7 +144,11 @@ class _CreateScreenState extends State<CreateScreen> {
               child: OutlinedButton(
                 onPressed: () => Navigator.of(context).maybePop(),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: SydneyColors.onSurface,
+                  foregroundColor: SydneyColors.ink,
+                  side: const BorderSide(color: SydneyColors.line),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   minimumSize: const Size.fromHeight(48),
                 ),
                 child: const Text('Cancel'),
@@ -122,6 +159,11 @@ class _CreateScreenState extends State<CreateScreen> {
               child: FilledButton(
                 onPressed: _continue,
                 style: FilledButton.styleFrom(
+                  backgroundColor: SydneyColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   minimumSize: const Size.fromHeight(48),
                 ),
                 child: const Text('Submit'),
@@ -172,17 +214,41 @@ class _PromptEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SydneyPanel(
+    return Container(
+      decoration: BoxDecoration(
+        color: SydneyColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF17201C).withValues(alpha: 0.05),
+            offset: const Offset(4, 4),
+            blurRadius: 8,
+          ),
+          const BoxShadow(
+            color: Colors.white,
+            offset: Offset(-4, -4),
+            blurRadius: 8,
+          ),
+        ],
+        border: Border.all(
+          color: SydneyColors.line.withValues(alpha: 0.35),
+          width: 0.8,
+        ),
+      ),
       padding: const EdgeInsets.all(SydneySpacing.md),
-      shadow: false,
       child: TextField(
         controller: controller,
         minLines: 7,
         maxLines: 12,
         textCapitalization: TextCapitalization.sentences,
         onChanged: onChanged,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: SydneyColors.ink,
+              height: 1.4,
+            ),
         decoration: const InputDecoration(
-          hintText: 'What does this agent do?',
+          hintText: 'What should this agent do?',
+          hintStyle: TextStyle(color: SydneyColors.subtleInk),
           filled: false,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -207,57 +273,89 @@ class _AgentTemplateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SydneyPanel(
-      onTap: onTap,
-      shadow: false,
-      padding: const EdgeInsets.all(SydneySpacing.md),
-      borderColor: selected ? SydneyColors.primary : SydneyColors.line,
-      color:
-          selected
-              ? SydneyColors.primarySoft.withValues(alpha: 0.65)
-              : SydneyColors.surfaceContainerLowest,
-      child: Row(
-        children: [
-          SydneyIconBadge(
-            size: 40,
-            color:
-                selected
-                    ? SydneyColors.surfaceContainerLowest
-                    : SydneyColors.primarySoft,
-            foregroundColor: SydneyColors.primary,
-            radius: SydneyRadius.sm,
-            borderColor: SydneyColors.line,
-            child: Icon(template.icon, size: 20),
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? SydneyColors.primarySoft.withValues(alpha: 0.35) : SydneyColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: selected
+                ? SydneyColors.primary.withValues(alpha: 0.06)
+                : const Color(0xFF17201C).withValues(alpha: 0.04),
+            offset: const Offset(4, 4),
+            blurRadius: 8,
           ),
-          const SizedBox(width: SydneySpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const BoxShadow(
+            color: Colors.white,
+            offset: Offset(-4, -4),
+            blurRadius: 8,
+          ),
+        ],
+        border: Border.all(
+          color: selected ? SydneyColors.primary.withValues(alpha: 0.5) : SydneyColors.line.withValues(alpha: 0.35),
+          width: selected ? 1.2 : 0.8,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                Text(
-                  template.label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: SydneyColors.ink,
-                    fontWeight: FontWeight.w800,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: selected ? SydneyColors.surfaceContainerLowest : SydneyColors.primarySoft,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: SydneyColors.line.withValues(alpha: 0.35),
+                      width: 0.8,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    template.icon,
+                    size: 18,
+                    color: SydneyColors.primary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  template.description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SydneyColors.mutedInk,
-                    height: 1.3,
+                const SizedBox(width: SydneySpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        template.label,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: SydneyColors.ink,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        template.description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SydneyColors.mutedInk,
+                              height: 1.3,
+                            ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: SydneySpacing.sm),
+                Icon(
+                  selected ? Icons.check_circle_rounded : Icons.add_circle_outline,
+                  size: 20,
+                  color: selected ? SydneyColors.primary : SydneyColors.subtleInk,
                 ),
               ],
             ),
           ),
-          Icon(
-            selected ? Icons.check_circle_rounded : Icons.add_circle_outline,
-            size: 20,
-            color: selected ? SydneyColors.primary : SydneyColors.outline,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -293,8 +391,7 @@ const _agentTemplates = [
   _AgentTemplate(
     id: 'news',
     label: 'News agent',
-    description:
-        'A balanced daily newsletter with TL;DR, context, and sources.',
+    description: 'A balanced daily newsletter with TL;DR, context, and sources.',
     icon: Icons.newspaper_rounded,
     prompt: '''
 I need a quick, unbiased breakdown of news from the last 48 hours. Please format it like a smart, easy-to-read daily newsletter. Make a good balance of local news based on where I am and global news.

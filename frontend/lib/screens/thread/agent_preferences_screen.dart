@@ -30,16 +30,49 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: SydneyColors.surface,
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        automaticallyImplyLeading: false,
+        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: SydneyColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x04000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
+              ),
+            ),
+          ),
         ),
-        title: const Text('Agent Preferences'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: SydneyColors.line),
+        titleSpacing: 12,
+        title: Text(
+          'Agent Preferences',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: SydneyColors.ink,
+                letterSpacing: -0.5,
+              ),
         ),
       ),
       body: SafeArea(
@@ -47,7 +80,7 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
-            SydneySpacing.lg,
+            SydneySpacing.md,
             SydneySpacing.page,
             96,
           ),
@@ -55,12 +88,33 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
             Text(
               'Configure how this agent processes information and communicates with you.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
-                height: 1.35,
-              ),
+                    color: SydneyColors.mutedInk,
+                    height: 1.35,
+                  ),
             ),
-            const SizedBox(height: SydneySpacing.lg),
-            SydneyPanel(
+            const SizedBox(height: SydneySpacing.md),
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -68,21 +122,42 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                     icon: Icons.info_outline_rounded,
                     title: 'Agent Description',
                   ),
-                  const SizedBox(height: SydneySpacing.xs),
+                  const SizedBox(height: SydneySpacing.md),
                   Text(
                     widget.agent.description.isNotEmpty
                         ? widget.agent.description
                         : 'No description available for this agent.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurfaceVariant,
-                      height: 1.45,
-                    ),
+                          color: SydneyColors.onSurfaceVariant,
+                          height: 1.45,
+                        ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: SydneySpacing.md),
-            SydneyPanel(
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -94,9 +169,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   Text(
                     'Select when the agent should deliver updates or actions.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: SydneyColors.mutedInk,
-                    ),
+                          fontSize: 11,
+                          color: SydneyColors.mutedInk,
+                        ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   _TimingOption(
@@ -116,7 +191,28 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
               ),
             ),
             const SizedBox(height: SydneySpacing.md),
-            SydneyPanel(
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -128,9 +224,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   Text(
                     "Adjust the verbosity of the agent's output.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: SydneyColors.mutedInk,
-                    ),
+                          fontSize: 11,
+                          color: SydneyColors.mutedInk,
+                        ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   SliderTheme(
@@ -145,8 +241,7 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                       max: 3,
                       divisions: 2,
                       value: _responseLimit,
-                      onChanged:
-                          (value) => setState(() => _responseLimit = value),
+                      onChanged: (value) => setState(() => _responseLimit = value),
                     ),
                   ),
                   Row(
@@ -170,7 +265,28 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
               ),
             ),
             const SizedBox(height: SydneySpacing.md),
-            SydneyPanel(
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -182,27 +298,40 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   Text(
                     "Set an expiration date for this agent's active duties.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: SydneyColors.mutedInk,
-                    ),
+                          fontSize: 11,
+                          color: SydneyColors.mutedInk,
+                        ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   TextField(
                     controller: _activeUntilController,
                     enabled: !_runIndefinitely,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: const InputDecoration(
+                          color: SydneyColors.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                    decoration: InputDecoration(
                       hintText: 'Unlimited',
                       fillColor: SydneyColors.surfaceContainer,
-                      suffixIcon: Icon(
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SydneyColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SydneyColors.line),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: SydneyColors.primary),
+                      ),
+                      suffixIcon: const Icon(
                         Icons.chevron_right_rounded,
                         color: SydneyColors.outlineVariant,
                         size: 18,
                       ),
-                      contentPadding: EdgeInsets.symmetric(
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: SydneySpacing.lg,
                         vertical: SydneySpacing.md,
                       ),
@@ -211,18 +340,16 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   const SizedBox(height: SydneySpacing.sm),
                   CheckboxListTile(
                     value: _runIndefinitely,
-                    onChanged:
-                        (value) =>
-                            setState(() => _runIndefinitely = value ?? false),
+                    onChanged: (value) => setState(() => _runIndefinitely = value ?? false),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
                     title: Text(
                       'Run indefinitely',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SydneyColors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
+                            color: SydneyColors.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                   ),
                 ],
@@ -231,27 +358,47 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
             if (!widget.agent.isAssistant) ...[
               const SizedBox(height: SydneySpacing.lg),
               const SydneySectionLabel('Danger Zone'),
-              SydneyPanel(
-                borderColor: const Color(0xFFFCA5A5),
-                color: const Color(0xFFFEF2F2),
+              const SizedBox(height: SydneySpacing.sm),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF991B1B).withValues(alpha: 0.03),
+                      offset: const Offset(4, 4),
+                      blurRadius: 8,
+                    ),
+                    const BoxShadow(
+                      color: Colors.white,
+                      offset: Offset(-4, -4),
+                      blurRadius: 8,
+                    ),
+                  ],
+                  border: Border.all(
+                    color: const Color(0xFFFCA5A5),
+                    width: 0.8,
+                  ),
+                ),
+                padding: const EdgeInsets.all(SydneySpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Delete agent',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: const Color(0xFF991B1B),
-                        fontWeight: FontWeight.w600,
-                      ),
+                            color: const Color(0xFF991B1B),
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       'Permanently delete this agent and all its messages. This action cannot be undone.',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFB91C1C),
-                        fontWeight: FontWeight.w400,
-                        height: 1.35,
-                      ),
+                            color: const Color(0xFFB91C1C),
+                            fontWeight: FontWeight.w400,
+                            height: 1.35,
+                          ),
                     ),
                     const SizedBox(height: SydneySpacing.md),
                     OutlinedButton.icon(
@@ -261,7 +408,11 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFDC2626),
                         side: const BorderSide(color: Color(0xFFFCA5A5)),
-                        minimumSize: const Size.fromHeight(40),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        minimumSize: const Size.fromHeight(44),
+                        textStyle: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -276,7 +427,15 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.check_box_outlined, size: 18),
           label: const Text('Save Preferences'),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          style: FilledButton.styleFrom(
+            backgroundColor: SydneyColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            minimumSize: const Size.fromHeight(48),
+            textStyle: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
@@ -341,9 +500,10 @@ class _PanelTitle extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: SydneyColors.primary,
-            fontSize: 14,
-          ),
+                color: SydneyColors.primary,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
         ),
       ],
     );
@@ -365,37 +525,51 @@ class _TimingOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SydneyPanel(
-      onTap: onTap,
-      shadow: false,
-      padding: const EdgeInsets.all(SydneySpacing.md),
-      borderColor: selected ? SydneyColors.primary : SydneyColors.line,
-      color: selected ? SydneyColors.primarySoft : SydneyColors.surfaceRaised,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? SydneyColors.primarySoft : SydneyColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected ? SydneyColors.primary : SydneyColors.line,
+          width: selected ? 1.2 : 0.8,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(SydneySpacing.md),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelMedium?.copyWith(color: SydneyColors.ink),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: SydneyColors.onSurfaceVariant,
-                    fontWeight: FontWeight.w400,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: SydneyColors.ink,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: SydneyColors.onSurfaceVariant,
+                              fontWeight: FontWeight.w400,
+                            ),
+                      ),
+                    ],
                   ),
                 ),
+                _RadioDot(selected: selected),
               ],
             ),
           ),
-          _RadioDot(selected: selected),
-        ],
+        ),
       ),
     );
   }
@@ -419,17 +593,16 @@ class _RadioDot extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child:
-          selected
-              ? Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-              )
-              : null,
+      child: selected
+          ? Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
     );
   }
 }
@@ -445,9 +618,9 @@ class _LimitLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
-        fontWeight: FontWeight.w700,
-      ),
+            color: selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+          ),
     );
   }
 }

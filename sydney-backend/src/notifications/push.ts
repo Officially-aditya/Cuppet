@@ -32,12 +32,15 @@ export async function sendPushNotification(
 
   const tokens = result.rows.map((row) => row.token);
   
+  const cleanTitle = cleanText(payload.title);
+  const cleanBody = cleanText(payload.body);
+
   // Send notification to all devices
   const response = await messaging.sendEachForMulticast({
     tokens,
     notification: {
-      title: payload.title,
-      body: payload.body,
+      title: cleanTitle,
+      body: cleanBody,
     },
     data: payload.data,
     android: {
@@ -53,8 +56,8 @@ export async function sendPushNotification(
       payload: {
         aps: {
           alert: {
-            title: payload.title,
-            body: payload.body,
+            title: cleanTitle,
+            body: cleanBody,
           },
           sound: "default",
           badge: 1,
@@ -117,4 +120,19 @@ export async function unregisterFCMToken(
     "DELETE FROM fcm_tokens WHERE user_id = $1 AND token = $2",
     [userId, token]
   );
+}
+
+export function cleanText(text: string): string {
+  if (!text) return text;
+  return text
+    // Remove markdown bold/italic markdown symbols
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/__/g, "")
+    .replace(/_([^_]+)_/g, "$1") // clean italic underscores
+    // Remove markdown headers
+    .replace(/^#+\s+/gm, "") // headers at the start of any line
+    .replace(/#+/g, "") // any stray header symbols
+    // Trim whitespace
+    .trim();
 }

@@ -29,10 +29,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.getNotificationSettings();
       final token = await messaging.getToken();
-      final enabled =
-          (settings.authorizationStatus == AuthorizationStatus.authorized ||
-              settings.authorizationStatus ==
-                  AuthorizationStatus.provisional) &&
+      final enabled = (settings.authorizationStatus == AuthorizationStatus.authorized ||
+              settings.authorizationStatus == AuthorizationStatus.provisional) &&
           token != null &&
           token.isNotEmpty;
       if (mounted) {
@@ -91,16 +89,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final initials = _initials(displayName);
 
     return Scaffold(
+      backgroundColor: SydneyColors.surface,
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+        automaticallyImplyLeading: false,
+        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: SydneyColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x04000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
+              ),
+            ),
+          ),
         ),
-        title: const Text('Settings'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: SydneyColors.line),
+        titleSpacing: 12,
+        title: Text(
+          'Settings',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: SydneyColors.ink,
+                letterSpacing: -0.5,
+              ),
         ),
       ),
       body: SafeArea(
@@ -108,20 +139,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
-            SydneySpacing.lg,
+            SydneySpacing.md,
             SydneySpacing.page,
             112,
           ),
           children: [
-            SydneyPanel(
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Row(
                 children: [
-                  SydneyIconBadge(
-                    size: 48,
-                    radius: SydneyRadius.md,
-                    color: SydneyColors.primarySoft,
-                    foregroundColor: SydneyColors.primary,
-                    child: Text(initials),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: SydneyColors.primarySoft,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: SydneyColors.line.withValues(alpha: 0.35),
+                        width: 0.8,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      initials,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: SydneyColors.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
                   ),
                   const SizedBox(width: SydneySpacing.lg),
                   Expanded(
@@ -130,17 +195,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         Text(
                           displayName,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleSmall?.copyWith(fontSize: 14),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: SydneyColors.ink,
+                              ),
                         ),
                         if (email.isNotEmpty) ...[
                           const SizedBox(height: SydneySpacing.xs),
                           Text(
                             email,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: SydneyColors.mutedInk),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: SydneyColors.mutedInk,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ],
@@ -151,7 +220,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: SydneySpacing.lg),
             const SydneySectionLabel('Preferences'),
-            SydneyPanel(
+            const SizedBox(height: SydneySpacing.sm),
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Row(
                 children: [
                   Expanded(
@@ -160,21 +251,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         Text(
                           'Push notifications',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: SydneyColors.onSurface),
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: SydneyColors.ink,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           _pushEnabled
                               ? 'Message and agent status alerts are active.'
                               : 'Enable to receive message and agent alerts.',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelSmall?.copyWith(
-                            color: SydneyColors.mutedInk,
-                            fontWeight: FontWeight.w400,
-                            height: 1.35,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: SydneyColors.mutedInk,
+                                fontWeight: FontWeight.w400,
+                                height: 1.35,
+                              ),
                         ),
                       ],
                     ),
@@ -202,62 +293,114 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: SydneySpacing.lg),
             const SydneySectionLabel('Security'),
-            SydneyPanel(
-              onTap:
-                  () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: SydneySpacing.sm),
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.connectors),
+                  child: Padding(
+                    padding: const EdgeInsets.all(SydneySpacing.lg),
+                    child: Row(
                       children: [
-                        Text(
-                          'Connectors',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: SydneyColors.onSurface),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Review accounts approved for backend access.',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelSmall?.copyWith(
-                            color: SydneyColors.mutedInk,
-                            fontWeight: FontWeight.w400,
-                            height: 1.35,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Connectors',
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      color: SydneyColors.ink,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Review accounts approved for backend access.',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: SydneyColors.mutedInk,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.35,
+                                    ),
+                              ),
+                            ],
                           ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: SydneyColors.subtleInk,
+                          size: 18,
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: SydneyColors.outlineVariant,
-                    size: 18,
-                  ),
-                ],
+                ),
               ),
             ),
             const SizedBox(height: SydneySpacing.lg),
             const SydneySectionLabel('Privacy'),
-            SydneyPanel(
+            const SizedBox(height: SydneySpacing.sm),
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Session storage',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: SydneyColors.onSurface,
-                    ),
+                          color: SydneyColors.ink,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Text(
                     'This app stores only your Sydney session token on device. No browser fingerprints or passive scripts are injected.',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: SydneyColors.mutedInk,
-                      fontWeight: FontWeight.w400,
-                      height: 1.45,
-                    ),
+                          color: SydneyColors.mutedInk,
+                          fontWeight: FontWeight.w400,
+                          height: 1.45,
+                        ),
                   ),
                 ],
               ),
@@ -280,8 +423,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           label: const Text('Sign out'),
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFFDC2626),
-            side: const BorderSide(color: Color(0xFFFECACA)),
+            side: const BorderSide(color: Color(0xFFFEE2E2)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             minimumSize: const Size.fromHeight(48),
+            textStyle: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ),
