@@ -473,9 +473,7 @@ Focus on material price movement, earnings, regulatory updates, major news, and 
     description: 'Finds trending topics and drafts Reddit, LinkedIn, or Twitter posts.',
     icon: Icons.post_add_rounded,
     prompt: '''
-Create a content extractor agent that searches the web for the latest trending topics in my niche.
-
-By default, format the output as a Twitter post draft. If I request LinkedIn or Reddit formats, adapt to those styles.
+Create a content extractor agent that searches the web for the latest trending topics in my niche to write Twitter posts.
 
 Provide 3 distinct content ideas first. Each idea should have a title and a brief hook. Let me select an idea to generate a complete draft for it.''',
   ),
