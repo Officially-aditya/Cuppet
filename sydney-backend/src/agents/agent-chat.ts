@@ -199,7 +199,10 @@ function agentChatSystemPrompt(
             "CRITICAL FORMATTING RULES FOR CONTENT DRAFTS:",
             "- Do NOT include any emojis in the post drafts or text content under any circumstances.",
             "- Always wrap post drafts or content outputs in a markdown code block (using ```) so the user can easily copy it from a code window.",
-            `- Adapt the writing style specifically for the ${platform.toUpperCase()} platform (e.g., short punchy sentences and hashtags/threads for Twitter/X; professional, paragraph-spaced, storytelling hooks/lessons for LinkedIn; detailed, community-centric, markdown paragraphs for Reddit).`,
+            `- Adapt the writing style specifically for the ${platform.toUpperCase()} platform:`,
+            `  * For TWITTER/X: Write the draft in an extremely short, concise manner. It MUST be strictly less than 100 characters in total length (including spaces).`,
+            `  * For LINKEDIN: Professional, paragraph-spaced, storytelling hooks, and business lessons.`,
+            `  * For REDDIT: Detailed, community-centric, formatted in markdown paragraphs.`,
             "- Keep drafts clean, professional, and well-structured."
           ].join("\n");
         })()
