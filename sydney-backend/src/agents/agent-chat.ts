@@ -202,7 +202,7 @@ function agentChatSystemPrompt(
             `- Adapt the writing style specifically for the ${platform.toUpperCase()} platform:`,
             `  * For TWITTER/X: Write the draft in an extremely short, concise manner. It MUST be strictly less than 280 characters in total length (including spaces).`,
             `  * For LINKEDIN: Open the post with a concrete claim or number (do NOT open with a story). Keep paragraphs to exactly one line each. Do NOT include any links in the post body.`,
-            `  * For REDDIT: Write a specific or contrarian title. Match the subreddit's existing tone exactly. Use absolutely no corporate voice, no call-to-action (CTA), and no self-promotional text (do NOT write things like 'check out my...').`,
+            `  * For REDDIT: Write a specific or contrarian title. Match the subreddit's existing tone exactly. Use absolutely no corporate voice, no call-to-action (CTA), and no self-promotional text (do NOT write things like 'check out my...'). The body content of the draft MUST be strictly between 100 and 300 words in total length.`,
             "- Keep drafts clean, professional, and well-structured."
           ].join("\n");
         })()

@@ -120,66 +120,75 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back_rounded, size: 18),
         ),
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Color(agent.accentColor),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                agent.avatarInitials,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
+        title: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            Navigator.of(context).pushNamed(
+              AppRoutes.agentPreferences,
+              arguments: agent,
+            );
+          },
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Color(agent.accentColor),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  agent.avatarInitials,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: SydneySpacing.md),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    agent.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleSmall?.copyWith(fontSize: 14),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const SizedBox(
-                        width: 6,
-                        height: 6,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: SydneyColors.primary,
-                            shape: BoxShape.circle,
+              const SizedBox(width: SydneySpacing.md),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      agent.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall?.copyWith(fontSize: 14),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 6,
+                          height: 6,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: SydneyColors.primary,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        agent.availability == AgentAvailability.paused
-                            ? 'PAUSED'
-                            : 'ACTIVE',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: SydneyColors.primary,
-                          fontSize: 10,
-                          letterSpacing: 0.8,
+                        const SizedBox(width: 6),
+                        Text(
+                          agent.availability == AgentAvailability.paused
+                              ? 'PAUSED'
+                              : 'ACTIVE',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: SydneyColors.primary,
+                            fontSize: 10,
+                            letterSpacing: 0.8,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           PopupMenuButton<String>(
@@ -219,6 +228,22 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     const SizedBox(width: 10),
                     Text(
                       'Clear chat',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: SydneyColors.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'rename',
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_outlined, size: 18, color: SydneyColors.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Rename agent',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: SydneyColors.ink,
                             fontWeight: FontWeight.w600,
@@ -581,6 +606,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     switch (action) {
       case 'clear_chat':
         _confirmClearChat();
+      case 'rename':
+        _renameAgent();
       case 'toggle_pause':
         _togglePause();
       case 'mute':
@@ -596,6 +623,94 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       case 'delete':
         _confirmDelete();
     }
+  }
+
+  void _renameAgent() {
+    final controller = TextEditingController(text: _activeAgent.name);
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: SydneyColors.line, width: 0.8),
+          ),
+          backgroundColor: Colors.white,
+          title: Text(
+            'Rename Agent',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: SydneyColors.ink,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: SydneyColors.ink,
+                ),
+            decoration: InputDecoration(
+              labelText: 'Agent Name',
+              labelStyle: const TextStyle(color: SydneyColors.outline),
+              fillColor: SydneyColors.surfaceContainerLow,
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: SydneyColors.line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: SydneyColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: SydneyColors.primary),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final newName = controller.text.trim();
+                if (newName.isEmpty) return;
+                final nav = Navigator.of(context);
+                try {
+                  await ref.read(agentServiceProvider).patchAgent(_activeAgent.id, {
+                    'name': newName,
+                  });
+                  ref.invalidate(agentsProvider);
+                  nav.pop();
+                  if (mounted) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(content: Text('Agent renamed successfully.')),
+                    );
+                  }
+                } catch (e) {
+                  nav.pop();
+                  if (mounted) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(content: Text('Failed to rename agent: $e')),
+                    );
+                  }
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: SydneyColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showProgressHeatmap(Agent agent) {
