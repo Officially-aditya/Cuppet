@@ -56,8 +56,12 @@ export async function createAgentChatReply(
     const isContentExtractor =
       context.agent.parsed_intent.intent === "content_extractor" ||
       context.agent.name.toLowerCase().includes("content extractor");
+    const isDsaAgent =
+      context.agent.parsed_intent.intent === "dsa_question" ||
+      context.agent.name.toLowerCase().includes("dsa") ||
+      context.agent.name.toLowerCase().includes("algorithm");
     const messages = buildMessages(context, fetchedReferencesText);
-    const system = agentChatSystemPrompt(useWebSearch, isContentExtractor, context.agent.prompt);
+    const system = agentChatSystemPrompt(useWebSearch, isContentExtractor, isDsaAgent, context.agent.prompt);
     let response = await createAnthropicMessage({
       maxTokens: useWebSearch ? 1100 : 700,
       system,
@@ -177,6 +181,7 @@ function buildMessages(
 function agentChatSystemPrompt(
   useWebSearch: boolean,
   isContentExtractor: boolean,
+  isDsaAgent: boolean,
   agentPrompt: string
 ): string {
   return [
@@ -206,6 +211,14 @@ function agentChatSystemPrompt(
             "- Keep drafts clean, professional, and well-structured."
           ].join("\n");
         })()
+      : "",
+    isDsaAgent
+      ? [
+          "CRITICAL FORMATTING RULES FOR DSA EXPLANATIONS:",
+          "- When explaining a problem, solution, complexity, or concept, divide your response into clear, structured sections using markdown headings (e.g., '### Approach', '### Complexity Analysis', '### Code Implementation').",
+          "- Do NOT write one massive, singular paragraph block. Always split separate points into individual sections under their own headings so they render as neat, readable UI cards.",
+          "- Keep descriptions practical, step-by-step, and mathematically sound."
+        ].join("\n")
       : "",
     "Keep replies concise, practical, and scannable. Use short bullets when listing items."
   ].filter(Boolean).join("\n");

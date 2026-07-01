@@ -18,14 +18,27 @@ class PlainTextTemplate extends StatelessWidget {
         'No message content was provided.';
     final blocks = _parseBlocks(text);
     final color = textColor ?? SydneyColors.ink;
+    final sections = _groupIntoSections(blocks);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var index = 0; index < blocks.length; index++) ...[
-          _PlainTextBlockView(block: blocks[index], textColor: color),
-          if (index < blocks.length - 1)
-            SizedBox(height: blocks[index].spacingAfter),
+        for (var index = 0; index < sections.length; index++) ...[
+          if (sections[index].heading == null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < sections[index].blocks.length; i++) ...[
+                  _PlainTextBlockView(block: sections[index].blocks[i], textColor: color),
+                  if (i < sections[index].blocks.length - 1)
+                    SizedBox(height: sections[index].blocks[i].spacingAfter),
+                ],
+              ],
+            )
+          else
+            _SectionCard(section: sections[index], textColor: color),
+          if (index < sections.length - 1 && sections[index].heading == null)
+            const SizedBox(height: SydneySpacing.md),
         ],
       ],
     );
@@ -388,6 +401,117 @@ class _CodeBlockView extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlainTextSection {
+  _PlainTextSection({this.heading, required this.blocks});
+  final _PlainTextBlock? heading;
+  final List<_PlainTextBlock> blocks;
+}
+
+List<_PlainTextSection> _groupIntoSections(List<_PlainTextBlock> blocks) {
+  final sections = <_PlainTextSection>[];
+  if (blocks.isEmpty) return sections;
+
+  List<_PlainTextBlock>? currentBlocks;
+
+  for (final block in blocks) {
+    if (block.type == _PlainTextBlockType.heading) {
+      currentBlocks = [];
+      sections.add(_PlainTextSection(heading: block, blocks: currentBlocks));
+    } else {
+      if (currentBlocks == null) {
+        currentBlocks = [];
+        sections.add(_PlainTextSection(heading: null, blocks: currentBlocks));
+      }
+      currentBlocks.add(block);
+    }
+  }
+  return sections;
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.section, required this.textColor});
+
+  final _PlainTextSection section;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: SydneySpacing.md),
+      decoration: BoxDecoration(
+        color: SydneyColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: SydneyColors.line.withValues(alpha: 0.8), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF17201C).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (section.heading != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: SydneySpacing.md,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: SydneyColors.surfaceContainerLow,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                border: Border(
+                  bottom: BorderSide(color: SydneyColors.line.withValues(alpha: 0.8), width: 0.8),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.dashboard_customize_outlined,
+                    size: 14,
+                    color: SydneyColors.primary,
+                  ),
+                  const SizedBox(width: SydneySpacing.xs),
+                  Expanded(
+                    child: Text(
+                      section.heading!.text.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: SydneyColors.primary,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (section.blocks.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(SydneySpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < section.blocks.length; i++) ...[
+                    _PlainTextBlockView(block: section.blocks[i], textColor: textColor),
+                    if (i < section.blocks.length - 1)
+                      SizedBox(height: section.blocks[i].spacingAfter),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );
