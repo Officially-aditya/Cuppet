@@ -73,20 +73,6 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             ),
           ],
         ),
-        actions: [
-          _HeaderActionButton(
-            icon: Icons.public_rounded,
-            tooltip: 'Connectors',
-            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-          ),
-          const SizedBox(width: SydneySpacing.xs),
-          _HeaderActionButton(
-            icon: Icons.settings_outlined,
-            tooltip: 'Settings',
-            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.settings),
-          ),
-          const SizedBox(width: SydneySpacing.page),
-        ],
       ),
       body: SafeArea(
         bottom: false,
@@ -181,47 +167,6 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   }
 }
 
-class _HeaderActionButton extends StatelessWidget {
-  const _HeaderActionButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: SydneyColors.line),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x04000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        tooltip: tooltip,
-        onPressed: onPressed,
-        icon: Icon(
-          icon,
-          size: 18,
-          color: SydneyColors.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
 
 class _InboxList extends StatelessWidget {
   const _InboxList({required this.agents});
