@@ -272,20 +272,20 @@ class _ConnectorStatusLine extends StatelessWidget {
   }
 }
 
-const Map<String, String> _brandLogoUrls = {
-  'gmail': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Gmail_icon_%282020%29.svg/512px-Gmail_icon_%282020%29.svg.png',
-  'slack': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/512px-Slack_icon_2019.svg.png',
-  'drive': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/512px-Google_Drive_icon_%282020%29.svg.png',
-  'gdrive': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/512px-Google_Drive_icon_%282020%29.svg.png',
-  'calendar': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Google_Calendar_icon_%282020%29.svg/512px-Google_Calendar_icon_%282020%29.svg.png',
-  'github': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Octicons-mark-github.svg/512px-Octicons-mark-github.svg.png',
-  'outlook': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg/512px-Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg.png',
-  'calendly': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Calendly_logo.svg/512px-Calendly_logo.svg.png',
-  'notion': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Notion-logo.svg/512px-Notion-logo.svg.png',
-  'gdocs': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Google_Docs_logo_%282020%29.svg/512px-Google_Docs_logo_%282020%29.svg.png',
-  'jira': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Jira_Logo.svg/512px-Jira_Logo.svg.png',
-  'asana': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Asana_logo.svg/512px-Asana_logo.svg.png',
-  'dropbox': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Dropbox_Icon.svg/512px-Dropbox_Icon.svg.png',
+const Set<String> _localLogoAssetIds = {
+  'gmail',
+  'slack',
+  'drive',
+  'gdrive',
+  'calendar',
+  'github',
+  'outlook',
+  'calendly',
+  'notion',
+  'gdocs',
+  'jira',
+  'asana',
+  'dropbox',
 };
 
 class ConnectorIcon extends StatelessWidget {
@@ -296,8 +296,7 @@ class ConnectorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logoUrl = _brandLogoUrls[connector.id];
-    if (logoUrl != null) {
+    if (_localLogoAssetIds.contains(connector.id)) {
       return SydneyIconBadge(
         size: size,
         radius: SydneyRadius.md,
@@ -306,11 +305,8 @@ class ConnectorIcon extends StatelessWidget {
         borderColor: SydneyColors.line,
         child: Padding(
           padding: EdgeInsets.all(size * 0.16),
-          child: Image.network(
-            logoUrl,
-            headers: const {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            },
+          child: Image.asset(
+            'assets/logos/${connector.id}.png',
             width: size * 0.68,
             height: size * 0.68,
             fit: BoxFit.contain,
