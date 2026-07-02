@@ -388,42 +388,75 @@ class _GoogleLogoPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double width = size.width;
-    final double radius = width / 2;
-    final double thickness = width * 0.26;
+    final double scaleX = size.width / 24.0;
+    final double scaleY = size.height / 24.0;
 
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = thickness
-      ..strokeCap = StrokeCap.butt;
+    canvas.save();
+    canvas.scale(scaleX, scaleY);
 
-    final Rect rect = Rect.fromCircle(center: Offset(radius, radius), radius: radius - thickness / 2);
+    // 1. Red part (top)
+    final Path redPath = Path()
+      ..moveTo(12.0, 5.04)
+      ..cubicTo(13.64, 5.04, 15.12, 5.6, 16.28, 6.71)
+      ..relativeLineTo(3.2, -3.2)
+      ..cubicTo(17.52, 1.68, 14.98, 1.0, 12.0, 1.0)
+      ..cubicTo(7.35, 1.0, 3.34, 3.67, 1.39, 7.56)
+      ..relativeLineTo(3.9, 3.02)
+      ..cubicTo(6.21, 7.42, 8.87, 5.04, 12.0, 5.04);
+    
+    final Paint redPaint = Paint()
+      ..color = const Color(0xFFEA4335)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(redPath, redPaint);
 
-    // Red segment (top)
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(rect, -2.4, 1.3, false, paint);
+    // 2. Green part (bottom)
+    final Path greenPath = Path()
+      ..moveTo(12.0, 18.96)
+      ..cubicTo(8.87, 18.96, 6.21, 16.58, 5.29, 13.42)
+      ..relativeLineTo(-3.9, 3.02)
+      ..cubicTo(3.34, 20.33, 7.35, 23.0, 12.0, 23.0)
+      ..cubicTo(14.98, 23.0, 17.48, 22.01, 19.3, 20.31)
+      ..relativeLineTo(-3.2, -2.63)
+      ..cubicTo(14.96, 18.49, 13.47, 18.96, 12.0, 18.96);
 
-    // Yellow segment (left)
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(rect, -3.85, 1.5, false, paint);
+    final Paint greenPaint = Paint()
+      ..color = const Color(0xFF34A853)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(greenPath, greenPaint);
 
-    // Green segment (bottom)
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(rect, -5.45, 1.65, false, paint);
+    // 3. Yellow part (left)
+    final Path yellowPath = Path()
+      ..moveTo(5.29, 13.42)
+      ..cubicTo(5.08, 12.79, 4.96, 12.12, 4.96, 11.4)
+      ..cubicTo(4.96, 10.68, 5.08, 10.01, 5.29, 9.38)
+      ..relativeLineTo(-3.9, -3.02)
+      ..cubicTo(0.5, 7.97, 0.0, 9.43, 0.0, 11.4)
+      ..cubicTo(0.0, 13.37, 0.5, 14.83, 1.39, 16.44)
+      ..relativeLineTo(3.9, -3.02);
 
-    // Blue segment (right)
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(rect, -0.75, 1.0, false, paint);
+    final Paint yellowPaint = Paint()
+      ..color = const Color(0xFFFBBC05)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(yellowPath, yellowPaint);
 
-    // Blue horizontal bar
-    final Paint barPaint = Paint()
+    // 4. Blue part (right & middle)
+    final Path bluePath = Path()
+      ..moveTo(24.0, 11.4)
+      ..cubicTo(24.0, 10.57, 23.93, 9.77, 23.8, 9.0)
+      ..lineTo(12.0, 9.0)
+      ..lineTo(12.0, 13.54)
+      ..lineTo(18.74, 13.54)
+      ..cubicTo(18.45, 15.1, 17.57, 16.41, 16.25, 17.3)
+      ..lineTo(19.45, 19.93)
+      ..cubicTo(21.33, 18.2, 24.0, 15.64, 24.0, 11.4)
+      ..close();
+
+    final Paint bluePaint = Paint()
       ..color = const Color(0xFF4285F4)
       ..style = PaintingStyle.fill;
-    
-    canvas.drawRect(
-      Rect.fromLTRB(radius, radius - thickness / 2, width, radius + thickness / 2),
-      barPaint,
-    );
+    canvas.drawPath(bluePath, bluePaint);
+
+    canvas.restore();
   }
 
   @override

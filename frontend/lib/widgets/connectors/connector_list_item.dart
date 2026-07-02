@@ -272,6 +272,15 @@ class _ConnectorStatusLine extends StatelessWidget {
   }
 }
 
+const Map<String, String> _brandLogoUrls = {
+  'web_search': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/512px-Google_%22G%22_logo.svg.png',
+  'gmail': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Gmail_icon_%282020%29.svg/512px-Gmail_icon_%282020%29.svg.png',
+  'slack': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/512px-Slack_icon_2019.svg.png',
+  'drive': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/512px-Google_Drive_icon_%282020%29.svg.png',
+  'calendar': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Google_Calendar_icon_%282020%29.svg/512px-Google_Calendar_icon_%282020%29.svg.png',
+  'github': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Octicons-mark-github.svg/512px-Octicons-mark-github.svg.png',
+};
+
 class ConnectorIcon extends StatelessWidget {
   const ConnectorIcon({required this.connector, this.size = 40, super.key});
 
@@ -280,6 +289,34 @@ class ConnectorIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logoUrl = _brandLogoUrls[connector.id];
+    if (logoUrl != null) {
+      return SydneyIconBadge(
+        size: size,
+        radius: SydneyRadius.md,
+        color: Colors.white,
+        foregroundColor: Colors.transparent,
+        borderColor: SydneyColors.line,
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.16),
+          child: Image.network(
+            logoUrl,
+            width: size * 0.68,
+            height: size * 0.68,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              final colors = _iconColors(connector.iconName);
+              return Icon(
+                _iconData(connector.iconName),
+                size: size * 0.48,
+                color: colors.foreground,
+              );
+            },
+          ),
+        ),
+      );
+    }
+
     final colors = _iconColors(connector.iconName);
     return SydneyIconBadge(
       size: size,
