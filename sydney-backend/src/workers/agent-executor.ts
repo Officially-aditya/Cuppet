@@ -329,6 +329,13 @@ async function executeAgentJob(
       status: "success"
     });
 
+    if (targetSnoozedId) {
+      await pool.query(
+        "DELETE FROM agent_messages WHERE id = $1 AND agent_id = $2",
+        [targetSnoozedId, agent.id]
+      );
+    }
+
     await publishRealtimeEventsSafely(
       {
         type: "message.created",
