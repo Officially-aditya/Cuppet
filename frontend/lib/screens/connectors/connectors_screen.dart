@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../models/connector.dart';
 import '../../providers/connectors_provider.dart';
@@ -73,102 +72,6 @@ class ConnectorsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      bottomNavigationBar: SydneyFooter(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: SydneyColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
-                    offset: const Offset(4, 4),
-                    blurRadius: 8,
-                  ),
-                  const BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-4, -4),
-                    blurRadius: 8,
-                  ),
-                ],
-                border: Border.all(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => Navigator.of(context).pushNamed(AppRoutes.addConnector),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        const SydneyIconBadge(
-                          size: 40,
-                          radius: SydneyRadius.md,
-                          color: SydneyColors.primarySoft,
-                          foregroundColor: SydneyColors.primary,
-                          child: Icon(Icons.add_rounded, size: 20),
-                        ),
-                        const SizedBox(width: SydneySpacing.md),
-                        Expanded(
-                          child: Text(
-                            'Add new connector',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: SydneyColors.ink,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context).pushNamed(AppRoutes.addConnector),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: SydneyColors.primary,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 32),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: SydneySpacing.md,
-                            ),
-                            textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          child: const Text('CONNECT'),
-                        ),
-                        const SizedBox(width: SydneySpacing.xs),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed(AppRoutes.addConnector),
-              icon: const Text('Other...'),
-              label: const Icon(Icons.chevron_right_rounded, size: 14),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(44),
-                side: const BorderSide(color: SydneyColors.line),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      letterSpacing: 0.8,
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -186,7 +89,7 @@ class _ConnectorList extends ConsumerWidget {
         SydneySpacing.page,
         SydneySpacing.lg,
         SydneySpacing.page,
-        164,
+        SydneySpacing.lg,
       ),
       children: [
         Text(
