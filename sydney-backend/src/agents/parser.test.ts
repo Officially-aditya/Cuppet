@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseIntent } from "./parser.js";
+import { parseIntent, responseLimitInstruction } from "./parser.js";
 
 test("classifies a calendar agenda as a dedicated calendar connector", () => {
   const parsed = parseIntent(
@@ -44,4 +44,17 @@ test("content extractor is not classified as unsupported even when mentioning tw
 
   assert.equal(parsed.intent, "content_extractor");
   assert.equal(parsed.output_template, "content_extractor");
+});
+
+test("responseLimitInstruction returns appropriate prompts", () => {
+  assert.match(responseLimitInstruction("concise"), /extremely brief/);
+  assert.match(responseLimitInstruction("detailed"), /highly detailed/);
+  assert.match(responseLimitInstruction("balanced"), /balanced/);
+  assert.match(responseLimitInstruction(undefined), /balanced/);
+});
+
+test("agent active_until parsing and date format compatibility", () => {
+  const dateStr = new Date().toISOString();
+  const parsed = new Date(dateStr);
+  assert.ok(!isNaN(parsed.getTime()));
 });

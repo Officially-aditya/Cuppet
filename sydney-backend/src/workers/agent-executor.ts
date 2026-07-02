@@ -10,6 +10,7 @@ import {
   createTechNewsBrief
 } from "../agents/tech-news.js";
 import { renderLlmCustomAgent } from "../agents/custom-agent.js";
+import { responseLimitInstruction } from "../agents/parser.js";
 import {
   renderedChecklist,
   renderedComparison,
@@ -271,6 +272,37 @@ async function executeAgentJob(
 
   if (agent.status !== "active") {
     return { skipped: "agent_not_active" };
+  }
+
+  const parsedIntent = typeof agent.parsed_intent === "string"
+    ? JSON.parse(agent.parsed_intent)
+    : (agent.parsed_intent || {});
+  
+  if (parsedIntent.active_until) {
+    const activeUntilDate = new Date(parsedIntent.active_until);
+    if (activeUntilDate <= new Date()) {
+      await pool.query(
+        "UPDATE agents SET status = 'paused' WHERE id = $1",
+        [agent.id]
+      );
+      const { syncAgentSchedule } = await import("../agents/scheduler.js");
+      await syncAgentSchedule({
+        id: agent.id,
+        schedule_cron: agent.schedule_cron,
+        status: "paused",
+        is_assistant: false
+      });
+      await publishRealtimeEventsSafely({
+        type: "agent.updated",
+        user_id: agent.user_id,
+        agent_id: agent.id,
+        data: {
+          status: "paused",
+          schedule_cron: agent.schedule_cron
+        }
+      });
+      return { skipped: "agent_active_until_reached" };
+    }
   }
 
   const executionKey = agentExecutionKey({
@@ -826,7 +858,8 @@ async function renderCustomAgent(
     agentName: agent.name,
     prompt: agent.prompt,
     action: actionText(agent),
-    heading: scheduledIntro(agent, "update", trigger)
+    heading: scheduledIntro(agent, "update", trigger),
+    responseLimit: parsedIntent.response_limit
   });
   if (llmRendered) {
     return llmRendered;
@@ -905,11 +938,12 @@ async function renderStudyGuideAgent(context: {
             "Return ONLY a valid JSON object matching this structure:",
             "{",
             '  "topic": "Topic Name",',
-            '  "definition": "Clear, concise theory explanation in markdown, followed by integrated questions and/or exercises for practice.",',
+            '  "definition": "Theory explanation in markdown, followed by integrated questions and/or exercises for practice.",',
             '  "references": [',
             '    { "title": "Reference Name", "url": "https://example.com" }',
             "  ]",
-            "}"
+            "}",
+            responseLimitInstruction(parsedIntent.response_limit)
           ].join(" "),
           messages: [
             {
@@ -989,11 +1023,12 @@ async function renderStudyGuideAgent(context: {
         "Return ONLY a valid JSON object matching this structure:",
         "{",
         '  "topic": "Topic Name",',
-        '  "definition": "Clear, concise definition and explanation in markdown.",',
+        '  "definition": "Definition and explanation in markdown.",',
         '  "references": [',
         '    { "title": "Reference Resource Name", "url": "https://example.com" }',
         "  ]",
-        "}"
+        "}",
+        responseLimitInstruction(parsedIntent.response_limit)
       ].join(" "),
       messages: [
         {

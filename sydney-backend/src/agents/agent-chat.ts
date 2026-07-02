@@ -5,7 +5,7 @@ import {
   type AnthropicContentBlock,
   type AnthropicTextMessage
 } from "./anthropic.js";
-import type { ParsedIntent } from "./parser.js";
+import { responseLimitInstruction, type ParsedIntent } from "./parser.js";
 import { fetchSourceReferenceDetail } from "../connectors/google-workspace.js";
 import {
   untrustedDataBlock,
@@ -61,9 +61,17 @@ export async function createAgentChatReply(
       context.agent.name.toLowerCase().includes("dsa") ||
       context.agent.name.toLowerCase().includes("algorithm");
     const messages = buildMessages(context, fetchedReferencesText);
-    const system = agentChatSystemPrompt(useWebSearch, isContentExtractor, isDsaAgent, context.agent.prompt);
+    const responseLimit = context.agent.parsed_intent.response_limit;
+    const system = agentChatSystemPrompt(
+      useWebSearch,
+      isContentExtractor,
+      isDsaAgent,
+      context.agent.prompt,
+      responseLimit
+    );
+    const baseMaxTokens = responseLimit === "detailed" ? 1500 : responseLimit === "concise" ? 500 : (useWebSearch ? 1100 : 700);
     let response = await createAnthropicMessage({
-      maxTokens: useWebSearch ? 1100 : 700,
+      maxTokens: baseMaxTokens,
       system,
       messages,
       ...(useWebSearch
@@ -86,7 +94,7 @@ export async function createAgentChatReply(
       }
       messages.push({ role: "assistant", content: response.content });
       response = await createAnthropicMessage({
-        maxTokens: useWebSearch ? 1100 : 700,
+        maxTokens: baseMaxTokens,
         system,
         messages,
         ...(useWebSearch
@@ -182,7 +190,8 @@ function agentChatSystemPrompt(
   useWebSearch: boolean,
   isContentExtractor: boolean,
   isDsaAgent: boolean,
-  agentPrompt: string
+  agentPrompt: string,
+  responseLimit?: string
 ): string {
   return [
     "You are a specialized agent inside the Sydney app.",
@@ -220,7 +229,8 @@ function agentChatSystemPrompt(
           "- Keep descriptions practical, step-by-step, and mathematically sound."
         ].join("\n")
       : "",
-    "Keep replies concise, practical, and scannable. Use short bullets when listing items."
+    "Keep replies concise, practical, and scannable. Use short bullets when listing items.",
+    responseLimitInstruction(responseLimit)
   ].filter(Boolean).join("\n");
 }
 

@@ -28,7 +28,9 @@ const updateAgentSchema = z
   .object({
     name: shortLabelSchema.optional(),
     schedule_cron: cronSchema.nullable().optional(),
-    status: z.enum(["active", "paused", "error"]).optional()
+    status: z.enum(["active", "paused", "error"]).optional(),
+    response_limit: z.enum(["concise", "balanced", "detailed"]).optional(),
+    active_until: z.string().datetime().nullable().optional()
   })
   .strict()
   .refine((body) => Object.keys(body).length > 0, {
@@ -141,6 +143,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const parsedIntent = await parseIntentHybrid(body.data.prompt);
+    const oneYearLater = new Date();
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    parsedIntent.active_until = oneYearLater.toISOString();
     if (parsedIntent.unsupported_connector) {
       return reply.code(422).send({
         error: {
@@ -248,6 +253,38 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    const parsedIntent = agent.parsed_intent;
+    if (parsedIntent && parsedIntent.active_until) {
+      const activeUntilDate = new Date(parsedIntent.active_until);
+      if (activeUntilDate <= new Date()) {
+        await pool.query(
+          "UPDATE agents SET status = 'paused' WHERE id = $1",
+          [agent.id]
+        );
+        await syncAgentSchedule({
+          id: agent.id,
+          schedule_cron: agent.schedule_cron,
+          status: "paused",
+          is_assistant: false
+        });
+        await publishRealtimeEvent({
+          type: "agent.updated",
+          user_id: userId,
+          agent_id: agent.id,
+          data: {
+            status: "paused",
+            schedule_cron: agent.schedule_cron
+          }
+        });
+        return reply.code(409).send({
+          error: {
+            code: "AGENT_NOT_ACTIVE",
+            message: "Only active agents can be run. This agent's active time has expired."
+          }
+        });
+      }
+    }
+
     const job = await enqueueAgentRun(agent.id, "manual");
     await publishRealtimeEvent({
       type: "run.queued",
@@ -295,10 +332,33 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         : body.data.schedule_cron;
     const nextStatus = body.data.status ?? existing.status;
 
+    const queryParts = [
+      "name = $1",
+      "schedule_cron = $2",
+      "status = $3"
+    ];
+    const params = [nextName, nextSchedule, nextStatus, agentId, userId];
+
+    let paramIndex = 6;
+    if (body.data.response_limit !== undefined) {
+      queryParts.push(`parsed_intent = jsonb_set(parsed_intent, '{response_limit}', $${paramIndex}::jsonb)`);
+      params.push(JSON.stringify(body.data.response_limit));
+      paramIndex++;
+    }
+    if (body.data.active_until !== undefined) {
+      if (body.data.active_until === null) {
+        queryParts.push("parsed_intent = parsed_intent - 'active_until'");
+      } else {
+        queryParts.push(`parsed_intent = jsonb_set(parsed_intent, '{active_until}', $${paramIndex}::jsonb)`);
+        params.push(JSON.stringify(body.data.active_until));
+        paramIndex++;
+      }
+    }
+
     const { rows } = await pool.query(
       `
         UPDATE agents
-        SET name = $1, schedule_cron = $2, status = $3
+        SET ${queryParts.join(", ")}
         WHERE id = $4 AND user_id = $5
         RETURNING
           id,
@@ -315,7 +375,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           created_at,
           updated_at
       `,
-      [nextName, nextSchedule, nextStatus, agentId, userId]
+      params
     );
 
     const updatedAgent = rows[0]!;

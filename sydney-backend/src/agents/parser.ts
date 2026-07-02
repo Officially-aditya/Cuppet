@@ -12,6 +12,8 @@ export interface ParsedIntent {
   safety_level: "read" | "suggest" | "act";
   risk_level: "low" | "medium" | "high";
   permissions_needed: string[];
+  response_limit?: "concise" | "balanced" | "detailed";
+  active_until?: string;
 }
 
 const UNSUPPORTED_CONNECTORS = [
@@ -1190,4 +1192,15 @@ function to24Hour(rawHour: string | undefined, meridiem: string | undefined): nu
   if (meridiem === "am") return hour === 12 ? 0 : hour;
   if (meridiem === "pm") return hour === 12 ? 12 : hour + 12;
   return hour;
+}
+
+export function responseLimitInstruction(limit?: string): string {
+  if (limit === "concise") {
+    return "RESPONSE DENSITY REQUIREMENT: The response must be extremely brief, concise, and focused. Avoid any extra explanation, detailed background, or filler. Deliver only the most essential key points or items directly.";
+  }
+  if (limit === "detailed") {
+    return "RESPONSE DENSITY REQUIREMENT: The response must be highly detailed, verbose, and precise. Include comprehensive explanations, complete background details, and in-depth step-by-step points.";
+  }
+  // Default to balanced
+  return "RESPONSE DENSITY REQUIREMENT: Deliver a balanced summary of information. Provide reasonable context and clear explanations without being overly verbose.";
 }

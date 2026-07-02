@@ -22,6 +22,39 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
   final _activeUntilController = TextEditingController(text: 'June 30, 2026');
 
   @override
+  void initState() {
+    super.initState();
+    final rawLimit = widget.agent.parsedIntent?['response_limit'] ??
+        widget.agent.parsedIntent?['responseLimit'];
+    if (rawLimit == 'concise') {
+      _responseLimit = 1;
+    } else if (rawLimit == 'detailed') {
+      _responseLimit = 3;
+    } else {
+      _responseLimit = 2; // Balanced
+    }
+
+    final rawActiveUntil = widget.agent.parsedIntent?['active_until'] ??
+        widget.agent.parsedIntent?['activeUntil'];
+    if (rawActiveUntil == null) {
+      _runIndefinitely = true;
+      _activeUntilController.text = '';
+    } else {
+      _runIndefinitely = false;
+      try {
+        final parsed = DateTime.parse(rawActiveUntil.toString());
+        final months = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        _activeUntilController.text = '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
+      } catch (_) {
+        _activeUntilController.text = rawActiveUntil.toString();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _activeUntilController.dispose();
     super.dispose();
@@ -306,6 +339,26 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   TextField(
                     controller: _activeUntilController,
                     enabled: !_runIndefinitely,
+                    readOnly: true,
+                    onTap: _runIndefinitely ? null : () async {
+                      final now = DateTime.now();
+                      final initialDate = DateTime.tryParse(widget.agent.parsedIntent?['active_until'] ?? '') ?? now.add(const Duration(days: 365));
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: initialDate.isAfter(now) ? initialDate : now,
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 365 * 10)),
+                      );
+                      if (picked != null) {
+                        final months = [
+                          'January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'
+                        ];
+                        setState(() {
+                          _activeUntilController.text = '${months[picked.month - 1]} ${picked.day}, ${picked.year}';
+                        });
+                      }
+                    },
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: SydneyColors.onSurface,
                           fontWeight: FontWeight.w500,
@@ -340,7 +393,21 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   const SizedBox(height: SydneySpacing.sm),
                   CheckboxListTile(
                     value: _runIndefinitely,
-                    onChanged: (value) => setState(() => _runIndefinitely = value ?? false),
+                    onChanged: (value) {
+                      setState(() {
+                        _runIndefinitely = value ?? false;
+                        if (_runIndefinitely) {
+                          _activeUntilController.clear();
+                        } else {
+                          final defaultDate = DateTime.now().add(const Duration(days: 365));
+                          final months = [
+                            'January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'
+                          ];
+                          _activeUntilController.text = '${months[defaultDate.month - 1]} ${defaultDate.day}, ${defaultDate.year}';
+                        }
+                      });
+                    },
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
@@ -424,7 +491,7 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
       ),
       bottomNavigationBar: SydneyFooter(
         child: FilledButton.icon(
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: _savePreferences,
           icon: const Icon(Icons.check_box_outlined, size: 18),
           label: const Text('Save Preferences'),
           style: FilledButton.styleFrom(
@@ -439,6 +506,76 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _savePreferences() async {
+    final limitStr = _responseLimit.round() == 1
+        ? 'concise'
+        : _responseLimit.round() == 3
+            ? 'detailed'
+            : 'balanced';
+
+    String? activeUntilIso;
+    if (!_runIndefinitely) {
+      final parsedDate = _parseActiveUntilText(_activeUntilController.text);
+      if (parsedDate != null) {
+        activeUntilIso = parsedDate.toUtc().toIso8601String();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select or enter a valid date.')),
+        );
+        return;
+      }
+    }
+
+    try {
+      await ref.read(agentServiceProvider).patchAgent(
+        widget.agent.id,
+        {
+          'response_limit': limitStr,
+          'active_until': activeUntilIso,
+        },
+      );
+      ref.invalidate(agentsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preferences saved successfully.')),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save preferences: $e')),
+        );
+      }
+    }
+  }
+
+  DateTime? _parseActiveUntilText(String text) {
+    try {
+      final clean = text.trim();
+      if (clean.isEmpty) return null;
+      
+      final months = [
+        'january', 'february', 'march', 'april', 'may', 'june',
+        'july', 'august', 'september', 'october', 'november', 'december'
+      ];
+      final match = RegExp(r'^([a-zA-Z]+)\s+(\d{1,2}),\s*(\d{4})$').firstMatch(clean);
+      if (match != null) {
+        final monthStr = match.group(1)!.toLowerCase();
+        final day = int.parse(match.group(2)!);
+        final year = int.parse(match.group(3)!);
+        final monthIndex = months.indexOf(monthStr);
+        if (monthIndex != -1) {
+          return DateTime(year, monthIndex + 1, day, 23, 59, 59);
+        }
+      }
+      
+      return DateTime.tryParse(clean);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _confirmDelete() async {

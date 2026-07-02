@@ -8,6 +8,7 @@ import {
 } from "./anthropic.js";
 import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
+import { responseLimitInstruction } from "./parser.js";
 
 const maxContinuationTurns = 2;
 
@@ -24,6 +25,7 @@ export async function renderLlmCustomAgent(input: {
   prompt: string;
   action: string;
   heading: string;
+  responseLimit?: string;
 }): Promise<RenderedAgentMessage | null> {
   if (!anthropicConfigured()) {
     return null;
@@ -41,7 +43,8 @@ export async function renderLlmCustomAgent(input: {
         : "Use only the user's saved prompt and action. Do not claim to have checked external services, files, email, web, Slack, calendar, or private data.",
       "If external data is required (like email, Slack, private documents) that cannot be retrieved via web search, state which connector is needed instead of inventing results. Never write conversational notes, summaries, or call-to-actions about automating updates or setting up connectors (e.g. do not say 'To automate these updates...').",
       "Never emit an empty heading, label, bullet, or field. Put a label and its value on the same line, for example: '- **Focus:** Use a hash set to track seen values.'",
-      "Return a detailed, structured, and useful message for this run."
+      "Return a detailed, structured, and useful message for this run.",
+      responseLimitInstruction(input.responseLimit)
     ].join(" ");
 
     const messages: AnthropicTextMessage[] = [
@@ -56,8 +59,10 @@ export async function renderLlmCustomAgent(input: {
       }
     ];
 
+    const maxTokens = input.responseLimit === "detailed" ? 1500 : input.responseLimit === "concise" ? 500 : 800;
+
     let response = await createAnthropicMessage({
-      maxTokens: 700,
+      maxTokens,
       system,
       messages,
       ...(useWebSearch
@@ -82,7 +87,7 @@ export async function renderLlmCustomAgent(input: {
       }
       messages.push({ role: "assistant", content: response.content });
       response = await createAnthropicMessage({
-        maxTokens: 700,
+        maxTokens,
         system,
         messages,
         ...(useWebSearch
