@@ -384,24 +384,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 data: (items) {
                   _syncReadStateWithInbox(items);
 
-                  // Clear optimistic message once the real list contains it.
-                  if (_pendingUserMessage != null) {
-                    final pending = _pendingUserMessage!;
-                    final alreadyInList = items.any(
-                      (m) => m.sender == MessageSender.user &&
-                             m.data['text']?.toString() == pending.data['text']?.toString() &&
-                             m.createdAt.isAfter(pending.createdAt.subtract(const Duration(seconds: 30))),
-                    );
-                    if (alreadyInList) {
-                      _pendingUserMessage = null;
-                      _awaitingResponse = false;
-                    }
-                  }
-
                   // Count items including optimistic ones for scroll detection.
                   final effectiveCount = items.length +
-                      (_pendingUserMessage != null ? 1 : 0) +
-                      (_awaitingResponse ? 1 : 0);
+                      (_pendingUserMessage != null ? 1 : 0);
                   if (_lastRenderedMessageCount != effectiveCount ||
                       _lastAvailability != agent.availability) {
                     _lastRenderedMessageCount = effectiveCount;
@@ -409,13 +394,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     _scrollToBottomSoon();
                   }
 
-                  // Build the display list: real items + optional pending + optional typing.
+                  // Build the display list: real items + optional pending user message.
                   final displayItems = [...items];
                   if (_pendingUserMessage != null) {
                     displayItems.add(_pendingUserMessage!);
                   }
 
-                  // Extra slots: day pill (1) + typing indicator (1).
+                  // Show typing indicator while awaiting response or agent is thinking.
                   final showTyping = _awaitingResponse ||
                       agent.availability == AgentAvailability.thinking;
                   final itemCount = displayItems.length + 1 + (showTyping ? 1 : 0);
@@ -489,6 +474,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       await ref
           .read(messageActionsProvider)
           .sendReply(threadId: _activeAgent.threadId, text: text);
+      // API succeeded — the real message is now in the server list.
+      // Clear the optimistic duplicate; typing indicator will continue
+      // showing via agent.availability == thinking until the agent responds.
+      if (mounted) {
+        setState(() {
+          _pendingUserMessage = null;
+          _awaitingResponse = false;
+        });
+      }
     } catch (error) {
       if (!mounted) return;
       // Clear optimistic state on failure so the UI doesn't stay stuck.
