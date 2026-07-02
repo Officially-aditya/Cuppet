@@ -273,7 +273,6 @@ class _ConnectorStatusLine extends StatelessWidget {
 }
 
 const Map<String, String> _brandLogoUrls = {
-  'web_search': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/512px-Google_%22G%22_logo.svg.png',
   'gmail': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Gmail_icon_%282020%29.svg/512px-Gmail_icon_%282020%29.svg.png',
   'slack': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/512px-Slack_icon_2019.svg.png',
   'drive': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/512px-Google_Drive_icon_%282020%29.svg.png',
@@ -309,6 +308,9 @@ class ConnectorIcon extends StatelessWidget {
           padding: EdgeInsets.all(size * 0.16),
           child: Image.network(
             logoUrl,
+            headers: const {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
             width: size * 0.68,
             height: size * 0.68,
             fit: BoxFit.contain,
@@ -349,6 +351,7 @@ IconData _iconData(String? iconName) {
     'Github' => Icons.code_rounded,
     'HardDrive' => Icons.storage_rounded,
     'FolderOpen' => Icons.folder_open_rounded,
+    'search' || 'Search' => Icons.language_rounded,
     _ => Icons.mail_outline_rounded,
   };
 }
