@@ -332,33 +332,29 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         : body.data.schedule_cron;
     const nextStatus = body.data.status ?? existing.status;
 
-    const queryParts = [
-      "name = $1",
-      "schedule_cron = $2",
-      "status = $3"
-    ];
-    const params = [nextName, nextSchedule, nextStatus, agentId, userId];
-
-    let paramIndex = 6;
+    const nextParsedIntent = {
+      ...(typeof existing.parsed_intent === "string"
+        ? JSON.parse(existing.parsed_intent)
+        : (existing.parsed_intent || {}))
+    };
     if (body.data.response_limit !== undefined) {
-      queryParts.push(`parsed_intent = jsonb_set(parsed_intent, '{response_limit}', $${paramIndex}::jsonb)`);
-      params.push(JSON.stringify(body.data.response_limit));
-      paramIndex++;
+      nextParsedIntent.response_limit = body.data.response_limit;
     }
     if (body.data.active_until !== undefined) {
       if (body.data.active_until === null) {
-        queryParts.push("parsed_intent = parsed_intent - 'active_until'");
+        delete nextParsedIntent.active_until;
       } else {
-        queryParts.push(`parsed_intent = jsonb_set(parsed_intent, '{active_until}', $${paramIndex}::jsonb)`);
-        params.push(JSON.stringify(body.data.active_until));
-        paramIndex++;
+        nextParsedIntent.active_until = body.data.active_until;
       }
     }
 
     const { rows } = await pool.query(
       `
         UPDATE agents
-        SET ${queryParts.join(", ")}
+        SET name = $1,
+            schedule_cron = $2,
+            status = $3,
+            parsed_intent = $6::jsonb
         WHERE id = $4 AND user_id = $5
         RETURNING
           id,
@@ -375,7 +371,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           created_at,
           updated_at
       `,
-      params
+      [nextName, nextSchedule, nextStatus, agentId, userId, JSON.stringify(nextParsedIntent)]
     );
 
     const updatedAgent = rows[0]!;
