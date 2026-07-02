@@ -31,6 +31,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   AgentAvailability? _lastAvailability;
   String? _lastReadSyncedMessageId;
 
+  /// Optimistic UI: the message the user just sent, shown immediately.
+  Message? _pendingUserMessage;
+  /// True while we are waiting for the agent's reply after an optimistic send.
+  bool _awaitingResponse = false;
+
   Agent get _activeAgent {
     return ref.read(agentsProvider).maybeWhen(
       data: (list) => list.firstWhere(
@@ -378,12 +383,42 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               child: messages.when(
                 data: (items) {
                   _syncReadStateWithInbox(items);
-                  if (_lastRenderedMessageCount != items.length ||
+
+                  // Clear optimistic message once the real list contains it.
+                  if (_pendingUserMessage != null) {
+                    final pending = _pendingUserMessage!;
+                    final alreadyInList = items.any(
+                      (m) => m.sender == MessageSender.user &&
+                             m.data['text']?.toString() == pending.data['text']?.toString() &&
+                             m.createdAt.isAfter(pending.createdAt.subtract(const Duration(seconds: 30))),
+                    );
+                    if (alreadyInList) {
+                      _pendingUserMessage = null;
+                      _awaitingResponse = false;
+                    }
+                  }
+
+                  // Count items including optimistic ones for scroll detection.
+                  final effectiveCount = items.length +
+                      (_pendingUserMessage != null ? 1 : 0) +
+                      (_awaitingResponse ? 1 : 0);
+                  if (_lastRenderedMessageCount != effectiveCount ||
                       _lastAvailability != agent.availability) {
-                    _lastRenderedMessageCount = items.length;
+                    _lastRenderedMessageCount = effectiveCount;
                     _lastAvailability = agent.availability;
                     _scrollToBottomSoon();
                   }
+
+                  // Build the display list: real items + optional pending + optional typing.
+                  final displayItems = [...items];
+                  if (_pendingUserMessage != null) {
+                    displayItems.add(_pendingUserMessage!);
+                  }
+
+                  // Extra slots: day pill (1) + typing indicator (1).
+                  final showTyping = _awaitingResponse ||
+                      agent.availability == AgentAvailability.thinking;
+                  final itemCount = displayItems.length + 1 + (showTyping ? 1 : 0);
 
                   return ListView.builder(
                     controller: _scrollController,
@@ -393,22 +428,22 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       SydneySpacing.page,
                       SydneySpacing.lg,
                     ),
-                    itemCount: items.length + 2,
+                    itemCount: itemCount,
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return const _ThreadDayPill();
                       }
                       final messageIndex = index - 1;
-                      if (messageIndex == items.length) {
-                        return agent.availability ==
-                                AgentAvailability.thinking
-                            ? const TypingIndicator()
-                            : const SizedBox.shrink();
+                      if (messageIndex < displayItems.length) {
+                        return MessageCard(
+                          message: displayItems[messageIndex],
+                          onAction: _handleMessageAction,
+                        );
                       }
-                      return MessageCard(
-                        message: items[messageIndex],
-                        onAction: _handleMessageAction,
-                      );
+                      // Last slot is the typing indicator.
+                      return showTyping
+                          ? const TypingIndicator()
+                          : const SizedBox.shrink();
                     },
                   );
                 },
@@ -432,22 +467,35 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   }
 
   Future<void> _sendReply(String text) async {
+    // Optimistic: show the user's message immediately.
+    final optimistic = Message.plainText(
+      id: 'pending_${DateTime.now().microsecondsSinceEpoch}',
+      threadId: _activeAgent.threadId,
+      sender: MessageSender.user,
+      text: text,
+    );
+    setState(() {
+      _pendingUserMessage = optimistic;
+      _awaitingResponse = true;
+    });
+    _scrollToBottomSoon();
+
+    // Fire the API call in the background — don't block the ReplyBar.
+    unawaited(_sendReplyAsync(text));
+  }
+
+  Future<void> _sendReplyAsync(String text) async {
     try {
       await ref
           .read(messageActionsProvider)
           .sendReply(threadId: _activeAgent.threadId, text: text);
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      if (_scrollController.hasClients) {
-        await _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-        );
-      }
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
+      // Clear optimistic state on failure so the UI doesn't stay stuck.
+      setState(() {
+        _pendingUserMessage = null;
+        _awaitingResponse = false;
+      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.toString())));
