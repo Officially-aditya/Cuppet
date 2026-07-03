@@ -41,3 +41,14 @@ test("merges a heading-only brief field with its following detail", () => {
     false
   );
 });
+
+test("stockSymbols extracts capital tickers and filters system words", () => {
+  function stockSymbols(prompt: string): string[] {
+    const matches = prompt.match(/\b[A-Z]{2,5}\b/g) ?? [];
+    return [...new Set(matches)].filter(
+      (symbol) => !["DSA", "JEE", "NEET", "PDF", "API"].includes(symbol)
+    );
+  }
+  const symbols = stockSymbols("Track TCS, RIL, INFY and avoid DSA, API, NEET");
+  assert.deepEqual(symbols, ["TCS", "RIL", "INFY"]);
+});

@@ -1293,22 +1293,137 @@ function renderDailyTaskAgent(agent: AgentRow): RenderedAgentMessage {
   });
 }
 
-function renderPortfolioWatch(agent: AgentRow): RenderedAgentMessage {
+async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessage> {
   const symbols = stockSymbols(agent.prompt);
-  return renderedDataSummary({
-    title: scheduledTitle(agent, "portfolio watch"),
-    text:
-      symbols.length > 0
-        ? `Tracking requested symbols: ${symbols.join(", ")}.`
-        : "I need the portfolio symbols or holdings before I can produce a real market-close summary.",
-    summary:
-      "This template is ready for market data. The next backend step is to connect a reliable market-data source or a web-search structured renderer.",
-    metrics: [
-      { label: "Symbols", value: String(symbols.length) },
-      { label: "Data", value: "Pending" }
-    ],
-    footer: "No prices were invented for this run."
-  });
+  const apiKey = process.env.STOCK_API_KEY || "";
+
+  if (!apiKey) {
+    return renderedDataSummary({
+      title: scheduledTitle(agent, "portfolio watch"),
+      text: "Stock API key is missing. Please set the STOCK_API_KEY environment variable.",
+      summary: "API configuration required.",
+      metrics: [],
+      footer: "Config missing"
+    });
+  }
+
+  try {
+    if (symbols.length > 0) {
+      const results: any[] = [];
+      for (const symbol of symbols) {
+        try {
+          const res = await fetch(`https://stock.indianapi.in/stock?name=${encodeURIComponent(symbol)}`, {
+            headers: { "x-api-key": apiKey }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.companyName) {
+              results.push(data);
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch stock details for ${symbol}:`, err);
+        }
+      }
+
+      if (results.length > 0) {
+        const lines = results.map((data) => {
+          const price = data.currentPrice.NSE || data.currentPrice.BSE || "N/A";
+          const change = data.percentChange || "0.00";
+          const changePrefix = parseFloat(change) > 0 ? "+" : "";
+          return `**${data.companyName || "Stock"}**: ₹${price} (${changePrefix}${change}%) • High: ₹${data.yearHigh} • Low: ₹${data.yearLow}`;
+        });
+
+        const metrics = results.slice(0, 4).map((data) => {
+          const price = data.currentPrice.NSE || data.currentPrice.BSE || "N/A";
+          const change = data.percentChange || "0.00";
+          const changePrefix = parseFloat(change) > 0 ? "+" : "";
+          return {
+            label: data.companyName ? (data.companyName.length > 15 ? data.companyName.slice(0, 15) + "..." : data.companyName) : "Stock",
+            value: `₹${price} (${changePrefix}${change}%)`
+          };
+        });
+
+        return renderedDataSummary({
+          title: scheduledTitle(agent, "portfolio watch"),
+          text: `Live tracking for: ${symbols.join(", ")}.`,
+          summary: lines.join("\n"),
+          metrics,
+          footer: "Live market data sourced from Indian Stock API."
+        });
+      } else {
+        return renderedDataSummary({
+          title: scheduledTitle(agent, "portfolio watch"),
+          text: `No stock details found for symbols: ${symbols.join(", ")}.`,
+          summary: "Could not retrieve matching stocks from the API.",
+          metrics: [],
+          footer: "No match found"
+        });
+      }
+    } else {
+      // Default to /trending
+      const res = await fetch("https://stock.indianapi.in/trending", {
+        headers: { "x-api-key": apiKey }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const topGainers = Array.isArray(data.top_gainers) ? data.top_gainers.slice(0, 3) : [];
+        const topLosers = Array.isArray(data.top_losers) ? data.top_losers.slice(0, 3) : [];
+
+        const lines: string[] = [];
+        if (topGainers.length > 0) {
+          lines.push("**Top Gainers**");
+          topGainers.forEach((stock: any) => {
+            const changePrefix = parseFloat(stock.percent_change) > 0 ? "+" : "";
+            lines.push(`${stock.company_name || "Stock"}: ₹${stock.price} (${changePrefix}${stock.percent_change}%)`);
+          });
+        }
+        if (topLosers.length > 0) {
+          if (lines.length > 0) lines.push("");
+          lines.push("**Top Losers**");
+          topLosers.forEach((stock: any) => {
+            lines.push(`${stock.company_name || "Stock"}: ₹${stock.price} (${stock.percent_change}%)`);
+          });
+        }
+
+        const metrics = [
+          ...topGainers.slice(0, 2).map((stock: any) => ({
+            label: `Gainer: ${stock.company_name ? (stock.company_name.length > 10 ? stock.company_name.slice(0, 10) + "..." : stock.company_name) : "Stock"}`,
+            value: `₹${stock.price} (+${stock.percent_change}%)`
+          })),
+          ...topLosers.slice(0, 2).map((stock: any) => ({
+            label: `Loser: ${stock.company_name ? (stock.company_name.length > 10 ? stock.company_name.slice(0, 10) + "..." : stock.company_name) : "Stock"}`,
+            value: `₹${stock.price} (${stock.percent_change}%)`
+          }))
+        ];
+
+        return renderedDataSummary({
+          title: scheduledTitle(agent, "portfolio watch"),
+          text: "No symbols specified. Showing current trending stocks.",
+          summary: lines.join("\n"),
+          metrics,
+          footer: "Live trending stock data sourced from Indian Stock API."
+        });
+      } else {
+        return renderedDataSummary({
+          title: scheduledTitle(agent, "portfolio watch"),
+          text: "I need the portfolio symbols or holdings before I can produce a real market-close summary.",
+          summary: "This template is ready for market data. Please edit your agent's prompt to include ticker symbols (e.g., RELIANCE, TCS).",
+          metrics: [],
+          footer: "Symbols pending"
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error in renderPortfolioWatch:", error);
+    return renderedDataSummary({
+      title: scheduledTitle(agent, "portfolio watch"),
+      text: "An error occurred while fetching stock market data.",
+      summary: String(error),
+      metrics: [],
+      footer: "API error"
+    });
+  }
 }
 
 function renderCompetitorWatch(agent: AgentRow): RenderedAgentMessage {
@@ -1775,7 +1890,7 @@ function dailyTask(prompt: string): {
   };
 }
 
-function stockSymbols(prompt: string): string[] {
+export function stockSymbols(prompt: string): string[] {
   const matches = prompt.match(/\b[A-Z]{2,5}\b/g) ?? [];
   return [...new Set(matches)].filter(
     (symbol) => !["DSA", "JEE", "NEET", "PDF", "API"].includes(symbol)
