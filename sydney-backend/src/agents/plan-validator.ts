@@ -79,7 +79,7 @@ export function validateAgentPlan(
   const intent: ParsedIntent = {
     ...base,
     name: cleanShortText(proposal.name) ?? base.name,
-    intent: cleanIntent(proposal.intent) ?? base.intent,
+    intent: cleanIntent(proposal.intent, base.intent) ?? base.intent,
     connector,
     connector_ids: connectors,
     action: cleanLongText(proposal.action) ?? base.action,
@@ -235,8 +235,45 @@ function templateConfig(template: string): Record<string, boolean> {
   };
 }
 
-function cleanIntent(value: string | undefined): string | undefined {
+const SUPPORTED_INTENTS = new Set([
+  "tech_news_brief",
+  "news_brief",
+  "job_market_radar",
+  "web_search_agent",
+  "scheduled_reminder",
+  "study_plan",
+  "dsa_question",
+  "interview_prep",
+  "procrastination_breaker",
+  "daily_task",
+  "habit_tracker",
+  "language_word",
+  "coding_tip",
+  "book_companion",
+  "parenting_milestones",
+  "relationship_nudge",
+  "gratitude_prompt",
+  "portfolio_watch",
+  "competitor_watch",
+  "content_extractor"
+]);
+
+function cleanIntent(value: string | undefined, baseIntent: string): string | undefined {
   const text = value?.trim();
+  if (text && SUPPORTED_INTENTS.has(text)) {
+    return text;
+  }
+  if (
+    text === "market_watch" ||
+    text === "market_monitoring" ||
+    text === "stock_monitor" ||
+    text === "stock_watch"
+  ) {
+    return "portfolio_watch";
+  }
+  if (SUPPORTED_INTENTS.has(baseIntent)) {
+    return baseIntent;
+  }
   return text && /^[a-z0-9_]{3,80}$/.test(text) ? text : undefined;
 }
 
