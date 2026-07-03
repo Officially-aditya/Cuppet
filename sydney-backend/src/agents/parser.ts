@@ -574,7 +574,10 @@ export function parseIntent(prompt: string): ParsedIntent {
     });
   }
 
-  if (/\b(?:stock|stocks|portfolio|market close|holdings?|market\s+(?:monitor|tracker|watch|movement)|financial\s+market|stock\s+(?:monitor|tracker|watch))\b/.test(lower)) {
+  if (
+    stockSymbols(prompt).length > 0 ||
+    /\b(?:stock|stocks|portfolio|market close|holdings?|market\s+(?:monitor|tracker|watch|movement)|financial\s+market|stock\s+(?:monitor|tracker|watch))\b/.test(lower)
+  ) {
     return baseIntent(prompt, {
       name: "Portfolio Watch",
       avatar: "line-chart",
@@ -1211,4 +1214,73 @@ export function responseLimitInstruction(limit?: string): string {
   }
   // Default to balanced
   return "RESPONSE DENSITY REQUIREMENT: Deliver a balanced summary of information. Provide reasonable context and clear explanations without being overly verbose.";
+}
+
+export const STOCK_MAPPINGS: Record<string, string> = {
+  "ril": "Reliance Industries",
+  "reliance": "Reliance Industries",
+  "tcs": "Tata Consultancy Services",
+  "tata consultancy": "Tata Consultancy Services",
+  "infy": "Infosys",
+  "infosys": "Infosys",
+  "tata steel": "Tata Steel",
+  "hdfc": "HDFC Bank",
+  "icici": "ICICI Bank",
+  "sbi": "State Bank of India",
+  "sbin": "State Bank of India",
+  "state bank": "State Bank of India",
+  "wipro": "Wipro",
+  "airtel": "Bharti Airtel",
+  "bharti airtel": "Bharti Airtel",
+  "l&t": "Larsen & Toubro",
+  "larsen": "Larsen & Toubro",
+  "rvnl": "Rail Vikas Nigam",
+  "irfc": "Indian Railway Finance Corporation",
+  "lic": "Life Insurance Corporation",
+  "hcl": "HCL Technologies"
+};
+
+export const STOP_WORDS = new Set([
+  "track", "watch", "stocks", "stock", "portfolio", "market", "close", "and", "the", "avoid", "for", "this",
+  "that", "daily", "with", "my", "holdings", "of", "me", "show", "give", "brief", "summary", "digest",
+  "movement", "today", "yesterday", "tomorrow", "week", "month", "year", "latest", "current", "update",
+  "price", "prices", "info", "information", "details", "report", "status", "rate", "rates",
+  "quotes", "quote", "share", "shares"
+]);
+
+export function stockSymbols(prompt: string): string[] {
+  const lower = prompt.toLowerCase();
+  const searchQueries: string[] = [];
+
+  for (const [key, value] of Object.entries(STOCK_MAPPINGS)) {
+    const regex = new RegExp(`\\b${key}\\b`, "i");
+    if (regex.test(lower)) {
+      searchQueries.push(value);
+    }
+  }
+
+  const matches = prompt.match(/\b[A-Z]{2,6}\b/g) ?? [];
+  for (const symbol of matches) {
+    if (["DSA", "JEE", "NEET", "PDF", "API"].includes(symbol)) {
+      continue;
+    }
+    if (STOCK_MAPPINGS[symbol.toLowerCase()]) {
+      continue;
+    }
+    searchQueries.push(symbol);
+  }
+
+  const words = lower.split(/[^a-zA-Z&]+/).map(w => w.trim()).filter(w => w.length >= 2);
+  for (const word of words) {
+    if (STOP_WORDS.has(word)) continue;
+    if (["dsa", "jee", "neet", "pdf", "api"].includes(word)) continue;
+    if (STOCK_MAPPINGS[word]) continue;
+    const isMatched = searchQueries.some(q => q.toLowerCase().includes(word));
+    if (isMatched) continue;
+
+    const titleCaseWord = word.charAt(0).toUpperCase() + word.slice(1);
+    searchQueries.push(titleCaseWord);
+  }
+
+  return [...new Set(searchQueries)].slice(0, 6);
 }

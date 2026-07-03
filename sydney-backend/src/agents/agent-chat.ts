@@ -5,7 +5,7 @@ import {
   type AnthropicContentBlock,
   type AnthropicTextMessage
 } from "./anthropic.js";
-import { responseLimitInstruction, type ParsedIntent } from "./parser.js";
+import { responseLimitInstruction, stockSymbols, type ParsedIntent } from "./parser.js";
 import { fetchSourceReferenceDetail } from "../connectors/google-workspace.js";
 import {
   untrustedDataBlock,
@@ -60,6 +60,49 @@ export async function createAgentChatReply(
       context.agent.parsed_intent.intent === "dsa_question" ||
       context.agent.name.toLowerCase().includes("dsa") ||
       context.agent.name.toLowerCase().includes("algorithm");
+    const isPortfolioWatch =
+      context.agent.parsed_intent.intent === "portfolio_watch" ||
+      context.agent.name.toLowerCase().includes("portfolio") ||
+      context.agent.name.toLowerCase().includes("market watch");
+
+    let liveStockContext = "";
+    if (isPortfolioWatch) {
+      const symbols = stockSymbols(context.agent.prompt);
+      const apiKey = process.env.STOCK_API_KEY || "";
+      if (apiKey && symbols.length > 0) {
+        const results: any[] = [];
+        for (const symbol of symbols) {
+          try {
+            const res = await fetch(`https://stock.indianapi.in/stock?name=${encodeURIComponent(symbol)}`, {
+              headers: { "x-api-key": apiKey }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.companyName) {
+                results.push(data);
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to fetch stock details for chat: ${symbol}`, err);
+          }
+        }
+        if (results.length > 0) {
+          const lines = results.map((data) => {
+            const price = data.currentPrice.NSE || data.currentPrice.BSE || "N/A";
+            const change = data.percentChange || "0.00";
+            const changePrefix = parseFloat(change) > 0 ? "+" : "";
+            const nseTicker = data.companyProfile?.exchangeCodeNse ? ` (${data.companyProfile.exchangeCodeNse})` : "";
+            return `- **${data.companyName || "Stock"}**${nseTicker}: ₹${price} (${changePrefix}${change}%) • Range: ₹${data.yearLow} - ₹${data.yearHigh}`;
+          });
+          liveStockContext = [
+            "LIVE STOCK DATA:",
+            "Use the following actual live market numbers for any queries about stock values or changes. Do not invent any numbers:",
+            ...lines
+          ].join("\n");
+        }
+      }
+    }
+
     const messages = buildMessages(context, fetchedReferencesText);
     const responseLimit = context.agent.parsed_intent.response_limit;
     const system = agentChatSystemPrompt(
@@ -67,7 +110,8 @@ export async function createAgentChatReply(
       isContentExtractor,
       isDsaAgent,
       context.agent.prompt,
-      responseLimit
+      responseLimit,
+      liveStockContext
     );
     const baseMaxTokens = responseLimit === "detailed" ? 1500 : responseLimit === "concise" ? 500 : (useWebSearch ? 1100 : 700);
     let response = await createAnthropicMessage({
@@ -191,7 +235,8 @@ function agentChatSystemPrompt(
   isContentExtractor: boolean,
   isDsaAgent: boolean,
   agentPrompt: string,
-  responseLimit?: string
+  responseLimit?: string,
+  liveStockContext?: string
 ): string {
   return [
     "You are a specialized agent inside the Sydney app.",
@@ -205,6 +250,8 @@ function agentChatSystemPrompt(
     useWebSearch
       ? "5. Use the web_search tool to find more details, background, or latest updates regarding topics mentioned in the output when the user asks for more information."
       : "5. Stay grounded — ONLY reference data that actually appears in your output or the fetched reference contents below. If the user asks for sources, links, or new information not present in the output or fetched references, politely explain that you cannot browse the web or provide new sources in this mode, rather than fabricating or defaulting to unrelated news topics.",
+    "",
+    liveStockContext || "",
     "",
     isContentExtractor
       ? (() => {

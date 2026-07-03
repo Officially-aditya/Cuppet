@@ -10,7 +10,7 @@ import {
   createTechNewsBrief
 } from "../agents/tech-news.js";
 import { renderLlmCustomAgent } from "../agents/custom-agent.js";
-import { responseLimitInstruction } from "../agents/parser.js";
+import { responseLimitInstruction, stockSymbols } from "../agents/parser.js";
 import {
   renderedChecklist,
   renderedComparison,
@@ -1891,74 +1891,7 @@ function dailyTask(prompt: string): {
   };
 }
 
-const STOCK_MAPPINGS: Record<string, string> = {
-  "ril": "Reliance Industries",
-  "reliance": "Reliance Industries",
-  "tcs": "Tata Consultancy Services",
-  "tata consultancy": "Tata Consultancy Services",
-  "infy": "Infosys",
-  "infosys": "Infosys",
-  "tata steel": "Tata Steel",
-  "hdfc": "HDFC Bank",
-  "icici": "ICICI Bank",
-  "sbi": "State Bank of India",
-  "sbin": "State Bank of India",
-  "state bank": "State Bank of India",
-  "wipro": "Wipro",
-  "airtel": "Bharti Airtel",
-  "bharti airtel": "Bharti Airtel",
-  "l&t": "Larsen & Toubro",
-  "larsen": "Larsen & Toubro",
-  "rvnl": "Rail Vikas Nigam",
-  "irfc": "Indian Railway Finance Corporation",
-  "lic": "Life Insurance Corporation",
-  "hcl": "HCL Technologies"
-};
 
-const STOP_WORDS = new Set([
-  "track", "watch", "stocks", "stock", "portfolio", "market", "close", "and", "the", "avoid", "for", "this",
-  "that", "daily", "with", "my", "holdings", "of", "me", "show", "give", "brief", "summary", "digest",
-  "movement", "today", "yesterday", "tomorrow", "week", "month", "year", "latest", "current", "update",
-  "price", "prices", "info", "information", "details", "report", "status", "rate", "rates",
-  "quotes", "quote", "share", "shares"
-]);
-
-export function stockSymbols(prompt: string): string[] {
-  const lower = prompt.toLowerCase();
-  const searchQueries: string[] = [];
-
-  for (const [key, value] of Object.entries(STOCK_MAPPINGS)) {
-    const regex = new RegExp(`\\b${key}\\b`, "i");
-    if (regex.test(lower)) {
-      searchQueries.push(value);
-    }
-  }
-
-  const matches = prompt.match(/\b[A-Z]{2,6}\b/g) ?? [];
-  for (const symbol of matches) {
-    if (["DSA", "JEE", "NEET", "PDF", "API"].includes(symbol)) {
-      continue;
-    }
-    if (STOCK_MAPPINGS[symbol.toLowerCase()]) {
-      continue;
-    }
-    searchQueries.push(symbol);
-  }
-
-  const words = lower.split(/[^a-zA-Z&]+/).map(w => w.trim()).filter(w => w.length >= 2);
-  for (const word of words) {
-    if (STOP_WORDS.has(word)) continue;
-    if (["dsa", "jee", "neet", "pdf", "api"].includes(word)) continue;
-    if (STOCK_MAPPINGS[word]) continue;
-    const isMatched = searchQueries.some(q => q.toLowerCase().includes(word));
-    if (isMatched) continue;
-
-    const titleCaseWord = word.charAt(0).toUpperCase() + word.slice(1);
-    searchQueries.push(titleCaseWord);
-  }
-
-  return [...new Set(searchQueries)].slice(0, 6);
-}
 
 function competitorNames(prompt: string): string[] {
   const quoted = [...prompt.matchAll(/"([^"]+)"/g)].map((match) => match[1]!);
