@@ -111,7 +111,15 @@ const CAPABILITIES: CapabilityDefinition[] = [
     permissionsNeeded: ["Web search or market data"],
     priority: 46,
     match: {
-      any: [/\bstocks?\b/, /\bportfolio\b/, /\bmarket close\b/, /\bholdings?\b/]
+      any: [
+        /\bstocks?\b/,
+        /\bportfolio\b/,
+        /\bmarket close\b/,
+        /\bholdings?\b/,
+        /\bmarket\s+(?:monitor|tracker|watch|movement)\b/,
+        /\bfinancial\s+market\b/,
+        /\bstock\s+(?:monitor|tracker|watch)\b/
+      ]
     }
   },
   {
@@ -566,7 +574,7 @@ export function parseIntent(prompt: string): ParsedIntent {
     });
   }
 
-  if (/\b(?:stock|stocks|portfolio|market close|holdings?)\b/.test(lower)) {
+  if (/\b(?:stock|stocks|portfolio|market close|holdings?|market\s+(?:monitor|tracker|watch|movement)|financial\s+market|stock\s+(?:monitor|tracker|watch))\b/.test(lower)) {
     return baseIntent(prompt, {
       name: "Portfolio Watch",
       avatar: "line-chart",

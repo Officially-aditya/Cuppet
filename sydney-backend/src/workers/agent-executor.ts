@@ -1331,7 +1331,8 @@ async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessa
           const price = data.currentPrice.NSE || data.currentPrice.BSE || "N/A";
           const change = data.percentChange || "0.00";
           const changePrefix = parseFloat(change) > 0 ? "+" : "";
-          return `**${data.companyName || "Stock"}**: ₹${price} (${changePrefix}${change}%) • High: ₹${data.yearHigh} • Low: ₹${data.yearLow}`;
+          const nseTicker = data.companyProfile?.exchangeCodeNse ? ` (${data.companyProfile.exchangeCodeNse})` : "";
+          return `**${data.companyName || "Stock"}**${nseTicker}: ₹${price} (${changePrefix}${change}%) • Range: ₹${data.yearLow} - ₹${data.yearHigh}`;
         });
 
         const metrics = results.slice(0, 4).map((data) => {
@@ -1347,7 +1348,7 @@ async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessa
         return renderedDataSummary({
           title: scheduledTitle(agent, "portfolio watch"),
           text: `Live tracking for: ${symbols.join(", ")}.`,
-          summary: lines.join("\n"),
+          summary: ["Market Close Summary:", ...lines].join("\n"),
           metrics,
           footer: "Live market data sourced from Indian Stock API."
         });
@@ -1372,17 +1373,17 @@ async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessa
 
         const lines: string[] = [];
         if (topGainers.length > 0) {
-          lines.push("**Top Gainers**");
+          lines.push("Top Gainers:");
           topGainers.forEach((stock: any) => {
             const changePrefix = parseFloat(stock.percent_change) > 0 ? "+" : "";
-            lines.push(`${stock.company_name || "Stock"}: ₹${stock.price} (${changePrefix}${stock.percent_change}%)`);
+            lines.push(`**${stock.company_name || "Stock"}**: ₹${stock.price} (${changePrefix}${stock.percent_change}%)`);
           });
         }
         if (topLosers.length > 0) {
           if (lines.length > 0) lines.push("");
-          lines.push("**Top Losers**");
+          lines.push("Top Losers:");
           topLosers.forEach((stock: any) => {
-            lines.push(`${stock.company_name || "Stock"}: ₹${stock.price} (${stock.percent_change}%)`);
+            lines.push(`**${stock.company_name || "Stock"}**: ₹${stock.price} (${stock.percent_change}%)`);
           });
         }
 
