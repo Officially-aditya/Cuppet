@@ -463,7 +463,7 @@ Include the problem statement, input and output format, constraints, 2 examples,
     description: 'Tracks a stock or portfolio and explains important movement.',
     icon: Icons.show_chart_rounded,
     prompt: '''
-Create an agent that watches major updates for my portfolio and gives me a clear explanation when something important happens.
+Create an agent that watches major updates for stocks like RIL, TCS, MRF and gives me a clear explanation when something important happens.
 
 Focus on material price movement, earnings, regulatory updates, major news, and sentiment shifts. Do not invent market data. If a reliable connector or data source is missing, tell me what needs to be connected before running.''',
   ),
