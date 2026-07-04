@@ -641,14 +641,18 @@ async function renderCalendarAgent(
   }));
 
   if (events.length === 0) {
+    let timeframe = `next ${days} days`;
+    if (days === 1) timeframe = "today";
+    else if (days === 2) timeframe = "today and tomorrow";
+
     return renderedDataSummary(
       {
         title: options.scheduledTitle(agent, "calendar agenda"),
         text: options.scheduledIntro(agent, "calendar agenda"),
-        summary: "No upcoming events were found on the primary calendar for the next 7 days.",
+        summary: `No upcoming events were found on your primary calendar for ${timeframe}.`,
         metrics: [
           { label: "Events", value: "0" },
-          { label: "Window", value: "7 days" },
+          { label: "Window", value: days === 1 ? "1 day" : `${days} days` },
           { label: "Source", value: "Calendar" }
         ],
         footer: "Read from Google Calendar. No events were created or changed."
@@ -667,7 +671,7 @@ async function renderCalendarAgent(
       ),
       metrics: [
         { label: "Events", value: String(events.length) },
-        { label: "Window", value: "7 days" },
+        { label: "Window", value: days === 1 ? "1 day" : `${days} days` },
         { label: "Source", value: "Calendar" }
       ],
       footer: "Read-only agenda from the primary Google Calendar."
