@@ -50,17 +50,64 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   String _describeTiming(Map<String, dynamic>? parsed) {
     final cron = parsed?['schedule_cron']?.toString();
     if (cron == null) return 'Whenever you message it';
-    if (cron.contains('0 9 * * *')) return 'Daily at 9:00 AM';
-    if (cron.contains('0 8 * * *')) return 'Daily at 8:00 AM';
-    if (cron.contains('0 7 * * *')) return 'Daily at 7:00 AM';
-    if (cron.contains('0 6 * * *')) return 'Daily at 6:00 AM';
-    if (cron.contains('0 8 * * 1')) return 'Weekly on Mondays at 8:00 AM';
-    if (cron.contains('0 9 * * 1')) return 'Weekly on Mondays at 9:00 AM';
-    if (cron.contains('0 20 * * *')) return 'Daily at 8:00 PM';
-    if (cron.contains('0 21 * * *')) return 'Daily at 9:00 PM';
-    if (cron.contains('0 16 * * *')) return 'Daily at 4:00 PM';
-    if (cron.contains('0 17 * * 5')) return 'Weekly on Fridays at 5:00 PM';
+
+    final parts = cron.split(' ');
+    if (parts.length < 5) return 'Runs on schedule: $cron';
+
+    final minuteStr = parts[0];
+    final hourStr = parts[1];
+    final dom = parts[2];
+    final dow = parts[4];
+
+    final minute = int.tryParse(minuteStr);
+    final hour = int.tryParse(hourStr);
+    if (minute == null || hour == null) return 'Runs on schedule: $cron';
+
+    final hourNum = hour == 0 || hour == 12 ? 12 : hour % 12;
+    final ampm = hour < 12 ? 'AM' : 'PM';
+    final minutePad = minute.toString().padLeft(2, '0');
+    final timeStr = '$hourNum:$minutePad $ampm';
+
+    if (dow == '1-5') {
+      return 'Weekdays at $timeStr';
+    }
+
+    if (dow == '*') {
+      if (dom == '*') {
+        return 'Daily at $timeStr';
+      } else {
+        final suffix = _daySuffix(dom);
+        return 'Monthly on the $dom$suffix at $timeStr';
+      }
+    }
+
+    final days = {
+      '0': 'Sundays',
+      '1': 'Mondays',
+      '2': 'Tuesdays',
+      '3': 'Wednesdays',
+      '4': 'Thursdays',
+      '5': 'Fridays',
+      '6': 'Saturdays',
+      '7': 'Sundays',
+    };
+    if (days.containsKey(dow)) {
+      return 'Weekly on ${days[dow]} at $timeStr';
+    }
+
     return 'Runs on schedule: $cron';
+  }
+
+  String _daySuffix(String dayStr) {
+    final day = int.tryParse(dayStr);
+    if (day == null) return '';
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
   }
 
   IconData _permissionIcon(String perm) {

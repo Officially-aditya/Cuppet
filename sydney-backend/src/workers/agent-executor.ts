@@ -1469,81 +1469,13 @@ function renderConnectorPending(
     `Once ${config.connectorName} OAuth and data collection are wired, this agent will ${config.expectedAction}.`
   ].join(" ");
 
-  switch (outputTemplate(agent)) {
-    case "data_summary":
-      return renderedDataSummary({
-        title,
-        text: scheduledIntro(agent, config.outputName),
-        summary,
-        metrics: [
-          { label: "Connector", value: "Required" },
-          { label: "Status", value: "Pending" }
-        ]
-      });
-
-    case "urgency_list":
-      return renderedUrgencyList({
-        title,
-        source: config.connectorName,
-        items: [
-          {
-            label: `Connect ${config.connectorName}`,
-            urgency: "medium",
-            due: "Required before this agent can run",
-            preview: summary
-          }
-        ]
-      });
-
-    case "checklist":
-      return renderedChecklist({
-        title,
-        message: scheduledIntro(agent, config.outputName),
-        items: [
-          {
-            id: "connect",
-            label: `Connect ${config.connectorName}`,
-            checked: false
-          },
-          {
-            id: "run_again",
-            label: `Run ${agent.name} again after the connector is active`,
-            checked: false
-          }
-        ],
-        footer: "No connector tokens are stored on the device."
-      });
-
-    case "daily_task":
-      return renderedDailyTask({
-        title,
-        task: `Connect ${config.connectorName}`,
-        context: summary,
-        estimated_minutes: 2,
-        actions: [connectorSetupAction(agent, config)]
-      });
-
-    case "comparison":
-      return renderedComparison({
-        title,
-        rows: [
-          {
-            label: config.connectorName,
-            changes: [summary],
-            sentiment: "needs_input"
-          }
-        ],
-        insight: "Connector setup is required before comparison data can be collected."
-      });
-
-    default:
-      return renderedPlainText(
-        [
-          scheduledIntro(agent, config.outputName),
-          summary
-        ].join("\n\n")
-      );
-  }
+  return renderedDailyTask({
+    title,
+    task: `Connect ${config.connectorName}`,
+    context: summary,
+    estimated_minutes: 2,
+    actions: [connectorSetupAction(agent, config)]
+  });
 }
 
 function renderConnectorReconnectRequired(

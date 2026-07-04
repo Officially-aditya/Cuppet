@@ -1162,24 +1162,59 @@ function capabilityIntent(
 }
 
 function parseSchedule(prompt: string): string | null {
-  const explicitTime = prompt.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/);
-  const hour = explicitTime ? to24Hour(explicitTime[1], explicitTime[3]) : null;
-  const minute = explicitTime?.[2] ? Number(explicitTime[2]) : 0;
+  const lower = prompt.toLowerCase();
+  const regexAmpm = /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i;
+  const regex24h = /\b(?:at\s+)?(\d{1,2}):(\d{2})\b/;
 
-  if (prompt.includes("friday")) return `${minute} ${hour ?? 9} * * 5`;
-  if (prompt.includes("weekly") || prompt.includes("every week")) {
-    return `${minute} ${hour ?? 9} * * 1`;
+  let hour: number | null = null;
+  let minute = 0;
+
+  const matchAmpm = lower.match(regexAmpm);
+  if (matchAmpm) {
+    hour = to24Hour(matchAmpm[1], matchAmpm[3]);
+    minute = matchAmpm[2] ? Number(matchAmpm[2]) : 0;
+  } else {
+    const match24h = lower.match(regex24h);
+    if (match24h) {
+      const h = Number(match24h[1]);
+      const m = Number(match24h[2]);
+      if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+        hour = h;
+        minute = m;
+      }
+    }
   }
-  if (prompt.includes("monthly") || prompt.includes("every month")) {
-    return `${minute} ${hour ?? 9} 1 * *`;
+
+  if (hour !== null) {
+    if (lower.includes("friday")) return `${minute} ${hour} * * 5`;
+    if (lower.includes("weekday") || lower.includes("every weekday") || lower.includes("weekdays")) {
+      return `${minute} ${hour} * * 1-5`;
+    }
+    if (lower.includes("weekly") || lower.includes("every week")) {
+      return `${minute} ${hour} * * 1`;
+    }
+    if (lower.includes("monthly") || lower.includes("every month")) {
+      return `${minute} ${hour} 1 * *`;
+    }
+    return `${minute} ${hour} * * *`;
   }
-  if (prompt.includes("market close")) return `${minute} ${hour ?? 16} * * *`;
-  if (prompt.includes("evening")) return `${minute} ${hour ?? 18} * * *`;
-  if (prompt.includes("morning")) return `${minute} ${hour ?? 7} * * *`;
-  if (prompt.includes("daily") || prompt.includes("every day")) {
-    return `${minute} ${hour ?? 9} * * *`;
+
+  if (lower.includes("friday")) return `0 9 * * 5`;
+  if (lower.includes("weekday") || lower.includes("every weekday") || lower.includes("weekdays")) {
+    return `0 9 * * 1-5`;
   }
-  if (explicitTime) return `${minute} ${hour} * * *`;
+  if (lower.includes("weekly") || lower.includes("every week")) {
+    return `0 9 * * 1`;
+  }
+  if (lower.includes("monthly") || lower.includes("every month")) {
+    return `0 9 1 * *`;
+  }
+  if (lower.includes("market close")) return `0 16 * * *`;
+  if (lower.includes("evening")) return `0 18 * * *`;
+  if (lower.includes("morning")) return `0 7 * * *`;
+  if (lower.includes("daily") || lower.includes("every day")) {
+    return `0 9 * * *`;
+  }
 
   return null;
 }

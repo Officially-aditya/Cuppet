@@ -58,3 +58,21 @@ test("agent active_until parsing and date format compatibility", () => {
   const parsed = new Date(dateStr);
   assert.ok(!isNaN(parsed.getTime()));
 });
+
+test("extracts schedule_cron for various times and frequencies", () => {
+  // Test "every weekday at 4 PM" -> 0 16 * * 1-5
+  const p1 = parseIntent("Create a stock watch agent every weekday at 4 PM");
+  assert.equal(p1.schedule_cron, "0 16 * * 1-5");
+
+  // Test "7 pm daily" -> 0 19 * * *
+  const p2 = parseIntent("Remind me to code 7 pm daily");
+  assert.equal(p2.schedule_cron, "0 19 * * *");
+
+  // Test "at 16:30 weekly" -> 30 16 * * 1
+  const p3 = parseIntent("Summarize my repository activity at 16:30 weekly");
+  assert.equal(p3.schedule_cron, "30 16 * * 1");
+
+  // Test "every month at 9:00 am" -> 0 9 1 * *
+  const p4 = parseIntent("Auditing invoices every month at 9:00 am");
+  assert.equal(p4.schedule_cron, "0 9 1 * *");
+});

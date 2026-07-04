@@ -12,6 +12,7 @@ import 'providers/auth_provider.dart';
 import 'providers/agents_provider.dart';
 import 'providers/messages_provider.dart';
 import 'services/push_service.dart';
+import 'services/notification_clear_service.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/sign_up_screen.dart';
 import 'screens/connectors/add_connector_screen.dart';
@@ -170,6 +171,7 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
   }
 
   void _handleNotificationClick(RemoteMessage message) async {
+    NotificationClearService.clearAll();
     final data = message.data;
     final agentId = data['agent_id']?.toString() ?? data['agentId']?.toString();
     if (agentId == null || agentId.isEmpty) {

@@ -14,6 +14,7 @@ import '../../widgets/thread/message_card.dart';
 import '../../widgets/thread/sydney_heatmap.dart';
 import '../../widgets/thread/reply_bar.dart';
 import '../../widgets/thread/typing_indicator.dart';
+import '../../services/notification_clear_service.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class ThreadScreen extends ConsumerStatefulWidget {
@@ -91,6 +92,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationClearService.clearAll();
   }
 
   @override
@@ -936,6 +938,7 @@ String _connectorName(Map<String, dynamic> action, String connectorId) {
     'drive' => 'Google Drive',
     'web_search' => 'Web Search',
     'slack' => 'Slack',
+    'calendar' => 'Google Calendar',
     _ => 'Connector',
   };
 }
