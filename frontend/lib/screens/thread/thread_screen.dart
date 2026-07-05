@@ -456,11 +456,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
                   return ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(
-                      SydneySpacing.page,
-                      SydneySpacing.lg,
-                      SydneySpacing.page,
-                      SydneySpacing.lg,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: SydneySpacing.lg,
                     ),
                     itemCount: itemCount,
                     itemBuilder: (context, index) {
@@ -494,7 +491,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                               color: isSelected
                                   ? SydneyColors.primary.withValues(alpha: 0.08)
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(SydneyRadius.sm),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: SydneySpacing.page,
                             ),
                             child: MessageCard(
                               message: message,
@@ -505,7 +504,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       }
                       // Last slot is the typing indicator.
                       return showTyping
-                          ? const TypingIndicator()
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: SydneySpacing.page,
+                              ),
+                              child: TypingIndicator(),
+                            )
                           : const SizedBox.shrink();
                     },
                   );
