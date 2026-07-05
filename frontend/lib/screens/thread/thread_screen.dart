@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
@@ -36,6 +37,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   Message? _pendingUserMessage;
   /// True while we are waiting for the agent's reply after an optimistic send.
   bool _awaitingResponse = false;
+
+  Message? _selectedMessage;
+  Message? _replyToMessage;
 
   Agent get _activeAgent {
     return ref.read(agentsProvider).maybeWhen(
@@ -115,7 +119,50 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final messages = ref.watch(messagesProvider(agent.threadId));
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: _selectedMessage != null
+          ? AppBar(
+              titleSpacing: 0,
+              backgroundColor: SydneyColors.surfaceContainerLowest,
+              bottom: const PreferredSize(
+                preferredSize: Size.fromHeight(1),
+                child: Divider(height: 1, color: SydneyColors.line),
+              ),
+              leading: IconButton(
+                tooltip: 'Cancel selection',
+                onPressed: () => setState(() => _selectedMessage = null),
+                icon: const Icon(Icons.close_rounded, size: 18),
+              ),
+              title: Text(
+                '1 message selected',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 14),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Copy text',
+                  icon: const Icon(Icons.copy_rounded, size: 18, color: SydneyColors.ink),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: _selectedMessage!.preview));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Message copied to clipboard')),
+                    );
+                    setState(() => _selectedMessage = null);
+                  },
+                ),
+                IconButton(
+                  tooltip: 'Reply to message',
+                  icon: const Icon(Icons.reply_rounded, size: 18, color: SydneyColors.ink),
+                  onPressed: () {
+                    final msg = _selectedMessage;
+                    setState(() {
+                      _replyToMessage = msg;
+                      _selectedMessage = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: SydneySpacing.md),
+              ],
+            )
+          : AppBar(
         titleSpacing: 0,
         backgroundColor: SydneyColors.surfaceContainerLowest,
         bottom: const PreferredSize(
@@ -422,9 +469,38 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       }
                       final messageIndex = index - 1;
                       if (messageIndex < displayItems.length) {
-                        return MessageCard(
-                          message: displayItems[messageIndex],
-                          onAction: _handleMessageAction,
+                        final message = displayItems[messageIndex];
+                        final isSelected = _selectedMessage?.id == message.id;
+                        return GestureDetector(
+                          onLongPress: () {
+                            setState(() {
+                              _selectedMessage = message;
+                            });
+                          },
+                          onTap: () {
+                            if (_selectedMessage != null) {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedMessage = null;
+                                } else {
+                                  _selectedMessage = message;
+                                }
+                              });
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? SydneyColors.primary.withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(SydneyRadius.sm),
+                            ),
+                            child: MessageCard(
+                              message: message,
+                              onAction: _handleMessageAction,
+                            ),
+                          ),
                         );
                       }
                       // Last slot is the typing indicator.
@@ -446,7 +522,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     ),
               ),
             ),
-            ReplyBar(onSend: _sendReply),
+            ReplyBar(
+              onSend: _sendReply,
+              replyToMessage: _replyToMessage,
+              onCancelReply: () => setState(() => _replyToMessage = null),
+            ),
           ],
         ),
       ),
@@ -454,12 +534,19 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   }
 
   Future<void> _sendReply(String text) async {
+    final toQuote = _replyToMessage;
+    setState(() => _replyToMessage = null);
+
+    final finalReplyText = toQuote != null
+        ? '> ${toQuote.preview.split('\n').join('\n> ')}\n\n$text'
+        : text;
+
     // Optimistic: show the user's message immediately.
     final optimistic = Message.plainText(
       id: 'pending_${DateTime.now().microsecondsSinceEpoch}',
       threadId: _activeAgent.threadId,
       sender: MessageSender.user,
-      text: text,
+      text: finalReplyText,
     );
     setState(() {
       _pendingUserMessage = optimistic;
@@ -468,7 +555,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     _scrollToBottomSoon();
 
     // Fire the API call in the background — don't block the ReplyBar.
-    unawaited(_sendReplyAsync(text));
+    unawaited(_sendReplyAsync(finalReplyText));
   }
 
   Future<void> _sendReplyAsync(String text) async {

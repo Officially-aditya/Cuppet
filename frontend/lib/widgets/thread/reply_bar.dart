@@ -4,12 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
+import '../../models/message.dart';
 import '../../providers/auth_provider.dart';
 
 class ReplyBar extends ConsumerStatefulWidget {
-  const ReplyBar({required this.onSend, super.key});
+  const ReplyBar({
+    required this.onSend,
+    this.replyToMessage,
+    this.onCancelReply,
+    super.key,
+  });
 
   final Future<void> Function(String text) onSend;
+  final Message? replyToMessage;
+  final VoidCallback? onCancelReply;
 
   @override
   ConsumerState<ReplyBar> createState() => _ReplyBarState();
@@ -32,65 +40,131 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
         color: SydneyColors.surfaceContainerLowest,
         border: Border(top: BorderSide(color: SydneyColors.line)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(SydneySpacing.lg),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: const Icon(
-                Icons.add_circle_outline_rounded,
-                color: SydneyColors.mutedInk,
-                size: 28,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.replyToMessage != null) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                SydneySpacing.lg,
+                SydneySpacing.sm,
+                SydneySpacing.lg,
+                0,
               ),
-              onPressed: _sending ? null : () => _showAttachmentOptions(context),
-            ),
-            const SizedBox(width: SydneySpacing.xs),
-            Expanded(
-              child: DecoratedBox(
+              child: Container(
                 decoration: BoxDecoration(
                   color: SydneyColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(SydneyRadius.md),
+                  borderRadius: BorderRadius.circular(SydneyRadius.sm),
                   border: Border.all(color: SydneyColors.line),
                 ),
-                child: TextField(
-                  controller: _controller,
-                  minLines: 1,
-                  maxLines: 4,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Message agent',
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: SydneySpacing.lg,
-                      vertical: 14,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: SydneyColors.primary,
+                        borderRadius: BorderRadius.horizontal(
+                          left: Radius.circular(SydneyRadius.sm),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: SydneySpacing.md),
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: FilledButton(
-                onPressed: _sending ? null : _send,
-                style: FilledButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(SydneyRadius.md),
-                  ),
-                ),
-                child: Icon(
-                  _sending ? Icons.more_horiz_rounded : Icons.send_rounded,
+                    const SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.replyToMessage!.sender == MessageSender.user
+                                ? 'Replying to your message'
+                                : 'Replying to agent',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: SydneyColors.primary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.replyToMessage!.preview,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SydneyColors.subtleInk,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 16, color: SydneyColors.mutedInk),
+                      onPressed: widget.onCancelReply,
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
-        ),
+          Padding(
+            padding: const EdgeInsets.all(SydneySpacing.lg),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: SydneyColors.mutedInk,
+                    size: 28,
+                  ),
+                  onPressed: _sending ? null : () => _showAttachmentOptions(context),
+                ),
+                const SizedBox(width: SydneySpacing.xs),
+                Expanded(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: SydneyColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(SydneyRadius.md),
+                      border: Border.all(color: SydneyColors.line),
+                    ),
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 4,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        hintText: 'Message agent',
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: SydneySpacing.lg,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: SydneySpacing.md),
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: _sending ? null : _send,
+                    style: FilledButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                      ),
+                    ),
+                    child: Icon(
+                      _sending ? Icons.more_horiz_rounded : Icons.send_rounded,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
