@@ -75,21 +75,17 @@ class PortfolioWatchTemplate extends StatelessWidget {
                   ),
                 )
               else
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final width = constraints.maxWidth;
-                    final crossAxisCount = width > 320 ? 2 : 1;
-                    final itemWidth = (width - (crossAxisCount - 1) * SydneySpacing.sm) / crossAxisCount;
-
-                    return Wrap(
-                      spacing: SydneySpacing.sm,
-                      runSpacing: SydneySpacing.sm,
-                      children: [
-                        for (final stock in stocks)
-                          _StockCard(stock: stock, width: itemWidth),
-                      ],
-                    );
-                  },
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: SydneySpacing.sm,
+                  mainAxisSpacing: SydneySpacing.sm,
+                  childAspectRatio: 1.85,
+                  children: [
+                    for (final stock in stocks)
+                      _StockCard(stock: stock),
+                  ],
                 ),
               if (footer != null && footer.isNotEmpty) ...[
                 const SizedBox(height: SydneySpacing.md),
@@ -122,10 +118,9 @@ class PortfolioWatchTemplate extends StatelessWidget {
 }
 
 class _StockCard extends StatelessWidget {
-  const _StockCard({required this.stock, required this.width});
+  const _StockCard({required this.stock});
 
   final Map<String, dynamic> stock;
-  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -140,9 +135,10 @@ class _StockCard extends StatelessWidget {
     final changeBg = isPositive ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);
 
     return Container(
-      width: width,
-      height: width * 0.95,
-      padding: const EdgeInsets.all(SydneySpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: SydneySpacing.sm,
+        vertical: SydneySpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: SydneyColors.surface,
         borderRadius: BorderRadius.circular(SydneyRadius.sm),
@@ -150,86 +146,65 @@ class _StockCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      ticker.isNotEmpty ? ticker : name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.2,
-                        color: SydneyColors.ink,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: SydneySpacing.xs,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: changeBg,
-                      borderRadius: BorderRadius.circular(SydneyRadius.xs),
-                    ),
-                    child: Text(
-                      change,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: changeColor,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (ticker.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SydneyColors.subtleInk,
-                    fontSize: 10,
+              Expanded(
+                child: Text(
+                  ticker.isNotEmpty ? ticker : name,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                    color: SydneyColors.ink,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ],
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 1.5,
+                ),
+                decoration: BoxDecoration(
+                  color: changeBg,
+                  borderRadius: BorderRadius.circular(SydneyRadius.xs),
+                ),
+                child: Text(
+                  change,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: changeColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: SydneySpacing.xs),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
                 price.startsWith('₹') ? price : '₹$price',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w900,
                   color: SydneyColors.ink,
-                  fontSize: 18,
                 ),
               ),
-              if (range.isNotEmpty) ...[
-                const SizedBox(height: 4),
+              if (range.isNotEmpty && range != 'Gainer' && range != 'Loser')
                 Text(
-                  range.startsWith('Range:') || range == 'Gainer' || range == 'Loser'
-                      ? range
-                      : 'Range: $range',
+                  range.replaceFirst('Range: ', ''),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: SydneyColors.subtleInk,
-                    fontSize: 9,
+                    fontSize: 8.5,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
             ],
           ),
         ],
