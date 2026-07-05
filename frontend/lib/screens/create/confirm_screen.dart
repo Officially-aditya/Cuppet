@@ -133,6 +133,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       'study_guide' => 'A study topic, explanation, and reference links',
       'dsa_question' => 'A daily practice DSA coding problem with examples and hints',
       'content_extractor' => 'A set of content creation ideas with tapable draft post generation',
+      'portfolio_watch' => 'A custom stock portfolio tracker layout',
       _ => 'A detailed summary report',
     };
   }

@@ -140,6 +140,14 @@ function normalizeTrigger(
   if (triggerType === "event") {
     unsupported.add(`trigger:event:${proposal.trigger?.event ?? "unknown"}`);
     warnings.push("Event-based triggers are not supported yet; using manual runs until a connector watcher exists.");
+    if (base.schedule_cron) {
+      return {
+        type: "schedule",
+        schedule_cron: base.schedule_cron,
+        event: proposal.trigger?.event ?? null,
+        config: proposal.trigger?.config ?? {}
+      };
+    }
     return {
       type: "manual",
       schedule_cron: null,
@@ -149,6 +157,14 @@ function normalizeTrigger(
   }
 
   if (triggerType === "manual") {
+    if (base.schedule_cron) {
+      return {
+        type: "schedule",
+        schedule_cron: base.schedule_cron,
+        event: null,
+        config: proposal.trigger?.config ?? {}
+      };
+    }
     return {
       type: "manual",
       schedule_cron: null,

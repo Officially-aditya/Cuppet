@@ -107,7 +107,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     action:
       "Summarizes portfolio or market movement when reliable symbols are provided.",
     defaultSchedule: "0 16 * * *",
-    outputTemplate: "data_summary",
+    outputTemplate: "portfolio_watch",
     permissionsNeeded: ["Web search or market data"],
     priority: 46,
     match: {

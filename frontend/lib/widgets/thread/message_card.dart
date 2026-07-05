@@ -15,6 +15,7 @@ import '../templates/urgency_list_template.dart';
 import '../templates/study_guide_template.dart';
 import '../templates/dsa_question_template.dart';
 import '../templates/content_extractor_template.dart';
+import '../templates/portfolio_watch_template.dart';
 
 class MessageCard extends StatelessWidget {
   const MessageCard({required this.message, this.onAction, super.key});
@@ -190,6 +191,7 @@ class _TemplateRouter extends StatelessWidget {
           }
         },
       ),
+      'portfolio_watch' => PortfolioWatchTemplate(data: data),
       _ => const PlainTextTemplate(
         data: {
           'text':

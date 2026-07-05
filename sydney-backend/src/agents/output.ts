@@ -203,6 +203,23 @@ export type ContentExtractorMessageContent = {
   };
 };
 
+export type PortfolioWatchMessageContent = {
+  template: "portfolio_watch";
+  version: "1.0";
+  data: {
+    title: string;
+    text: string;
+    stocks: Array<{
+      name: string;
+      ticker: string;
+      price: string;
+      change: string;
+      range: string;
+    }>;
+    footer: string;
+  };
+};
+
 export type AgentMessageContent =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -215,7 +232,8 @@ export type AgentMessageContent =
   | NewsBriefMessageContent
   | StudyGuideMessageContent
   | DsaQuestionMessageContent
-  | ContentExtractorMessageContent;
+  | ContentExtractorMessageContent
+  | PortfolioWatchMessageContent;
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;
@@ -323,6 +341,13 @@ export function renderedContentExtractor(
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("content_extractor", data, meta);
+}
+
+export function renderedPortfolioWatch(
+  data: PortfolioWatchMessageContent["data"],
+  meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
+): RenderedAgentMessage {
+  return rendered("portfolio_watch", data, meta);
 }
 
 export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {
