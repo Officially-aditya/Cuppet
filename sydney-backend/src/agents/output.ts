@@ -239,6 +239,7 @@ export type RenderedAgentMessage = {
   content: AgentMessageContent;
   sourceRefs: unknown[];
   tokensUsed: number;
+  additionalTopicsCovered?: string[];
 };
 
 export function renderedPlainText(

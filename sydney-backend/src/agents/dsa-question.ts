@@ -1,4 +1,4 @@
-type DsaQuestion = {
+export type DsaQuestion = {
   title: string;
   difficulty: "Easy" | "Medium" | "Hard";
   prompt: string;
@@ -185,7 +185,7 @@ export function renderDsaQuestion(params: {
   };
 }
 
-function questionForDate(date: string, agentId: string, topicsCovered?: string[]): DsaQuestion {
+export function questionForDate(date: string, agentId: string, topicsCovered?: string[]): DsaQuestion {
   const pool = dsaQuestions.filter(
     (q) => !topicsCovered?.map((t) => t.toLowerCase()).includes(q.title.toLowerCase())
   );
@@ -194,7 +194,7 @@ function questionForDate(date: string, agentId: string, topicsCovered?: string[]
   return questionPool[index]!;
 }
 
-function dateKey(date: Date): string {
+export function dateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
