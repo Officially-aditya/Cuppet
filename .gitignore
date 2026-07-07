@@ -101,3 +101,7 @@ pgdata/
 **/postgres-data/
 **/redis-data/
 **/pgdata/
+
+# Documentation
+sydney-backend/backend.md
+
