@@ -243,7 +243,7 @@ export function routeAgentMessage(
 
     return {
       intent: "update_instructions",
-      confidence: scheduleCron ? 0.9 : 0.86,
+      confidence: scheduleCron ? 0.9 : 0.65,
       reason: scheduleCron ? "instruction_and_schedule_update" : "instruction_update",
       slots: {
         instruction,
