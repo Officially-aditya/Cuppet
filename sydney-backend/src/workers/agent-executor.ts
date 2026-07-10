@@ -5,7 +5,8 @@ import {
   renderDsaQuestion,
   wantsDsaQuestion,
   questionForDate,
-  dateKey
+  dateKey,
+  type DsaQuestion
 } from "../agents/dsa-question.js";
 import {
   createGeneralNewsBrief,
@@ -804,7 +805,11 @@ async function renderScheduledReminder(
         items.push({ summary: `Reminder: ${withPeriod(reminder)}` });
       }
       if (includeDsaQuestion) {
-        const dsaQuestion = questionForDate(date, agent.id, topicsCovered);
+        const dsaQuestion = await generateDynamicDsaQuestion({
+          agentPrompt: agent.prompt,
+          agentId: agent.id,
+          topicsCovered
+        });
         additionalTopicsCovered.push(dsaQuestion.title);
         const dsaSec = [
           `DSA question of the day (${date}): ${dsaQuestion.title}`,
@@ -835,7 +840,11 @@ async function renderScheduledReminder(
       sections.push(`Reminder: ${withPeriod(reminder)}`);
     }
     if (includeDsaQuestion) {
-      const dsaQuestion = questionForDate(date, agent.id, topicsCovered);
+      const dsaQuestion = await generateDynamicDsaQuestion({
+        agentPrompt: agent.prompt,
+        agentId: agent.id,
+        topicsCovered
+      });
       additionalTopicsCovered.push(dsaQuestion.title);
       const dsaSec = [
         `DSA question of the day (${date}): ${dsaQuestion.title}`,
@@ -866,7 +875,11 @@ async function renderScheduledReminder(
     items.push({ summary: `Reminder: ${withPeriod(reminder)}` });
   }
   if (includeDsaQuestion) {
-    const dsaQuestion = questionForDate(date, agent.id, topicsCovered);
+    const dsaQuestion = await generateDynamicDsaQuestion({
+      agentPrompt: agent.prompt,
+      agentId: agent.id,
+      topicsCovered
+    });
     additionalTopicsCovered.push(dsaQuestion.title);
     const dsaSec = [
       `DSA question of the day (${date}): ${dsaQuestion.title}`,
@@ -923,9 +936,35 @@ async function renderCustomAgent(
 
   if (wantsDsaQuestion(text)) {
     console.log("[renderCustomAgent] wantsDsaQuestion. topicsCovered:", topicsCovered);
-    const dsaQuestion = renderDsaQuestion({ agentId: agent.id, topicsCovered });
-    console.log("[renderCustomAgent] generated static DSA question:", dsaQuestion.title);
-    return renderedDsaQuestion(dsaQuestion);
+    const dsaQuestion = await generateDynamicDsaQuestion({
+      agentPrompt: agent.prompt,
+      agentId: agent.id,
+      topicsCovered
+    });
+    console.log("[renderCustomAgent] generated dynamic DSA question:", dsaQuestion.title);
+    const slug = dsaQuestion.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const leetcodeUrl = `https://leetcode.com/problems/${slug}/`;
+    const res = renderedDsaQuestion({
+      title: dsaQuestion.title,
+      difficulty: dsaQuestion.difficulty,
+      problem: dsaQuestion.prompt,
+      constraints: dsaQuestion.target,
+      examples: [],
+      hint: dsaQuestion.hint,
+      references: [
+        {
+          title: `LeetCode: ${dsaQuestion.title}`,
+          url: leetcodeUrl
+        }
+      ],
+      completed: false,
+      actions: [
+        { id: "done", label: "Done", style: "primary" },
+        { id: "snooze", label: "Snooze 30min", style: "secondary" },
+        { id: "skip", label: "Skip today", style: "ghost" }
+      ]
+    });
+    return { ...res, additionalTopicsCovered: [dsaQuestion.title] };
   }
 
   const llmRendered = await renderLlmCustomAgent({
@@ -1161,6 +1200,86 @@ async function renderStudyGuideAgent(context: {
   }
 }
 
+async function generateDynamicDsaQuestion(params: {
+  agentPrompt: string;
+  agentId: string;
+  topicsCovered: string[];
+}): Promise<DsaQuestion> {
+  const { agentPrompt, agentId, topicsCovered } = params;
+
+  if (anthropicConfigured()) {
+    try {
+      let chosenQuestion: DsaQuestion | null = null;
+      let attempts = 0;
+      while (attempts < 3) {
+        const response = await createAnthropicMessage({
+          maxTokens: 1000,
+          system: [
+            "You run a Sydney DSA (Data Structures & Algorithms) daily practice agent.",
+            "Your task is to generate ONE new coding problem for the user based on their practice preferences.",
+            "Check the list of previously covered problems and generate a new problem that has NOT been covered.",
+            "You must NEVER repeat or generate any DSA problem that has already been covered. Ensure the generated problem is completely different and logically distinct from the list of previously covered problems: " + JSON.stringify(topicsCovered),
+            "Rotate between: arrays, strings, hash maps, linked lists, trees, graphs, dynamic programming, greedy, stacks, queues, binary search, and sliding window.",
+            "Keep difficulty mostly Medium unless the user asks otherwise.",
+            "Return ONLY a valid JSON object matching this structure:",
+            "{",
+            '  "title": "Problem Title",',
+            '  "difficulty": "Easy" | "Medium" | "Hard",',
+            '  "problem": "Full problem statement.",',
+            '  "target": "Specific constraints or algorithmic target like O(n).",',
+            '  "hint": "One helpful hint without giving the solution."',
+            "}"
+          ].join(" "),
+          messages: [
+            {
+              role: "user",
+              content: [
+                userInstructionBlock("practice_preferences", agentPrompt, 4000),
+                userInstructionBlock("previously_covered_problems", JSON.stringify(topicsCovered), 6000),
+                `Previously covered problems (DO NOT repeat any of these): ${topicsCovered.length > 0 ? topicsCovered.join(", ") : "None"}`,
+                `Generate the next unique DSA practice problem.`
+              ].join("\n")
+            }
+          ]
+        });
+
+        const body = extractAnthropicText(response.content);
+        const match = body.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (parsed && parsed.title && parsed.problem) {
+            const isAlreadyCovered = topicsCovered.some(
+              (t) => t.toLowerCase().trim() === parsed.title.toLowerCase().trim()
+            );
+            if (!isAlreadyCovered) {
+              chosenQuestion = {
+                title: parsed.title,
+                difficulty: parsed.difficulty || "Medium",
+                prompt: parsed.problem,
+                target: parsed.target || "",
+                hint: parsed.hint || ""
+              };
+              break;
+            }
+            console.log(`[DsaQuestion] title "${parsed.title}" was already covered in dynamic generation, retrying...`);
+          }
+        }
+        attempts++;
+      }
+
+      if (chosenQuestion) {
+        return chosenQuestion;
+      }
+    } catch (error) {
+      console.error("[DsaQuestion] Dynamic DSA generation failed, falling back to static list:", error);
+    }
+  }
+
+  // Fallback to static list (for tests or key configuration failure)
+  const date = dateKey(new Date());
+  return questionForDate(date, agentId, topicsCovered);
+}
+
 async function renderDsaQuestionAgent(context: {
   agent: AgentRow;
   trigger: AgentExecutorJobData["trigger"];
@@ -1179,10 +1298,13 @@ async function renderDsaQuestionAgent(context: {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
   }
 
-  const date = dateKey(new Date());
-  const chosenQuestion = questionForDate(date, agent.id, topicsCovered);
-
   try {
+    const chosenQuestion = await generateDynamicDsaQuestion({
+      agentPrompt: agent.prompt,
+      agentId: agent.id,
+      topicsCovered
+    });
+
     const response = await createAnthropicMessage({
       maxTokens: 1500,
       system: [
