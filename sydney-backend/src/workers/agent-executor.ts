@@ -1908,74 +1908,147 @@ function errorMessage(error: unknown): string {
 
 
 function extractNotificationBody(content: AgentMessageContent): string {
-  if (content.template === "content_extractor") {
-    const ideas = content.data.ideas;
-    if (ideas && ideas.length > 0) {
-      return `Trending ideas: ${ideas.map(i => i.title).join(", ")}`.substring(0, 100);
-    }
-    return "Content creation ideas";
-  }
+  let rawBody = "New message available";
 
-  if (content.template === "news_brief") {
-    const items = content.data.items;
-    if (items && items.length > 0) {
-      const firstWithHeadline = items.find((item) => item.headline && item.headline.trim().length > 0);
-      if (firstWithHeadline) {
-        return `${firstWithHeadline.headline}: ${firstWithHeadline.summary}`.substring(0, 100);
+  try {
+    if (content.template === "content_extractor") {
+      const ideas = content.data.ideas;
+      if (ideas && ideas.length > 0) {
+        rawBody = `Trending ideas: ${ideas.map((i) => i.title).join(", ")}`;
+      } else {
+        rawBody = "Content creation ideas";
       }
-      const firstItem = items[0];
-      if (firstItem) {
-        return firstItem.summary.substring(0, 100);
+    } else if (content.template === "news_brief") {
+      const items = content.data.items;
+      if (items && items.length > 0) {
+        const firstWithHeadline = items.find((item) => item.headline && item.headline.trim().length > 0);
+        if (firstWithHeadline) {
+          rawBody = `${firstWithHeadline.headline}: ${firstWithHeadline.summary}`;
+        } else {
+          const firstItem = items[0];
+          if (firstItem) {
+            rawBody = firstItem.summary;
+          }
+        }
+      } else {
+        rawBody = content.data.title || "News Update";
+      }
+    } else if (content.template === "data_summary") {
+      const summary = content.data.summary || content.data.description;
+      if (summary && summary.trim().length > 0) {
+        rawBody = summary.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
+      } else {
+        const items = content.data.items as any[];
+        if (items && items.length > 0 && items[0]) {
+          const firstItem = items[0];
+          const label = firstItem.label || firstItem.title || firstItem.subject;
+          if (label) rawBody = String(label);
+        } else if (content.data.text) {
+          rawBody = content.data.text.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
+        } else {
+          rawBody = content.data.title || "Data Digest";
+        }
+      }
+    } else if (content.template === "plain_text" && content.data.body) {
+      const body = String(content.data.body);
+      const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+      const firstLine = lines[0] || "";
+      if (lines.length > 1 && /^Here's your/i.test(firstLine)) {
+        const secondLine = lines[1];
+        if (secondLine !== undefined) {
+          rawBody = secondLine;
+        } else {
+          rawBody = firstLine;
+        }
+      } else {
+        rawBody = firstLine;
+      }
+    } else if (content.template === "daily_task" && content.data.task) {
+      const title = content.data.title ? `${content.data.title}: ` : "";
+      const mins = content.data.estimated_minutes ? ` (${content.data.estimated_minutes} min)` : "";
+      rawBody = `${title}${content.data.task}${mins}`;
+    } else if (content.template === "urgency_list" && content.data.items) {
+      const items = content.data.items;
+      if (items.length > 0) {
+        rawBody = `${content.data.title}: ${items.map((i) => `${i.label}${i.urgency ? ` (${i.urgency})` : ""}`).join(", ")}`;
+      } else {
+        rawBody = content.data.title || "Urgency List";
+      }
+    } else if (content.template === "checklist" && content.data.items) {
+      if (content.data.message) {
+        rawBody = `${content.data.title}: ${content.data.message}`;
+      } else {
+        const unchecked = content.data.items.filter((i) => !i.checked);
+        if (unchecked.length > 0) {
+          rawBody = `${content.data.title}: ${unchecked.map((i) => i.label).join(", ")}`;
+        } else {
+          rawBody = content.data.title || "Checklist Update";
+        }
+      }
+    } else if (content.template === "study_guide") {
+      const topic = content.data.topic;
+      const def = content.data.definition;
+      if (topic && def) {
+        rawBody = `Lesson: ${topic} - ${def}`;
+      } else {
+        rawBody = topic || "Study Guide Update";
+      }
+    } else if (content.template === "dsa_question") {
+      const title = content.data.title;
+      const prob = content.data.problem;
+      const diff = content.data.difficulty ? ` (${content.data.difficulty})` : "";
+      if (title && prob) {
+        rawBody = `Problem${diff}: ${title} - ${prob}`;
+      } else {
+        rawBody = title || "DSA Question";
+      }
+    } else if (content.template === "portfolio_watch") {
+      const title = content.data.title;
+      const stocks = content.data.stocks;
+      if (stocks && stocks.length > 0) {
+        rawBody = `${title}: ${stocks.map((s) => `${s.ticker} (${s.change})`).join(", ")}`;
+      } else if (content.data.text) {
+        rawBody = `${title}: ${content.data.text}`;
+      } else {
+        rawBody = title || "Portfolio Update";
+      }
+    } else if (content.template === "progress_tracker") {
+      const title = content.data.title;
+      const current = content.data.current;
+      const total = content.data.total;
+      const text = content.data.text;
+      rawBody = `${title} (${current}/${total}): ${text}`;
+    } else if (content.template === "streak_counter") {
+      const label = content.data.label;
+      const count = content.data.count;
+      const unit = content.data.unit;
+      const caption = content.data.caption ? ` (${content.data.caption})` : "";
+      if (content.data.word && content.data.definition) {
+        rawBody = `${label}: ${content.data.word} - ${content.data.definition}`;
+      } else {
+        rawBody = `${label}: ${count} ${unit}${caption}`;
+      }
+    } else if (content.template === "comparison") {
+      const title = content.data.title;
+      const period = content.data.period ? ` (${content.data.period})` : "";
+      const rows = content.data.rows;
+      if (rows && rows.length > 0) {
+        rawBody = `${title}${period}: ${rows.map((r) => `${r.label} [${r.changes.join(", ")}]`).join(" | ")}`;
+      } else {
+        rawBody = title || "Comparison Update";
       }
     }
-    return content.data.title;
+  } catch (err) {
+    console.error("Error in extractNotificationBody:", err);
   }
 
-  if (content.template === "data_summary") {
-    const summary = content.data.summary || content.data.description;
-    if (summary && summary.trim().length > 0) {
-      const cleanSummary = summary.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
-      return cleanSummary.substring(0, 100);
-    }
-    const items = content.data.items as any[];
-    if (items && items.length > 0 && items[0]) {
-      const firstItem = items[0];
-      const label = firstItem.label || firstItem.title || firstItem.subject;
-      if (label) return String(label).substring(0, 100);
-    }
-    if (content.data.text) {
-      const cleanText = content.data.text.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
-      if (cleanText) return cleanText.substring(0, 100);
-    }
-    return content.data.title;
-  }
+  // Clean formatting: strip markdown elements and excessive spaces
+  const cleanBody = rawBody
+    .replace(/\s+/g, " ")
+    .replace(/[*_`#]/g, "")
+    .trim();
 
-  if (content.template === "plain_text" && content.data.body) {
-    const body = String(content.data.body);
-    const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
-    const firstLine = lines[0] || "";
-    if (lines.length > 1 && /^Here's your/i.test(firstLine)) {
-      const secondLine = lines[1];
-      if (secondLine !== undefined) {
-        return secondLine.length > 100 ? secondLine.substring(0, 97) + "..." : secondLine;
-      }
-    }
-    return firstLine.length > 100 ? firstLine.substring(0, 97) + "..." : firstLine;
-  }
-
-  if (content.template === "daily_task" && content.data.task) {
-    return String(content.data.task);
-  }
-
-  if (content.template === "urgency_list" && content.data.items?.[0]?.label) {
-    return String(content.data.items[0].label);
-  }
-
-  if (content.template === "checklist" && content.data.message) {
-    return String(content.data.message);
-  }
-
-  return "New message available";
+  return cleanBody.length > 180 ? cleanBody.substring(0, 177) + "..." : cleanBody;
 }
 
 async function renderContentExtractorAgent(context: {
