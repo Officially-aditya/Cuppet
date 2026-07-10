@@ -2042,6 +2042,25 @@ function extractNotificationBody(content: AgentMessageContent): string {
     console.error("Error in extractNotificationBody:", err);
   }
 
+  if (rawBody === "New message available" || !rawBody.trim()) {
+    const data = content.data as any;
+    if (data) {
+      const fallbackText =
+        data.title ||
+        data.label ||
+        data.topic ||
+        data.task ||
+        data.message ||
+        data.body ||
+        data.text ||
+        data.description ||
+        data.headline;
+      if (fallbackText) {
+        rawBody = String(fallbackText);
+      }
+    }
+  }
+
   // Clean formatting: strip markdown elements and excessive spaces
   const cleanBody = rawBody
     .replace(/\s+/g, " ")
