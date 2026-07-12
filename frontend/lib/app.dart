@@ -244,7 +244,7 @@ class _AppLoadingScreenState extends State<_AppLoadingScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.12).animate(
+    _scaleAnimation = Tween<double>(begin: 0.90, end: 1.10).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
@@ -268,8 +268,8 @@ class _AppLoadingScreenState extends State<_AppLoadingScreen>
             scale: _scaleAnimation,
             child: Image.asset(
               'assets/logos/cuppet.png',
-              width: 120,
-              height: 120,
+              width: 180,
+              height: 180,
               fit: BoxFit.contain,
             ),
           ),
