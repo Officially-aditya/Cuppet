@@ -416,6 +416,13 @@ function scoreRunNow(
     };
   }
 
+  if (
+    /\b(?:draft|write|explain|translate|format|create post|write post|draft post)\b/i.test(lower) ||
+    lower.includes("generate draft")
+  ) {
+    return { confidence: 0, reason: "draft_or_chat_request" };
+  }
+
   if (asksForFreshAgentData(agent, lower)) {
     return {
       confidence: 0.88,
