@@ -204,8 +204,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 const SizedBox(height: SydneySpacing.xxl),
                 const AuthDividerLabel(),
                 const SizedBox(height: SydneySpacing.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       "Don't have an account?",
