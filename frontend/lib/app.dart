@@ -219,46 +219,65 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
     return widget.child;
   }
 }
-
-class _AppLoadingScreen extends StatelessWidget {
+class _AppLoadingScreen extends StatefulWidget {
   const _AppLoadingScreen();
+
+  @override
+  State<_AppLoadingScreen> createState() => _AppLoadingScreenState();
+}
+
+class _AppLoadingScreenState extends State<_AppLoadingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacityAnimation;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.12).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(SydneySpacing.page),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
-              Text('Cuppet', style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: SydneySpacing.sm),
-              Text(
-                'Opening your conversations...',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: SydneyColors.mutedInk),
-              ),
-              const SizedBox(height: SydneySpacing.xl),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(SydneyRadius.full),
-                child: const LinearProgressIndicator(
-                  minHeight: 4,
-                  color: SydneyColors.primary,
-                  backgroundColor: SydneyColors.primarySoft,
-                ),
-              ),
-              const Spacer(),
-            ],
+      backgroundColor: SydneyColors.surfaceContainerLowest,
+      body: Center(
+        child: FadeTransition(
+          opacity: _opacityAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Image.asset(
+              'assets/logos/cuppet.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),
     );
   }
 }
-
 class _RouteErrorScreen extends StatelessWidget {
   const _RouteErrorScreen({required this.message});
 
