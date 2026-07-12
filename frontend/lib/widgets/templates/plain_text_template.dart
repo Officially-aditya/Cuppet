@@ -29,7 +29,10 @@ class PlainTextTemplate extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var i = 0; i < sections[index].blocks.length; i++) ...[
-                  _PlainTextBlockView(block: sections[index].blocks[i], textColor: color),
+                  _PlainTextBlockView(
+                    block: sections[index].blocks[i],
+                    textColor: color,
+                  ),
                   if (i < sections[index].blocks.length - 1)
                     SizedBox(height: sections[index].blocks[i].spacingAfter),
                 ],
@@ -121,9 +124,15 @@ class _PlainTextBlockView extends StatelessWidget {
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.broken_image_outlined, color: SydneyColors.mutedInk),
+                    Icon(
+                      Icons.broken_image_outlined,
+                      color: SydneyColors.mutedInk,
+                    ),
                     SizedBox(width: 8),
-                    Text('Failed to load image', style: TextStyle(color: SydneyColors.mutedInk)),
+                    Text(
+                      'Failed to load image',
+                      style: TextStyle(color: SydneyColors.mutedInk),
+                    ),
                   ],
                 ),
               );
@@ -166,7 +175,9 @@ class _IndentedLine extends StatelessWidget {
           child: MarkdownText(
             text: text,
             textColor: textColor,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.35),
           ),
         ),
       ],
@@ -330,7 +341,10 @@ class _CodeBlockView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.md, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: SydneySpacing.md,
+              vertical: 6,
+            ),
             decoration: const BoxDecoration(
               color: SydneyColors.surfaceContainerLow,
               borderRadius: BorderRadius.only(
@@ -343,15 +357,19 @@ class _CodeBlockView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.description_outlined, size: 14, color: SydneyColors.mutedInk),
+                const Icon(
+                  Icons.description_outlined,
+                  size: 14,
+                  color: SydneyColors.mutedInk,
+                ),
                 const SizedBox(width: SydneySpacing.xs),
                 Text(
                   'DRAFT POST',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: SydneyColors.mutedInk,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
-                      ),
+                    color: SydneyColors.mutedInk,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const Spacer(),
                 Material(
@@ -371,14 +389,20 @@ class _CodeBlockView extends StatelessWidget {
                       padding: const EdgeInsets.all(4),
                       child: Row(
                         children: [
-                          const Icon(Icons.copy_rounded, size: 12, color: SydneyColors.primary),
+                          const Icon(
+                            Icons.copy_rounded,
+                            size: 12,
+                            color: SydneyColors.primary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Copy',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: SydneyColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: SydneyColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -394,10 +418,10 @@ class _CodeBlockView extends StatelessWidget {
               child: Text(
                 text,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SydneyColors.ink,
-                      fontFamily: 'monospace',
-                      height: 1.4,
-                    ),
+                  color: SydneyColors.ink,
+                  fontFamily: 'monospace',
+                  height: 1.4,
+                ),
               ),
             ),
           ),
@@ -448,7 +472,10 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: SydneyColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SydneyColors.line.withValues(alpha: 0.8), width: 0.8),
+        border: Border.all(
+          color: SydneyColors.line.withValues(alpha: 0.8),
+          width: 0.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF17201C).withValues(alpha: 0.03),
@@ -474,7 +501,10 @@ class _SectionCard extends StatelessWidget {
                   topRight: Radius.circular(16),
                 ),
                 border: Border(
-                  bottom: BorderSide(color: SydneyColors.line.withValues(alpha: 0.8), width: 0.8),
+                  bottom: BorderSide(
+                    color: SydneyColors.line.withValues(alpha: 0.8),
+                    width: 0.8,
+                  ),
                 ),
               ),
               child: Row(
@@ -489,10 +519,10 @@ class _SectionCard extends StatelessWidget {
                     child: Text(
                       section.heading!.text.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: SydneyColors.primary,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
+                        color: SydneyColors.primary,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ],
@@ -505,7 +535,10 @@ class _SectionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (var i = 0; i < section.blocks.length; i++) ...[
-                    _PlainTextBlockView(block: section.blocks[i], textColor: textColor),
+                    _PlainTextBlockView(
+                      block: section.blocks[i],
+                      textColor: textColor,
+                    ),
                     if (i < section.blocks.length - 1)
                       SizedBox(height: section.blocks[i].spacingAfter),
                   ],

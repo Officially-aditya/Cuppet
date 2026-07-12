@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/auth/auth_widgets.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -15,10 +16,10 @@ class SignUpScreen extends ConsumerStatefulWidget {
 
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Authenticated User');
-  final _emailController = TextEditingController(text: 'user@session.local');
-  final _passwordController = TextEditingController(text: 'sydneysafepass');
-  final _confirmController = TextEditingController(text: 'sydneysafepass');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
   bool _showPassword = false;
   bool _showConfirm = false;
 
@@ -44,7 +45,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
               children: [
-                const _AuthLogo(),
+                const AuthLogo(),
                 const SizedBox(height: SydneySpacing.lg),
                 Text(
                   'Create Account',
@@ -64,7 +65,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      _AuthField(
+                      AuthField(
                         label: 'Full Name',
                         controller: _nameController,
                         icon: Icons.person_outline_rounded,
@@ -76,7 +77,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     : null,
                       ),
                       const SizedBox(height: 14),
-                      _AuthField(
+                      AuthField(
                         label: 'Email Address',
                         controller: _emailController,
                         icon: Icons.mail_outline_rounded,
@@ -89,7 +90,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     : null,
                       ),
                       const SizedBox(height: 14),
-                      _AuthField(
+                      AuthField(
                         label: 'Password',
                         controller: _passwordController,
                         icon: Icons.lock_outline_rounded,
@@ -117,7 +118,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     : null,
                       ),
                       const SizedBox(height: 14),
-                      _AuthField(
+                      AuthField(
                         label: 'Password Confirmation',
                         controller: _confirmController,
                         icon: Icons.key_outlined,
@@ -167,11 +168,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   child: Text(loading ? 'Creating...' : 'Create Account'),
                 ),
                 const SizedBox(height: SydneySpacing.lg),
-                const _DividerLabel(),
+                const AuthDividerLabel(),
                 const SizedBox(height: SydneySpacing.lg),
                 OutlinedButton.icon(
                   onPressed: loading ? null : _continueWithGoogle,
-                  icon: const _GoogleMark(),
+                  icon: const GoogleMark(),
                   label: const Text('Sign up with Google'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: SydneyColors.onSurface,
@@ -242,117 +243,5 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         context,
       ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
     }
-  }
-}
-
-class _AuthLogo extends StatelessWidget {
-  const _AuthLogo();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: SydneyPanel(
-        padding: EdgeInsets.zero,
-        radius: SydneyRadius.lg,
-        child: SydneyIconBadge(
-          size: 64,
-          radius: SydneyRadius.lg,
-          color: SydneyColors.surfaceContainerLowest,
-          foregroundColor: SydneyColors.primary,
-          child: Text('S'),
-        ),
-      ),
-    );
-  }
-}
-
-class _AuthField extends StatelessWidget {
-  const _AuthField({
-    required this.label,
-    required this.controller,
-    required this.icon,
-    this.keyboardType,
-    this.textInputAction,
-    this.obscureText = false,
-    this.validator,
-    this.suffix,
-    this.onFieldSubmitted,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final IconData icon;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final bool obscureText;
-  final String? Function(String?)? validator;
-  final Widget? suffix;
-  final ValueChanged<String>? onFieldSubmitted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: SydneySpacing.xs, bottom: 6),
-          child: Text(
-            label.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.onSurfaceVariant,
-              letterSpacing: 0.7,
-            ),
-          ),
-        ),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          validator: validator,
-          onFieldSubmitted: onFieldSubmitted,
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 18, color: SydneyColors.outline),
-            suffixIcon: suffix,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DividerLabel extends StatelessWidget {
-  const _DividerLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(child: Divider(color: SydneyColors.line)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.md),
-          child: Text(
-            'OR',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.onSurfaceVariant,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ),
-        const Expanded(child: Divider(color: SydneyColors.line)),
-      ],
-    );
-  }
-}
-
-class _GoogleMark extends StatelessWidget {
-  const _GoogleMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'G',
-      style: TextStyle(color: Color(0xFFEA4335), fontWeight: FontWeight.w900),
-    );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class ComparisonTemplate extends StatelessWidget {
   const ComparisonTemplate({required this.data, super.key});
@@ -15,7 +16,7 @@ class ComparisonTemplate extends StatelessWidget {
         data['headline']?.toString() ??
         'Comparison';
     final period = data['period']?.toString();
-    final rows = _maps(data['rows']);
+    final rows = templateMaps(data['rows']);
     final insight = data['insight']?.toString();
     final narrative = data['trending_narrative']?.toString();
 
@@ -97,7 +98,7 @@ class _ComparisonRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = row['label']?.toString() ?? 'Item';
-    final changes = _strings(row['changes']);
+    final changes = templateStrings(row['changes']);
     final sentiment = row['sentiment']?.toString();
 
     return Row(
@@ -164,21 +165,4 @@ class _StatusDot extends StatelessWidget {
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
-}
-
-List<Map<String, dynamic>> _maps(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
-}
-
-List<String> _strings(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value.map((item) => item.toString()).toList();
 }

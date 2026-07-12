@@ -1,3 +1,5 @@
+import { UNSUPPORTED_CONNECTORS } from "./unsupported-connectors.js";
+
 export interface ParsedIntent {
   name: string;
   avatar: string;
@@ -15,16 +17,6 @@ export interface ParsedIntent {
   response_limit?: "concise" | "balanced" | "detailed";
   active_until?: string;
 }
-
-const UNSUPPORTED_CONNECTORS = [
-  "instagram",
-  "whatsapp",
-  "twitter",
-  "linkedin",
-  "google fit",
-  "fitbit",
-  "notion"
-];
 
 type CapabilityDefinition = {
   name: string;

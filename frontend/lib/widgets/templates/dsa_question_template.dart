@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class DsaQuestionTemplate extends StatefulWidget {
   const DsaQuestionTemplate({required this.data, this.onAction, super.key});
@@ -28,10 +29,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
     final inputFormat = widget.data['input_format']?.toString();
     final outputFormat = widget.data['output_format']?.toString();
     final constraints = widget.data['constraints']?.toString();
-    final examples = _maps(widget.data['examples']);
+    final examples = templateMaps(widget.data['examples']);
     final hint = widget.data['hint']?.toString();
-    final references = _maps(widget.data['references']);
-    final actions = _maps(widget.data['actions']);
+    final references = templateMaps(widget.data['references']);
+    final actions = templateMaps(widget.data['actions']);
 
     Color diffColor;
     Color diffBg;
@@ -64,10 +65,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
       child: Text(
         difficulty.toUpperCase(),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: diffColor,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
-            ),
+          color: diffColor,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+        ),
       ),
     );
 
@@ -91,8 +92,8 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                       title,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   if (completed) ...[
@@ -114,27 +115,27 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
         MarkdownText(
           text: problem,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                height: 1.4,
-                color: SydneyColors.onSurface,
-              ),
+            height: 1.4,
+            color: SydneyColors.onSurface,
+          ),
         ),
         if (inputFormat != null && inputFormat.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.md),
           Text(
             'INPUT FORMAT',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.mutedInk,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ),
+              color: SydneyColors.mutedInk,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
           ),
           const SizedBox(height: SydneySpacing.xs),
           MarkdownText(
             text: inputFormat,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SydneyColors.onSurfaceVariant,
-                  height: 1.35,
-                ),
+              color: SydneyColors.onSurfaceVariant,
+              height: 1.35,
+            ),
           ),
         ],
         if (outputFormat != null && outputFormat.isNotEmpty) ...[
@@ -142,18 +143,18 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
           Text(
             'OUTPUT FORMAT',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.mutedInk,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ),
+              color: SydneyColors.mutedInk,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
           ),
           const SizedBox(height: SydneySpacing.xs),
           MarkdownText(
             text: outputFormat,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SydneyColors.onSurfaceVariant,
-                  height: 1.35,
-                ),
+              color: SydneyColors.onSurfaceVariant,
+              height: 1.35,
+            ),
           ),
         ],
         if (constraints != null && constraints.isNotEmpty) ...[
@@ -161,18 +162,18 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
           Text(
             'CONSTRAINTS',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.mutedInk,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ),
+              color: SydneyColors.mutedInk,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
           ),
           const SizedBox(height: SydneySpacing.xs),
           MarkdownText(
             text: constraints,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SydneyColors.onSurfaceVariant,
-                  height: 1.35,
-                ),
+              color: SydneyColors.onSurfaceVariant,
+              height: 1.35,
+            ),
           ),
         ],
         if (examples.isNotEmpty) ...[
@@ -180,10 +181,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
           Text(
             'EXAMPLES',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.primary,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ),
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
           ),
           const SizedBox(height: SydneySpacing.sm),
           for (var i = 0; i < examples.length; i++) ...[
@@ -202,9 +203,9 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                   Text(
                     'Example ${i + 1}',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: SydneyColors.onSurface,
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: SydneyColors.onSurface,
+                    ),
                   ),
                   const SizedBox(height: SydneySpacing.xs),
                   Row(
@@ -213,18 +214,20 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                       Text(
                         'Input: ',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: SydneyColors.mutedInk,
-                              fontFamily: 'Courier',
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: SydneyColors.mutedInk,
+                          fontFamily: 'Courier',
+                        ),
                       ),
                       Expanded(
                         child: Text(
                           examples[i]['input']?.toString() ?? '',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurface,
-                                fontFamily: 'Courier',
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: SydneyColors.onSurface,
+                            fontFamily: 'Courier',
+                          ),
                         ),
                       ),
                     ],
@@ -236,18 +239,20 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                       Text(
                         'Output: ',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: SydneyColors.mutedInk,
-                              fontFamily: 'Courier',
-                            ),
+                          fontWeight: FontWeight.bold,
+                          color: SydneyColors.mutedInk,
+                          fontFamily: 'Courier',
+                        ),
                       ),
                       Expanded(
                         child: Text(
                           examples[i]['output']?.toString() ?? '',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurface,
-                                fontFamily: 'Courier',
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: SydneyColors.onSurface,
+                            fontFamily: 'Courier',
+                          ),
                         ),
                       ),
                     ],
@@ -260,10 +265,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                     MarkdownText(
                       text: 'Explanation: ${examples[i]['explanation']}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SydneyColors.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                            height: 1.3,
-                          ),
+                        color: SydneyColors.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                        height: 1.3,
+                      ),
                     ),
                   ],
                 ],
@@ -304,11 +309,12 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                       Expanded(
                         child: Text(
                           _showHint ? 'Hint (Click to hide)' : 'Reveal Hint',
-                          style:
-                              Theme.of(context).textTheme.labelMedium?.copyWith(
-                                    color: SydneyColors.warning,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelMedium?.copyWith(
+                            color: SydneyColors.warning,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       Icon(
@@ -327,9 +333,9 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                     MarkdownText(
                       text: hint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SydneyColors.onSurfaceVariant,
-                            height: 1.35,
-                          ),
+                        color: SydneyColors.onSurfaceVariant,
+                        height: 1.35,
+                      ),
                     ),
                   ],
                 ],
@@ -342,10 +348,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
           Text(
             'REFERENCES',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.primary,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                ),
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
           ),
           const SizedBox(height: SydneySpacing.xs),
           Column(
@@ -370,25 +376,16 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                 _ActionPill(
                   label: action['label']?.toString() ?? 'Action',
                   styleName: action['style']?.toString() ?? 'secondary',
-                  onPressed: widget.onAction == null
-                      ? null
-                      : () => widget.onAction!(action),
+                  onPressed:
+                      widget.onAction == null
+                          ? null
+                          : () => widget.onAction!(action),
                 ),
             ],
           ),
         ],
       ],
     );
-  }
-
-  List<Map<String, dynamic>> _maps(Object? value) {
-    if (value is! List) {
-      return const [];
-    }
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
   }
 }
 
@@ -424,10 +421,10 @@ class _ReferenceItem extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SydneyColors.primary,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
+                    color: SydneyColors.primary,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
                 ),
               ),
             ],
@@ -454,15 +451,17 @@ class _ActionPill extends StatelessWidget {
     final primary = styleName == 'primary';
     final ghost = styleName == 'ghost';
 
-    final foreground = primary
-        ? SydneyColors.onPrimary
-        : ghost
+    final foreground =
+        primary
+            ? SydneyColors.onPrimary
+            : ghost
             ? SydneyColors.mutedInk
             : SydneyColors.onSurface;
 
-    final background = primary
-        ? SydneyColors.primary
-        : ghost
+    final background =
+        primary
+            ? SydneyColors.primary
+            : ghost
             ? Colors.transparent
             : SydneyColors.surfaceContainer;
 
@@ -481,18 +480,19 @@ class _ActionPill extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(SydneyRadius.full),
-          side: primary || ghost
-              ? BorderSide.none
-              : const BorderSide(color: SydneyColors.line),
+          side:
+              primary || ghost
+                  ? BorderSide.none
+                  : const BorderSide(color: SydneyColors.line),
         ),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
+          color: foreground,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
+        ),
       ),
     );
   }

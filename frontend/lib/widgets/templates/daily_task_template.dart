@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class DailyTaskTemplate extends StatelessWidget {
   const DailyTaskTemplate({required this.data, this.onAction, super.key});
@@ -15,7 +16,7 @@ class DailyTaskTemplate extends StatelessWidget {
     final task = data['task']?.toString() ?? 'No task was provided.';
     final contextText = data['context']?.toString();
     final minutes = _number(data['estimated_minutes']);
-    final actions = _maps(data['actions']);
+    final actions = templateMaps(data['actions']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,14 +172,4 @@ int? _number(Object? value) {
     return int.tryParse(value);
   }
   return null;
-}
-
-List<Map<String, dynamic>> _maps(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
 }

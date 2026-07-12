@@ -1,8 +1,6 @@
 import { Worker, type Job } from "bullmq";
 import { z } from "zod";
 import {
-  createDsaQuestionSection,
-  renderDsaQuestion,
   wantsDsaQuestion,
   questionForDate,
   dateKey,
@@ -15,20 +13,13 @@ import {
 import { renderLlmCustomAgent } from "../agents/custom-agent.js";
 import { responseLimitInstruction, stockSymbols } from "../agents/parser.js";
 import {
-  renderedChecklist,
-  renderedComparison,
   renderedDailyTask,
-  renderedDataSummary,
   renderedDsaQuestion,
   renderedPlainText,
-  renderedProgressTracker,
-  renderedStreakCounter,
-  renderedUrgencyList,
   renderedNewsBrief,
   renderedStudyGuide,
   renderedContentExtractor,
   renderedPortfolioWatch,
-  parseNewsBriefText,
   type AgentMessageContent,
   type RenderedAgentMessage,
   type NewsBriefItem
@@ -59,19 +50,28 @@ import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
 import { agentExecutionKey } from "./execution-key.js";
 import { userInstructionBlock, untrustedDataBlock } from "../security/prompt-guard.js";
-
-type AgentRow = {
-  id: string;
-  user_id: string;
-  name: string;
-  prompt: string;
-  parsed_intent: Record<string, unknown>;
-  connector_ids: string[];
-  schedule_cron: string | null;
-  is_assistant: boolean;
-  status: "active" | "paused" | "error";
-  safety_level: "read" | "suggest" | "act";
-};
+import { type AgentRow, actionText, intentName } from "./agent-types.js";
+import {
+  scheduledIntro,
+  scheduledTitle,
+  reminderWithoutDynamicRequests,
+  topicLabel,
+  wantsNewsBrief,
+  wantsTechNewsBrief,
+  withPeriod
+} from "./schedule-labels.js";
+import {
+  renderBookCompanion,
+  renderCodingTip,
+  renderCompetitorWatch,
+  renderDailyTaskAgent,
+  renderGratitudePrompt,
+  renderHabitTracker,
+  renderLanguageWord,
+  renderParentingMilestone,
+  renderRelationshipNudge
+} from "./stub-renderers.js";
+import { agentDebug } from "./debug-log.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -935,13 +935,13 @@ async function renderCustomAgent(
   }
 
   if (wantsDsaQuestion(text)) {
-    console.log("[renderCustomAgent] wantsDsaQuestion. topicsCovered:", topicsCovered);
+    agentDebug("[renderCustomAgent] wantsDsaQuestion. topicsCovered:", topicsCovered);
     const dsaQuestion = await generateDynamicDsaQuestion({
       agentPrompt: agent.prompt,
       agentId: agent.id,
       topicsCovered
     });
-    console.log("[renderCustomAgent] generated dynamic DSA question:", dsaQuestion.title);
+    agentDebug("[renderCustomAgent] generated dynamic DSA question:", dsaQuestion.title);
     const slug = dsaQuestion.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const leetcodeUrl = `https://leetcode.com/problems/${slug}/`;
     const res = renderedDsaQuestion({
@@ -1001,7 +1001,7 @@ async function renderStudyGuideAgent(context: {
     ? parsedIntent.topics_covered
     : [];
 
-  console.log("[StudyGuideAgent] running agentId:", agent.id, "previously_covered_topics:", topicsCovered);
+  agentDebug("[StudyGuideAgent] running agentId:", agent.id, "previously_covered_topics:", topicsCovered);
 
   if (!anthropicConfigured()) {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
@@ -1012,7 +1012,7 @@ async function renderStudyGuideAgent(context: {
   try {
     driveToken = await googleAccessToken(agent.user_id, "drive");
   } catch (err) {
-    console.log("[StudyGuideAgent] Google Drive access token not linked or expired, falling back to standard generation:", err);
+    agentDebug("[StudyGuideAgent] Google Drive access token not linked or expired, falling back to standard generation:", err);
   }
 
   // 2. If Google Drive token exists, look for PDFs
@@ -1029,7 +1029,7 @@ async function renderStudyGuideAgent(context: {
       }
 
       if (selectedFile) {
-        console.log(`[StudyGuideAgent] Found PDF file to study: ${selectedFile.name} (ID: ${selectedFile.id})`);
+        agentDebug(`[StudyGuideAgent] Found PDF file to study: ${selectedFile.name} (ID: ${selectedFile.id})`);
         const { chunks } = await downloadAndParsePdf(driveToken, selectedFile.id);
         
         let chunkIdx = typeof parsedIntent.current_chunk === "number" ? parsedIntent.current_chunk : 0;
@@ -1038,7 +1038,7 @@ async function renderStudyGuideAgent(context: {
         }
         
         const currentChunkText = chunks[chunkIdx] || "";
-        console.log(`[StudyGuideAgent] Studying chunk ${chunkIdx + 1}/${chunks.length} of ${selectedFile.name}`);
+        agentDebug(`[StudyGuideAgent] Studying chunk ${chunkIdx + 1}/${chunks.length} of ${selectedFile.name}`);
 
         const response = await createAnthropicMessage({
           maxTokens: 1200,
@@ -1078,7 +1078,7 @@ async function renderStudyGuideAgent(context: {
           throw new Error("Invalid LLM response format: No JSON object found.");
         }
         const data = studyGuideResponseSchema.parse(JSON.parse(match[0]));
-        console.log("[StudyGuideAgent] generated topic from PDF:", data.topic);
+        agentDebug("[StudyGuideAgent] generated topic from PDF:", data.topic);
 
         // Update current_chunk index in the database
         const nextChunk = chunkIdx + 1;
@@ -1166,7 +1166,7 @@ async function renderStudyGuideAgent(context: {
       throw new Error("Invalid LLM response format: No JSON object found.");
     }
     const data = studyGuideResponseSchema.parse(JSON.parse(match[0]));
-    console.log("[StudyGuideAgent] generated topic:", data.topic);
+    agentDebug("[StudyGuideAgent] generated topic:", data.topic);
 
     const completed = false;
     const actions = [
@@ -1261,7 +1261,7 @@ async function generateDynamicDsaQuestion(params: {
               };
               break;
             }
-            console.log(`[DsaQuestion] title "${parsed.title}" was already covered in dynamic generation, retrying...`);
+            agentDebug(`[DsaQuestion] title "${parsed.title}" was already covered in dynamic generation, retrying...`);
           }
         }
         attempts++;
@@ -1292,7 +1292,7 @@ async function renderDsaQuestionAgent(context: {
     ? parsedIntent.topics_covered
     : [];
 
-  console.log("[DsaQuestionAgent] running agentId:", agent.id, "previously_covered_problems:", topicsCovered);
+  agentDebug("[DsaQuestionAgent] running agentId:", agent.id, "previously_covered_problems:", topicsCovered);
 
   if (!anthropicConfigured()) {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
@@ -1352,7 +1352,7 @@ async function renderDsaQuestionAgent(context: {
     }
     const data = dsaQuestionResponseSchema.parse(JSON.parse(match[0]));
     data.title = chosenQuestion.title; // Ensure exact match
-    console.log("[DsaQuestionAgent] generated title:", data.title);
+    agentDebug("[DsaQuestionAgent] generated title:", data.title);
 
     const actions: Array<{
       id: "done" | "snooze" | "skip";
@@ -1392,99 +1392,6 @@ async function renderDsaQuestionAgent(context: {
       ].join("\n")
     );
   }
-}
-
-function renderStudyPlan(
-  agent: AgentRow
-): RenderedAgentMessage {
-  const steps = studySteps(agent.prompt);
-
-  return renderedProgressTracker({
-    title: scheduledTitle(agent, "study plan"),
-    text: studyPlanText(agent.prompt),
-    total: steps.length,
-    current: 0,
-    steps: steps.map((label) => ({ label, done: false }))
-  });
-}
-
-function renderHabitTracker(
-  agent: AgentRow
-): RenderedAgentMessage {
-  return renderedStreakCounter({
-    label: habitLabel(agent.prompt),
-    count: 0,
-    unit: "logged days",
-    caption: `${scheduledIntro(agent, "habit check-in")} ${habitPrompt(agent.prompt)}`
-  });
-}
-
-function renderLanguageWord(agent: AgentRow): RenderedAgentMessage {
-  const word = languageWord(agent.prompt);
-  return renderedStreakCounter({
-    label: scheduledTitle(agent, `${word.language} word`),
-    count: 0,
-    unit: "learned days",
-    word: word.word,
-    definition: word.definition,
-    example: word.example,
-    translation: word.translation,
-    caption: "Reply with \"got it\" or \"need review\" so I can tune the next word."
-  });
-}
-
-function renderCodingTip(agent: AgentRow): RenderedAgentMessage {
-  const heading = scheduledIntro(agent, "coding tip");
-  const body = codingTip(agent.prompt);
-  return renderedNewsBrief(parseNewsBriefText(heading, body));
-}
-
-function renderBookCompanion(agent: AgentRow): RenderedAgentMessage {
-  const heading = scheduledIntro(agent, "book insight");
-  const body = bookInsight(agent.prompt);
-  return renderedNewsBrief(parseNewsBriefText(heading, body));
-}
-
-function renderParentingMilestone(agent: AgentRow): RenderedAgentMessage {
-  const heading = scheduledIntro(agent, "development update");
-  const body = [
-    "This week's focus: watch for one new communication cue, one new movement skill, and one new social response.",
-    "If anything concerns you, treat this as a prompt to ask a pediatrician, not medical advice."
-  ].join("\n\n");
-  return renderedNewsBrief(parseNewsBriefText(heading, body));
-}
-
-function renderRelationshipNudge(agent: AgentRow): RenderedAgentMessage {
-  const heading = scheduledIntro(agent, "relationship nudge");
-  const body = [
-    "Reach out to one person today with a message that is easy to send and easy to answer.",
-    "Prompt: \"Thought of you today. How have you been?\""
-  ].join("\n\n");
-  return renderedNewsBrief(parseNewsBriefText(heading, body));
-}
-
-function renderGratitudePrompt(agent: AgentRow): RenderedAgentMessage {
-  const heading = scheduledIntro(agent, "gratitude prompt");
-  const body = [
-    "Write three things you are grateful for tonight.",
-    "Keep them specific: one person, one moment, and one thing you are looking forward to."
-  ].join("\n\n");
-  return renderedNewsBrief(parseNewsBriefText(heading, body));
-}
-
-function renderDailyTaskAgent(agent: AgentRow): RenderedAgentMessage {
-  const task = dailyTask(agent.prompt);
-  return renderedDailyTask({
-    title: scheduledTitle(agent, task.title),
-    task: task.task,
-    context: task.context,
-    estimated_minutes: task.estimatedMinutes,
-    actions: [
-      { id: "done", label: "Done", style: "primary" },
-      { id: "more_time", label: "Need more time", style: "secondary" },
-      { id: "too_hard", label: "Too hard", style: "ghost" }
-    ]
-  });
 }
 
 async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessage> {
@@ -1604,37 +1511,6 @@ async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessa
   }
 }
 
-function renderCompetitorWatch(agent: AgentRow): RenderedAgentMessage {
-  const competitors = competitorNames(agent.prompt);
-  const rows =
-    competitors.length > 0
-      ? competitors.map((name) => ({
-          label: name,
-          changes: [
-            "Watch target saved. Search-backed change extraction is the next renderer step."
-          ],
-          sentiment: "needs_input" as const
-        }))
-      : [
-          {
-            label: "Competitors",
-            changes: ["Reply with the company names you want watched."],
-            sentiment: "needs_input" as const
-          }
-        ];
-
-  return renderedComparison({
-    title: scheduledTitle(agent, "competitor watch"),
-    period: "Current watchlist",
-    rows,
-    insight:
-      competitors.length > 0
-        ? "The comparison template is active. It will become search-backed when the structured web research renderer is added."
-        : "Competitor names are required before this agent can compare launches or positioning.",
-    trending_narrative: "No narrative generated until real competitor data is collected."
-  });
-}
-
 function renderConnectorPending(
   agent: AgentRow,
   config: ConnectorPendingConfig
@@ -1724,300 +1600,6 @@ function singleConnectorId(connectorIds: string[]): string | null {
   ];
 
   return unique.length === 1 ? unique[0]! : null;
-}
-
-function intentName(agent: AgentRow): string {
-  const parsedIntent = typeof agent.parsed_intent === "string"
-    ? JSON.parse(agent.parsed_intent)
-    : (agent.parsed_intent || {});
-  return String(parsedIntent.intent ?? "");
-}
-
-function actionText(agent: AgentRow): string {
-  const parsedIntent = typeof agent.parsed_intent === "string"
-    ? JSON.parse(agent.parsed_intent)
-    : (agent.parsed_intent || {});
-  return String(parsedIntent.action ?? agent.prompt).trim();
-}
-
-function outputTemplate(agent: AgentRow): string {
-  const parsedIntent = typeof agent.parsed_intent === "string"
-    ? JSON.parse(agent.parsed_intent)
-    : (agent.parsed_intent || {});
-  return String(parsedIntent.output_template ?? "plain_text");
-}
-
-function scheduledIntro(agent: AgentRow, label: string, trigger?: AgentRunTrigger): string {
-  return `${scheduledTitle(agent, label, trigger)}.`;
-}
-
-function scheduledTitle(agent: AgentRow, label: string, trigger?: AgentRunTrigger): string {
-  if (trigger === "manual") {
-    return `Here's the ${label} you requested`;
-  }
-  if (trigger === "snooze") {
-    return `Here's your snoozed ${label}`;
-  }
-  const time = scheduleTimeLabel(agent.schedule_cron);
-  return time ? `Here's your ${time} ${label}` : `Here's your ${label}`;
-}
-
-function scheduleTimeLabel(cron: string | null): string | null {
-  const daily = cron?.match(/^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+\*$/);
-  if (!daily) {
-    return null;
-  }
-
-  const minute = Number(daily[1]);
-  const hour24 = Number(daily[2]);
-  const meridiem = hour24 >= 12 ? "pm" : "am";
-  const hour12 = hour24 % 12 || 12;
-  const minutePart = minute === 0 ? "" : `:${String(minute).padStart(2, "0")}`;
-  return `${hour12}${minutePart}${meridiem}`;
-}
-
-function wantsTechNewsBrief(text: string): boolean {
-  return /\btech(?:nology)?\s+news\b/i.test(text);
-}
-
-function wantsNewsBrief(text: string): boolean {
-  return /\b(?:news|headlines?)\b/i.test(text);
-}
-
-function topicLabel(prompt: string, fallback: string): string {
-  const funding = prompt.match(/\b(?:about|on)\s+(.+?)\s+(?:every|daily|at|morning|evening|weekly|$)/i);
-  if (funding?.[1]) {
-    return `${funding[1].trim()} brief`;
-  }
-
-  return fallback;
-}
-
-function reminderWithoutDynamicRequests(action: string): string {
-  return action
-    .replace(/^reminder:\s*/i, "")
-    .replace(
-      /\s*(?:,?\s*(?:and|along with reminders?)\s*)?(?:send|give|share|include)\s+me\s+(?:the\s+)?(?:dsa|data structures?\s*(?:and|&)\s*algorithms?|algorithm)\s+(?:question|problem|challenge)(?:\s+of\s+the\s+day|\s+daily)?\s*\.?$/i,
-      ""
-    )
-    .replace(
-      /\s*(?:,?\s*(?:and|along with reminders?)\s*)?(?:send|give|share|include)\s+me\s+(?:the\s+)?(?:tech(?:nology)?\s+)?(?:news|headlines?)(?:\s+(?:brief|digest))?(?:\s+of\s+the\s+day|\s+daily)?\s*\.?$/i,
-      ""
-    )
-    .replace(/\s+\band\s*$/i, "")
-    .replace(/\s*,\s*$/, "")
-    .trim()
-    .replace(/\s+\.$/, "");
-}
-
-function withPeriod(text: string): string {
-  return /[.!?]$/.test(text) ? text : `${text}.`;
-}
-
-function studyPlanText(prompt: string): string {
-  if (/\bjee\b/i.test(prompt)) {
-    return "Focus on one physics, chemistry, and maths block today. Keep each block small enough to finish.";
-  }
-
-  if (/\bneet\b/i.test(prompt)) {
-    return "Focus on one biology, chemistry, and physics block today. Review mistakes before adding new material.";
-  }
-
-  if (/\bdsa\b/i.test(prompt)) {
-    return "Focus on one concept, one implementation, and one review pass today.";
-  }
-
-  return "Focus on one meaningful study block today, then close the loop with a short review.";
-}
-
-function studySteps(prompt: string): string[] {
-  if (/\bjee\b/i.test(prompt)) {
-    return [
-      "Solve one physics concept set",
-      "Review one chemistry topic",
-      "Complete one maths problem block",
-      "Write down mistakes and next actions"
-    ];
-  }
-
-  if (/\bneet\b/i.test(prompt)) {
-    return [
-      "Revise one biology chapter section",
-      "Practice one chemistry question set",
-      "Solve one physics numericals block",
-      "Review incorrect answers"
-    ];
-  }
-
-  if (/\bdsa\b/i.test(prompt)) {
-    return [
-      "Review the core pattern",
-      "Solve one medium problem",
-      "Write the complexity analysis",
-      "Save one mistake or insight"
-    ];
-  }
-
-  return [
-    "Pick the highest-impact topic",
-    "Do one focused study block",
-    "Test recall without notes",
-    "Record the next action"
-  ];
-}
-
-function habitLabel(prompt: string): string {
-  const lower = prompt.toLowerCase();
-  if (lower.includes("meditat")) return "Meditation";
-  if (lower.includes("language")) return "Language practice";
-  if (lower.includes("word")) return "Vocabulary";
-  if (lower.includes("code") || lower.includes("coding")) return "Coding";
-  return "Daily habit";
-}
-
-function habitPrompt(prompt: string): string {
-  const lower = prompt.toLowerCase();
-  if (lower.includes("meditat")) return "Do one short meditation session now.";
-  if (lower.includes("language")) return "Complete one language practice rep now.";
-  if (lower.includes("word")) return "Learn and use one new word today.";
-  if (lower.includes("code") || lower.includes("coding")) {
-    return "Complete one focused coding rep now.";
-  }
-
-  return "Complete one small rep now.";
-}
-
-function languageWord(prompt: string): {
-  language: string;
-  word: string;
-  definition: string;
-  example: string;
-  translation: string;
-} {
-  if (/\bspanish\b/i.test(prompt)) {
-    return {
-      language: "Spanish",
-      word: "Madrugada",
-      definition: "The hours between midnight and dawn.",
-      example: "Me desperte en la madrugada.",
-      translation: "I woke up in the early hours."
-    };
-  }
-
-  if (/\bfrench\b/i.test(prompt)) {
-    return {
-      language: "French",
-      word: "Depaysement",
-      definition: "The feeling of being outside your usual environment.",
-      example: "Ce voyage m'a donne un vrai depaysement.",
-      translation: "This trip gave me a real change of scene."
-    };
-  }
-
-  return {
-    language: "Vocabulary",
-    word: "Deliberate",
-    definition: "Done consciously and intentionally.",
-    example: "Make one deliberate improvement before moving on.",
-    translation: "Use it today in one sentence of your own."
-  };
-}
-
-function codingTip(prompt: string): string {
-  if (/\bpython\b/i.test(prompt)) {
-    return [
-      "Today: use `collections.defaultdict` when missing keys should start with a default value.",
-      "It keeps counting/grouping code smaller and avoids repeated `if key not in dict` checks."
-    ].join("\n");
-  }
-
-  if (/\bflutter|dart\b/i.test(prompt)) {
-    return [
-      "Today: keep expensive work out of `build()`.",
-      "Precompute derived values in state/providers so rebuilds stay cheap and predictable."
-    ].join("\n");
-  }
-
-  if (/\bsql\b/i.test(prompt)) {
-    return [
-      "Today: check query plans before adding indexes.",
-      "`EXPLAIN ANALYZE` tells you whether the database is scanning, sorting, or using the index you expected."
-    ].join("\n");
-  }
-
-  return [
-    "Today: write down the time complexity before coding the solution.",
-    "It forces you to choose the data structure first instead of patching performance later."
-  ].join("\n");
-}
-
-function bookInsight(prompt: string): string {
-  if (/\batomic habits\b/i.test(prompt)) {
-    return [
-      "Today's insight from Atomic Habits: habits get easier when the cue is obvious and the action is small.",
-      "Prompt: choose one habit and define the exact cue that will trigger it today."
-    ].join("\n");
-  }
-
-  return [
-    "Today's reading prompt: capture one idea you can apply in the next 24 hours.",
-    "Keep it concrete: one action, one situation, one expected benefit."
-  ].join("\n");
-}
-
-function dailyTask(prompt: string): {
-  title: string;
-  task: string;
-  context: string;
-  estimatedMinutes: number;
-} {
-  if (/\binterview\b/i.test(prompt)) {
-    return {
-      title: "interview prep",
-      task: "Solve one medium array or string problem and write the complexity analysis.",
-      context:
-        "After that, rehearse one behavioral answer using situation, action, result.",
-      estimatedMinutes: 45
-    };
-  }
-
-  if (/\bportfolio\b/i.test(prompt)) {
-    return {
-      title: "portfolio task",
-      task: "Write one case study headline for your strongest project.",
-      context:
-        "Do not design the whole site today. Create one small artifact that makes tomorrow easier.",
-      estimatedMinutes: 20
-    };
-  }
-
-  return {
-    title: "daily task",
-    task: "Define the smallest useful next step and complete it today.",
-    context:
-      "The task should be small enough that lack of motivation is not a blocker.",
-    estimatedMinutes: 20
-  };
-}
-
-
-
-function competitorNames(prompt: string): string[] {
-  const quoted = [...prompt.matchAll(/"([^"]+)"/g)].map((match) => match[1]!);
-  if (quoted.length > 0) {
-    return quoted.map((name) => name.trim()).filter(Boolean);
-  }
-
-  const afterWatch = prompt.match(/\bwatch\s+(.+?)\s+(?:and\s+)?tell\b/i)?.[1];
-  if (!afterWatch || /\bcompetitors?\b/i.test(afterWatch)) {
-    return [];
-  }
-
-  return afterWatch
-    .split(/\s*,\s*|\s+and\s+/i)
-    .map((name) => name.trim())
-    .filter(Boolean)
-    .slice(0, 6);
 }
 
 function errorMessage(error: unknown): string {

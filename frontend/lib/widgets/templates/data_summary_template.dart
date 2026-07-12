@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class DataSummaryTemplate extends StatelessWidget {
   const DataSummaryTemplate({required this.data, super.key});
@@ -14,10 +15,11 @@ class DataSummaryTemplate extends StatelessWidget {
     final intro = data['text']?.toString();
     final summary =
         data['summary']?.toString() ?? data['description']?.toString();
-    final metrics = _maps(data['metrics']);
-    final items = _maps(data['items']);
+    final metrics = templateMaps(data['metrics']);
+    final items = templateMaps(data['items']);
     final blocks = _summaryBlocks(summary, title);
-    final showIntro = intro != null &&
+    final showIntro =
+        intro != null &&
         intro.isNotEmpty &&
         intro.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase() !=
             title.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
@@ -387,14 +389,4 @@ String _cleanInline(String value) {
 
 String _comparisonKey(String value) {
   return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '').trim();
-}
-
-List<Map<String, dynamic>> _maps(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
 }

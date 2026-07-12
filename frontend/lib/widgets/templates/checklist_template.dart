@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class ChecklistTemplate extends StatelessWidget {
   const ChecklistTemplate({required this.data, super.key});
@@ -13,7 +14,7 @@ class ChecklistTemplate extends StatelessWidget {
     final title = data['title']?.toString() ?? 'Checklist';
     final subtitle = data['subtitle']?.toString();
     final message = data['message']?.toString();
-    final items = _maps(data['items']);
+    final items = templateMaps(data['items']);
     final footer = data['footer']?.toString();
 
     return Column(
@@ -86,14 +87,4 @@ class ChecklistTemplate extends StatelessWidget {
       ],
     );
   }
-}
-
-List<Map<String, dynamic>> _maps(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
 }

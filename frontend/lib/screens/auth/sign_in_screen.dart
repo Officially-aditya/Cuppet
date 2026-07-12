@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/auth/auth_widgets.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -15,8 +16,8 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'user@session.local');
-  final _passwordController = TextEditingController(text: 'sydneysafepass');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _showPassword = false;
   bool _showEmailForm = false;
 
@@ -42,42 +43,44 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               padding: const EdgeInsets.fromLTRB(24, 40, 24, 28),
               children: [
                 const SizedBox(height: SydneySpacing.xxl),
-                const _AuthLogo(),
+                const AuthLogo(),
                 const SizedBox(height: SydneySpacing.lg),
                 Text(
                   'Welcome back',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: SydneyColors.ink,
-                        letterSpacing: -0.5,
-                      ),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: SydneyColors.ink,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: SydneySpacing.sm),
                 Text(
                   'Delegate work through conversations with agents you trust.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: SydneyColors.mutedInk,
-                      ),
+                    color: SydneyColors.mutedInk,
+                  ),
                 ),
                 const SizedBox(height: SydneySpacing.xxl),
                 Column(
                   children: [
-                    _LoginOptionCard(
+                    LoginOptionCard(
                       title: 'Sign in with Google',
                       subtitle: 'Access your account instantly with Google',
-                      leadingWidget: const _GoogleMark(),
+                      leadingWidget: const GoogleMark(),
                       onTap: loading ? null : _continueWithGoogle,
                     ),
                     const SizedBox(height: SydneySpacing.md),
-                    _LoginOptionCard(
+                    LoginOptionCard(
                       title: 'Sign in with Email',
                       subtitle: 'Use your email address and password',
                       icon: Icons.mail_outline_rounded,
                       leadingIconColor: SydneyColors.primary,
-                      onTap: () => setState(() => _showEmailForm = !_showEmailForm),
+                      onTap:
+                          () =>
+                              setState(() => _showEmailForm = !_showEmailForm),
                     ),
                   ],
                 ),
@@ -92,7 +95,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                            color: const Color(
+                              0xFF17201C,
+                            ).withValues(alpha: 0.05),
                             offset: const Offset(4, 4),
                             blurRadius: 8,
                           ),
@@ -112,26 +117,34 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         key: _formKey,
                         child: Column(
                           children: [
-                            _AuthField(
+                            AuthField(
                               label: 'Email Address',
                               controller: _emailController,
                               icon: Icons.mail_outline_rounded,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              validator: (value) => value == null || value.trim().isEmpty
-                                  ? 'Enter your email.'
-                                  : null,
+                              validator:
+                                  (value) =>
+                                      value == null || value.trim().isEmpty
+                                          ? 'Enter your email.'
+                                          : null,
                             ),
                             const SizedBox(height: SydneySpacing.lg),
-                            _AuthField(
+                            AuthField(
                               label: 'Password',
                               controller: _passwordController,
                               icon: Icons.lock_outline_rounded,
                               obscureText: !_showPassword,
                               textInputAction: TextInputAction.done,
                               suffix: IconButton(
-                                tooltip: _showPassword ? 'Hide password' : 'Show password',
-                                onPressed: () => setState(() => _showPassword = !_showPassword),
+                                tooltip:
+                                    _showPassword
+                                        ? 'Hide password'
+                                        : 'Show password',
+                                onPressed:
+                                    () => setState(
+                                      () => _showPassword = !_showPassword,
+                                    ),
                                 icon: Icon(
                                   _showPassword
                                       ? Icons.visibility_off_outlined
@@ -140,9 +153,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   color: SydneyColors.outline,
                                 ),
                               ),
-                              validator: (value) => value == null || value.isEmpty
-                                  ? 'Enter your password.'
-                                  : null,
+                              validator:
+                                  (value) =>
+                                      value == null || value.isEmpty
+                                          ? 'Enter your password.'
+                                          : null,
                               onFieldSubmitted: (_) => _submit(),
                             ),
                             Align(
@@ -172,9 +187,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 minimumSize: const Size.fromHeight(48),
-                                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              child: Text(loading ? 'Signing in...' : 'Sign In'),
+                              child: Text(
+                                loading ? 'Signing in...' : 'Sign In',
+                              ),
                             ),
                           ],
                         ),
@@ -183,7 +202,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ],
                 const SizedBox(height: SydneySpacing.xxl),
-                const _DividerLabel(),
+                const AuthDividerLabel(),
                 const SizedBox(height: SydneySpacing.lg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -191,13 +210,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     Text(
                       "Don't have an account?",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SydneyColors.onSurfaceVariant,
-                          ),
+                        color: SydneyColors.onSurfaceVariant,
+                      ),
                     ),
                     TextButton(
-                      onPressed: loading
-                          ? null
-                          : () => Navigator.of(context).pushNamed(AppRoutes.signUp),
+                      onPressed:
+                          loading
+                              ? null
+                              : () => Navigator.of(
+                                context,
+                              ).pushNamed(AppRoutes.signUp),
                       child: const Text(
                         'Create one',
                         style: TextStyle(
@@ -220,7 +242,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    await ref.read(authControllerProvider.notifier).signIn(
+    await ref
+        .read(authControllerProvider.notifier)
+        .signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
@@ -229,7 +253,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
     final state = ref.read(authControllerProvider).asData?.value;
     if (state?.isAuthenticated == true) {
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
     }
   }
 
@@ -240,331 +266,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
     final state = ref.read(authControllerProvider).asData?.value;
     if (state?.isAuthenticated == true) {
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
     }
-  }
-}
-
-class _AuthLogo extends StatelessWidget {
-  const _AuthLogo();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: SydneyPanel(
-        padding: EdgeInsets.zero,
-        radius: SydneyRadius.lg,
-        child: SydneyIconBadge(
-          size: 64,
-          radius: SydneyRadius.lg,
-          color: SydneyColors.surfaceContainerLowest,
-          foregroundColor: SydneyColors.primary,
-          child: Text('S'),
-        ),
-      ),
-    );
-  }
-}
-
-class _AuthField extends StatelessWidget {
-  const _AuthField({
-    required this.label,
-    required this.controller,
-    required this.icon,
-    this.keyboardType,
-    this.textInputAction,
-    this.obscureText = false,
-    this.validator,
-    this.suffix,
-    this.onFieldSubmitted,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final IconData icon;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final bool obscureText;
-  final String? Function(String?)? validator;
-  final Widget? suffix;
-  final ValueChanged<String>? onFieldSubmitted;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: SydneySpacing.xs, bottom: 6),
-          child: Text(
-            label.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.onSurfaceVariant,
-                  letterSpacing: 0.7,
-                ),
-          ),
-        ),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          validator: validator,
-          onFieldSubmitted: onFieldSubmitted,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: SydneyColors.ink,
-              ),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 18, color: SydneyColors.outline),
-            suffixIcon: suffix,
-            fillColor: SydneyColors.surfaceContainerLow,
-            filled: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: SydneySpacing.md,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SydneyColors.line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SydneyColors.line),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SydneyColors.primary),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DividerLabel extends StatelessWidget {
-  const _DividerLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(child: Divider(color: SydneyColors.line)),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: SydneySpacing.md),
-          child: Text(
-            'OR',
-            style: TextStyle(
-              color: SydneyColors.outline,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: SydneyColors.line)),
-      ],
-    );
-  }
-}
-
-class _GoogleMark extends StatelessWidget {
-  const _GoogleMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 18,
-      height: 18,
-      child: CustomPaint(
-        painter: _GoogleLogoPainter(),
-      ),
-    );
-  }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  const _GoogleLogoPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double scaleX = size.width / 24.0;
-    final double scaleY = size.height / 24.0;
-
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    // 1. Red part (top)
-    final Path redPath = Path()
-      ..moveTo(12.0, 5.04)
-      ..cubicTo(13.64, 5.04, 15.12, 5.6, 16.28, 6.71)
-      ..relativeLineTo(3.2, -3.2)
-      ..cubicTo(17.52, 1.68, 14.98, 1.0, 12.0, 1.0)
-      ..cubicTo(7.35, 1.0, 3.34, 3.67, 1.39, 7.56)
-      ..relativeLineTo(3.9, 3.02)
-      ..cubicTo(6.21, 7.42, 8.87, 5.04, 12.0, 5.04);
-    
-    final Paint redPaint = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(redPath, redPaint);
-
-    // 2. Green part (bottom)
-    final Path greenPath = Path()
-      ..moveTo(12.0, 18.96)
-      ..cubicTo(8.87, 18.96, 6.21, 16.58, 5.29, 13.42)
-      ..relativeLineTo(-3.9, 3.02)
-      ..cubicTo(3.34, 20.33, 7.35, 23.0, 12.0, 23.0)
-      ..cubicTo(14.98, 23.0, 17.48, 22.01, 19.3, 20.31)
-      ..relativeLineTo(-3.2, -2.63)
-      ..cubicTo(14.96, 18.49, 13.47, 18.96, 12.0, 18.96);
-
-    final Paint greenPaint = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(greenPath, greenPaint);
-
-    // 3. Yellow part (left)
-    final Path yellowPath = Path()
-      ..moveTo(5.29, 13.42)
-      ..cubicTo(5.08, 12.79, 4.96, 12.12, 4.96, 11.4)
-      ..cubicTo(4.96, 10.68, 5.08, 10.01, 5.29, 9.38)
-      ..relativeLineTo(-3.9, -3.02)
-      ..cubicTo(0.5, 7.97, 0.0, 9.43, 0.0, 11.4)
-      ..cubicTo(0.0, 13.37, 0.5, 14.83, 1.39, 16.44)
-      ..relativeLineTo(3.9, -3.02);
-
-    final Paint yellowPaint = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(yellowPath, yellowPaint);
-
-    // 4. Blue part (right & middle)
-    final Path bluePath = Path()
-      ..moveTo(24.0, 11.4)
-      ..cubicTo(24.0, 10.57, 23.93, 9.77, 23.8, 9.0)
-      ..lineTo(12.0, 9.0)
-      ..lineTo(12.0, 13.54)
-      ..lineTo(18.74, 13.54)
-      ..cubicTo(18.45, 15.1, 17.57, 16.41, 16.25, 17.3)
-      ..lineTo(19.45, 19.93)
-      ..cubicTo(21.33, 18.2, 24.0, 15.64, 24.0, 11.4)
-      ..close();
-
-    final Paint bluePaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(bluePath, bluePaint);
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _LoginOptionCard extends StatelessWidget {
-  const _LoginOptionCard({
-    required this.title,
-    required this.subtitle,
-    this.icon,
-    this.leadingWidget,
-    this.leadingIconColor,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData? icon;
-  final Widget? leadingWidget;
-  final Color? leadingIconColor;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: SydneyColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF17201C).withValues(alpha: 0.04),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-          const BoxShadow(
-            color: Colors.white,
-            offset: Offset(-4, -4),
-            blurRadius: 8,
-          ),
-        ],
-        border: Border.all(
-          color: SydneyColors.line.withValues(alpha: 0.35),
-          width: 0.8,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: SydneyColors.surfaceContainerLowest,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: SydneyColors.line,
-                      width: 0.8,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: leadingWidget ??
-                      Icon(
-                        icon,
-                        size: 20,
-                        color: leadingIconColor ?? SydneyColors.primary,
-                      ),
-                ),
-                const SizedBox(width: SydneySpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: SydneyColors.ink,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SydneyColors.mutedInk,
-                              height: 1.3,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: SydneySpacing.sm),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: SydneyColors.outline,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

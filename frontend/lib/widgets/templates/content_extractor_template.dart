@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import 'template_utils.dart';
 
 class ContentExtractorTemplate extends StatelessWidget {
-  const ContentExtractorTemplate({required this.data, this.onAction, super.key});
+  const ContentExtractorTemplate({
+    required this.data,
+    this.onAction,
+    super.key,
+  });
 
   final Map<String, dynamic> data;
   final ValueChanged<Map<String, dynamic>>? onAction;
 
   @override
   Widget build(BuildContext context) {
-    final ideas = _maps(data['ideas']);
+    final ideas = templateMaps(data['ideas']);
 
     if (ideas.isEmpty) {
       return Column(
@@ -26,19 +31,20 @@ class ContentExtractorTemplate extends StatelessWidget {
               const SizedBox(width: SydneySpacing.sm),
               Text(
                 'Content Extractor',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
             ],
           ),
           const SizedBox(height: SydneySpacing.md),
           Text(
-            data['text']?.toString() ?? 'No trending topics found yet. Please trigger a run or type to search.',
+            data['text']?.toString() ??
+                'No trending topics found yet. Please trigger a run or type to search.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.4,
-                  color: SydneyColors.onSurface,
-                ),
+              height: 1.4,
+              color: SydneyColors.onSurface,
+            ),
           ),
         ],
       );
@@ -57,18 +63,18 @@ class ContentExtractorTemplate extends StatelessWidget {
             const SizedBox(width: SydneySpacing.sm),
             Text(
               'Trending Content Ideas',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
           ],
         ),
         const SizedBox(height: SydneySpacing.xs),
         Text(
           'Select an idea below to generate a formatted draft post.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
         ),
         const SizedBox(height: SydneySpacing.md),
         Column(
@@ -87,22 +93,13 @@ class ContentExtractorTemplate extends StatelessWidget {
                   }
                 },
               ),
-              if (i < ideas.length - 1) const SizedBox(height: SydneySpacing.sm),
+              if (i < ideas.length - 1)
+                const SizedBox(height: SydneySpacing.sm),
             ],
           ],
         ),
       ],
     );
-  }
-
-  List<Map<String, dynamic>> _maps(Object? value) {
-    if (value is! List) {
-      return const [];
-    }
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
   }
 }
 
@@ -166,9 +163,9 @@ class _IdeaCard extends StatelessWidget {
                       child: Text(
                         '$index',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SydneyColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: SydneyColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: SydneySpacing.sm),
@@ -176,9 +173,9 @@ class _IdeaCard extends StatelessWidget {
                       child: Text(
                         title,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: SydneyColors.ink,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          color: SydneyColors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],
@@ -189,9 +186,9 @@ class _IdeaCard extends StatelessWidget {
                   child: Text(
                     hook,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.onSurfaceVariant,
-                          height: 1.35,
-                        ),
+                      color: SydneyColors.onSurfaceVariant,
+                      height: 1.35,
+                    ),
                   ),
                 ),
                 const SizedBox(height: SydneySpacing.md),
@@ -207,10 +204,12 @@ class _IdeaCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'Generate Post Draft',
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: SydneyColors.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelMedium?.copyWith(
+                          color: SydneyColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const Spacer(),
                       const Icon(

@@ -1,4 +1,5 @@
 import type { ParsedIntent } from "./parser.js";
+import { UNSUPPORTED_CHAT_CONNECTORS } from "./unsupported-connectors.js";
 
 export type AgentMessageRouteIntent =
   | "chat"
@@ -41,15 +42,6 @@ export type AgentMessageRouterContext = {
   schedule_cron: string | null;
   status: "active" | "paused" | "error";
 };
-
-const unsupportedConnectors = [
-  "instagram",
-  "whatsapp",
-  "twitter",
-  "linkedin",
-  "calendar",
-  "notion"
-];
 
 const connectorNames = ["gmail", "email", "mail", "mailbox", "inbox", "drive", "slack"];
 
@@ -120,7 +112,7 @@ export function routeAgentMessage(
 ): AgentMessageRoute {
   const normalized = normalizeText(text);
   const lower = normalized.toLowerCase();
-  const unsupported = unsupportedConnectors.find((connector) =>
+  const unsupported = UNSUPPORTED_CHAT_CONNECTORS.find((connector) =>
     lower.includes(connector)
   );
 

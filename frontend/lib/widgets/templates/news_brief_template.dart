@@ -22,12 +22,14 @@ class _NewsBriefTemplateState extends State<NewsBriefTemplate> {
     final items = _normalizedItems(itemsList);
 
     final initialCountVal = widget.data['initial_item_count'];
-    final initialCount = initialCountVal is num ? initialCountVal.toInt() : null;
+    final initialCount =
+        initialCountVal is num ? initialCountVal.toInt() : null;
 
     final shouldTruncate = initialCount != null && items.length > initialCount;
-    final visibleItems = (shouldTruncate && !_isExpanded)
-        ? items.take(initialCount).toList()
-        : items;
+    final visibleItems =
+        (shouldTruncate && !_isExpanded)
+            ? items.take(initialCount).toList()
+            : items;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +215,6 @@ class _NewsItemCardState extends State<_NewsItemCard> {
     final summary = widget.item['summary']?.toString() ?? '';
     final hasSummary = _hasVisibleText(summary);
 
-    // If there is no headline, render it as a simple text block (intro/outro) - always visible
     if (headline == null || headline.isEmpty || !hasSummary) {
       return Padding(
         padding: const EdgeInsets.symmetric(
@@ -230,13 +231,8 @@ class _NewsItemCardState extends State<_NewsItemCard> {
       );
     }
 
-    // If there is a headline, render it in a pretty collapsible boxed card
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _isExpanded = !_isExpanded;
-        });
-      },
+      onTap: () => setState(() => _isExpanded = !_isExpanded),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(SydneySpacing.md),

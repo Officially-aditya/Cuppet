@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class ProgressTrackerTemplate extends StatelessWidget {
   const ProgressTrackerTemplate({required this.data, super.key});
@@ -11,7 +12,7 @@ class ProgressTrackerTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = data['title']?.toString() ?? 'Progress';
-    final steps = _maps(data['steps']);
+    final steps = templateMaps(data['steps']);
     final total = _number(data['total']) ?? steps.length;
     final current =
         _number(data['current']) ??
@@ -37,7 +38,8 @@ class ProgressTrackerTemplate extends StatelessWidget {
         ),
         const SizedBox(height: SydneySpacing.md),
         MarkdownText(
-          text: data['text']?.toString() ??
+          text:
+              data['text']?.toString() ??
               "I'm ready to help. Let's finish setting up your workflow.",
           style: Theme.of(
             context,
@@ -149,14 +151,4 @@ int? _number(Object? value) {
     return int.tryParse(value);
   }
   return null;
-}
-
-List<Map<String, dynamic>> _maps(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
 }

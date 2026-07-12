@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class PortfolioWatchTemplate extends StatelessWidget {
   const PortfolioWatchTemplate({required this.data, super.key});
@@ -13,7 +14,7 @@ class PortfolioWatchTemplate extends StatelessWidget {
     final title = data['title']?.toString() ?? 'Portfolio Watch';
     final text = data['text']?.toString();
     final footer = data['footer']?.toString();
-    final stocks = _maps(data['stocks']);
+    final stocks = templateMaps(data['stocks']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,8 +84,7 @@ class PortfolioWatchTemplate extends StatelessWidget {
                   mainAxisSpacing: SydneySpacing.sm,
                   childAspectRatio: 1.3,
                   children: [
-                    for (final stock in stocks)
-                      _StockCard(stock: stock),
+                    for (final stock in stocks) _StockCard(stock: stock),
                   ],
                 ),
               if (footer != null && footer.isNotEmpty) ...[
@@ -105,16 +105,6 @@ class PortfolioWatchTemplate extends StatelessWidget {
       ],
     );
   }
-
-  List<Map<String, dynamic>> _maps(Object? value) {
-    if (value is! List) {
-      return const [];
-    }
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-  }
 }
 
 class _StockCard extends StatelessWidget {
@@ -131,8 +121,10 @@ class _StockCard extends StatelessWidget {
     final range = stock['range']?.toString() ?? '';
 
     final isPositive = !change.startsWith('-');
-    final changeColor = isPositive ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
-    final changeBg = isPositive ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);
+    final changeColor =
+        isPositive ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final changeBg =
+        isPositive ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE);
 
     return Container(
       padding: const EdgeInsets.all(SydneySpacing.sm),
@@ -209,7 +201,9 @@ class _StockCard extends StatelessWidget {
                   fontSize: 16,
                 ),
               ),
-              if (range.isNotEmpty && range != 'Gainer' && range != 'Loser') ...[
+              if (range.isNotEmpty &&
+                  range != 'Gainer' &&
+                  range != 'Loser') ...[
                 const SizedBox(height: 2),
                 Text(
                   range.replaceFirst('Range: ', ''),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class UrgencyListTemplate extends StatelessWidget {
   const UrgencyListTemplate({required this.data, super.key});
@@ -11,7 +12,7 @@ class UrgencyListTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = data['title']?.toString() ?? 'Priority list';
-    final items = _maps(data['items']);
+    final items = templateMaps(data['items']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,14 +88,4 @@ class _UrgencyDot extends StatelessWidget {
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
-}
-
-List<Map<String, dynamic>> _maps(Object? value) {
-  if (value is! List) {
-    return const [];
-  }
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
 }

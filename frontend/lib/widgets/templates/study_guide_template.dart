@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'template_utils.dart';
 
 class StudyGuideTemplate extends StatefulWidget {
   const StudyGuideTemplate({required this.data, this.onAction, super.key});
@@ -20,20 +21,24 @@ class _StudyGuideTemplateState extends State<StudyGuideTemplate> {
   @override
   Widget build(BuildContext context) {
     final topic = widget.data['topic']?.toString() ?? 'Daily Topic';
-    final definition = widget.data['definition']?.toString() ?? 'No description was provided.';
+    final definition =
+        widget.data['definition']?.toString() ?? 'No description was provided.';
     final completed = widget.data['completed'] == true;
     final actionTaken = widget.data['action_taken']?.toString();
     final showActions = !completed && actionTaken == null;
-    final references = _maps(widget.data['references']);
-    final actions = _maps(widget.data['actions']);
+    final references = templateMaps(widget.data['references']);
+    final actions = templateMaps(widget.data['actions']);
 
     final initiallyCollapsed = widget.data['initially_collapsed'] == true;
     final shouldCollapse = initiallyCollapsed && !_isExpanded;
 
     // Truncate definition to first 180 characters if collapsed
-    final displayText = shouldCollapse
-        ? (definition.length > 180 ? '${definition.substring(0, 180)}...' : definition)
-        : definition;
+    final displayText =
+        shouldCollapse
+            ? (definition.length > 180
+                ? '${definition.substring(0, 180)}...'
+                : definition)
+            : definition;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,9 +55,9 @@ class _StudyGuideTemplateState extends State<StudyGuideTemplate> {
             Expanded(
               child: Text(
                 topic,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             if (completed)
@@ -112,7 +117,10 @@ class _StudyGuideTemplateState extends State<StudyGuideTemplate> {
                       _ActionPill(
                         label: action['label']?.toString() ?? 'Action',
                         styleName: action['style']?.toString() ?? 'secondary',
-                        onPressed: widget.onAction == null ? null : () => widget.onAction!(action),
+                        onPressed:
+                            widget.onAction == null
+                                ? null
+                                : () => widget.onAction!(action),
                       ),
                   ],
                 ),
@@ -130,7 +138,9 @@ class _StudyGuideTemplateState extends State<StudyGuideTemplate> {
                 });
               },
               icon: Icon(
-                _isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                _isExpanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
                 color: SydneyColors.primary,
                 size: 18,
               ),
@@ -157,16 +167,6 @@ class _StudyGuideTemplateState extends State<StudyGuideTemplate> {
         ],
       ],
     );
-  }
-
-  List<Map<String, dynamic>> _maps(Object? value) {
-    if (value is! List) {
-      return const [];
-    }
-    return value
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
   }
 }
 
@@ -232,15 +232,17 @@ class _ActionPill extends StatelessWidget {
     final primary = styleName == 'primary';
     final ghost = styleName == 'ghost';
 
-    final foreground = primary
-        ? SydneyColors.onPrimary
-        : ghost
+    final foreground =
+        primary
+            ? SydneyColors.onPrimary
+            : ghost
             ? SydneyColors.mutedInk
             : SydneyColors.onSurface;
 
-    final background = primary
-        ? SydneyColors.primary
-        : ghost
+    final background =
+        primary
+            ? SydneyColors.primary
+            : ghost
             ? Colors.transparent
             : SydneyColors.surfaceContainer;
 
@@ -259,9 +261,10 @@ class _ActionPill extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(SydneyRadius.full),
-          side: primary || ghost
-              ? BorderSide.none
-              : const BorderSide(color: SydneyColors.line),
+          side:
+              primary || ghost
+                  ? BorderSide.none
+                  : const BorderSide(color: SydneyColors.line),
         ),
       ),
       child: Text(
