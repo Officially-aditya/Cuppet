@@ -19,7 +19,7 @@ class User {
           json['displayName']?.toString() ??
           json['display_name']?.toString() ??
           json['name']?.toString() ??
-          'Sydney user',
+          'Cuppet user',
       avatarUrl:
           json['avatarUrl']?.toString() ??
           json['avatar_url']?.toString() ??

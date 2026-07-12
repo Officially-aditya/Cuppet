@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../design/tokens.dart';
 import '../../models/connector.dart';
 import '../../providers/connectors_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 
@@ -21,35 +22,7 @@ class ConnectorsScreen extends ConsumerWidget {
         backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
         scrolledUnderElevation: 0,
         elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x04000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
-              ),
-            ),
-          ),
-        ),
-        titleSpacing: 12,
+        titleSpacing: SydneySpacing.page,
         title: Text(
           'Connectors',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -70,6 +43,14 @@ class ConnectorsScreen extends ConsumerWidget {
             message: error.toString(),
             onRetry: () => ref.invalidate(connectorsProvider),
           ),
+        ),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 1,
+        onSelected: (index) => navigateToMainDestination(
+          context,
+          currentIndex: 1,
+          selectedIndex: index,
         ),
       ),
     );

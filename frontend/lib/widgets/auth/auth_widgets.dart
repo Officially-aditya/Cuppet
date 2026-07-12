@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
-import '../sydney_primitives.dart';
 
 /// Shared logo badge used on sign-in / sign-up screens.
 class AuthLogo extends StatelessWidget {
@@ -9,17 +8,13 @@ class AuthLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: SydneyPanel(
-        padding: EdgeInsets.zero,
-        radius: SydneyRadius.lg,
-        child: SydneyIconBadge(
-          size: 64,
-          radius: SydneyRadius.lg,
-          color: SydneyColors.surfaceContainerLowest,
-          foregroundColor: SydneyColors.primary,
-          child: Text('S'),
-        ),
+    return Center(
+      child: Image.asset(
+        'assets/logos/cuppet.png',
+        width: 240,
+        height: 132,
+        fit: BoxFit.contain,
+        semanticLabel: 'Cuppet logo',
       ),
     );
   }

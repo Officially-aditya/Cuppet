@@ -54,7 +54,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Sydney',
+              'Cuppet',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -147,23 +147,13 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
-        onSelected: (index) => _handleNav(index),
+        onSelected: (index) => navigateToMainDestination(
+          context,
+          currentIndex: 0,
+          selectedIndex: index,
+        ),
       ),
     );
-  }
-
-  void _handleNav(int index) {
-    if (index == 0) {
-      return;
-    }
-    if (index == 1) {
-      Navigator.of(context).pushNamed(AppRoutes.connectors);
-      return;
-    }
-    if (index == 2) {
-      Navigator.of(context).pushNamed(AppRoutes.settings);
-      return;
-    }
   }
 }
 

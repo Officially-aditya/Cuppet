@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -84,7 +85,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final user = authState.asData?.value.user;
-    final displayName = user?.displayName ?? 'Sydney User';
+    final displayName = user?.displayName ?? 'Cuppet User';
     final email = user?.email ?? '';
     final initials = _initials(displayName);
 
@@ -95,35 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
         scrolledUnderElevation: 0,
         elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x04000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
-              ),
-            ),
-          ),
-        ),
-        titleSpacing: 12,
+        titleSpacing: SydneySpacing.page,
         title: Text(
           'Settings',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -395,7 +368,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'This app stores only your Sydney session token on device. No browser fingerprints or passive scripts are injected.',
+                    'This app stores only your Cuppet session token on device. No browser fingerprints or passive scripts are injected.',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: SydneyColors.mutedInk,
                           fontWeight: FontWeight.w400,
@@ -408,29 +381,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SydneyFooter(
-        child: OutlinedButton.icon(
-          onPressed: () async {
-            await ref.read(authControllerProvider.notifier).signOut();
-            if (context.mounted) {
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                AppRoutes.signIn,
-                (route) => false,
-              );
-            }
-          },
-          icon: const Icon(Icons.logout_rounded, size: 16),
-          label: const Text('Sign out'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFDC2626),
-            side: const BorderSide(color: Color(0xFFFEE2E2)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SydneyFooter(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await ref.read(authControllerProvider.notifier).signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.signIn,
+                    (route) => false,
+                  );
+                }
+              },
+              icon: const Icon(Icons.logout_rounded, size: 16),
+              label: const Text('Sign out'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFFEE2E2)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                minimumSize: const Size.fromHeight(48),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-            minimumSize: const Size.fromHeight(48),
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ),
+          AppBottomNav(
+            currentIndex: 2,
+            onSelected: (index) => navigateToMainDestination(
+              context,
+              currentIndex: 2,
+              selectedIndex: index,
+            ),
+          ),
+        ],
       ),
     );
   }

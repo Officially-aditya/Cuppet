@@ -29,12 +29,15 @@ class ThreadScreen extends ConsumerStatefulWidget {
 
 class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   final _scrollController = ScrollController();
+  Timer? _shortScrollCorrection;
+  Timer? _longScrollCorrection;
   int _lastRenderedMessageCount = -1;
   AgentAvailability? _lastAvailability;
   String? _lastReadSyncedMessageId;
 
   /// Optimistic UI: the message the user just sent, shown immediately.
   Message? _pendingUserMessage;
+
   /// True while we are waiting for the agent's reply after an optimistic send.
   bool _awaitingResponse = false;
 
@@ -42,13 +45,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   Message? _replyToMessage;
 
   Agent get _activeAgent {
-    return ref.read(agentsProvider).maybeWhen(
-      data: (list) => list.firstWhere(
-        (a) => a.id == widget.agent.id,
-        orElse: () => widget.agent,
-      ),
-      orElse: () => widget.agent,
-    );
+    return ref
+        .read(agentsProvider)
+        .maybeWhen(
+          data:
+              (list) => list.firstWhere(
+                (a) => a.id == widget.agent.id,
+                orElse: () => widget.agent,
+              ),
+          orElse: () => widget.agent,
+        );
   }
 
   bool _shouldShowHeatmap(Agent agent) {
@@ -75,7 +81,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
     final nameLower = agent.name.toLowerCase();
     final descriptionLower = agent.description.toLowerCase();
-    final containsTrackableKeywords = nameLower.contains('study') ||
+    final containsTrackableKeywords =
+        nameLower.contains('study') ||
         nameLower.contains('practice') ||
         nameLower.contains('streak') ||
         nameLower.contains('habit') ||
@@ -90,7 +97,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         descriptionLower.contains('leetcode') ||
         descriptionLower.contains('learn');
 
-    return isKnownIntent || isTrackableTemplate || hasHistory || containsTrackableKeywords;
+    return isKnownIntent ||
+        isTrackableTemplate ||
+        hasHistory ||
+        containsTrackableKeywords;
   }
 
   @override
@@ -101,6 +111,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
   @override
   void dispose() {
+    _shortScrollCorrection?.cancel();
+    _longScrollCorrection?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -119,312 +131,378 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final messages = ref.watch(messagesProvider(agent.threadId));
 
     return Scaffold(
-      appBar: _selectedMessage != null
-          ? AppBar(
-              titleSpacing: 0,
-              backgroundColor: SydneyColors.surfaceContainerLowest,
-              bottom: const PreferredSize(
-                preferredSize: Size.fromHeight(1),
-                child: Divider(height: 1, color: SydneyColors.line),
-              ),
-              leading: IconButton(
-                tooltip: 'Cancel selection',
-                onPressed: () => setState(() => _selectedMessage = null),
-                icon: const Icon(Icons.close_rounded, size: 18),
-              ),
-              title: Text(
-                '1 message selected',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 14),
-              ),
-              actions: [
-                IconButton(
-                  tooltip: 'Copy text',
-                  icon: const Icon(Icons.copy_rounded, size: 18, color: SydneyColors.ink),
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: _selectedMessage!.preview));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Message copied to clipboard')),
-                    );
-                    setState(() => _selectedMessage = null);
+      appBar:
+          _selectedMessage != null
+              ? AppBar(
+                titleSpacing: 0,
+                backgroundColor: SydneyColors.surfaceContainerLowest,
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(1),
+                  child: Divider(height: 1, color: SydneyColors.line),
+                ),
+                leading: IconButton(
+                  tooltip: 'Cancel selection',
+                  onPressed: () => setState(() => _selectedMessage = null),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                ),
+                title: Text(
+                  '1 message selected',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontSize: 14),
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Copy text',
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      size: 18,
+                      color: SydneyColors.ink,
+                    ),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: _selectedMessage!.preview),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Message copied to clipboard'),
+                        ),
+                      );
+                      setState(() => _selectedMessage = null);
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Reply to message',
+                    icon: const Icon(
+                      Icons.reply_rounded,
+                      size: 18,
+                      color: SydneyColors.ink,
+                    ),
+                    onPressed: () {
+                      final msg = _selectedMessage;
+                      setState(() {
+                        _replyToMessage = msg;
+                        _selectedMessage = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(width: SydneySpacing.md),
+                ],
+              )
+              : AppBar(
+                titleSpacing: 0,
+                backgroundColor: SydneyColors.surfaceContainerLowest,
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(1),
+                  child: Divider(height: 1, color: SydneyColors.line),
+                ),
+                leading: IconButton(
+                  tooltip: 'Back',
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                ),
+                title: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    Navigator.of(
+                      context,
+                    ).pushNamed(AppRoutes.agentPreferences, arguments: agent);
                   },
-                ),
-                IconButton(
-                  tooltip: 'Reply to message',
-                  icon: const Icon(Icons.reply_rounded, size: 18, color: SydneyColors.ink),
-                  onPressed: () {
-                    final msg = _selectedMessage;
-                    setState(() {
-                      _replyToMessage = msg;
-                      _selectedMessage = null;
-                    });
-                  },
-                ),
-                const SizedBox(width: SydneySpacing.md),
-              ],
-            )
-          : AppBar(
-        titleSpacing: 0,
-        backgroundColor: SydneyColors.surfaceContainerLowest,
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: SydneyColors.line),
-        ),
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_rounded, size: 18),
-        ),
-        title: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            Navigator.of(context).pushNamed(
-              AppRoutes.agentPreferences,
-              arguments: agent,
-            );
-          },
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Color(agent.accentColor),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  agent.avatarInitials,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Color(agent.accentColor),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          agent.avatarInitials,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: SydneySpacing.md),
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              agent.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleSmall?.copyWith(fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const SizedBox(
+                                  width: 6,
+                                  height: 6,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: SydneyColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  agent.availability == AgentAvailability.paused
+                                      ? 'PAUSED'
+                                      : 'ACTIVE',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelSmall?.copyWith(
+                                    color: SydneyColors.primary,
+                                    fontSize: 10,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: SydneySpacing.md),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      agent.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleSmall?.copyWith(fontSize: 14),
+                actions: [
+                  PopupMenuButton<String>(
+                    icon: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: SydneyColors.line),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x04000000),
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.more_vert_rounded,
+                        size: 18,
+                        color: SydneyColors.ink,
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const SizedBox(
-                          width: 6,
-                          height: 6,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: SydneyColors.primary,
-                              shape: BoxShape.circle,
+                    tooltip: 'More options',
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(
+                        color: SydneyColors.line,
+                        width: 0.8,
+                      ),
+                    ),
+                    color: Colors.white,
+                    elevation: 4,
+                    shadowColor: Colors.black.withValues(alpha: 0.1),
+                    surfaceTintColor: Colors.transparent,
+                    onSelected: (value) => _handleMenuAction(value),
+                    itemBuilder:
+                        (context) => [
+                          PopupMenuItem(
+                            value: 'clear_chat',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.delete_sweep_rounded,
+                                  size: 18,
+                                  color: SydneyColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Clear chat',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: SydneyColors.ink,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          agent.availability == AgentAvailability.paused
-                              ? 'PAUSED'
-                              : 'ACTIVE',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: SydneyColors.primary,
-                            fontSize: 10,
-                            letterSpacing: 0.8,
+                          PopupMenuItem(
+                            value: 'rename',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.edit_outlined,
+                                  size: 18,
+                                  color: SydneyColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Rename agent',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: SydneyColors.ink,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x04000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
+                          PopupMenuItem(
+                            value: 'toggle_pause',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  agent.availability == AgentAvailability.paused
+                                      ? Icons.play_arrow_rounded
+                                      : Icons.pause_rounded,
+                                  size: 18,
+                                  color: SydneyColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  agent.availability == AgentAvailability.paused
+                                      ? 'Resume agent'
+                                      : 'Pause agent',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: SydneyColors.ink,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'mute',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.notifications_off_outlined,
+                                  size: 18,
+                                  color: SydneyColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Mute agent',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: SydneyColors.ink,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(height: 8),
+                          PopupMenuItem(
+                            value: 'preferences',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.settings_outlined,
+                                  size: 18,
+                                  color: SydneyColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Agent preferences',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: SydneyColors.ink,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_shouldShowHeatmap(agent))
+                            PopupMenuItem(
+                              value: 'view_heatmap',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month_rounded,
+                                    size: 18,
+                                    color: SydneyColors.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'View progress heatmap',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
+                                      color: SydneyColors.ink,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (!agent.isAssistant)
+                            PopupMenuItem(
+                              value: 'run_now',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.play_circle_outline_rounded,
+                                    size: 18,
+                                    color: SydneyColors.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Run agent now',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
+                                      color: SydneyColors.ink,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (!agent.isAssistant) ...[
+                            const PopupMenuDivider(height: 8),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.delete_outline_rounded,
+                                    size: 18,
+                                    color: Color(0xFFDC2626),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Delete agent',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium?.copyWith(
+                                      color: const Color(0xFFDC2626),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                   ),
+                  const SizedBox(width: SydneySpacing.sm),
                 ],
               ),
-              child: const Icon(Icons.more_vert_rounded, size: 18, color: SydneyColors.ink),
-            ),
-            tooltip: 'More options',
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: SydneyColors.line, width: 0.8),
-            ),
-            color: Colors.white,
-            elevation: 4,
-            shadowColor: Colors.black.withValues(alpha: 0.1),
-            surfaceTintColor: Colors.transparent,
-            onSelected: (value) => _handleMenuAction(value),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'clear_chat',
-                child: Row(
-                  children: [
-                    const Icon(Icons.delete_sweep_rounded, size: 18, color: SydneyColors.onSurfaceVariant),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Clear chat',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SydneyColors.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'rename',
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit_outlined, size: 18, color: SydneyColors.onSurfaceVariant),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Rename agent',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SydneyColors.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'toggle_pause',
-                child: Row(
-                  children: [
-                    Icon(
-                      agent.availability == AgentAvailability.paused
-                          ? Icons.play_arrow_rounded
-                          : Icons.pause_rounded,
-                      size: 18,
-                      color: SydneyColors.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      agent.availability == AgentAvailability.paused
-                          ? 'Resume agent'
-                          : 'Pause agent',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SydneyColors.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'mute',
-                child: Row(
-                  children: [
-                    const Icon(Icons.notifications_off_outlined, size: 18, color: SydneyColors.onSurfaceVariant),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Mute agent',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SydneyColors.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(height: 8),
-              PopupMenuItem(
-                value: 'preferences',
-                child: Row(
-                  children: [
-                    const Icon(Icons.settings_outlined, size: 18, color: SydneyColors.onSurfaceVariant),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Agent preferences',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SydneyColors.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_shouldShowHeatmap(agent))
-                PopupMenuItem(
-                  value: 'view_heatmap',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_month_rounded, size: 18, color: SydneyColors.onSurfaceVariant),
-                      const SizedBox(width: 10),
-                      Text(
-                        'View progress heatmap',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: SydneyColors.ink,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (!agent.isAssistant)
-                PopupMenuItem(
-                  value: 'run_now',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.play_circle_outline_rounded, size: 18, color: SydneyColors.onSurfaceVariant),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Run agent now',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: SydneyColors.ink,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (!agent.isAssistant) ...[
-                const PopupMenuDivider(height: 8),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.delete_outline_rounded,
-                        size: 18,
-                        color: Color(0xFFDC2626),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Delete agent',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFFDC2626),
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(width: SydneySpacing.sm),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -434,8 +512,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   _syncReadStateWithInbox(items);
 
                   // Count items including optimistic ones for scroll detection.
-                  final effectiveCount = items.length +
-                      (_pendingUserMessage != null ? 1 : 0);
+                  final effectiveCount =
+                      items.length + (_pendingUserMessage != null ? 1 : 0);
                   if (_lastRenderedMessageCount != effectiveCount ||
                       _lastAvailability != agent.availability) {
                     _lastRenderedMessageCount = effectiveCount;
@@ -450,9 +528,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   }
 
                   // Show typing indicator while awaiting response or agent is thinking.
-                  final showTyping = _awaitingResponse ||
+                  final showTyping =
+                      _awaitingResponse ||
                       agent.availability == AgentAvailability.thinking;
-                  final itemCount = displayItems.length + 1 + (showTyping ? 1 : 0);
+                  final itemCount =
+                      displayItems.length + 1 + (showTyping ? 1 : 0);
 
                   return ListView.builder(
                     controller: _scrollController,
@@ -488,9 +568,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? SydneyColors.primary.withValues(alpha: 0.08)
-                                  : Colors.transparent,
+                              color:
+                                  isSelected
+                                      ? SydneyColors.primary.withValues(
+                                        alpha: 0.08,
+                                      )
+                                      : Colors.transparent,
                             ),
                             padding: const EdgeInsets.symmetric(
                               horizontal: SydneySpacing.page,
@@ -505,11 +588,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       // Last slot is the typing indicator.
                       return showTyping
                           ? const Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: SydneySpacing.page,
-                              ),
-                              child: TypingIndicator(),
-                            )
+                            padding: EdgeInsets.symmetric(
+                              horizontal: SydneySpacing.page,
+                            ),
+                            child: TypingIndicator(),
+                          )
                           : const SizedBox.shrink();
                     },
                   );
@@ -541,9 +624,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final toQuote = _replyToMessage;
     setState(() => _replyToMessage = null);
 
-    final finalReplyText = toQuote != null
-        ? '> ${toQuote.preview.split('\n').join('\n> ')}\n\n$text'
-        : text;
+    final finalReplyText =
+        toQuote != null
+            ? '> ${toQuote.preview.split('\n').join('\n> ')}\n\n$text'
+            : text;
 
     // Optimistic: show the user's message immediately.
     final optimistic = Message.plainText(
@@ -597,12 +681,14 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
 
       // Perform secondary jumps to handle layout changes of lazy-loaded items
-      Future.delayed(const Duration(milliseconds: 60), () {
+      _shortScrollCorrection?.cancel();
+      _shortScrollCorrection = Timer(const Duration(milliseconds: 60), () {
         if (_scrollController.hasClients) {
           _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         }
       });
-      Future.delayed(const Duration(milliseconds: 180), () {
+      _longScrollCorrection?.cancel();
+      _longScrollCorrection = Timer(const Duration(milliseconds: 180), () {
         if (_scrollController.hasClients) {
           _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         }
@@ -774,16 +860,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
           title: Text(
             'Rename Agent',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: SydneyColors.ink,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: SydneyColors.ink,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: TextField(
             controller: controller,
             autofocus: true,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: SydneyColors.ink,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: SydneyColors.ink),
             decoration: InputDecoration(
               labelText: 'Agent Name',
               labelStyle: const TextStyle(color: SydneyColors.outline),
@@ -814,14 +900,17 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 if (newName.isEmpty) return;
                 final nav = Navigator.of(context);
                 try {
-                  await ref.read(agentServiceProvider).patchAgent(_activeAgent.id, {
-                    'name': newName,
-                  });
+                  await ref.read(agentServiceProvider).patchAgent(
+                    _activeAgent.id,
+                    {'name': newName},
+                  );
                   ref.invalidate(agentsProvider);
                   nav.pop();
                   if (mounted) {
                     ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(content: Text('Agent renamed successfully.')),
+                      const SnackBar(
+                        content: Text('Agent renamed successfully.'),
+                      ),
                     );
                   }
                 } catch (e) {
@@ -856,9 +945,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       builder: (context) {
         return SydneyHeatmapSheet(
           agentName: agent.name,
-          history: agent.parsedIntent?['history'] is Map
-              ? Map<String, dynamic>.from(agent.parsedIntent?['history'] as Map)
-              : const {},
+          history:
+              agent.parsedIntent?['history'] is Map
+                  ? Map<String, dynamic>.from(
+                    agent.parsedIntent?['history'] as Map,
+                  )
+                  : const {},
           intent: agent.parsedIntent?['intent']?.toString(),
         );
       },
@@ -867,9 +959,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
   Future<void> _runAgentNow() async {
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Starting agent run...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Starting agent run...')));
       await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
       ref.invalidate(messagesProvider(_activeAgent.threadId));
       ref.invalidate(agentsProvider);
@@ -877,9 +969,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       _scheduleThreadRefresh(const Duration(seconds: 6));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to run agent: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to run agent: $e')));
       }
     }
   }

@@ -31,7 +31,7 @@ class SydneyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Sydney',
+      title: 'Cuppet',
       theme: SydneyTheme.light,
       home: const AuthGate(),
       onGenerateRoute: _onGenerateRoute,
@@ -232,7 +232,7 @@ class _AppLoadingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Spacer(),
-              Text('Sydney', style: Theme.of(context).textTheme.displaySmall),
+              Text('Cuppet', style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: SydneySpacing.sm),
               Text(
                 'Opening your conversations...',

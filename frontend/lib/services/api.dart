@@ -193,7 +193,7 @@ ApiException apiExceptionFrom(Object error, String fallback) {
   if (error is DioException) {
     if (error.response == null) {
       return const ApiException(
-        'Sydney could not reach the backend. Check your connection or install a build configured for the deployed API.',
+        'Cuppet could not reach the backend. Check your connection or install a build configured for the deployed API.',
         statusCode: null,
       );
     }

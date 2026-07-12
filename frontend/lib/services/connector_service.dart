@@ -238,7 +238,7 @@ List<Connector> _mockConnectorList() {
     Connector(
       id: 'asana',
       name: 'Asana',
-      description: 'Keep your tasks and projects in sync with Sydney.',
+      description: 'Keep your tasks and projects in sync with Cuppet.',
       status: ConnectorStatus.disconnected,
       category: 'PROJECT MANAGEMENT',
       iconName: 'CheckSquare',
