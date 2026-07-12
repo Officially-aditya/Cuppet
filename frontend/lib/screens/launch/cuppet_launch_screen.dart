@@ -60,8 +60,8 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
                   Image.asset(
                     'assets/logos/cuppet.png',
                     key: const ValueKey('cuppet-launch-animation'),
-                    width: 180,
-                    height: 180,
+                    width: 220,
+                    height: 220,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: SydneySpacing.md),
