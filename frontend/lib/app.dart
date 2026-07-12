@@ -20,6 +20,7 @@ import 'screens/connectors/connectors_screen.dart';
 import 'screens/create/confirm_screen.dart';
 import 'screens/create/create_screen.dart';
 import 'screens/inbox/inbox_screen.dart';
+import 'screens/launch/cuppet_launch_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/thread/agent_preferences_screen.dart';
 import 'screens/thread/thread_screen.dart';
@@ -33,7 +34,7 @@ class SydneyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       title: 'Cuppet',
       theme: SydneyTheme.light,
-      home: const AuthGate(),
+      home: const CuppetLaunchScreen(child: AuthGate()),
       onGenerateRoute: _onGenerateRoute,
     );
   }
