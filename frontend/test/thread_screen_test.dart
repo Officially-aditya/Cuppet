@@ -8,6 +8,7 @@ import 'package:sydney/models/message.dart';
 import 'package:sydney/providers/agents_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/screens/thread/thread_screen.dart';
+import 'package:sydney/screens/thread/agent_preferences_screen.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
 
 final testAgent = Agent(
@@ -146,6 +147,38 @@ void main() {
       (label) => tester.getTopLeft(find.text(label)).dy,
     );
     expect(positions, orderedEquals(positions.toList()..sort()));
+  });
+
+  testWidgets('pause preference updates to resume below description', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: AgentPreferencesScreen(agent: testAgent)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Agent active'), findsNothing);
+    expect(find.text('Pause agent'), findsOneWidget);
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      isFalse,
+    );
+    expect(
+      tester.getTopLeft(find.text('Agent Description')).dy,
+      lessThan(tester.getTopLeft(find.text('Pause agent')).dy),
+    );
+
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pump();
+    expect(find.text('Resume agent'), findsOneWidget);
+    expect(find.text('Pause agent'), findsNothing);
+    expect(
+      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      isTrue,
+    );
   });
 
   testWidgets('thread keeps its composer visible while messages load', (

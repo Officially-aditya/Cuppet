@@ -305,8 +305,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 actions: [
                   PopupMenuButton<String>(
                     constraints: const BoxConstraints(
-                      minWidth: 288,
-                      maxWidth: 320,
+                      minWidth: 248,
+                      maxWidth: 280,
                     ),
                     icon: Container(
                       width: 36,
@@ -351,27 +351,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                               icon: Icons.play_circle_outline_rounded,
                               label: 'Run agent now',
                             ),
-                          PopupMenuItem(
+                          _agentMenuItem(
+                            context,
                             value: 'preferences',
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.settings_outlined,
-                                  size: 18,
-                                  color: SydneyColors.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Agent preferences',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    color: SydneyColors.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            icon: Icons.settings_outlined,
+                            label: 'Agent preferences',
                           ),
                           if (_shouldShowHeatmap(agent))
                             _agentMenuItem(

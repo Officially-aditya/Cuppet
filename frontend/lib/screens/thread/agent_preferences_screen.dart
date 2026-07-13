@@ -151,43 +151,6 @@ class _AgentPreferencesScreenState
               decoration: BoxDecoration(
                 color: SydneyColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              child: SwitchListTile(
-                value: !_isPaused,
-                onChanged: (active) => setState(() => _isPaused = !active),
-                activeThumbColor: SydneyColors.primary,
-                title: Text(
-                  'Agent active',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: SydneyColors.ink,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(
-                  _isPaused
-                      ? 'Paused agents will not run on their schedule.'
-                      : 'This agent will run according to its schedule.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
-                ),
-                secondary: Icon(
-                  _isPaused
-                      ? Icons.pause_circle_outline
-                      : Icons.play_circle_outline,
-                  color: SydneyColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            Container(
-              decoration: BoxDecoration(
-                color: SydneyColors.surface,
-                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF17201C).withValues(alpha: 0.05),
@@ -224,6 +187,44 @@ class _AgentPreferencesScreenState
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.md),
+            Material(
+              color: SydneyColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: SwitchListTile(
+                value: _isPaused,
+                onChanged: (paused) => setState(() => _isPaused = paused),
+                activeThumbColor: SydneyColors.primary,
+                title: Text(
+                  _isPaused ? 'Resume agent' : 'Pause agent',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: SydneyColors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: Text(
+                  _isPaused
+                      ? 'This agent is paused and will not run on its schedule.'
+                      : 'Turn this on to stop scheduled runs.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
+                ),
+                secondary: Icon(
+                  _isPaused
+                      ? Icons.play_circle_outline
+                      : Icons.pause_circle_outline,
+                  color: SydneyColors.primary,
+                ),
               ),
             ),
             const SizedBox(height: SydneySpacing.md),
@@ -478,44 +479,47 @@ class _AgentPreferencesScreenState
                     ),
                   ),
                   const SizedBox(height: SydneySpacing.sm),
-                  CheckboxListTile(
-                    value: _runIndefinitely,
-                    onChanged: (value) {
-                      setState(() {
-                        _runIndefinitely = value ?? false;
-                        if (_runIndefinitely) {
-                          _activeUntilController.clear();
-                        } else {
-                          final defaultDate = DateTime.now().add(
-                            const Duration(days: 365),
-                          );
-                          final months = [
-                            'January',
-                            'February',
-                            'March',
-                            'April',
-                            'May',
-                            'June',
-                            'July',
-                            'August',
-                            'September',
-                            'October',
-                            'November',
-                            'December',
-                          ];
-                          _activeUntilController.text =
-                              '${months[defaultDate.month - 1]} ${defaultDate.day}, ${defaultDate.year}';
-                        }
-                      });
-                    },
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: Text(
-                      'Run indefinitely',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SydneyColors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
+                  Material(
+                    color: Colors.transparent,
+                    child: CheckboxListTile(
+                      value: _runIndefinitely,
+                      onChanged: (value) {
+                        setState(() {
+                          _runIndefinitely = value ?? false;
+                          if (_runIndefinitely) {
+                            _activeUntilController.clear();
+                          } else {
+                            final defaultDate = DateTime.now().add(
+                              const Duration(days: 365),
+                            );
+                            final months = [
+                              'January',
+                              'February',
+                              'March',
+                              'April',
+                              'May',
+                              'June',
+                              'July',
+                              'August',
+                              'September',
+                              'October',
+                              'November',
+                              'December',
+                            ];
+                            _activeUntilController.text =
+                                '${months[defaultDate.month - 1]} ${defaultDate.day}, ${defaultDate.year}';
+                          }
+                        });
+                      },
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(
+                        'Run indefinitely',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SydneyColors.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
