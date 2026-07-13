@@ -30,6 +30,10 @@ const envSchema = z.object({
   GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
   AGENT_SCHEDULE_TIME_ZONE: z.string().default("Asia/Kolkata"),
+  RUN_AGENT_WORKER_IN_API: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   MOBILE_AUTH_CALLBACK_SCHEME: z.string().default("sydney"),
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),

@@ -316,20 +316,20 @@ export async function hasUsableGoogleWorkspaceToken(
   userId: string,
   connectorId: GoogleWorkspaceConnectorId
 ): Promise<boolean> {
-  const { rows } = await pool.query<{ exists: boolean }>(
+  const { rows } = await pool.query<{ scopes: string[] }>(
     `
-      SELECT EXISTS (
-        SELECT 1
-        FROM connector_tokens
-        WHERE user_id = $1
-          AND connector_id = $2
-          AND status = 'connected'
-      ) AS exists
+      SELECT scopes
+      FROM connector_tokens
+      WHERE user_id = $1
+        AND connector_id = $2
+        AND status = 'connected'
     `,
     [userId, connectorId]
   );
 
-  return rows[0]?.exists === true;
+  return rows.some((row) =>
+    googleScopesCoverConnector(row.scopes ?? [], connectorId)
+  );
 }
 
 export async function renderGoogleWorkspaceAgent(
@@ -663,7 +663,7 @@ async function renderCalendarAgent(
       {
         title: options.scheduledTitle(agent, "calendar agenda"),
         text: options.scheduledIntro(agent, "calendar agenda"),
-        summary: `No upcoming events were found on your primary calendar for ${timeframe}.`,
+        summary: `No upcoming events were found on your selected calendars for ${timeframe}.`,
         metrics: [
           { label: "Events", value: "0" },
           { label: "Window", value: days === 1 ? "1 day" : `${days} days` },
@@ -688,7 +688,7 @@ async function renderCalendarAgent(
         { label: "Window", value: days === 1 ? "1 day" : `${days} days` },
         { label: "Source", value: "Calendar" }
       ],
-      footer: "Read-only agenda from the primary Google Calendar."
+      footer: "Read-only agenda from your selected Google calendars."
     },
     { sourceRefs }
   );
@@ -815,6 +815,9 @@ async function storeGoogleWorkspaceToken(input: {
   }
 
   const grantedScopes = parseScopes(input.token.scope);
+  if (!googleScopesCoverConnector(grantedScopes, input.requestedConnectorId)) {
+    throw new Error("google_workspace_required_scopes_not_granted");
+  }
   const connectorIds = coveredConnectors(grantedScopes, input.requestedConnectorId);
   const refreshToken =
     input.token.refresh_token ??
@@ -878,6 +881,15 @@ export async function googleAccessToken(
   );
   const token = rows[0];
   if (!token) return null;
+
+  if (!googleScopesCoverConnector(token.scopes ?? [], connectorId)) {
+    await markConnectorActionRequired(
+      userId,
+      connectorId,
+      "google_workspace_scopes_missing"
+    );
+    throw connectorAuthRequired(connectorId, "google_workspace_scopes_missing");
+  }
 
   let accessToken: string;
   let refreshToken: string;
@@ -1007,23 +1019,37 @@ async function fetchCalendarEvents(
   timeMax: Date,
   maxResults: number
 ): Promise<CalendarEvent[]> {
-  const url = new URL(
-    `${calendarApiBase}/calendars/${encodeURIComponent(calendarId)}/events`
-  );
-  url.searchParams.set("timeMin", timeMin.toISOString());
-  url.searchParams.set("timeMax", timeMax.toISOString());
-  url.searchParams.set("singleEvents", "true");
-  url.searchParams.set("orderBy", "startTime");
-  url.searchParams.set("showDeleted", "false");
-  url.searchParams.set("maxResults", String(maxResults));
+  const events: CalendarEvent[] = [];
+  let pageToken: string | undefined;
 
-  const response = await googleJson<{ items?: CalendarEvent[] }>(url, accessToken);
-  return (response.items ?? [])
-    .filter(
-      (event): event is CalendarEvent =>
-        Boolean(event.id) && event.status !== "cancelled"
-    )
-    .map((event) => ({ ...event, calendarId, calendarName }));
+  do {
+    const url = new URL(
+      `${calendarApiBase}/calendars/${encodeURIComponent(calendarId)}/events`
+    );
+    url.searchParams.set("timeMin", timeMin.toISOString());
+    url.searchParams.set("timeMax", timeMax.toISOString());
+    url.searchParams.set("singleEvents", "true");
+    url.searchParams.set("orderBy", "startTime");
+    url.searchParams.set("showDeleted", "false");
+    url.searchParams.set("maxResults", String(maxResults));
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const response = await googleJson<{
+      items?: CalendarEvent[];
+      nextPageToken?: string;
+    }>(url, accessToken);
+    events.push(
+      ...(response.items ?? [])
+        .filter(
+          (event): event is CalendarEvent =>
+            Boolean(event.id) && event.status !== "cancelled"
+        )
+        .map((event) => ({ ...event, calendarId, calendarName }))
+    );
+    pageToken = response.nextPageToken;
+  } while (pageToken && events.length < maxResults);
+
+  return events.slice(0, maxResults);
 }
 
 export async function fetchVisibleCalendarEvents(
@@ -1059,7 +1085,7 @@ export async function fetchVisibleCalendarEvents(
     calendars = [{ id: "primary", summary: "Primary", primary: true }];
   }
 
-  const eventLists = await Promise.all(
+  const eventResults = await Promise.allSettled(
     calendars.slice(0, 20).map((calendar) =>
       fetchCalendarEvents(
         accessToken,
@@ -1071,6 +1097,29 @@ export async function fetchVisibleCalendarEvents(
       )
     )
   );
+
+  const authFailure = eventResults.find(
+    (result): result is PromiseRejectedResult =>
+      result.status === "rejected" &&
+      result.reason instanceof ConnectorAuthRequiredError
+  );
+  if (authFailure) {
+    throw authFailure.reason;
+  }
+
+  const eventLists = eventResults
+    .filter(
+      (result): result is PromiseFulfilledResult<CalendarEvent[]> =>
+        result.status === "fulfilled"
+    )
+    .map((result) => result.value);
+
+  if (eventLists.length === 0) {
+    const firstFailure = eventResults.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected"
+    );
+    throw firstFailure?.reason ?? new Error("calendar_events_unavailable");
+  }
 
   const seen = new Set<string>();
   return eventLists
@@ -1092,7 +1141,8 @@ function calendarEventTimestamp(event: CalendarEvent): number {
 
 async function googleJson<T>(url: URL, accessToken: string): Promise<T> {
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` }
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(15_000)
   });
   const body = (await response.json()) as T & {
     error?: {
@@ -1336,6 +1386,20 @@ function coveredConnectors(
     );
 
   return covered.length > 0 ? covered : [fallback];
+}
+
+export function googleScopesCoverConnector(
+  scopes: string[],
+  connectorId: GoogleWorkspaceConnectorId
+): boolean {
+  if (
+    connectorId === "calendar" &&
+    (scopes.includes("https://www.googleapis.com/auth/calendar.readonly") ||
+      scopes.includes("https://www.googleapis.com/auth/calendar"))
+  ) {
+    return true;
+  }
+  return connectorScopes[connectorId].every((scope) => scopes.includes(scope));
 }
 
 function parseScopes(scope: string | undefined): string[] {

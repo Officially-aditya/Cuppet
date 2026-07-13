@@ -8,6 +8,7 @@ import {
   handleGoogleWorkspaceOAuthCallback,
   hasUsableGoogleWorkspaceToken,
   isGoogleWorkspaceConnector,
+  googleScopesCoverConnector,
   parseGoogleWorkspaceCallbackUrl
 } from "./google-workspace.js";
 import {
@@ -96,7 +97,10 @@ const connectors: ConnectorDefinition[] = [
     description: "Read upcoming events and prepare agenda summaries",
     icon_name: "Calendar",
     category: "CALENDAR & SCHEDULING",
-    required_scopes: ["Read upcoming calendar events"],
+    required_scopes: [
+      "View your calendar list",
+      "Read upcoming calendar events"
+    ],
     auth_configured: googleWorkspaceAuthConfigured()
   },
   {
@@ -420,9 +424,10 @@ async function connectorStatuses(userId: string): Promise<Map<string, string>> {
     pool.query<{
       connector_id: string;
       status: ConnectorStatus;
+      scopes: string[];
     }>(
       `
-        SELECT connector_id, status
+        SELECT connector_id, status, scopes
         FROM connector_tokens
         WHERE user_id = $1
       `,
@@ -433,6 +438,14 @@ async function connectorStatuses(userId: string): Promise<Map<string, string>> {
   const statuses = new Map<string, string>();
   const tokenBackedConnectors = new Set<string>();
   for (const row of tokenResult.rows) {
+    if (
+      row.status === "connected" &&
+      isGoogleWorkspaceConnector(row.connector_id) &&
+      !googleScopesCoverConnector(row.scopes ?? [], row.connector_id)
+    ) {
+      statuses.set(row.connector_id, "action_required");
+      continue;
+    }
     statuses.set(row.connector_id, row.status);
     if (row.status === "connected") {
       tokenBackedConnectors.add(row.connector_id);

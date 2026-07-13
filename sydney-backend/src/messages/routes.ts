@@ -524,6 +524,8 @@ async function handleAgentTextMessage(
   let instructionUpdate: InstructionUpdateRow;
   let userMessage: MessageRow;
   let agentMessage: MessageRow;
+  let job: Awaited<ReturnType<typeof enqueueAgentRun>> | undefined;
+  let committed = false;
   const userCreatedAt = new Date();
   const agentCreatedAt = offsetDate(userCreatedAt, 1);
 
@@ -576,16 +578,16 @@ async function handleAgentTextMessage(
     });
 
     await touchAgentWithClient(client, userId, agent.id);
+    job =
+      decision.kind === "run_now" && agent.status === "active"
+        ? await enqueueAgentRun(agent.id, "manual")
+        : undefined;
     await client.query("COMMIT");
+    committed = true;
 
     if (updatedAgent) {
       await syncAgentSchedule(updatedAgent);
     }
-
-    const job =
-      decision.kind === "run_now" && agent.status === "active"
-        ? await enqueueAgentRun(agent.id, "manual")
-        : undefined;
 
     await publishMessageEvents(userId, [userMessage, agentMessage]);
 
@@ -620,7 +622,12 @@ async function handleAgentTextMessage(
       ...(job ? { job: { id: job.id, name: job.name } } : {})
     };
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (!committed) {
+      await client.query("ROLLBACK");
+      if (job) {
+        await job.remove().catch(() => undefined);
+      }
+    }
     throw error;
   } finally {
     client.release();

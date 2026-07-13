@@ -274,7 +274,27 @@ const SUPPORTED_INTENTS = new Set([
   "content_extractor"
 ]);
 
+const CONNECTOR_BACKED_INTENTS = new Set([
+  "email_digest",
+  "invoice_tracker",
+  "subscription_auditor",
+  "email_followup_watcher",
+  "lead_response_monitor",
+  "travel_sentinel",
+  "drive_summary",
+  "pdf_summary",
+  "meeting_recap",
+  "project_deadline_watcher",
+  "calendar_agenda",
+  "github_activity_digest"
+]);
+
 function cleanIntent(value: string | undefined, baseIntent: string): string | undefined {
+  // Connector dispatch is deterministic. An LLM refinement may improve labels,
+  // actions, and schedules, but must not route a known connector agent elsewhere.
+  if (CONNECTOR_BACKED_INTENTS.has(baseIntent)) {
+    return baseIntent;
+  }
   const text = value?.trim();
   if (text && SUPPORTED_INTENTS.has(text)) {
     return text;

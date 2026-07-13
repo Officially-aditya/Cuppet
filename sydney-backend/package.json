@@ -7,6 +7,7 @@
     "dev:api": "tsx watch src/index.ts",
     "dev:worker": "tsx watch worker.ts",
     "build": "tsc",
+    "start": "node dist/src/index.js",
     "start:api": "node dist/src/index.js",
     "start:worker": "node dist/worker.js",
     "test": "tsx --test src/**/*.test.ts",

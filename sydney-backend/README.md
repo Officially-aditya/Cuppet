@@ -92,7 +92,9 @@ New users automatically get the pre-installed Assistant contact and welcome mess
 
 Scheduled agents are registered in BullMQ when they are created or updated. The API also resyncs active schedules from Postgres on startup, so Redis resets do not permanently drop schedules.
 
-Google Workspace OAuth supports Gmail, Drive, and Calendar as separate read-only connectors. Enable the Gmail API, Google Drive API, and Google Calendar API for the configured Google Cloud project. Calendar uses the `calendar.events.readonly` scope and reads upcoming events from the user's primary calendar without creating or changing events.
+Google Workspace OAuth supports Gmail, Drive, and Calendar as separate read-only connectors. Enable the Gmail API, Google Drive API, and Google Calendar API for the configured Google Cloud project. Calendar uses the `calendar.events.readonly` and `calendar.calendarlist.readonly` scopes and reads upcoming events from the user's selected calendars without creating or changing events. Existing Calendar connections must reconnect once after either scope changes.
+
+The production API embeds an agent worker by default so an API-only deployment cannot accept jobs that no process will consume. Set `RUN_AGENT_WORKER_IN_API=false` only when a dedicated `npm run start:worker` service is deployed and monitored. `GET /health` reports the embedded worker state in `agent_worker`.
 
 GitHub OAuth uses `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and
 `GITHUB_REDIRECT_URI`. Configure the production OAuth callback as:

@@ -535,6 +535,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       await ref
           .read(messageActionsProvider)
           .sendReply(threadId: _activeAgent.threadId, text: text);
+      // A text reply can request an asynchronous run (for example, "run now").
+      // Keep polling as a fallback when a realtime event is delayed or missed.
+      _scheduleRunRefreshes();
       // API succeeded — the real message is now in the server list.
       // Clear the optimistic duplicate; typing indicator will continue
       // showing via agent.availability == thinking until the agent responds.

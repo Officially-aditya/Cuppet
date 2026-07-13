@@ -1,6 +1,36 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fetchVisibleCalendarEvents } from "./google-workspace.js";
+import {
+  fetchVisibleCalendarEvents,
+  googleScopesCoverConnector
+} from "./google-workspace.js";
+
+test("Calendar connections require both event and calendar-list grants", () => {
+  assert.equal(
+    googleScopesCoverConnector(
+      ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "calendar"
+    ),
+    false
+  );
+  assert.equal(
+    googleScopesCoverConnector(
+      [
+        "https://www.googleapis.com/auth/calendar.events.readonly",
+        "https://www.googleapis.com/auth/calendar.calendarlist.readonly"
+      ],
+      "calendar"
+    ),
+    true
+  );
+  assert.equal(
+    googleScopesCoverConnector(
+      ["https://www.googleapis.com/auth/calendar.readonly"],
+      "calendar"
+    ),
+    true
+  );
+});
 
 test("calendar agenda merges selected calendars and sorts upcoming events", async () => {
   const originalFetch = globalThis.fetch;
@@ -105,6 +135,87 @@ test("calendar agenda falls back to primary when calendar-list lookup fails", as
     );
     assert.equal(events[0]?.id, "fallback-event");
     assert.equal(events[0]?.calendarId, "primary");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("calendar agenda keeps readable calendars when one selected calendar fails", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("/users/me/calendarList")) {
+      return Response.json({
+        items: [
+          { id: "primary@example.com", summary: "Personal", primary: true },
+          { id: "stale@example.com", summary: "Stale shared calendar", selected: true }
+        ]
+      });
+    }
+    if (url.includes(encodeURIComponent("primary@example.com"))) {
+      return Response.json({
+        items: [
+          {
+            id: "visible-event",
+            summary: "Planning session",
+            status: "confirmed",
+            start: { dateTime: "2026-07-14T11:00:00.000Z" }
+          }
+        ]
+      });
+    }
+    return Response.json(
+      { error: { status: "NOT_FOUND", message: "Calendar no longer exists" } },
+      { status: 404 }
+    );
+  };
+
+  try {
+    const events = await fetchVisibleCalendarEvents(
+      "access-token",
+      new Date("2026-07-14T00:00:00.000Z"),
+      new Date("2026-07-21T00:00:00.000Z"),
+      12
+    );
+    assert.deepEqual(events.map((event) => event.id), ["visible-event"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("calendar agenda follows event pagination until it finds an event", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.includes("/users/me/calendarList")) {
+      return Response.json({
+        items: [{ id: "primary@example.com", summary: "Personal", primary: true }]
+      });
+    }
+    if (!url.searchParams.has("pageToken")) {
+      return Response.json({ items: [], nextPageToken: "next-page" });
+    }
+    assert.equal(url.searchParams.get("pageToken"), "next-page");
+    return Response.json({
+      items: [
+        {
+          id: "paginated-event",
+          summary: "Later result",
+          status: "confirmed",
+          start: { dateTime: "2026-07-15T09:00:00.000Z" }
+        }
+      ]
+    });
+  };
+
+  try {
+    const events = await fetchVisibleCalendarEvents(
+      "access-token",
+      new Date("2026-07-14T00:00:00.000Z"),
+      new Date("2026-07-21T00:00:00.000Z"),
+      12
+    );
+    assert.deepEqual(events.map((event) => event.id), ["paginated-event"]);
   } finally {
     globalThis.fetch = originalFetch;
   }

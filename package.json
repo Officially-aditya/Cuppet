@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm --prefix sydney-backend ci && npm --prefix sydney-backend run build",
     "migrate": "npm --prefix sydney-backend run migrate",
-    "start": "npm run migrate && sh -c 'npm --prefix sydney-backend run start:worker & exec npm --prefix sydney-backend run start:api'",
+    "start": "npm run migrate && npm --prefix sydney-backend run start:api",
     "start:api": "npm run migrate && npm --prefix sydney-backend run start:api",
     "start:worker": "npm --prefix sydney-backend run start:worker"
   }

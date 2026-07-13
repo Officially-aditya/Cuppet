@@ -8,8 +8,6 @@ initializeFirebase();
 
 const worker = createAgentExecutorWorker();
 
-console.log("Sydney worker booted. Agent executor is listening.");
-
 worker.on("completed", (job, result) => {
   console.log(`Agent job completed: ${job.id}`, result);
 });
@@ -21,6 +19,9 @@ worker.on("failed", (job, error) => {
 worker.on("error", (error) => {
   console.error("Agent executor worker error", error);
 });
+
+await worker.waitUntilReady();
+console.log("Cuppet worker is connected to Redis and listening for agent jobs.");
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   console.log(`Sydney worker shutting down: ${signal}`);

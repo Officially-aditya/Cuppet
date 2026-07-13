@@ -77,6 +77,7 @@ import {
   renderRelationshipNudge
 } from "./stub-renderers.js";
 import { agentDebug } from "./debug-log.js";
+import { shouldRetryAgentRun } from "./run-lifecycle.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -460,7 +461,11 @@ async function executeAgentJob(
       return { runId: run.id, messageId: message.id };
     }
 
-    await markRunFailed(run.id, error);
+    if (shouldRetryAgentRun(job.attemptsMade, job.opts.attempts)) {
+      await markRunFailed(run.id, error);
+      throw error;
+    }
+
     const errorMsg = errorMessage(error);
     const rendered = renderedPlainText(
       `⚠️ **Run Failed**\n\n${agent.name} encountered an error during this run:\n> ${errorMsg}\n\nThis may be due to a temporary network issue or service disruption. Please try running the agent again.`
@@ -471,7 +476,7 @@ async function executeAgentJob(
       content: rendered.content,
       sourceRefs: rendered.sourceRefs,
       tokensUsed: rendered.tokensUsed,
-      status: "partial",
+      status: "failed",
       errorMessage: errorMsg
     });
 
@@ -492,7 +497,7 @@ async function executeAgentJob(
         data: { trigger: job.data.trigger, error: errorMsg }
       }
     );
-    throw error;
+    return { runId: run.id, messageId: message.id };
   }
 }
 
@@ -576,7 +581,7 @@ async function persistRunMessage(
     content: AgentMessageContent;
     sourceRefs: unknown[];
     tokensUsed: number;
-    status: "success" | "partial";
+    status: "success" | "partial" | "failed";
     errorMessage?: string;
     additionalTopicsCovered?: string[];
   }

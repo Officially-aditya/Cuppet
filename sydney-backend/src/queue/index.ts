@@ -23,13 +23,19 @@ export const redisConnection: ConnectionOptions = {
   port: Number(redisUrl.port || 6379),
   username: redisUrl.username || undefined,
   password: redisUrl.password || undefined,
+  tls: redisUrl.protocol === "rediss:" ? {} : undefined,
   maxRetriesPerRequest: null
+};
+
+const producerRedisConnection: ConnectionOptions = {
+  ...redisConnection,
+  maxRetriesPerRequest: 1
 };
 
 export const agentExecutorQueue = new Queue<AgentExecutorJobData>(
   agentExecutorQueueName,
   {
-    connection: redisConnection
+    connection: producerRedisConnection
   }
 );
 
