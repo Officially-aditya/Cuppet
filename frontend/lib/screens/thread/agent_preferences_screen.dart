@@ -12,19 +12,24 @@ class AgentPreferencesScreen extends ConsumerStatefulWidget {
   final Agent agent;
 
   @override
-  ConsumerState<AgentPreferencesScreen> createState() => _AgentPreferencesScreenState();
+  ConsumerState<AgentPreferencesScreen> createState() =>
+      _AgentPreferencesScreenState();
 }
 
-class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen> {
+class _AgentPreferencesScreenState
+    extends ConsumerState<AgentPreferencesScreen> {
   String _responseTiming = 'real-time';
   double _responseLimit = 2;
   bool _runIndefinitely = false;
+  late bool _isPaused;
   final _activeUntilController = TextEditingController(text: 'June 30, 2026');
 
   @override
   void initState() {
     super.initState();
-    final rawLimit = widget.agent.parsedIntent?['response_limit'] ??
+    _isPaused = widget.agent.availability == AgentAvailability.paused;
+    final rawLimit =
+        widget.agent.parsedIntent?['response_limit'] ??
         widget.agent.parsedIntent?['responseLimit'];
     if (rawLimit == 'concise') {
       _responseLimit = 1;
@@ -34,7 +39,8 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
       _responseLimit = 2; // Balanced
     }
 
-    final rawActiveUntil = widget.agent.parsedIntent?['active_until'] ??
+    final rawActiveUntil =
+        widget.agent.parsedIntent?['active_until'] ??
         widget.agent.parsedIntent?['activeUntil'];
     if (rawActiveUntil == null) {
       _runIndefinitely = true;
@@ -44,10 +50,21 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
       try {
         final parsed = DateTime.parse(rawActiveUntil.toString());
         final months = [
-          'January', 'February', 'March', 'April', 'May', 'June',
-          'July', 'August', 'September', 'October', 'November', 'December'
+          'January',
+          'February',
+          'March',
+          'April',
+          'May',
+          'June',
+          'July',
+          'August',
+          'September',
+          'October',
+          'November',
+          'December',
         ];
-        _activeUntilController.text = '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
+        _activeUntilController.text =
+            '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
       } catch (_) {
         _activeUntilController.text = rawActiveUntil.toString();
       }
@@ -92,7 +109,11 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                 padding: EdgeInsets.zero,
                 tooltip: 'Back',
                 onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 18,
+                  color: SydneyColors.ink,
+                ),
               ),
             ),
           ),
@@ -101,11 +122,11 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
         title: Text(
           'Agent Preferences',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: SydneyColors.ink,
-                letterSpacing: -0.5,
-              ),
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            color: SydneyColors.ink,
+            letterSpacing: -0.5,
+          ),
         ),
       ),
       body: SafeArea(
@@ -121,9 +142,46 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
             Text(
               'Configure how this agent processes information and communicates with you.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SydneyColors.mutedInk,
-                    height: 1.35,
+                color: SydneyColors.mutedInk,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.md),
+            Container(
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              child: SwitchListTile(
+                value: !_isPaused,
+                onChanged: (active) => setState(() => _isPaused = !active),
+                activeThumbColor: SydneyColors.primary,
+                title: Text(
+                  'Agent active',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: SydneyColors.ink,
+                    fontWeight: FontWeight.w700,
                   ),
+                ),
+                subtitle: Text(
+                  _isPaused
+                      ? 'Paused agents will not run on their schedule.'
+                      : 'This agent will run according to its schedule.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
+                ),
+                secondary: Icon(
+                  _isPaused
+                      ? Icons.pause_circle_outline
+                      : Icons.play_circle_outline,
+                  color: SydneyColors.primary,
+                ),
+              ),
             ),
             const SizedBox(height: SydneySpacing.md),
             Container(
@@ -161,9 +219,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                         ? widget.agent.description
                         : 'No description available for this agent.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.onSurfaceVariant,
-                          height: 1.45,
-                        ),
+                      color: SydneyColors.onSurfaceVariant,
+                      height: 1.45,
+                    ),
                   ),
                 ],
               ),
@@ -202,9 +260,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   Text(
                     'Select when the agent should deliver updates or actions.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: SydneyColors.mutedInk,
-                        ),
+                      fontSize: 11,
+                      color: SydneyColors.mutedInk,
+                    ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   _TimingOption(
@@ -257,9 +315,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   Text(
                     "Adjust the verbosity of the agent's output.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: SydneyColors.mutedInk,
-                        ),
+                      fontSize: 11,
+                      color: SydneyColors.mutedInk,
+                    ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   SliderTheme(
@@ -274,7 +332,8 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                       max: 3,
                       divisions: 2,
                       value: _responseLimit,
-                      onChanged: (value) => setState(() => _responseLimit = value),
+                      onChanged:
+                          (value) => setState(() => _responseLimit = value),
                     ),
                   ),
                   Row(
@@ -331,38 +390,64 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                   Text(
                     "Set an expiration date for this agent's active duties.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          color: SydneyColors.mutedInk,
-                        ),
+                      fontSize: 11,
+                      color: SydneyColors.mutedInk,
+                    ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   TextField(
                     controller: _activeUntilController,
                     enabled: !_runIndefinitely,
                     readOnly: true,
-                    onTap: _runIndefinitely ? null : () async {
-                      final now = DateTime.now();
-                      final initialDate = DateTime.tryParse(widget.agent.parsedIntent?['active_until'] ?? '') ?? now.add(const Duration(days: 365));
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: initialDate.isAfter(now) ? initialDate : now,
-                        firstDate: now,
-                        lastDate: now.add(const Duration(days: 365 * 10)),
-                      );
-                      if (picked != null) {
-                        final months = [
-                          'January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'
-                        ];
-                        setState(() {
-                          _activeUntilController.text = '${months[picked.month - 1]} ${picked.day}, ${picked.year}';
-                        });
-                      }
-                    },
+                    onTap:
+                        _runIndefinitely
+                            ? null
+                            : () async {
+                              final now = DateTime.now();
+                              final initialDate =
+                                  DateTime.tryParse(
+                                    widget
+                                            .agent
+                                            .parsedIntent?['active_until'] ??
+                                        '',
+                                  ) ??
+                                  now.add(const Duration(days: 365));
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate:
+                                    initialDate.isAfter(now)
+                                        ? initialDate
+                                        : now,
+                                firstDate: now,
+                                lastDate: now.add(
+                                  const Duration(days: 365 * 10),
+                                ),
+                              );
+                              if (picked != null) {
+                                final months = [
+                                  'January',
+                                  'February',
+                                  'March',
+                                  'April',
+                                  'May',
+                                  'June',
+                                  'July',
+                                  'August',
+                                  'September',
+                                  'October',
+                                  'November',
+                                  'December',
+                                ];
+                                setState(() {
+                                  _activeUntilController.text =
+                                      '${months[picked.month - 1]} ${picked.day}, ${picked.year}';
+                                });
+                              }
+                            },
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.onSurface,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: SydneyColors.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Unlimited',
                       fillColor: SydneyColors.surfaceContainer,
@@ -377,7 +462,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SydneyColors.primary),
+                        borderSide: const BorderSide(
+                          color: SydneyColors.primary,
+                        ),
                       ),
                       suffixIcon: const Icon(
                         Icons.chevron_right_rounded,
@@ -399,12 +486,25 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                         if (_runIndefinitely) {
                           _activeUntilController.clear();
                         } else {
-                          final defaultDate = DateTime.now().add(const Duration(days: 365));
+                          final defaultDate = DateTime.now().add(
+                            const Duration(days: 365),
+                          );
                           final months = [
-                            'January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'
+                            'January',
+                            'February',
+                            'March',
+                            'April',
+                            'May',
+                            'June',
+                            'July',
+                            'August',
+                            'September',
+                            'October',
+                            'November',
+                            'December',
                           ];
-                          _activeUntilController.text = '${months[defaultDate.month - 1]} ${defaultDate.day}, ${defaultDate.year}';
+                          _activeUntilController.text =
+                              '${months[defaultDate.month - 1]} ${defaultDate.day}, ${defaultDate.year}';
                         }
                       });
                     },
@@ -414,9 +514,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                     title: Text(
                       'Run indefinitely',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SydneyColors.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        color: SydneyColors.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -454,18 +554,18 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
                     Text(
                       'Delete agent',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: const Color(0xFF991B1B),
-                            fontWeight: FontWeight.w800,
-                          ),
+                        color: const Color(0xFF991B1B),
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Permanently delete this agent and all its messages. This action cannot be undone.',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFFB91C1C),
-                            fontWeight: FontWeight.w400,
-                            height: 1.35,
-                          ),
+                        color: const Color(0xFFB91C1C),
+                        fontWeight: FontWeight.w400,
+                        height: 1.35,
+                      ),
                     ),
                     const SizedBox(height: SydneySpacing.md),
                     OutlinedButton.icon(
@@ -509,9 +609,10 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
   }
 
   Future<void> _savePreferences() async {
-    final limitStr = _responseLimit.round() == 1
-        ? 'concise'
-        : _responseLimit.round() == 3
+    final limitStr =
+        _responseLimit.round() == 1
+            ? 'concise'
+            : _responseLimit.round() == 3
             ? 'detailed'
             : 'balanced';
 
@@ -529,13 +630,11 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
     }
 
     try {
-      await ref.read(agentServiceProvider).patchAgent(
-        widget.agent.id,
-        {
-          'response_limit': limitStr,
-          'active_until': activeUntilIso,
-        },
-      );
+      await ref.read(agentServiceProvider).patchAgent(widget.agent.id, {
+        'response_limit': limitStr,
+        'active_until': activeUntilIso,
+        'status': _isPaused ? 'paused' : 'active',
+      });
       ref.invalidate(agentsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -556,12 +655,24 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
     try {
       final clean = text.trim();
       if (clean.isEmpty) return null;
-      
+
       final months = [
-        'january', 'february', 'march', 'april', 'may', 'june',
-        'july', 'august', 'september', 'october', 'november', 'december'
+        'january',
+        'february',
+        'march',
+        'april',
+        'may',
+        'june',
+        'july',
+        'august',
+        'september',
+        'october',
+        'november',
+        'december',
       ];
-      final match = RegExp(r'^([a-zA-Z]+)\s+(\d{1,2}),\s*(\d{4})$').firstMatch(clean);
+      final match = RegExp(
+        r'^([a-zA-Z]+)\s+(\d{1,2}),\s*(\d{4})$',
+      ).firstMatch(clean);
       if (match != null) {
         final monthStr = match.group(1)!.toLowerCase();
         final day = int.parse(match.group(2)!);
@@ -571,7 +682,7 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
           return DateTime(year, monthIndex + 1, day, 23, 59, 59);
         }
       }
-      
+
       return DateTime.tryParse(clean);
     } catch (_) {
       return null;
@@ -581,25 +692,26 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete agent'),
-        content: Text(
-          'This will permanently delete "${widget.agent.name}" and all its messages. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete agent'),
+            content: Text(
+              'This will permanently delete "${widget.agent.name}" and all its messages. This cannot be undone.',
             ),
-            child: const Text('Delete'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (confirmed != true || !mounted) return;
 
@@ -614,9 +726,9 @@ class _AgentPreferencesScreenState extends ConsumerState<AgentPreferencesScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -637,10 +749,10 @@ class _PanelTitle extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: SydneyColors.primary,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+            color: SydneyColors.primary,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -686,18 +798,20 @@ class _TimingOption extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                              color: SydneyColors.ink,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelMedium?.copyWith(
+                          color: SydneyColors.ink,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SydneyColors.onSurfaceVariant,
-                              fontWeight: FontWeight.w400,
-                            ),
+                          color: SydneyColors.onSurfaceVariant,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
                     ],
                   ),
@@ -730,16 +844,17 @@ class _RadioDot extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: selected
-          ? Container(
-              width: 6,
-              height: 6,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-            )
-          : null,
+      child:
+          selected
+              ? Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              )
+              : null,
     );
   }
 }
@@ -755,9 +870,9 @@ class _LimitLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
-            fontWeight: FontWeight.w800,
-          ),
+        color: selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
+        fontWeight: FontWeight.w800,
+      ),
     );
   }
 }

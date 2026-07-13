@@ -27,6 +27,34 @@ class ThreadScreen extends ConsumerStatefulWidget {
   ConsumerState<ThreadScreen> createState() => _ThreadScreenState();
 }
 
+PopupMenuItem<String> _agentMenuItem(
+  BuildContext context, {
+  required String value,
+  required IconData icon,
+  required String label,
+}) {
+  return PopupMenuItem<String>(
+    value: value,
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: SydneyColors.onSurfaceVariant),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: SydneyColors.ink,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   final _scrollController = ScrollController();
   Timer? _shortScrollCorrection;
@@ -276,6 +304,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 ),
                 actions: [
                   PopupMenuButton<String>(
+                    constraints: const BoxConstraints(
+                      minWidth: 288,
+                      maxWidth: 320,
+                    ),
                     icon: Container(
                       width: 36,
                       height: 36,
@@ -312,99 +344,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     onSelected: (value) => _handleMenuAction(value),
                     itemBuilder:
                         (context) => [
-                          PopupMenuItem(
-                            value: 'clear_chat',
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.delete_sweep_rounded,
-                                  size: 18,
-                                  color: SydneyColors.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Clear chat',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    color: SydneyColors.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          if (!agent.isAssistant)
+                            _agentMenuItem(
+                              context,
+                              value: 'run_now',
+                              icon: Icons.play_circle_outline_rounded,
+                              label: 'Run agent now',
                             ),
-                          ),
-                          PopupMenuItem(
-                            value: 'rename',
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.edit_outlined,
-                                  size: 18,
-                                  color: SydneyColors.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Rename agent',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    color: SydneyColors.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'toggle_pause',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  agent.availability == AgentAvailability.paused
-                                      ? Icons.play_arrow_rounded
-                                      : Icons.pause_rounded,
-                                  size: 18,
-                                  color: SydneyColors.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  agent.availability == AgentAvailability.paused
-                                      ? 'Resume agent'
-                                      : 'Pause agent',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    color: SydneyColors.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'mute',
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.notifications_off_outlined,
-                                  size: 18,
-                                  color: SydneyColors.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Mute agent',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodyMedium?.copyWith(
-                                    color: SydneyColors.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(height: 8),
                           PopupMenuItem(
                             value: 'preferences',
                             child: Row(
@@ -428,76 +374,30 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             ),
                           ),
                           if (_shouldShowHeatmap(agent))
-                            PopupMenuItem(
+                            _agentMenuItem(
+                              context,
                               value: 'view_heatmap',
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_month_rounded,
-                                    size: 18,
-                                    color: SydneyColors.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'View progress heatmap',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium?.copyWith(
-                                      color: SydneyColors.ink,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              icon: Icons.calendar_month_rounded,
+                              label: 'View progress heatmap',
                             ),
-                          if (!agent.isAssistant)
-                            PopupMenuItem(
-                              value: 'run_now',
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.play_circle_outline_rounded,
-                                    size: 18,
-                                    color: SydneyColors.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Run agent now',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium?.copyWith(
-                                      color: SydneyColors.ink,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (!agent.isAssistant) ...[
-                            const PopupMenuDivider(height: 8),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.delete_outline_rounded,
-                                    size: 18,
-                                    color: Color(0xFFDC2626),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Delete agent',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium?.copyWith(
-                                      color: const Color(0xFFDC2626),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                          _agentMenuItem(
+                            context,
+                            value: 'clear_chat',
+                            icon: Icons.delete_sweep_rounded,
+                            label: 'Clear chat',
+                          ),
+                          _agentMenuItem(
+                            context,
+                            value: 'mute',
+                            icon:
+                                agent.notificationsMuted
+                                    ? Icons.notifications_outlined
+                                    : Icons.notifications_off_outlined,
+                            label:
+                                agent.notificationsMuted
+                                    ? 'Unmute agent'
+                                    : 'Mute agent',
+                          ),
                         ],
                   ),
                   const SizedBox(width: SydneySpacing.sm),
@@ -837,10 +737,6 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     switch (action) {
       case 'clear_chat':
         _confirmClearChat();
-      case 'rename':
-        _renameAgent();
-      case 'toggle_pause':
-        _togglePause();
       case 'mute':
         _toggleMute();
       case 'preferences':
@@ -851,100 +747,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         _showProgressHeatmap(_activeAgent);
       case 'run_now':
         _runAgentNow();
-      case 'delete':
-        _confirmDelete();
     }
-  }
-
-  void _renameAgent() {
-    final controller = TextEditingController(text: _activeAgent.name);
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: SydneyColors.line, width: 0.8),
-          ),
-          backgroundColor: Colors.white,
-          title: Text(
-            'Rename Agent',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: SydneyColors.ink,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: SydneyColors.ink),
-            decoration: InputDecoration(
-              labelText: 'Agent Name',
-              labelStyle: const TextStyle(color: SydneyColors.outline),
-              fillColor: SydneyColors.surfaceContainerLow,
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: SydneyColors.line),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: SydneyColors.line),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: SydneyColors.primary),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final newName = controller.text.trim();
-                if (newName.isEmpty) return;
-                final nav = Navigator.of(context);
-                try {
-                  await ref.read(agentServiceProvider).patchAgent(
-                    _activeAgent.id,
-                    {'name': newName},
-                  );
-                  ref.invalidate(agentsProvider);
-                  nav.pop();
-                  if (mounted) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Agent renamed successfully.'),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  nav.pop();
-                  if (mounted) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(content: Text('Failed to rename agent: $e')),
-                    );
-                  }
-                }
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: SydneyColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showProgressHeatmap(Agent agent) {
@@ -978,7 +781,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       _scheduleRunRefreshes();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Run queued. Waiting for the result...')),
+          const SnackBar(
+            content: Text('Run queued. Waiting for the result...'),
+          ),
         );
       }
     } catch (e) {
@@ -1033,74 +838,22 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     }
   }
 
-  Future<void> _togglePause() async {
-    final isPaused = _activeAgent.availability == AgentAvailability.paused;
-    final nextStatus = isPaused ? 'active' : 'paused';
+  Future<void> _toggleMute() async {
+    final shouldMute = !_activeAgent.notificationsMuted;
     try {
       await ref.read(agentServiceProvider).patchAgent(_activeAgent.id, {
-        'status': nextStatus,
+        'notifications_muted': shouldMute,
       });
       ref.invalidate(agentsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isPaused ? 'Agent resumed.' : 'Agent paused.'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
-  }
-
-  void _toggleMute() {
-    // Mute is a local preference — show confirmation for now.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Agent muted. You won\'t receive notifications for this agent.',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _confirmDelete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Delete agent'),
             content: Text(
-              'This will permanently delete "${_activeAgent.name}" and all its messages. This cannot be undone.',
+              shouldMute
+                  ? 'Agent muted. Push notifications are off.'
+                  : 'Agent unmuted. Push notifications are on.',
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFDC2626),
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
           ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await ref.read(agentServiceProvider).archiveAgent(_activeAgent.id);
-      ref.invalidate(agentsProvider);
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${_activeAgent.name}" deleted.')),
         );
       }
     } catch (e) {

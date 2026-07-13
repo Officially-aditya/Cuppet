@@ -50,7 +50,12 @@ import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
 import { agentExecutionKey } from "./execution-key.js";
 import { userInstructionBlock, untrustedDataBlock } from "../security/prompt-guard.js";
-import { type AgentRow, actionText, intentName } from "./agent-types.js";
+import {
+  type AgentRow,
+  actionText,
+  intentName,
+  notificationsMuted
+} from "./agent-types.js";
 import {
   scheduledIntro,
   scheduledTitle,
@@ -392,18 +397,19 @@ async function executeAgentJob(
       }
     );
 
-    // Send push notification
-    await sendPushNotification(pool, agent.user_id, {
-      title: agent.name,
-      body: extractNotificationBody(rendered.content),
-      data: {
-        agent_id: agent.id,
-        message_id: message.id,
-        run_id: run.id,
-      },
-    }).catch((error) => {
-      console.error("Failed to send push notification:", error);
-    });
+    if (!notificationsMuted(agent)) {
+      await sendPushNotification(pool, agent.user_id, {
+        title: agent.name,
+        body: extractNotificationBody(rendered.content),
+        data: {
+          agent_id: agent.id,
+          message_id: message.id,
+          run_id: run.id,
+        },
+      }).catch((error) => {
+        console.error("Failed to send push notification:", error);
+      });
+    }
 
     return { runId: run.id, messageId: message.id };
   } catch (error) {

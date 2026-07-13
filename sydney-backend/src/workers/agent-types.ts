@@ -36,3 +36,7 @@ export function actionText(agent: AgentRow): string {
 export function outputTemplate(agent: AgentRow): string {
   return String(parseAgentIntent(agent).output_template ?? "plain_text");
 }
+
+export function notificationsMuted(agent: AgentRow): boolean {
+  return parseAgentIntent(agent).notifications_muted === true;
+}

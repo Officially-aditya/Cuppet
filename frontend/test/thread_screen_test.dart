@@ -114,6 +114,40 @@ void main() {
     expect(find.text(testAgent.name), findsOneWidget);
   });
 
+  testWidgets('agent menu exposes the focused action set in order', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final menuAgent = testAgent.copyWith(
+      parsedIntent: const {'intent': 'habit_tracker'},
+    );
+    await tester.pumpWidget(
+      threadHost(agent: menuAgent, loadMessages: () async => []),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('More options'));
+    await tester.pumpAndSettle();
+
+    const labels = [
+      'Run agent now',
+      'Agent preferences',
+      'View progress heatmap',
+      'Clear chat',
+      'Mute agent',
+    ];
+    for (final label in labels) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Pause agent'), findsNothing);
+    expect(find.text('Delete agent'), findsNothing);
+
+    final positions = labels.map(
+      (label) => tester.getTopLeft(find.text(label)).dy,
+    );
+    expect(positions, orderedEquals(positions.toList()..sort()));
+  });
+
   testWidgets('thread keeps its composer visible while messages load', (
     tester,
   ) async {

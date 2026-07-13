@@ -26,6 +26,17 @@ void main() {
     expect(agent.availability, AgentAvailability.ready);
   });
 
+  test('agent maps its persisted notification preference', () {
+    final muted = Agent.fromJson({
+      'id': 'agent_1',
+      'parsed_intent': {'notifications_muted': true},
+    });
+    final defaultAgent = Agent.fromJson({'id': 'agent_2'});
+
+    expect(muted.notificationsMuted, isTrue);
+    expect(defaultAgent.notificationsMuted, isFalse);
+  });
+
   test('message maps Sydney backend fields', () {
     final message = Message.fromJson({
       'id': 'message_1',

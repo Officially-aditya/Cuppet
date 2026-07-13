@@ -34,6 +34,7 @@ class Agent {
   final Map<String, dynamic>? parsedIntent;
 
   bool get hasUnread => unreadCount > 0;
+  bool get notificationsMuted => parsedIntent?['notifications_muted'] == true;
 
   Agent copyWith({
     String? id,

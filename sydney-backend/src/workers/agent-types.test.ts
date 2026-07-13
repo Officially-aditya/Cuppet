@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   actionText,
   intentName,
+  notificationsMuted,
   outputTemplate,
   parseAgentIntent,
   type AgentRow
@@ -52,3 +53,8 @@ test("malformed persisted intent safely falls back to the agent prompt", () => {
   assert.equal(outputTemplate(malformed), "plain_text");
 });
 
+test("only explicitly muted agents suppress notifications", () => {
+  assert.equal(notificationsMuted(agent({ notifications_muted: true })), true);
+  assert.equal(notificationsMuted(agent({ notifications_muted: false })), false);
+  assert.equal(notificationsMuted(agent({})), false);
+});
