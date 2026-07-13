@@ -789,8 +789,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
         ref.invalidate(messagesProvider(_activeAgent.threadId));
         ref.invalidate(agentsProvider);
-        _scheduleThreadRefresh(const Duration(seconds: 2));
-        _scheduleThreadRefresh(const Duration(seconds: 6));
+        _scheduleRunRefreshes();
       }
 
       if (!mounted) {
@@ -821,6 +820,17 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         ref.invalidate(messagesProvider(_activeAgent.threadId));
       }
     });
+  }
+
+  void _scheduleRunRefreshes() {
+    for (final delay in const [
+      Duration(seconds: 2),
+      Duration(seconds: 5),
+      Duration(seconds: 10),
+      Duration(seconds: 20),
+    ]) {
+      _scheduleThreadRefresh(delay);
+    }
   }
 
   void _handleMenuAction(String action) {
@@ -965,8 +975,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
       ref.invalidate(messagesProvider(_activeAgent.threadId));
       ref.invalidate(agentsProvider);
-      _scheduleThreadRefresh(const Duration(seconds: 2));
-      _scheduleThreadRefresh(const Duration(seconds: 6));
+      _scheduleRunRefreshes();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Run queued. Waiting for the result...')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

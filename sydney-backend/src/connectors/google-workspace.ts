@@ -112,6 +112,17 @@ type CalendarEvent = {
     responseStatus?: string;
     self?: boolean;
   }>;
+  calendarId?: string;
+  calendarName?: string;
+};
+
+type CalendarListEntry = {
+  id?: string;
+  summary?: string;
+  primary?: boolean;
+  selected?: boolean;
+  deleted?: boolean;
+  accessRole?: string;
 };
 
 const googleAuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -123,7 +134,8 @@ const calendarApiBase = "https://www.googleapis.com/calendar/v3";
 const gmailScopes = ["https://www.googleapis.com/auth/gmail.readonly"];
 const driveScopes = ["https://www.googleapis.com/auth/drive.readonly"];
 const calendarScopes = [
-  "https://www.googleapis.com/auth/calendar.events.readonly"
+  "https://www.googleapis.com/auth/calendar.events.readonly",
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly"
 ];
 
 const connectorScopes: Record<GoogleWorkspaceConnectorId, string[]> = {
@@ -629,7 +641,7 @@ async function renderCalendarAgent(
   const now = new Date();
   const days = calendarWindowInDays(agent.prompt, actionText(agent));
   const through = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-  const events = await fetchCalendarEvents(accessToken, now, through, 12);
+  const events = await fetchVisibleCalendarEvents(accessToken, now, through, 12);
   const sourceRefs = events.map((event) => ({
     type: "calendar_event",
     source: "Google Calendar",
@@ -637,7 +649,9 @@ async function renderCalendarAgent(
     title: calendarEventTitle(event),
     url: event.htmlLink,
     start: event.start,
-    end: event.end
+    end: event.end,
+    calendar_id: event.calendarId,
+    calendar_name: event.calendarName
   }));
 
   if (events.length === 0) {
@@ -987,11 +1001,15 @@ async function fetchDriveDocExcerpts(
 
 async function fetchCalendarEvents(
   accessToken: string,
+  calendarId: string,
+  calendarName: string,
   timeMin: Date,
   timeMax: Date,
   maxResults: number
 ): Promise<CalendarEvent[]> {
-  const url = new URL(`${calendarApiBase}/calendars/primary/events`);
+  const url = new URL(
+    `${calendarApiBase}/calendars/${encodeURIComponent(calendarId)}/events`
+  );
   url.searchParams.set("timeMin", timeMin.toISOString());
   url.searchParams.set("timeMax", timeMax.toISOString());
   url.searchParams.set("singleEvents", "true");
@@ -1000,9 +1018,76 @@ async function fetchCalendarEvents(
   url.searchParams.set("maxResults", String(maxResults));
 
   const response = await googleJson<{ items?: CalendarEvent[] }>(url, accessToken);
-  return (response.items ?? []).filter(
-    (event): event is CalendarEvent => Boolean(event.id) && event.status !== "cancelled"
+  return (response.items ?? [])
+    .filter(
+      (event): event is CalendarEvent =>
+        Boolean(event.id) && event.status !== "cancelled"
+    )
+    .map((event) => ({ ...event, calendarId, calendarName }));
+}
+
+export async function fetchVisibleCalendarEvents(
+  accessToken: string,
+  timeMin: Date,
+  timeMax: Date,
+  maxResults: number
+): Promise<CalendarEvent[]> {
+  const calendarListUrl = new URL(`${calendarApiBase}/users/me/calendarList`);
+  calendarListUrl.searchParams.set("minAccessRole", "reader");
+  calendarListUrl.searchParams.set("showDeleted", "false");
+  calendarListUrl.searchParams.set("showHidden", "false");
+  calendarListUrl.searchParams.set("maxResults", "100");
+
+  let calendars: CalendarListEntry[];
+  try {
+    const response = await googleJson<{ items?: CalendarListEntry[] }>(
+      calendarListUrl,
+      accessToken
+    );
+    calendars = (response.items ?? []).filter(
+      (calendar) =>
+        Boolean(calendar.id) &&
+        calendar.deleted !== true &&
+        (calendar.primary === true || calendar.selected === true)
+    );
+  } catch (error) {
+    if (error instanceof ConnectorAuthRequiredError) throw error;
+    calendars = [];
+  }
+
+  if (calendars.length === 0) {
+    calendars = [{ id: "primary", summary: "Primary", primary: true }];
+  }
+
+  const eventLists = await Promise.all(
+    calendars.slice(0, 20).map((calendar) =>
+      fetchCalendarEvents(
+        accessToken,
+        calendar.id!,
+        calendar.summary || (calendar.primary ? "Primary" : "Calendar"),
+        timeMin,
+        timeMax,
+        maxResults
+      )
+    )
   );
+
+  const seen = new Set<string>();
+  return eventLists
+    .flat()
+    .sort((a, b) => calendarEventTimestamp(a) - calendarEventTimestamp(b))
+    .filter((event) => {
+      const key = `${event.id}:${event.start?.dateTime ?? event.start?.date ?? ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, maxResults);
+}
+
+function calendarEventTimestamp(event: CalendarEvent): number {
+  const raw = event.start?.dateTime ?? event.start?.date;
+  return raw ? Date.parse(raw) || Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
 }
 
 async function googleJson<T>(url: URL, accessToken: string): Promise<T> {
