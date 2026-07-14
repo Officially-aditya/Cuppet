@@ -16,6 +16,10 @@ final connectorsProvider =
 class ConnectorsController extends AsyncNotifier<List<Connector>> {
   @override
   Future<List<Connector>> build() {
+    final auth = ref.watch(authControllerProvider).value;
+    if (auth?.isAuthenticated != true) {
+      return Future.value(const <Connector>[]);
+    }
     return ref.watch(connectorServiceProvider).listConnectors();
   }
 

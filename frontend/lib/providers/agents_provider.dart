@@ -15,6 +15,10 @@ final agentsProvider = AsyncNotifierProvider<AgentsController, List<Agent>>(
 class AgentsController extends AsyncNotifier<List<Agent>> {
   @override
   Future<List<Agent>> build() {
+    final auth = ref.watch(authControllerProvider).value;
+    if (auth?.isAuthenticated != true) {
+      return Future.value(const <Agent>[]);
+    }
     return ref.watch(agentServiceProvider).listAgents();
   }
 

@@ -35,7 +35,7 @@ class SydneyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       title: 'Cuppet',
       theme: SydneyTheme.light,
-      home: const CuppetLaunchScreen(child: AuthGate()),
+      home: const AuthGate(),
       onGenerateRoute: _onGenerateRoute,
     );
   }
@@ -44,7 +44,7 @@ class SydneyApp extends ConsumerWidget {
     return switch (settings.name) {
       AppRoutes.signIn => _route(settings, const SignInScreen()),
       AppRoutes.signUp => _route(settings, const SignUpScreen()),
-      AppRoutes.inbox => _route(settings, const InboxScreen()),
+      AppRoutes.inbox => _route(settings, const AuthGate()),
       AppRoutes.create => _route(settings, const CreateScreen()),
       AppRoutes.connectors => _route(settings, const ConnectorsScreen()),
       AppRoutes.addConnector => _route(settings, const AddConnectorScreen()),
@@ -98,20 +98,47 @@ class SydneyApp extends ConsumerWidget {
   }
 }
 
-class AuthGate extends ConsumerWidget {
+class AuthGate extends ConsumerStatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends ConsumerState<AuthGate> {
+  String? _revealedUserId;
+
+  @override
+  Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     return auth.when(
       data: (state) {
-        return state.isAuthenticated
-            ? const RealtimeBridge(child: InboxScreen())
-            : const SignInScreen();
+        if (!state.isAuthenticated) {
+          _revealedUserId = null;
+          return const CuppetLaunchScreen(ready: true, child: SignInScreen());
+        }
+
+        final userId = state.user!.id;
+        final agents = ref.watch(agentsProvider);
+        final agentsReady = agents.hasValue || agents.hasError;
+        final alreadyRevealed = _revealedUserId == userId;
+        if (agentsReady) _revealedUserId = userId;
+        final ready = alreadyRevealed || agentsReady;
+
+        return CuppetLaunchScreen(
+          ready: ready,
+          child:
+              ready
+                  ? const RealtimeBridge(child: InboxScreen())
+                  : const SizedBox.expand(),
+        );
       },
-      loading: () => const _AppLoadingScreen(),
-      error: (_, _) => const SignInScreen(),
+      loading:
+          () =>
+              const CuppetLaunchScreen(ready: false, child: SizedBox.expand()),
+      error:
+          (_, _) =>
+              const CuppetLaunchScreen(ready: true, child: SignInScreen()),
     );
   }
 }
@@ -224,68 +251,6 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
     });
 
     return widget.child;
-  }
-}
-
-class _AppLoadingScreen extends StatefulWidget {
-  const _AppLoadingScreen();
-
-  @override
-  State<_AppLoadingScreen> createState() => _AppLoadingScreenState();
-}
-
-class _AppLoadingScreenState extends State<_AppLoadingScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacityAnimation;
-  late final Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-
-    _opacityAnimation = Tween<double>(
-      begin: 0.6,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.12,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    _controller.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: SydneyColors.surfaceContainerLowest,
-      body: Center(
-        child: FadeTransition(
-          opacity: _opacityAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: Image.asset(
-              'assets/logos/cuppet.png',
-              width: 220,
-              height: 220,
-              fit: BoxFit.contain,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

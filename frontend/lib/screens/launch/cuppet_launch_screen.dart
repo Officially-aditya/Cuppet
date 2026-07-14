@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 
 class CuppetLaunchScreen extends StatefulWidget {
-  const CuppetLaunchScreen({required this.child, super.key});
+  const CuppetLaunchScreen({
+    required this.ready,
+    required this.child,
+    super.key,
+  });
 
+  final bool ready;
   final Widget child;
 
   @override
@@ -14,20 +19,39 @@ class CuppetLaunchScreen extends StatefulWidget {
 class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  bool _finished = false;
+  late final Animation<double> _opacity;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed && mounted) {
-          setState(() => _finished = true);
-        }
-      });
-    _controller.forward();
+      duration: const Duration(milliseconds: 1100),
+    );
+    _opacity = Tween<double>(
+      begin: 0.82,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(
+      begin: 0.98,
+      end: 1.03,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    if (!widget.ready) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(CuppetLaunchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.ready == oldWidget.ready) return;
+
+    if (widget.ready) {
+      _controller.stop();
+    } else {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override
@@ -38,47 +62,59 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_finished) {
-      return widget.child;
-    }
-
-    return Scaffold(
-      backgroundColor: SydneyColors.surfaceContainerLowest,
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            final fade = CurvedAnimation(
-              parent: _controller,
-              curve: const Interval(0.82, 1.0, curve: Curves.easeOut),
-            ).value;
-            return Opacity(
-              opacity: (1.0 - fade).clamp(0.0, 1.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/logos/cuppet.png',
-                    key: const ValueKey('cuppet-launch-animation'),
-                    width: 220,
-                    height: 220,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: SydneySpacing.md),
-                  Text(
-                    'Cuppet',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: SydneyColors.primary,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.8,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        widget.child,
+        IgnorePointer(
+          ignoring: widget.ready,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child:
+                widget.ready
+                    ? const SizedBox.expand(
+                      key: ValueKey('cuppet-launch-ready'),
+                    )
+                    : Scaffold(
+                      key: const ValueKey('cuppet-launch-loading'),
+                      backgroundColor: SydneyColors.surfaceContainerLowest,
+                      body: Center(
+                        child: FadeTransition(
+                          opacity: _opacity,
+                          child: ScaleTransition(
+                            scale: _scale,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'assets/logos/cuppet.png',
+                                  key: const ValueKey(
+                                    'cuppet-launch-animation',
+                                  ),
+                                  width: 220,
+                                  height: 220,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(height: SydneySpacing.md),
+                                Text(
+                                  'Cuppet',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineMedium?.copyWith(
+                                    color: SydneyColors.primary,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                  ),
-                ],
-              ),
-            );
-          },
+                      ),
+                    ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

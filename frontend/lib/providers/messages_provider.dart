@@ -22,6 +22,10 @@ final messagesProvider = FutureProvider.family<List<Message>, String>((
   ref,
   threadId,
 ) async {
+  final auth = ref.watch(authControllerProvider).value;
+  if (auth?.isAuthenticated != true) {
+    return const <Message>[];
+  }
   final messages = await ref
       .watch(messageServiceProvider)
       .fetchThread(threadId);
@@ -32,6 +36,10 @@ final messagesProvider = FutureProvider.family<List<Message>, String>((
 });
 
 final briefingsProvider = FutureProvider<List<Message>>((ref) {
+  final auth = ref.watch(authControllerProvider).value;
+  if (auth?.isAuthenticated != true) {
+    return Future.value(const <Message>[]);
+  }
   return ref.watch(messageServiceProvider).fetchBriefings();
 });
 

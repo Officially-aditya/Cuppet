@@ -88,13 +88,15 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             await ref.read(agentsProvider.notifier).refresh();
           },
           child: agents.when(
+            skipLoadingOnRefresh: true,
+            skipLoadingOnReload: true,
             data:
                 (items) => _InboxList(
                   agents: items,
                   briefings: briefings.value ?? const [],
                   onOpenBriefing: _openBriefing,
                 ),
-            loading: () => const _InboxLoading(),
+            loading: () => const SizedBox.expand(),
             error:
                 (error, _) => SydneyErrorState(
                   title: 'Messages could not load',
@@ -483,31 +485,6 @@ const _onboardingSuggestions = [
         'Create an agent that gives me one DSA coding question every day at 7 PM.',
   ),
 ];
-
-class _InboxLoading extends StatelessWidget {
-  const _InboxLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        SydneySpacing.page,
-        SydneySpacing.lg,
-        SydneySpacing.page,
-        118,
-      ),
-      itemCount: 4,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return const SydneyLoadingBlock(height: 44, radius: SydneyRadius.md);
-        }
-        return const SydneyLoadingBlock(height: 78, radius: SydneyRadius.md);
-      },
-    );
-  }
-}
 
 Agent _assistantFallback() {
   return Agent(
