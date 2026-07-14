@@ -29,7 +29,7 @@ test("adding a schedule disables realtime delivery", () => {
       schedule_cron: null,
       status: "active"
     },
-    "Run every day at 9 AM",
+    "Update agent to run every day at 9 AM",
     {
       routeOverride: {
         intent: "change_schedule",

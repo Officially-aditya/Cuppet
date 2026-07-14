@@ -191,14 +191,14 @@ export function routeAgentMessage(
     };
   }
 
-  const explicitUpdate = isExplicitUpdateRequest(lower);
+  const explicitUpdate = isExplicitAgentUpdateCommand(lower);
   const instruction = explicitUpdate
     ? normalizeInstruction(agent, normalized, {
         hasScheduleChange: scheduleCron !== null
       })
     : "";
 
-  if (scheduleCron !== null && !instruction) {
+  if (explicitUpdate && scheduleCron !== null && !instruction) {
     return {
       intent: "change_schedule",
       confidence: 0.9,
@@ -245,6 +245,19 @@ export function routeAgentMessage(
         instruction,
         ...(scheduleCron !== null ? { schedule_cron: scheduleCron } : {})
       }
+    };
+  }
+
+  if (
+    scheduleCron !== null ||
+    /^(?:also|and|plus|along with|add|include|set|make it|have it)\b/.test(lower)
+  ) {
+    return {
+      intent: "chat",
+      confidence: 0.82,
+      reason: "follow_up_without_explicit_agent_update",
+      slots: {},
+      patch: {}
     };
   }
 
@@ -347,14 +360,9 @@ function isDeleteRequest(lower: string): boolean {
   return /\b(?:delete|remove|destroy)\b.*\b(?:agent|this|it)\b/.test(lower);
 }
 
-function isExplicitUpdateRequest(lower: string): boolean {
-  return (
-    /^(also|and|plus|along with|add|include|update|change|set|make it|have it)\b/.test(
-      lower
-    ) ||
-    /\b(change|update|set|move)\b.*\b(schedule|time|cron|daily|weekly|monthly)\b/.test(
-      lower
-    )
+export function isExplicitAgentUpdateCommand(text: string): boolean {
+  return /^(?:(?:can|could|would)\s+you\s+|i\s+(?:want|need)\s+to\s+|please\s+)?(?:update|change|edit|modify|reconfigure)\s+(?:(?:this|the|my)\s+)?agent\b/i.test(
+    text.trim()
   );
 }
 
@@ -370,6 +378,10 @@ function normalizeInstruction(
       .replace(/^along with (?:the )?(?:reminders?|agent),?\s*/i, "")
       .replace(/^(?:also|and|plus),?\s*/i, "")
       .replace(/^(?:please\s+)?(?:add|include)\s+/i, "")
+      .replace(
+        /^(?:(?:can|could|would)\s+you\s+|i\s+(?:want|need)\s+to\s+|please\s+)?(?:update|change|edit|modify|reconfigure)\s+(?:(?:this|the|my)\s+)?agent(?:\s+(?:to|so it|and))?\s*/i,
+        ""
+      )
       .replace(
         /^(?:change|update|set|move)\s+(?:the\s+)?(?:schedule|time)\s*(?:to)?\s*/i,
         ""
@@ -613,7 +625,7 @@ function isScheduleOnlyText(value: string): boolean {
   const stripped = value
     .replace(/\b(?:at|to)?\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi, "")
     .replace(/\b(?:daily|every day|weekly|every week|monthly|every month|friday|morning|evening)\b/gi, "")
-    .replace(/\b(?:to|at|on|schedule|time)\b/gi, "")
+    .replace(/\b(?:to|at|on|schedule|time|run|send|deliver)\b/gi, "")
     .trim();
 
   return stripped.length === 0;

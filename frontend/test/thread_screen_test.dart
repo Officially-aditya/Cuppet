@@ -187,6 +187,39 @@ void main() {
     expect(resumeSwitch.activeTrackColor, SydneyColors.primary);
   });
 
+  testWidgets('description changes require functionality confirmation', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: AgentPreferencesScreen(agent: testAgent)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('agent_description_field')),
+      'Deliver a focused AI research briefing every weekday.',
+    );
+    await tester.tap(find.text('Save Preferences'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Update agent functionality?'), findsOneWidget);
+    expect(
+      find.text(
+        'Changing the agent description will update its functionality.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Update agent functionality?'), findsNothing);
+  });
+
   testWidgets('thread keeps its composer visible while messages load', (
     tester,
   ) async {

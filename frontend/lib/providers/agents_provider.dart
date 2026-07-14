@@ -31,4 +31,14 @@ class AgentsController extends AsyncNotifier<List<Agent>> {
       () => ref.read(agentServiceProvider).listAgents(),
     );
   }
+
+  void upsertAgent(Agent updated) {
+    final current = state.asData?.value;
+    if (current == null) {
+      ref.invalidateSelf();
+      return;
+    }
+    final withoutUpdated = current.where((agent) => agent.id != updated.id);
+    state = AsyncValue.data(Agent.sortForInbox([...withoutUpdated, updated]));
+  }
 }

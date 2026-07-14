@@ -52,11 +52,15 @@ class MessageActions {
     required String threadId,
     required String text,
   }) async {
-    final message = await _ref
+    final result = await _ref
         .read(messageServiceProvider)
         .sendReply(threadId: threadId, text: text);
+    final updatedAgent = result.updatedAgent;
+    if (updatedAgent != null) {
+      _ref.read(agentsProvider.notifier).upsertAgent(updatedAgent);
+    }
     _ref.invalidate(messagesProvider(threadId));
-    return message;
+    return result.message;
   }
 
   Future<void> connectLiveUpdates() async {

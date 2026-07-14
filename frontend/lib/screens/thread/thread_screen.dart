@@ -542,7 +542,6 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       await ref
           .read(messageActionsProvider)
           .sendReply(threadId: _activeAgent.threadId, text: text);
-      ref.invalidate(agentsProvider);
       // A text reply can request an asynchronous run (for example, "run now").
       // Keep polling as a fallback when a realtime event is delayed or missed.
       _scheduleRunRefreshes();

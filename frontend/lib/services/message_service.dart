@@ -1,8 +1,16 @@
 import 'dart:convert';
 
 import '../config/env.dart';
+import '../models/agent.dart';
 import '../models/message.dart';
 import 'api.dart';
+
+class SendReplyResult {
+  const SendReplyResult({required this.message, this.updatedAgent});
+
+  final Message message;
+  final Agent? updatedAgent;
+}
 
 class MessageService {
   MessageService({required ApiClient api}) : _api = api;
@@ -55,7 +63,7 @@ class MessageService {
     }
   }
 
-  Future<Message> sendReply({
+  Future<SendReplyResult> sendReply({
     required String threadId,
     required String text,
   }) async {
@@ -94,7 +102,7 @@ class MessageService {
         },
       );
       _mockThreads[threadId] = [..._mockThreads[threadId]!, message, reply];
-      return message;
+      return SendReplyResult(message: message);
     }
 
     try {
@@ -106,7 +114,14 @@ class MessageService {
       if (data is! Map) {
         throw const ApiException('The server did not return your message.');
       }
-      return Message.fromJson(Map<String, dynamic>.from(data));
+      final rawAgent = response.data?['agent'];
+      return SendReplyResult(
+        message: Message.fromJson(Map<String, dynamic>.from(data)),
+        updatedAgent:
+            rawAgent is Map
+                ? Agent.fromJson(Map<String, dynamic>.from(rawAgent))
+                : null,
+      );
     } catch (error) {
       throw apiExceptionFrom(
         error,

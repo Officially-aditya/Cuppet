@@ -1,6 +1,7 @@
 import type { ParsedIntent } from "./parser.js";
 import {
   describeSchedule,
+  isExplicitAgentUpdateCommand,
   routeAgentMessage,
   type AgentMessageRoute,
   type AgentMessageRouterContext
@@ -61,6 +62,23 @@ export function decideAgentInstruction(
   }
 
   const route = context.routeOverride ?? routeAgentMessage(agent, trimmed);
+
+  if (
+    (route.intent === "update_instructions" ||
+      route.intent === "change_schedule") &&
+    !isExplicitAgentUpdateCommand(trimmed)
+  ) {
+    return {
+      kind: "chat",
+      status: "recorded",
+      confidence: 0.9,
+      reason: "agent_update_requires_explicit_command",
+      reply:
+        'I treated that as a conversation. Start with "update agent" when you want to change this agent\'s functionality.',
+      patch: {},
+      needsLlmReply: true
+    };
+  }
 
   switch (route.intent) {
     case "unsupported":

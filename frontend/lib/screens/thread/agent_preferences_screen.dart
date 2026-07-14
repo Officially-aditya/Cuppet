@@ -22,11 +22,15 @@ class _AgentPreferencesScreenState
   double _responseLimit = 2;
   bool _runIndefinitely = false;
   late bool _isPaused;
+  late final TextEditingController _descriptionController;
   final _activeUntilController = TextEditingController(text: 'June 30, 2026');
 
   @override
   void initState() {
     super.initState();
+    _descriptionController = TextEditingController(
+      text: widget.agent.description,
+    );
     _isPaused = widget.agent.availability == AgentAvailability.paused;
     final schedule = widget.agent.parsedIntent?['schedule_cron']?.toString();
     final hasSchedule = schedule != null && schedule.trim().isNotEmpty;
@@ -79,6 +83,7 @@ class _AgentPreferencesScreenState
 
   @override
   void dispose() {
+    _descriptionController.dispose();
     _activeUntilController.dispose();
     super.dispose();
   }
@@ -183,13 +188,32 @@ class _AgentPreferencesScreenState
                     title: 'Agent Description',
                   ),
                   const SizedBox(height: SydneySpacing.md),
-                  Text(
-                    widget.agent.description.isNotEmpty
-                        ? widget.agent.description
-                        : 'No description available for this agent.',
+                  TextField(
+                    key: const ValueKey('agent_description_field'),
+                    controller: _descriptionController,
+                    minLines: 3,
+                    maxLines: 6,
+                    textCapitalization: TextCapitalization.sentences,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurfaceVariant,
-                      height: 1.45,
+                      color: SydneyColors.onSurface,
+                      height: 1.4,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Describe what this agent should do.',
+                      helperText:
+                          'Use “update agent…” in chat for future changes.',
+                      helperMaxLines: 2,
+                      filled: true,
+                      fillColor: SydneyColors.surfaceContainerLowest,
+                      contentPadding: const EdgeInsets.all(SydneySpacing.md),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: SydneyColors.line),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: SydneyColors.line),
+                      ),
                     ),
                   ),
                 ],
@@ -640,13 +664,27 @@ class _AgentPreferencesScreenState
       }
     }
 
+    final description = _descriptionController.text.trim();
+    if (description.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a clear agent description.')),
+      );
+      return;
+    }
+    final descriptionChanged = description != widget.agent.description.trim();
+    if (descriptionChanged && !await _confirmDescriptionUpdate()) {
+      return;
+    }
+
     try {
-      await ref.read(agentServiceProvider).patchAgent(widget.agent.id, {
+      final patch = <String, dynamic>{
         'response_limit': limitStr,
         'active_until': activeUntilIso,
         'realtime_enabled': _responseTiming == 'real-time',
         'status': _isPaused ? 'paused' : 'active',
-      });
+        if (descriptionChanged) 'description': description,
+      };
+      await ref.read(agentServiceProvider).patchAgent(widget.agent.id, patch);
       ref.invalidate(agentsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -661,6 +699,30 @@ class _AgentPreferencesScreenState
         );
       }
     }
+  }
+
+  Future<bool> _confirmDescriptionUpdate() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Update agent functionality?'),
+            content: const Text(
+              'Changing the agent description will update its functionality.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Confirm'),
+              ),
+            ],
+          ),
+    );
+    return confirmed == true;
   }
 
   DateTime? _parseActiveUntilText(String text) {

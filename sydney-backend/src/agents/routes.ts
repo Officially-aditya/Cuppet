@@ -30,6 +30,11 @@ const createAgentSchema = z
 const updateAgentSchema = z
   .object({
     name: shortLabelSchema.optional(),
+    description: validatedTextSchema({
+      field: "Description",
+      min: 3,
+      max: 4000
+    }).optional(),
     schedule_cron: cronSchema.nullable().optional(),
     status: z.enum(["active", "paused", "error"]).optional(),
     notifications_muted: z.boolean().optional(),
@@ -330,10 +335,42 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
+    const existingParsedIntent = {
+      ...(typeof existing.parsed_intent === "string"
+        ? JSON.parse(existing.parsed_intent)
+        : (existing.parsed_intent || {}))
+    };
+    const description = body.data.description?.trim();
+    let nextParsedIntent = existingParsedIntent;
+    let nextPrompt = existing.prompt;
+    let nextConnectorIds = existing.connector_ids;
+    let nextSafetyLevel = existing.safety_level;
+
+    if (description !== undefined) {
+      const reparsed = await parseIntentHybrid(description);
+      if (reparsed.unsupported_connector) {
+        return reply.code(422).send({
+          error: {
+            code: "UNSUPPORTED_CONNECTOR",
+            message: `I can't access ${reparsed.unsupported_connector} yet. Update the description to use Gmail, Calendar, Drive, GitHub, Slack, Notion, or web search instead.`
+          }
+        });
+      }
+      nextParsedIntent = {
+        ...reparsed,
+        ...preservedAgentState(existingParsedIntent)
+      };
+      nextPrompt = description;
+      nextConnectorIds = reparsed.connector_ids;
+      nextSafetyLevel = reparsed.safety_level;
+    }
+
     const nextName = body.data.name ?? existing.name;
     let nextSchedule =
       body.data.schedule_cron === undefined
-        ? existing.schedule_cron
+        ? description === undefined
+          ? existing.schedule_cron
+          : (nextParsedIntent.schedule_cron ?? null)
         : body.data.schedule_cron;
     if (
       body.data.realtime_enabled === true &&
@@ -343,11 +380,6 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
     const nextStatus = body.data.status ?? existing.status;
 
-    const nextParsedIntent = {
-      ...(typeof existing.parsed_intent === "string"
-        ? JSON.parse(existing.parsed_intent)
-        : (existing.parsed_intent || {}))
-    };
     if (body.data.response_limit !== undefined) {
       nextParsedIntent.response_limit = body.data.response_limit;
     }
@@ -375,8 +407,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         SET name = $1,
             schedule_cron = $2,
             status = $3,
-            parsed_intent = $6::jsonb
-        WHERE id = $4 AND user_id = $5
+            parsed_intent = $4::jsonb,
+            prompt = $5,
+            connector_ids = $6,
+            safety_level = $7
+        WHERE id = $8 AND user_id = $9
         RETURNING
           id,
           name,
@@ -392,7 +427,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           created_at,
           updated_at
       `,
-      [nextName, nextSchedule, nextStatus, agentId, userId, JSON.stringify(nextParsedIntent)]
+      [
+        nextName,
+        nextSchedule,
+        nextStatus,
+        JSON.stringify(nextParsedIntent),
+        nextPrompt,
+        nextConnectorIds,
+        nextSafetyLevel,
+        agentId,
+        userId
+      ]
     );
 
     const updatedAgent = rows[0]!;
@@ -645,6 +690,22 @@ async function getAgent(userId: string, agentId: string) {
   );
 
   return rows[0] ?? null;
+}
+
+function preservedAgentState(
+  intent: Record<string, unknown>
+): Record<string, unknown> {
+  const preserved: Record<string, unknown> = {};
+  for (const key of [
+    "active_until",
+    "history",
+    "notifications_muted",
+    "response_limit",
+    "topics_covered"
+  ]) {
+    if (intent[key] !== undefined) preserved[key] = intent[key];
+  }
+  return preserved;
 }
 
 async function writeAgentCreatedMessage(

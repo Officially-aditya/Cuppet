@@ -37,6 +37,23 @@ void main() {
     expect(defaultAgent.notificationsMuted, isFalse);
   });
 
+  test('agent chat update response refreshes its functional description', () {
+    final updated = Agent.fromJson({
+      'id': 'agent_1',
+      'name': 'Tech News',
+      'prompt': 'Original prompt\n\nUser update: include security news',
+      'parsed_intent': {
+        'action': 'Summarizes technology news. Also: include security news.',
+      },
+      'status': 'active',
+    });
+
+    expect(
+      updated.description,
+      'Summarizes technology news. Also: include security news.',
+    );
+  });
+
   test('message maps Sydney backend fields', () {
     final message = Message.fromJson({
       'id': 'message_1',
