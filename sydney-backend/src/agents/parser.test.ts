@@ -2,6 +2,22 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseIntent, responseLimitInstruction } from "./parser.js";
 
+test("onboarding suggestions create the intended scheduled agents", () => {
+  const news = parseIntent(
+    "Create an agent that delivers a concise technology news briefing every day at 8 AM."
+  );
+  assert.equal(news.intent, "tech_news_brief");
+  assert.equal(news.schedule_cron, "0 8 * * *");
+  assert.equal(news.realtime_enabled, false);
+
+  const coding = parseIntent(
+    "Create an agent that gives me one DSA coding question every day at 7 PM."
+  );
+  assert.equal(coding.intent, "dsa_question");
+  assert.equal(coding.schedule_cron, "0 19 * * *");
+  assert.equal(coding.realtime_enabled, false);
+});
+
 test("classifies the four multi-connector briefing agents", () => {
   const cases = [
     {

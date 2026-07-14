@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/routes.dart';
 import 'design/tokens.dart';
 import 'models/agent.dart';
+import 'models/thread_launch_request.dart';
 import 'providers/auth_provider.dart';
 import 'providers/agents_provider.dart';
 import 'providers/messages_provider.dart';
@@ -63,6 +64,12 @@ class SydneyApp extends ConsumerWidget {
 
   Route<dynamic> _threadRoute(RouteSettings settings) {
     final args = settings.arguments;
+    if (args is ThreadLaunchRequest) {
+      return _route(
+        settings,
+        ThreadScreen(agent: args.agent, initialMessage: args.initialMessage),
+      );
+    }
     if (args is Agent) {
       return _route(settings, ThreadScreen(agent: args));
     }
@@ -219,6 +226,7 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
     return widget.child;
   }
 }
+
 class _AppLoadingScreen extends StatefulWidget {
   const _AppLoadingScreen();
 
@@ -240,13 +248,15 @@ class _AppLoadingScreenState extends State<_AppLoadingScreen>
       duration: const Duration(milliseconds: 1400),
     );
 
-    _opacityAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 0.6,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.12).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.repeat(reverse: true);
   }
@@ -278,6 +288,7 @@ class _AppLoadingScreenState extends State<_AppLoadingScreen>
     );
   }
 }
+
 class _RouteErrorScreen extends StatelessWidget {
   const _RouteErrorScreen({required this.message});
 

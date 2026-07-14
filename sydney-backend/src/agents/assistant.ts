@@ -4,7 +4,7 @@ const ASSISTANT_CONTENT = {
   template: "plain_text",
   version: "1.0",
   data: {
-    headline: "Hey! I'm Sydney.",
+    headline: "Hey! I'm Cuppet.",
     body:
       "I can chat with you like Claude or ChatGPT. The real magic is agents: tell me what you want, and I can create a contact that messages you on schedule.",
     items: [

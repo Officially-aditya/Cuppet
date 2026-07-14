@@ -126,6 +126,8 @@ export async function ingestAgentEvent(
         WHERE user_id = ANY($1::text[])
           AND status = 'active'
           AND is_assistant = FALSE
+          AND schedule_cron IS NULL
+          AND parsed_intent->>'realtime_enabled' = 'true'
           AND connector_ids @> ARRAY[$2]::text[]
       `,
       [userIds, connectorId]
@@ -204,7 +206,13 @@ export function shouldTriggerAgentEvent(
   parsedIntent: Record<string, unknown>,
   event: Pick<NormalizedAgentEvent, "source" | "eventType" | "payload">
 ): boolean {
-  if (parsedIntent.realtime_enabled === false) return false;
+  if (parsedIntent.realtime_enabled !== true) return false;
+  if (
+    typeof parsedIntent.schedule_cron === "string" &&
+    parsedIntent.schedule_cron.trim().length > 0
+  ) {
+    return false;
+  }
   const intent = String(parsedIntent.intent ?? "");
 
   switch (event.source) {

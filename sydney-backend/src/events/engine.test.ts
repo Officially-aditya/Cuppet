@@ -11,7 +11,7 @@ import {
 } from "./routes.js";
 
 test("Slack urgent watchers trigger only on urgent messages or mentions", () => {
-  const intent = { intent: "slack_urgent_watcher" };
+  const intent = { intent: "slack_urgent_watcher", realtime_enabled: true };
   assert.equal(
     shouldTriggerAgentEvent(intent, {
       source: "slack",
@@ -39,7 +39,10 @@ test("Slack urgent watchers trigger only on urgent messages or mentions", () => 
 });
 test("event matching is connector-specific and can be disabled per agent", () => {
   assert.equal(
-    shouldTriggerAgentEvent({ intent: "github_activity_digest" }, {
+    shouldTriggerAgentEvent({
+      intent: "github_activity_digest",
+      realtime_enabled: true
+    }, {
       source: "github",
       eventType: "github.pull_request",
       payload: {}
@@ -54,11 +57,38 @@ test("event matching is connector-specific and can be disabled per agent", () =>
     false
   );
   assert.equal(
-    shouldTriggerAgentEvent({ intent: "portfolio_watch" }, {
+    shouldTriggerAgentEvent({
+      intent: "portfolio_watch",
+      realtime_enabled: true
+    }, {
       source: "stock",
       eventType: "stock.quote",
       payload: { threshold_crossed: false }
     }),
+    false
+  );
+});
+
+test("scheduled and legacy agents never consume realtime events", () => {
+  const push = {
+    source: "github" as const,
+    eventType: "github.push",
+    payload: {}
+  };
+
+  assert.equal(
+    shouldTriggerAgentEvent({ intent: "github_activity_digest" }, push),
+    false
+  );
+  assert.equal(
+    shouldTriggerAgentEvent(
+      {
+        intent: "github_activity_digest",
+        realtime_enabled: true,
+        schedule_cron: "0 9 * * *"
+      },
+      push
+    ),
     false
   );
 });

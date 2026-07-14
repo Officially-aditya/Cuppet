@@ -331,10 +331,16 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const nextName = body.data.name ?? existing.name;
-    const nextSchedule =
+    let nextSchedule =
       body.data.schedule_cron === undefined
         ? existing.schedule_cron
         : body.data.schedule_cron;
+    if (
+      body.data.realtime_enabled === true &&
+      body.data.schedule_cron === undefined
+    ) {
+      nextSchedule = null;
+    }
     const nextStatus = body.data.status ?? existing.status;
 
     const nextParsedIntent = {
@@ -357,6 +363,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
     if (body.data.realtime_enabled !== undefined) {
       nextParsedIntent.realtime_enabled = body.data.realtime_enabled;
+    }
+    nextParsedIntent.schedule_cron = nextSchedule;
+    if (nextSchedule) {
+      nextParsedIntent.realtime_enabled = false;
     }
 
     const { rows } = await pool.query(

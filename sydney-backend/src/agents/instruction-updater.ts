@@ -199,7 +199,8 @@ function updateDecision(
     action: instruction
       ? mergeAction(agent.parsed_intent, instruction)
       : agent.parsed_intent.action,
-    schedule_cron: scheduleCron ?? null
+    schedule_cron: scheduleCron ?? null,
+    ...(route.slots.scheduleCron != null ? { realtime_enabled: false } : {})
   };
   const nextPrompt = instruction
     ? [agent.prompt, `User update: ${text}`].join("\n\n")

@@ -28,8 +28,10 @@ class _AgentPreferencesScreenState
   void initState() {
     super.initState();
     _isPaused = widget.agent.availability == AgentAvailability.paused;
+    final schedule = widget.agent.parsedIntent?['schedule_cron']?.toString();
+    final hasSchedule = schedule != null && schedule.trim().isNotEmpty;
     _responseTiming =
-        widget.agent.parsedIntent?['realtime_enabled'] == false
+        hasSchedule || widget.agent.parsedIntent?['realtime_enabled'] != true
             ? 'daily'
             : 'real-time';
     final rawLimit =

@@ -6,6 +6,7 @@ import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
 import '../../models/message.dart';
+import '../../models/thread_launch_request.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -215,6 +216,13 @@ class _InboxList extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleAgents = agents.isEmpty ? [_assistantFallback()] : agents;
     final hasCreatedAgent = agents.any((agent) => !agent.isAssistant);
+    Agent? assistant;
+    for (final agent in agents) {
+      if (agent.isAssistant) {
+        assistant = agent;
+        break;
+      }
+    }
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -289,47 +297,170 @@ class _InboxList extends StatelessWidget {
           ),
           const SizedBox(height: 6),
         ],
-        if (!hasCreatedAgent) ...[
-          const SizedBox(height: SydneySpacing.xl),
-          const _StartSentencePrompt(),
+        if (!hasCreatedAgent && assistant != null) ...[
+          const SizedBox(height: SydneySpacing.lg),
+          _OnboardingSuggestions(assistant: assistant),
         ],
       ],
     );
   }
 }
 
-class _StartSentencePrompt extends StatelessWidget {
-  const _StartSentencePrompt();
+class _OnboardingSuggestions extends StatelessWidget {
+  const _OnboardingSuggestions({required this.assistant});
+
+  final Agent assistant;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: SydneySpacing.lg),
-      child: Column(
-        children: [
-          Text(
-            'Start with one sentence',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontSize: 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'TRY CUPPET',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: SydneyColors.mutedInk,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.1,
           ),
-          const SizedBox(height: SydneySpacing.xs),
-          SizedBox(
-            width: 280,
-            child: Text(
-              'Create an agent for something you want watched, summarized, or prepared.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
-                height: 1.35,
-              ),
-            ),
+        ),
+        const SizedBox(height: SydneySpacing.sm),
+        for (var index = 0; index < _onboardingSuggestions.length; index++) ...[
+          _OnboardingSuggestionCard(
+            suggestion: _onboardingSuggestions[index],
+            onTap:
+                () => Navigator.of(context).pushNamed(
+                  AppRoutes.thread,
+                  arguments: ThreadLaunchRequest(
+                    agent: assistant,
+                    initialMessage: _onboardingSuggestions[index].prompt,
+                  ),
+                ),
           ),
+          if (index != _onboardingSuggestions.length - 1)
+            const SizedBox(height: SydneySpacing.sm),
         ],
+      ],
+    );
+  }
+}
+
+class _OnboardingSuggestionCard extends StatelessWidget {
+  const _OnboardingSuggestionCard({
+    required this.suggestion,
+    required this.onTap,
+  });
+
+  final _OnboardingSuggestion suggestion;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: SydneyColors.agentBubble,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        key: ValueKey('onboarding_${suggestion.id}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(SydneySpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: SydneyColors.line),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: SydneyColors.primarySoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  suggestion.icon,
+                  size: 18,
+                  color: SydneyColors.primary,
+                ),
+              ),
+              const SizedBox(width: SydneySpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      suggestion.question,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: SydneyColors.ink,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      suggestion.answer,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SydneyColors.mutedInk,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: SydneySpacing.xs),
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: SydneyColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
+
+class _OnboardingSuggestion {
+  const _OnboardingSuggestion({
+    required this.id,
+    required this.icon,
+    required this.question,
+    required this.answer,
+    required this.prompt,
+  });
+
+  final String id;
+  final IconData icon;
+  final String question;
+  final String answer;
+  final String prompt;
+}
+
+const _onboardingSuggestions = [
+  _OnboardingSuggestion(
+    id: 'daily_news',
+    icon: Icons.newspaper_outlined,
+    question: 'Want AI to deliver news every morning?',
+    answer: 'Cuppet can create a daily technology briefing for you.',
+    prompt:
+        'Create an agent that delivers a concise technology news briefing every day at 8 AM.',
+  ),
+  _OnboardingSuggestion(
+    id: 'daily_coding',
+    icon: Icons.code_rounded,
+    question: 'Want to sharpen your coding skills daily?',
+    answer: 'Cuppet can prepare one practice problem every evening.',
+    prompt:
+        'Create an agent that gives me one DSA coding question every day at 7 PM.',
+  ),
+];
 
 class _InboxLoading extends StatelessWidget {
   const _InboxLoading();

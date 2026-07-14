@@ -19,9 +19,10 @@ import '../../services/notification_clear_service.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class ThreadScreen extends ConsumerStatefulWidget {
-  const ThreadScreen({required this.agent, super.key});
+  const ThreadScreen({required this.agent, this.initialMessage, super.key});
 
   final Agent agent;
+  final String? initialMessage;
 
   @override
   ConsumerState<ThreadScreen> createState() => _ThreadScreenState();
@@ -135,6 +136,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   void initState() {
     super.initState();
     NotificationClearService.clearAll();
+    final initialMessage = widget.initialMessage?.trim();
+    if (initialMessage != null && initialMessage.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _sendReply(initialMessage);
+      });
+    }
   }
 
   @override
@@ -535,6 +542,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       await ref
           .read(messageActionsProvider)
           .sendReply(threadId: _activeAgent.threadId, text: text);
+      ref.invalidate(agentsProvider);
       // A text reply can request an asynchronous run (for example, "run now").
       // Keep polling as a fallback when a realtime event is delayed or missed.
       _scheduleRunRefreshes();
