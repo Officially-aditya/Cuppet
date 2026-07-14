@@ -10,8 +10,7 @@ export const UNSUPPORTED_CONNECTORS = [
   "twitter",
   "linkedin",
   "google fit",
-  "fitbit",
-  "notion"
+  "fitbit"
 ] as const;
 
 /**

@@ -27,6 +27,13 @@ import {
   slackAuthConfigured,
   slackScopesCoverReadAccess
 } from "./slack.js";
+import {
+  createNotionAuthUrl,
+  handleNotionOAuthCallback,
+  hasUsableNotionToken,
+  notionAuthConfigured,
+  parseNotionCallbackUrl
+} from "./notion.js";
 import { callbackSchemeSchema } from "../security/input-validation.js";
 
 type ConnectorDefinition = {
@@ -98,6 +105,15 @@ const connectors: ConnectorDefinition[] = [
     category: "PRODUCTIVITY & DOCS",
     required_scopes: ["Read Google Drive files"],
     auth_configured: googleWorkspaceAuthConfigured()
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    description: "Read selected workspace pages and summarize recent changes",
+    icon_name: "BookOpen",
+    category: "PRODUCTIVITY & DOCS",
+    required_scopes: ["Read pages selected during Notion authorization"],
+    auth_configured: notionAuthConfigured()
   },
   {
     id: "calendar",
@@ -183,6 +199,26 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         error: {
           code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
           message: "Invalid Slack OAuth callback."
+        }
+      });
+    }
+  });
+
+  app.get("/connectors/notion/callback", async (request, reply) => {
+    const query = request.query as {
+      code?: string;
+      state?: string;
+      error?: string;
+    };
+    try {
+      const redirectUrl = await handleNotionOAuthCallback(query);
+      return reply.redirect(redirectUrl.toString());
+    } catch (error) {
+      request.log.warn({ error }, "Invalid Notion OAuth callback");
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+          message: "Invalid Notion OAuth callback."
         }
       });
     }
@@ -274,6 +310,21 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
+      if (
+        status === "connected" &&
+        connector.id === "notion" &&
+        !(await hasUsableNotionToken(request.auth!.userId))
+      ) {
+        return reply.code(409).send({
+          error: {
+            code: "CONNECTOR_OAUTH_REQUIRED",
+            message:
+              "Notion authorization is required before this connector can be marked connected.",
+            connector_id: connector.id
+          }
+        });
+      }
+
       await setConnectorStatus(request.auth!.userId, connector.id, status);
       return connectorPayload(connector, status);
     }
@@ -337,6 +388,20 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
           return connectorOAuthNotConfigured(reply, connector.id, "Slack");
         }
         const session = await createSlackAuthUrl({
+          userId: request.auth!.userId,
+          callbackScheme: body.data.callbackScheme
+        });
+        return {
+          authUrl: session.authUrl,
+          callbackScheme: session.callbackScheme
+        };
+      }
+
+      if (connector.id === "notion") {
+        if (!notionAuthConfigured()) {
+          return connectorOAuthNotConfigured(reply, connector.id, "Notion");
+        }
+        const session = await createNotionAuthUrl({
           userId: request.auth!.userId,
           callbackScheme: body.data.callbackScheme
         });
@@ -474,6 +539,33 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
                 error instanceof Error
                   ? error.message
                   : "Invalid Slack callback.",
+              connector_id: connector.id
+            }
+          });
+        }
+      }
+
+      if (connector.id === "notion") {
+        try {
+          const callback = parseNotionCallbackUrl(body.data.callbackUrl);
+          if (callback.error) {
+            return reply.code(400).send({
+              error: {
+                code: "CONNECTOR_OAUTH_FAILED",
+                message: `Notion authorization failed: ${callback.error}`,
+                connector_id: connector.id
+              }
+            });
+          }
+          return connectorPayload(connector, "connected");
+        } catch (error) {
+          return reply.code(400).send({
+            error: {
+              code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Invalid Notion callback.",
               connector_id: connector.id
             }
           });
@@ -648,6 +740,7 @@ function isTokenBackedConnector(connectorId: string): boolean {
   return (
     isGoogleWorkspaceConnector(connectorId) ||
     connectorId === "github" ||
-    connectorId === "slack"
+    connectorId === "slack" ||
+    connectorId === "notion"
   );
 }

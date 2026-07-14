@@ -52,6 +52,10 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_REDIRECT_URI: z.string().url().optional(),
   GITHUB_OAUTH_SCOPES: z.string().default("read:user"),
+  NOTION_CLIENT_ID: z.string().optional(),
+  NOTION_CLIENT_SECRET: z.string().optional(),
+  NOTION_AUTHORIZATION_URL: z.string().url().optional(),
+  NOTION_API_VERSION: z.string().default("2026-03-11"),
   FIREBASE_SERVICE_ACCOUNT: z.string().optional()
 });
 

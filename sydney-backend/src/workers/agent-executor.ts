@@ -47,6 +47,7 @@ import {
 } from "../connectors/google-workspace.js";
 import { renderGitHubAgent } from "../connectors/github.js";
 import { renderSlackAgent } from "../connectors/slack.js";
+import { renderNotionAgent } from "../connectors/notion.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
 import { agentExecutionKey } from "./execution-key.js";
@@ -219,6 +220,11 @@ const connectorPendingConfigs: Record<string, ConnectorPendingConfig> = {
     connectorName: "GitHub",
     outputName: "GitHub activity digest",
     expectedAction: "summarize recently updated repositories, open issues, and pull requests"
+  },
+  notion_workspace_digest: {
+    connectorName: "Notion",
+    outputName: "Notion workspace digest",
+    expectedAction: "read selected Notion pages and summarize relevant changes"
   }
 };
 
@@ -828,6 +834,14 @@ async function renderAgentMessage(
     });
     if (slackMessage) {
       return slackMessage;
+    }
+
+    const notionMessage = await renderNotionAgent(agent, {
+      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
+      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
+    });
+    if (notionMessage) {
+      return notionMessage;
     }
 
     return renderConnectorPending(agent, connectorPending);

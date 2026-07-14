@@ -37,6 +37,7 @@ class Connector {
             'calendar',
             'github',
             'slack',
+            'notion',
           }.contains(id)) &&
       requiredScopes.isNotEmpty;
 

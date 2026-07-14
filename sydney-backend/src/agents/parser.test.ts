@@ -38,6 +38,18 @@ test("classifies GitHub repository activity as a GitHub connector agent", () => 
   assert.equal(parsed.realtime_enabled, false);
 });
 
+test("classifies Notion workspace summaries as a Notion connector agent", () => {
+  const parsed = parseIntent(
+    "Create an agent that summarizes changes in my selected Notion pages every morning."
+  );
+
+  assert.equal(parsed.intent, "notion_workspace_digest");
+  assert.equal(parsed.connector, "notion");
+  assert.deepEqual(parsed.connector_ids, ["notion"]);
+  assert.deepEqual(parsed.permissions_needed, ["Read selected Notion pages"]);
+  assert.equal(parsed.schedule_cron, "0 7 * * *");
+});
+
 test("treats immediate repository change alerts as realtime, not daily", () => {
   const parsed = parseIntent(
     "Create an agent which tracks any changes in my repository Sydney, if there are any changes, inform me immediately"

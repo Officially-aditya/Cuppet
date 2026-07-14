@@ -40,6 +40,7 @@ const supportedConnectors = new Set([
   "calendar",
   "github",
   "slack",
+  "notion",
   "web_search"
 ]);
 const supportedTemplates = new Set([
@@ -283,6 +284,7 @@ function connectorPermissions(
   if (connectors.includes("drive")) return ["Google Drive read access"];
   if (connectors.includes("calendar")) return ["Google Calendar event read access"];
   if (connectors.includes("github")) return ["GitHub profile and repository read access"];
+  if (connectors.includes("notion")) return ["Read selected Notion pages"];
   if (connectors.includes("web_search")) return ["Web search (no login needed)"];
   return fallback;
 }
@@ -339,7 +341,8 @@ const CONNECTOR_BACKED_INTENTS = new Set([
   "meeting_recap",
   "project_deadline_watcher",
   "calendar_agenda",
-  "github_activity_digest"
+  "github_activity_digest",
+  "notion_workspace_digest"
 ]);
 
 function cleanIntent(value: string | undefined, baseIntent: string): string | undefined {

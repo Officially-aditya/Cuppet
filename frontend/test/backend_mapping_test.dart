@@ -107,4 +107,20 @@ void main() {
       expect(connector.shouldUseOAuth, isTrue);
     },
   );
+
+  test(
+    'known Notion connector always uses OAuth instead of a status toggle',
+    () {
+      const connector = Connector(
+        id: 'notion',
+        name: 'Notion',
+        description: 'Workspace pages',
+        status: ConnectorStatus.disconnected,
+        requiredScopes: ['Read selected pages'],
+        authConfigured: false,
+      );
+
+      expect(connector.shouldUseOAuth, isTrue);
+    },
+  );
 }

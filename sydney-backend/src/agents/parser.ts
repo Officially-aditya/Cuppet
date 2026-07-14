@@ -80,6 +80,22 @@ const CAPABILITIES: CapabilityDefinition[] = [
     }
   },
   {
+    name: "Notion Workspace Digest",
+    avatar: "book-open",
+    intent: "notion_workspace_digest",
+    connector: "notion",
+    connectorIds: ["notion"],
+    action:
+      "Reads selected Notion pages and summarizes recent workspace changes and relevant notes.",
+    defaultSchedule: "0 9 * * *",
+    outputTemplate: "data_summary",
+    permissionsNeeded: ["Read selected Notion pages"],
+    priority: 63,
+    match: {
+      any: [/\bnotion\b/]
+    }
+  },
+  {
     name: "Competitor Watch",
     avatar: "binoculars",
     intent: "competitor_watch",

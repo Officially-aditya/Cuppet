@@ -108,6 +108,20 @@ profile information and public repository activity. Add `repo` only when
 private repository access is required; GitHub OAuth defines `repo` as a broad
 scope. GitHub access tokens are encrypted with the existing connector vault.
 
+Notion uses a read-only public OAuth connection. Configure
+`NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET`, and the complete
+`NOTION_AUTHORIZATION_URL` from the Notion developer dashboard. Register this
+production redirect URI:
+
+```text
+https://sydney-production.up.railway.app/connectors/notion/callback
+```
+
+Enable the connection's read-content capability. During OAuth, each user
+selects the pages that Cuppet may access; Notion agents cannot search or read
+unselected pages. Access and refresh tokens are encrypted in the connector
+vault. `NOTION_API_VERSION` defaults to `2026-03-11`.
+
 Slack uses a read-only OAuth bot installation. Configure `SLACK_CLIENT_ID`,
 `SLACK_CLIENT_SECRET`, and `SLACK_REDIRECT_URI`, and add the exact production
 callback URL to the Slack app's OAuth & Permissions page:
