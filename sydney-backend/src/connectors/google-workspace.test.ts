@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   fetchVisibleCalendarEvents,
-  googleScopesCoverConnector
+  googleScopesCoverConnector,
+  startGmailWatch
 } from "./google-workspace.js";
 
 test("Calendar connections require both event and calendar-list grants", () => {
@@ -216,6 +217,36 @@ test("calendar agenda follows event pagination until it finds an event", async (
       12
     );
     assert.deepEqual(events.map((event) => event.id), ["paginated-event"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Gmail push watch targets Pub/Sub and filters to inbox changes", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.method, "POST");
+    assert.equal(
+      (init?.headers as Record<string, string>).Authorization,
+      "Bearer access-token"
+    );
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      topicName: "projects/cuppet/topics/gmail-events",
+      labelIds: ["INBOX"],
+      labelFilterBehavior: "INCLUDE"
+    });
+    return Response.json({ historyId: "123", expiration: "9999999999999" });
+  };
+
+  try {
+    const watch = await startGmailWatch(
+      "access-token",
+      "projects/cuppet/topics/gmail-events"
+    );
+    assert.deepEqual(watch, {
+      historyId: "123",
+      expiration: "9999999999999"
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -9,6 +9,7 @@ import { realtimeRoutes } from "../realtime/routes.js";
 import { uploadRoutes } from "../uploads/routes.js";
 import { agentWorkerRuntimeStatus } from "../workers/runtime-status.js";
 import { config } from "../config.js";
+import { eventRoutes } from "../events/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
@@ -18,6 +19,7 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(notificationRoutes);
   await app.register(realtimeRoutes);
   await app.register(uploadRoutes);
+  await app.register(eventRoutes);
 
   app.get("/health", async (_request, reply) => {
     const workerStatus = agentWorkerRuntimeStatus();

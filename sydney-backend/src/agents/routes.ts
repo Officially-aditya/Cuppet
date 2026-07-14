@@ -30,6 +30,7 @@ const updateAgentSchema = z
     schedule_cron: cronSchema.nullable().optional(),
     status: z.enum(["active", "paused", "error"]).optional(),
     notifications_muted: z.boolean().optional(),
+    realtime_enabled: z.boolean().optional(),
     response_limit: z.enum(["concise", "balanced", "detailed"]).optional(),
     active_until: z.string().datetime().nullable().optional()
   })
@@ -350,6 +351,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
     if (body.data.notifications_muted !== undefined) {
       nextParsedIntent.notifications_muted = body.data.notifications_muted;
+    }
+    if (body.data.realtime_enabled !== undefined) {
+      nextParsedIntent.realtime_enabled = body.data.realtime_enabled;
     }
 
     const { rows } = await pool.query(

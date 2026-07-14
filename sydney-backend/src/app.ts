@@ -4,6 +4,12 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { config } from "./config.js";
 import { registerApi } from "./api/index.js";
 
+declare module "fastify" {
+  interface FastifyRequest {
+    rawBody?: Buffer;
+  }
+}
+
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     bodyLimit: 64 * 1024,
@@ -21,6 +27,26 @@ export async function buildApp(): Promise<FastifyInstance> {
           }
         : true
   });
+
+  // Webhook signatures cover the exact request bytes. Preserve those bytes
+  // while continuing to expose parsed JSON to existing route handlers.
+  app.removeContentTypeParser("application/json");
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (request, body, done) => {
+      const rawBody = Buffer.isBuffer(body) ? body : Buffer.from(body);
+      request.rawBody = rawBody;
+      try {
+        done(
+          null,
+          rawBody.length === 0 ? {} : JSON.parse(rawBody.toString("utf8"))
+        );
+      } catch (error) {
+        done(error as Error);
+      }
+    }
+  );
 
   await app.register(multipart, {
     limits: {

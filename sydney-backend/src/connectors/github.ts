@@ -8,6 +8,7 @@ import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
+import { upsertConnectorInstallation } from "../events/engine.js";
 import {
   decryptConnectorSecret,
   encryptConnectorSecret
@@ -36,6 +37,7 @@ type GitHubTokenRow = {
 };
 
 type GitHubUser = {
+  id?: number;
   login: string;
   html_url?: string;
 };
@@ -171,8 +173,15 @@ export async function handleGitHubOAuthCallback(input: {
 
   try {
     const token = await exchangeAuthorizationCode(input.code);
-    await validateGitHubIdentity(token.access_token!);
+    const identity = await validateGitHubIdentity(token.access_token!);
     await storeGitHubToken(state.userId, token);
+    await upsertConnectorInstallation({
+      userId: state.userId,
+      connectorId: "github",
+      externalAccountId: identity.login,
+      externalAccountName: identity.login,
+      metadata: { github_user_id: identity.id }
+    });
     return mobileConnectorRedirect(state.callbackScheme, {
       status: "connected"
     });
@@ -445,7 +454,7 @@ async function refreshGitHubToken(
   return body.access_token;
 }
 
-async function validateGitHubIdentity(accessToken: string): Promise<void> {
+async function validateGitHubIdentity(accessToken: string): Promise<GitHubUser> {
   const response = await fetch(`${githubApiBase}/user`, {
     headers: githubHeaders(accessToken)
   });
@@ -455,6 +464,7 @@ async function validateGitHubIdentity(accessToken: string): Promise<void> {
   if (!response.ok || !body.login) {
     throw new Error(body.message ?? "github_identity_validation_failed");
   }
+  return body;
 }
 
 async function storeGitHubToken(

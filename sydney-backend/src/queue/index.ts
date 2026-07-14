@@ -10,12 +10,15 @@ const redisUrl = new URL(config.REDIS_URL);
 export const agentExecutorQueueName = "agent-executor";
 export const agentExecutorJobName = "agent.execute";
 
-export type AgentRunTrigger = "manual" | "schedule" | "snooze";
+export type AgentRunTrigger = "manual" | "schedule" | "snooze" | "event";
 
 export type AgentExecutorJobData = {
   agentId: string;
   trigger: AgentRunTrigger;
   snoozedMessageId?: string;
+  eventId?: string;
+  eventSource?: string;
+  eventType?: string;
 };
 
 export const redisConnection: ConnectionOptions = {
@@ -48,6 +51,31 @@ export async function enqueueAgentRun(
     { agentId, trigger },
     {
       attempts: 2,
+      backoff: { type: "exponential", delay: 3000 },
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 1000 }
+    }
+  );
+}
+
+export async function enqueueAgentEvent(input: {
+  agentId: string;
+  eventId: string;
+  eventSource: string;
+  eventType: string;
+}) {
+  return agentExecutorQueue.add(
+    agentExecutorJobName,
+    {
+      agentId: input.agentId,
+      trigger: "event",
+      eventId: input.eventId,
+      eventSource: input.eventSource,
+      eventType: input.eventType
+    },
+    {
+      jobId: `event-${input.eventId}-${input.agentId}`,
+      attempts: 3,
       backoff: { type: "exponential", delay: 3000 },
       removeOnComplete: { count: 1000 },
       removeOnFail: { count: 1000 }

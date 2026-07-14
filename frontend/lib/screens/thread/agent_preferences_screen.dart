@@ -28,6 +28,10 @@ class _AgentPreferencesScreenState
   void initState() {
     super.initState();
     _isPaused = widget.agent.availability == AgentAvailability.paused;
+    _responseTiming =
+        widget.agent.parsedIntent?['realtime_enabled'] == false
+            ? 'daily'
+            : 'real-time';
     final rawLimit =
         widget.agent.parsedIntent?['response_limit'] ??
         widget.agent.parsedIntent?['responseLimit'];
@@ -268,7 +272,7 @@ class _AgentPreferencesScreenState
                   const SizedBox(height: SydneySpacing.md),
                   _TimingOption(
                     title: 'Real-time',
-                    subtitle: 'Immediate notification on every action',
+                    subtitle: 'Notify me when a matching external event occurs',
                     selected: _responseTiming == 'real-time',
                     onTap: () => setState(() => _responseTiming = 'real-time'),
                   ),
@@ -637,6 +641,7 @@ class _AgentPreferencesScreenState
       await ref.read(agentServiceProvider).patchAgent(widget.agent.id, {
         'response_limit': limitStr,
         'active_until': activeUntilIso,
+        'realtime_enabled': _responseTiming == 'real-time',
         'status': _isPaused ? 'paused' : 'active',
       });
       ref.invalidate(agentsProvider);

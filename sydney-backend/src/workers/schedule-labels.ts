@@ -20,6 +20,9 @@ export function scheduledTitle(
   if (trigger === "snooze") {
     return `Here's your snoozed ${label}`;
   }
+  if (trigger === "event") {
+    return `New ${label}`;
+  }
   const time = scheduleTimeLabel(agent.schedule_cron);
   return time ? `Here's your ${time} ${label}` : `Here's your ${label}`;
 }

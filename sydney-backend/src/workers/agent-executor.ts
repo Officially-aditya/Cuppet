@@ -320,6 +320,7 @@ async function executeAgentJob(
     agentId: agent.id,
     trigger: job.data.trigger,
     jobId: job.id,
+    eventId: job.data.eventId,
     timestamp: job.timestamp,
     delay: typeof job.opts.delay === "number" ? job.opts.delay : undefined
   });
@@ -372,6 +373,12 @@ async function executeAgentJob(
       status: "success",
       additionalTopicsCovered: rendered.additionalTopicsCovered
     });
+    if (job.data.trigger === "event" && job.data.eventId) {
+      await markEventDelivery(job.data.eventId, agent.id, "delivered", {
+        runId: run.id,
+        messageId: message.id
+      });
+    }
 
     if (targetSnoozedId) {
       await pool.query(
@@ -430,6 +437,12 @@ async function executeAgentJob(
         status: "partial",
         errorMessage: error.reason
       });
+      if (job.data.trigger === "event" && job.data.eventId) {
+        await markEventDelivery(job.data.eventId, agent.id, "delivered", {
+          runId: run.id,
+          messageId: message.id
+        });
+      }
 
       await publishRealtimeEventsSafely(
         {
@@ -480,6 +493,13 @@ async function executeAgentJob(
       status: "failed",
       errorMessage: errorMsg
     });
+    if (job.data.trigger === "event" && job.data.eventId) {
+      await markEventDelivery(job.data.eventId, agent.id, "failed", {
+        runId: run.id,
+        messageId: message.id,
+        reason: errorMsg
+      });
+    }
 
     await publishRealtimeEventsSafely(
       {
@@ -525,6 +545,37 @@ async function markConnectorActionRequired(
       [userId, connectorId]
     )
   ]);
+}
+
+async function markEventDelivery(
+  eventId: string,
+  agentId: string,
+  status: "delivered" | "failed",
+  details: {
+    runId: string;
+    messageId?: string;
+    reason?: string;
+  }
+): Promise<void> {
+  await pool.query(
+    `
+      UPDATE event_deliveries
+      SET status = $3,
+          run_id = $4,
+          message_id = $5,
+          reason = $6,
+          updated_at = NOW()
+      WHERE event_id = $1 AND agent_id = $2
+    `,
+    [
+      eventId,
+      agentId,
+      status,
+      details.runId,
+      details.messageId ?? null,
+      details.reason ?? null
+    ]
+  );
 }
 
 async function loadAgent(agentId: string): Promise<AgentRow | null> {

@@ -116,11 +116,40 @@ callback URL to the Slack app's OAuth & Permissions page:
 https://sydney-production.up.railway.app/connectors/slack/callback
 ```
 
-The default `SLACK_OAUTH_SCOPES` value reads public/private channel history and
-member names; it does not grant message-writing access. After installation,
+The default `SLACK_OAUTH_SCOPES` value reads public/private channel history,
+member names, and app mentions; it does not grant message-writing access. After installation,
 invite the Cuppet Slack app to each channel that an agent should summarize.
-`SLACK_SIGNING_SECRET` is reserved for a future Events API receiver and is not
-required for scheduled or manually triggered Slack agents.
+Configure Slack Event Subscriptions to send `message.channels`,
+`message.groups`, and `app_mention` to:
+
+```text
+https://sydney-production.up.railway.app/events/slack
+```
+
+The endpoint validates `SLACK_SIGNING_SECRET`, acknowledges events quickly,
+deduplicates Slack retries, and queues matching urgent-watcher agents.
+
+GitHub App webhooks can send `push`, `pull_request`, `issues`, `release`, and
+`workflow_run` events to `/events/github`. Configure the same long random
+`GITHUB_WEBHOOK_SECRET` in GitHub and Railway. Gmail Pub/Sub push subscriptions
+send to `/events/gmail?token=<GMAIL_PUBSUB_VERIFICATION_TOKEN>`. Gmail push is a
+signal: the queued agent performs the targeted Gmail API read after delivery.
+
+Set `GMAIL_PUBSUB_TOPIC` to the fully qualified Pub/Sub topic name. Grant
+`gmail-api-push@system.gserviceaccount.com` permission to publish to that topic,
+then configure a push subscription targeting the authenticated Gmail event
+URL. Cuppet creates mailbox watches after Gmail OAuth and renews them daily.
+Calendar and Drive OAuth connections similarly create HTTPS watch channels at
+`/events/google/calendar` and `/events/google/drive`; their random channel
+tokens are stored only as hashes and watches are replaced before expiration.
+
+Deployments must run `npm run migrate` before starting the event-enabled API so
+the installation, inbound-event, provider-subscription, and delivery ledgers
+exist.
+
+Event ingestion is push-first. Scheduler usage is limited to subscription
+renewal, token refresh, recovery reconciliation, and explicitly scheduled
+digests; it is not used to check providers every few seconds.
 
 ## LLM and Input Security
 

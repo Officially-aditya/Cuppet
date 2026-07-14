@@ -42,8 +42,11 @@ const envSchema = z.object({
   SLACK_OAUTH_SCOPES: z
     .string()
     .default(
-      "channels:read,channels:history,groups:read,groups:history,users:read"
+      "channels:read,channels:history,groups:read,groups:history,users:read,app_mentions:read"
     ),
+  GITHUB_WEBHOOK_SECRET: z.string().optional(),
+  GMAIL_PUBSUB_VERIFICATION_TOKEN: z.string().optional(),
+  GMAIL_PUBSUB_TOPIC: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_REDIRECT_URI: z.string().url().optional(),

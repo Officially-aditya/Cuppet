@@ -53,3 +53,23 @@ test("snooze jobs retain distinct delivery keys", () => {
   assert.notEqual(first, second);
   assert.match(first!, /^snooze:/);
 });
+
+test("webhook retries share the same event execution key", () => {
+  const first = agentExecutionKey({
+    agentId: "agent-1",
+    trigger: "event",
+    eventId: "event-123",
+    jobId: "attempt-1",
+    timestamp: 1781965800000
+  });
+  const retry = agentExecutionKey({
+    agentId: "agent-1",
+    trigger: "event",
+    eventId: "event-123",
+    jobId: "attempt-2",
+    timestamp: 1781965900000
+  });
+
+  assert.equal(first, retry);
+  assert.equal(first, "event:agent-1:event-123");
+});

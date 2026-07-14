@@ -11,6 +11,12 @@ import {
 } from "../agents/output.js";
 import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
+import { upsertConnectorInstallation } from "../events/engine.js";
+import {
+  createGooglePushChannel,
+  storeGooglePushSubscription,
+  type GooglePushConnector
+} from "../events/google-subscriptions.js";
 import {
   decryptConnectorSecret,
   encryptConnectorSecret
@@ -279,6 +285,28 @@ export async function handleGoogleWorkspaceOAuthCallback(input: {
       requestedConnectorId: state.connectorId,
       token
     });
+    if (
+      token.access_token &&
+      googleScopesCoverConnector(parseScopes(token.scope), "gmail")
+    ) {
+      await storeGmailInstallation(state.userId, token.access_token).catch(
+        () => undefined
+      );
+    }
+    const pushConnectors = coveredConnectors(
+      parseScopes(token.scope),
+      state.connectorId
+    ).filter(
+      (connectorId): connectorId is GooglePushConnector =>
+        connectorId === "calendar" || connectorId === "drive"
+    );
+    for (const connectorId of pushConnectors) {
+      await registerGooglePushWatches(
+        state.userId,
+        connectorId,
+        token.access_token!
+      ).catch(() => undefined);
+    }
 
     return mobileConnectorRedirect(state.callbackScheme, state.connectorId, {
       status: "connected"
@@ -288,6 +316,239 @@ export async function handleGoogleWorkspaceOAuthCallback(input: {
       error: errorCode(error)
     });
   }
+}
+
+async function storeGmailInstallation(
+  userId: string,
+  accessToken: string
+): Promise<void> {
+  const response = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000)
+    }
+  );
+  const body = (await response.json()) as { emailAddress?: string };
+  if (!response.ok || !body.emailAddress) return;
+  const watch = await startGmailWatch(accessToken);
+  await upsertConnectorInstallation({
+    userId,
+    connectorId: "gmail",
+    externalAccountId: body.emailAddress,
+    externalAccountName: body.emailAddress,
+    metadata: watch
+      ? { history_id: watch.historyId, watch_expiration: watch.expiration }
+      : { push_configured: false }
+  });
+}
+
+export async function startGmailWatch(
+  accessToken: string,
+  topicName = config.GMAIL_PUBSUB_TOPIC
+): Promise<{ historyId: string; expiration: string } | null> {
+  if (!topicName) return null;
+  const response = await fetch(
+    "https://gmail.googleapis.com/gmail/v1/users/me/watch",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        topicName,
+        labelIds: ["INBOX"],
+        labelFilterBehavior: "INCLUDE"
+      }),
+      signal: AbortSignal.timeout(15_000)
+    }
+  );
+  const body = (await response.json()) as {
+    historyId?: string;
+    expiration?: string;
+    error?: { message?: string };
+  };
+  if (!response.ok || !body.historyId || !body.expiration) {
+    throw new Error(body.error?.message ?? "gmail_watch_failed");
+  }
+  return { historyId: body.historyId, expiration: body.expiration };
+}
+
+export async function renewGmailPushWatches(): Promise<{
+  renewed: number;
+  failed: number;
+}> {
+  if (!config.GMAIL_PUBSUB_TOPIC) return { renewed: 0, failed: 0 };
+  const { rows } = await pool.query<{ user_id: string }>(
+    `SELECT user_id FROM connector_tokens
+     WHERE connector_id = 'gmail' AND status = 'connected'`
+  );
+  let renewed = 0;
+  let failed = 0;
+  for (const row of rows) {
+    try {
+      const accessToken = await googleAccessToken(row.user_id, "gmail");
+      if (!accessToken) {
+        failed += 1;
+        continue;
+      }
+      await storeGmailInstallation(row.user_id, accessToken);
+      renewed += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { renewed, failed };
+}
+
+export async function renewGooglePushWatches(): Promise<{
+  renewed: number;
+  failed: number;
+}> {
+  const { rows } = await pool.query<{
+    user_id: string;
+    connector_id: GooglePushConnector;
+  }>(
+    `
+      SELECT DISTINCT token.user_id, token.connector_id
+      FROM connector_tokens token
+      WHERE token.connector_id IN ('calendar', 'drive')
+        AND token.status = 'connected'
+        AND NOT EXISTS (
+          SELECT 1 FROM provider_subscriptions subscription
+          WHERE subscription.user_id = token.user_id
+            AND subscription.connector_id = token.connector_id
+            AND subscription.expires_at > NOW() + INTERVAL '2 days'
+        )
+    `
+  );
+  let renewed = 0;
+  let failed = 0;
+  for (const row of rows) {
+    try {
+      const accessToken = await googleAccessToken(
+        row.user_id,
+        row.connector_id
+      );
+      if (!accessToken) {
+        failed += 1;
+        continue;
+      }
+      await registerGooglePushWatches(
+        row.user_id,
+        row.connector_id,
+        accessToken
+      );
+      renewed += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { renewed, failed };
+}
+
+async function registerGooglePushWatches(
+  userId: string,
+  connectorId: GooglePushConnector,
+  accessToken: string
+): Promise<void> {
+  if (!/^https:\/\//i.test(config.AUTH_BASE_URL)) return;
+  if (connectorId === "calendar") {
+    const listUrl = new URL(`${calendarApiBase}/users/me/calendarList`);
+    listUrl.searchParams.set("minAccessRole", "reader");
+    listUrl.searchParams.set("showDeleted", "false");
+    listUrl.searchParams.set("maxResults", "20");
+    const list = await googleJson<{ items?: Array<{ id?: string }> }>(
+      listUrl,
+      accessToken
+    );
+    for (const calendar of (list.items ?? []).slice(0, 20)) {
+      if (!calendar.id) continue;
+      const channel = createGooglePushChannel({ connectorId, userId });
+      const response = await googleWatchRequest(
+        new URL(
+          `${calendarApiBase}/calendars/${encodeURIComponent(calendar.id)}/events/watch`
+        ),
+        accessToken,
+        channel,
+        connectorId
+      );
+      await storeGooglePushSubscription({
+        userId,
+        connectorId,
+        channelId: channel.id,
+        channelToken: channel.token,
+        resourceId: response.resourceId,
+        resourceUri: response.resourceUri,
+        expiration: response.expiration ?? channel.expiration,
+        metadata: { calendar_id: calendar.id }
+      });
+    }
+    return;
+  }
+
+  const startToken = await googleJson<{ startPageToken?: string }>(
+    new URL(`${driveApiBase}/changes/startPageToken`),
+    accessToken
+  );
+  if (!startToken.startPageToken) throw new Error("drive_start_page_token_missing");
+  const channel = createGooglePushChannel({ connectorId, userId });
+  const watchUrl = new URL(`${driveApiBase}/changes/watch`);
+  watchUrl.searchParams.set("pageToken", startToken.startPageToken);
+  const response = await googleWatchRequest(
+    watchUrl,
+    accessToken,
+    channel,
+    connectorId
+  );
+  await storeGooglePushSubscription({
+    userId,
+    connectorId,
+    channelId: channel.id,
+    channelToken: channel.token,
+    resourceId: response.resourceId,
+    resourceUri: response.resourceUri,
+    expiration: response.expiration ?? channel.expiration,
+    metadata: { page_token: startToken.startPageToken }
+  });
+}
+
+async function googleWatchRequest(
+  url: URL,
+  accessToken: string,
+  channel: ReturnType<typeof createGooglePushChannel>,
+  connectorId: GooglePushConnector
+): Promise<{ resourceId?: string; resourceUri?: string; expiration?: string }> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(
+      connectorId === "calendar"
+        ? {
+            id: channel.id,
+            token: channel.token,
+            type: channel.type,
+            address: channel.address,
+            params: { ttl: String(6 * 24 * 60 * 60) }
+          }
+        : channel
+    ),
+    signal: AbortSignal.timeout(15_000)
+  });
+  const body = (await response.json()) as {
+    resourceId?: string;
+    resourceUri?: string;
+    expiration?: string;
+    error?: { message?: string };
+  };
+  if (!response.ok || !body.resourceId) {
+    throw new Error(body.error?.message ?? "google_watch_failed");
+  }
+  return body;
 }
 
 export function parseGoogleWorkspaceCallbackUrl(

@@ -8,6 +8,7 @@ import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
+import { upsertConnectorInstallation } from "../events/engine.js";
 import {
   decryptConnectorSecret,
   encryptConnectorSecret
@@ -183,6 +184,15 @@ export async function handleSlackOAuthCallback(input: {
     }
     await validateSlackIdentity(token.access_token!);
     await storeSlackToken(state.userId, token);
+    if (token.team?.id) {
+      await upsertConnectorInstallation({
+        userId: state.userId,
+        connectorId: "slack",
+        externalAccountId: token.team.id,
+        externalAccountName: token.team.name,
+        metadata: { team_id: token.team.id }
+      });
+    }
     return mobileConnectorRedirect(state.callbackScheme, { status: "connected" });
   } catch (error) {
     return mobileConnectorRedirect(state.callbackScheme, {

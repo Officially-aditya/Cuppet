@@ -6,6 +6,10 @@ import { initializeFirebase } from "./notifications/firebase.js";
 import { closeQueue } from "./queue/index.js";
 import { createAgentExecutorWorker } from "./workers/agent-executor.js";
 import { setAgentWorkerRuntimeStatus } from "./workers/runtime-status.js";
+import {
+  renewGmailPushWatches,
+  renewGooglePushWatches
+} from "./connectors/google-workspace.js";
 
 // Initialize Firebase on startup
 initializeFirebase();
@@ -63,6 +67,32 @@ try {
   }, 60 * 60 * 1000);
   // Keep track of the timer so we can clear it on shutdown if needed, or let it run
   cleanupTimer.unref();
+
+  const renewGmailWatches = async () => {
+    const [gmail, google] = await Promise.all([
+      renewGmailPushWatches(),
+      renewGooglePushWatches()
+    ]);
+    if (
+      gmail.renewed > 0 ||
+      gmail.failed > 0 ||
+      google.renewed > 0 ||
+      google.failed > 0
+    ) {
+      app.log.info({ gmail, google }, "Renewed Google push watches");
+    }
+  };
+  renewGmailWatches().catch((error) =>
+    app.log.error({ error }, "Failed to renew Gmail push watches")
+  );
+  const gmailWatchTimer = setInterval(
+    () =>
+      renewGmailWatches().catch((error) =>
+        app.log.error({ error }, "Failed to renew Gmail push watches")
+      ),
+    24 * 60 * 60 * 1000
+  );
+  gmailWatchTimer.unref();
 
   await app.listen({
     host: config.HOST,
