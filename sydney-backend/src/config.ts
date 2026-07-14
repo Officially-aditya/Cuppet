@@ -46,6 +46,7 @@ const envSchema = z.object({
       "channels:read,channels:history,groups:read,groups:history,users:read,app_mentions:read"
     ),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
+  GITHUB_APP_SLUG: z.string().trim().min(1).optional(),
   GMAIL_PUBSUB_VERIFICATION_TOKEN: z.string().optional(),
   GMAIL_PUBSUB_TOPIC: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),

@@ -15,6 +15,7 @@ import {
   createGitHubAuthUrl,
   githubAuthConfigured,
   githubPrivateRepositoryAccessEnabled,
+  handleGitHubInstallCallback,
   handleGitHubOAuthCallback,
   hasUsableGitHubToken,
   parseGitHubCallbackUrl
@@ -179,6 +180,27 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         error: {
           code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
           message: "Invalid GitHub OAuth callback."
+        }
+      });
+    }
+  });
+
+  app.get("/connectors/github/install/callback", async (request, reply) => {
+    const query = request.query as {
+      installation_id?: string;
+      setup_action?: string;
+      state?: string;
+    };
+
+    try {
+      const redirectUrl = await handleGitHubInstallCallback(query);
+      return reply.redirect(redirectUrl.toString());
+    } catch (error) {
+      request.log.warn({ error }, "Invalid GitHub App installation callback");
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_GITHUB_APP_INSTALL_CALLBACK",
+          message: "Invalid GitHub App installation callback."
         }
       });
     }

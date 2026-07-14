@@ -134,8 +134,9 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     }
     const installation = parsed.data.installation;
     const externalAccountId =
-      installation?.account?.login ??
-      (installation?.id === undefined ? null : String(installation.id));
+      installation?.id === undefined
+        ? installation?.account?.login ?? null
+        : String(installation.id);
     if (!externalAccountId) {
       return reply.code(202).send({ accepted: true, ignored: true });
     }
@@ -145,6 +146,9 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
       externalEventId: deliveryId,
       eventType: `github.${eventName}`,
       externalAccountId,
+      externalAccountAliases: installation?.account?.login
+        ? [installation.account.login]
+        : undefined,
       subjectId:
         parsed.data.repository?.id === undefined
           ? undefined

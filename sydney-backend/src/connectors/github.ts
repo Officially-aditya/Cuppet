@@ -15,6 +15,7 @@ import {
 } from "./token-vault.js";
 
 const githubAuthorizationEndpoint = "https://github.com/login/oauth/authorize";
+const githubAppBase = "https://github.com/apps";
 const githubTokenEndpoint = "https://github.com/login/oauth/access_token";
 const githubApiBase = "https://api.github.com";
 const githubApiVersion = "2022-11-28";
@@ -106,6 +107,10 @@ export function githubAuthConfigured(): boolean {
   );
 }
 
+export function githubAppInstallConfigured(): boolean {
+  return Boolean(config.GITHUB_APP_SLUG);
+}
+
 export function githubRequestedScopes(): string[] {
   return config.GITHUB_OAUTH_SCOPES
     .split(/[\s,]+/)
@@ -135,16 +140,47 @@ export async function createGitHubAuthUrl(input: {
     exp: now + 10 * 60
   });
 
-  const authUrl = new URL(githubAuthorizationEndpoint);
-  authUrl.searchParams.set("client_id", config.GITHUB_CLIENT_ID!);
-  authUrl.searchParams.set("redirect_uri", config.GITHUB_REDIRECT_URI!);
-  authUrl.searchParams.set("state", state);
-  const scopes = githubRequestedScopes();
-  if (scopes.length > 0) {
-    authUrl.searchParams.set("scope", scopes.join(" "));
-  }
+  const authUrl = config.GITHUB_APP_SLUG
+    ? buildGitHubAppInstallUrl(config.GITHUB_APP_SLUG, state)
+    : buildGitHubOAuthUrl(state);
 
   return { authUrl: authUrl.toString(), callbackScheme };
+}
+
+export function buildGitHubAppInstallUrl(slug: string, state: string): URL {
+  if (!/^[a-z0-9-]+$/i.test(slug)) {
+    throw new Error("invalid_github_app_slug");
+  }
+  const url = new URL(`${githubAppBase}/${slug}/installations/new`);
+  url.searchParams.set("state", state);
+  return url;
+}
+
+export async function handleGitHubInstallCallback(input: {
+  installation_id?: string;
+  setup_action?: string;
+  state?: string;
+}): Promise<URL> {
+  if (!input.state) {
+    return mobileConnectorRedirect("sydney", { error: "missing_state" });
+  }
+
+  const state = verifyOAuthState(input.state);
+  if (input.setup_action === "delete") {
+    return mobileConnectorRedirect(state.callbackScheme, {
+      error: "github_app_installation_removed"
+    });
+  }
+  if (!input.installation_id || !/^\d+$/.test(input.installation_id)) {
+    return mobileConnectorRedirect(state.callbackScheme, {
+      error: "missing_installation_id"
+    });
+  }
+
+  await storeGitHubAppInstallation(state.userId, input.installation_id);
+
+  const oauthState = createOAuthState(state.userId, state.callbackScheme);
+  return buildGitHubOAuthUrl(oauthState);
 }
 
 export async function handleGitHubOAuthCallback(input: {
@@ -175,13 +211,7 @@ export async function handleGitHubOAuthCallback(input: {
     const token = await exchangeAuthorizationCode(input.code);
     const identity = await validateGitHubIdentity(token.access_token!);
     await storeGitHubToken(state.userId, token);
-    await upsertConnectorInstallation({
-      userId: state.userId,
-      connectorId: "github",
-      externalAccountId: identity.login,
-      externalAccountName: identity.login,
-      metadata: { github_user_id: identity.id }
-    });
+    await storeGitHubIdentityMapping(state.userId, identity);
     return mobileConnectorRedirect(state.callbackScheme, {
       status: "connected"
     });
@@ -709,6 +739,100 @@ function tokenExpiry(expiresIn: number | undefined): Date {
 function signOAuthState(payload: OAuthState): string {
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${encodedPayload}.${hmac(encodedPayload)}`;
+}
+
+function createOAuthState(userId: string, callbackScheme: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  return signOAuthState({
+    v: 1,
+    userId,
+    connectorId: "github",
+    callbackScheme: sanitizeCallbackScheme(callbackScheme),
+    nonce: randomBytes(16).toString("base64url"),
+    iat: now,
+    exp: now + 10 * 60
+  });
+}
+
+function buildGitHubOAuthUrl(state: string): URL {
+  const authUrl = new URL(githubAuthorizationEndpoint);
+  authUrl.searchParams.set("client_id", config.GITHUB_CLIENT_ID!);
+  authUrl.searchParams.set("redirect_uri", config.GITHUB_REDIRECT_URI!);
+  authUrl.searchParams.set("state", state);
+  const scopes = githubRequestedScopes();
+  if (scopes.length > 0) authUrl.searchParams.set("scope", scopes.join(" "));
+  return authUrl;
+}
+
+async function storeGitHubIdentityMapping(
+  userId: string,
+  identity: GitHubUser
+): Promise<void> {
+  const existing = await pool.query<{
+    external_account_id: string;
+    metadata: Record<string, unknown> | null;
+  }>(
+    `
+      SELECT external_account_id, metadata
+      FROM connector_installations
+      WHERE user_id = $1 AND connector_id = 'github'
+      LIMIT 1
+    `,
+    [userId]
+  );
+  const installation = existing.rows[0];
+  const installationId = installation?.metadata?.installation_id;
+  await upsertConnectorInstallation({
+    userId,
+    connectorId: "github",
+    externalAccountId:
+      installation && installationId !== undefined
+        ? installation.external_account_id
+        : identity.login,
+    externalAccountName: identity.login,
+    metadata: {
+      ...(installation?.metadata ?? {}),
+      github_user_id: identity.id,
+      github_login: identity.login
+    }
+  });
+}
+
+async function storeGitHubAppInstallation(
+  userId: string,
+  installationId: string
+): Promise<void> {
+  const existing = await pool.query<{
+    external_account_name: string | null;
+    metadata: Record<string, unknown> | null;
+  }>(
+    `
+      SELECT external_account_name, metadata
+      FROM connector_installations
+      WHERE user_id = $1 AND connector_id = 'github'
+      LIMIT 1
+    `,
+    [userId]
+  );
+  const current = existing.rows[0];
+  const previousIds = Array.isArray(current?.metadata?.installation_ids)
+    ? current.metadata.installation_ids.map(String)
+    : current?.metadata?.installation_id === undefined
+      ? []
+      : [String(current.metadata.installation_id)];
+  const installationIds = [...new Set([...previousIds, installationId])];
+
+  await upsertConnectorInstallation({
+    userId,
+    connectorId: "github",
+    externalAccountId: installationId,
+    externalAccountName: current?.external_account_name ?? undefined,
+    metadata: {
+      ...(current?.metadata ?? {}),
+      installation_id: installationId,
+      installation_ids: installationIds
+    }
+  });
 }
 
 function verifyOAuthState(state: string): OAuthState {

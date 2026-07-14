@@ -145,7 +145,19 @@ deduplicates Slack retries, and queues matching urgent-watcher agents.
 
 GitHub App webhooks can send `push`, `pull_request`, `issues`, `release`, and
 `workflow_run` events to `/events/github`. Configure the same long random
-`GITHUB_WEBHOOK_SECRET` in GitHub and Railway. Gmail Pub/Sub push subscriptions
+`GITHUB_WEBHOOK_SECRET` in GitHub and Railway. Set the GitHub App's Setup URL to:
+
+```text
+https://sydney-production.up.railway.app/connectors/github/install/callback
+```
+
+Set `GITHUB_APP_SLUG` in Railway to the slug shown in the app's public URL
+(`github.com/apps/<slug>`). Cuppet's Connect
+button will then request repository access and continue into the existing
+GitHub OAuth flow automatically. The stored installation ID routes personal
+and organization repository events to the approving Cuppet user.
+
+Gmail Pub/Sub push subscriptions
 send to `/events/gmail?token=<GMAIL_PUBSUB_VERIFICATION_TOKEN>`. Gmail push is a
 signal: the queued agent performs the targeted Gmail API read after delivery.
 

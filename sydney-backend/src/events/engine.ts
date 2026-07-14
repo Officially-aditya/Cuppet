@@ -17,6 +17,7 @@ export type NormalizedAgentEvent = {
   payload: Record<string, unknown>;
   occurredAt: Date;
   targetUserIds?: string[];
+  externalAccountAliases?: string[];
 };
 
 export type EventIngestionResult = {
@@ -79,17 +80,32 @@ export async function ingestAgentEvent(
     const connectorId = connectorForSource(event.source);
     let userIds = [...new Set(event.targetUserIds ?? [])];
     if (userIds.length === 0) {
+      const externalAccountIds = [
+        event.externalAccountId,
+        ...(event.externalAccountAliases ?? [])
+      ].map((value) => value.toLowerCase());
       const userRows = await client.query<{ user_id: string }>(
         `
           SELECT DISTINCT user_id
           FROM connector_installations
-          WHERE connector_id = $1 AND lower(external_account_id) = lower($2)
+          WHERE connector_id = $1
+            AND (
+              lower(external_account_id) = ANY($2::text[])
+              OR (
+                $1 = 'github'
+                AND (
+                  lower(metadata->>'installation_id') = ANY($2::text[])
+                  OR COALESCE(metadata->'installation_ids', '[]'::jsonb)
+                    ?| $2::text[]
+                )
+              )
+            )
           UNION
           SELECT id AS user_id
           FROM users
-          WHERE $1 = 'gmail' AND lower(email) = lower($2)
+          WHERE $1 = 'gmail' AND lower(email) = ANY($2::text[])
         `,
-        [connectorId, event.externalAccountId]
+        [connectorId, externalAccountIds]
       );
       userIds = userRows.rows.map((row) => row.user_id);
     }
