@@ -81,7 +81,40 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.byKey(const ValueKey('onboarding_daily_news')));
+    final newsCard = find.byKey(const ValueKey('onboarding_daily_news'));
+    final codingCard = find.byKey(const ValueKey('onboarding_daily_coding'));
+    final newsSize = tester.getSize(newsCard);
+    final codingSize = tester.getSize(codingCard);
+    expect(newsSize.width, closeTo(newsSize.height, 0.1));
+    expect(codingSize.width, closeTo(codingSize.height, 0.1));
+    expect(
+      tester.getTopLeft(newsCard).dy,
+      closeTo(tester.getTopLeft(codingCard).dy, 0.1),
+    );
+    expect(
+      tester.getBottomLeft(newsCard).dy,
+      lessThan(
+        tester
+            .getTopLeft(
+              find.text(
+                'Assistant is pinned so you always have a place to start.',
+              ),
+            )
+            .dy,
+      ),
+    );
+    expect(
+      tester
+          .getTopLeft(
+            find.text(
+              'Assistant is pinned so you always have a place to start.',
+            ),
+          )
+          .dy,
+      lessThan(tester.getTopLeft(find.text('Assistant')).dy),
+    );
+
+    await tester.tap(newsCard);
     await tester.pumpAndSettle();
 
     expect(find.text('Assistant opened'), findsOneWidget);

@@ -281,6 +281,10 @@ class _InboxList extends StatelessWidget {
           ],
           const SizedBox(height: SydneySpacing.sm),
         ],
+        if (!hasCreatedAgent && assistant != null) ...[
+          _OnboardingSuggestions(assistant: assistant),
+          const SizedBox(height: SydneySpacing.md),
+        ],
         if (!hasCreatedAgent) ...[
           const SydneyNotice(
             text: 'Assistant is pinned so you always have a place to start.',
@@ -296,10 +300,6 @@ class _InboxList extends StatelessWidget {
                 ).pushNamed(AppRoutes.thread, arguments: agent),
           ),
           const SizedBox(height: 6),
-        ],
-        if (!hasCreatedAgent && assistant != null) ...[
-          const SizedBox(height: SydneySpacing.lg),
-          _OnboardingSuggestions(assistant: assistant),
         ],
       ],
     );
@@ -325,21 +325,36 @@ class _OnboardingSuggestions extends StatelessWidget {
           ),
         ),
         const SizedBox(height: SydneySpacing.sm),
-        for (var index = 0; index < _onboardingSuggestions.length; index++) ...[
-          _OnboardingSuggestionCard(
-            suggestion: _onboardingSuggestions[index],
-            onTap:
-                () => Navigator.of(context).pushNamed(
-                  AppRoutes.thread,
-                  arguments: ThreadLaunchRequest(
-                    agent: assistant,
-                    initialMessage: _onboardingSuggestions[index].prompt,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (
+              var index = 0;
+              index < _onboardingSuggestions.length;
+              index++
+            ) ...[
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: _OnboardingSuggestionCard(
+                    suggestion: _onboardingSuggestions[index],
+                    onTap:
+                        () => Navigator.of(context).pushNamed(
+                          AppRoutes.thread,
+                          arguments: ThreadLaunchRequest(
+                            agent: assistant,
+                            initialMessage:
+                                _onboardingSuggestions[index].prompt,
+                          ),
+                        ),
                   ),
                 ),
-          ),
-          if (index != _onboardingSuggestions.length - 1)
-            const SizedBox(height: SydneySpacing.sm),
-        ],
+              ),
+              if (index != _onboardingSuggestions.length - 1)
+                const SizedBox(width: SydneySpacing.sm),
+            ],
+          ],
+        ),
       ],
     );
   }
@@ -358,65 +373,72 @@ class _OnboardingSuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: SydneyColors.agentBubble,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         key: ValueKey('onboarding_${suggestion.id}'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(SydneySpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: SydneyColors.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 5,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: SydneyColors.primarySoft,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  suggestion.icon,
-                  size: 18,
-                  color: SydneyColors.primary,
+              Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: SydneyColors.primarySoft,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      suggestion.icon,
+                      size: 17,
+                      color: SydneyColors.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 17,
+                    color: SydneyColors.primary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: SydneySpacing.sm),
+              Text(
+                suggestion.question,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: SydneyColors.ink,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  height: 1.2,
                 ),
               ),
-              const SizedBox(width: SydneySpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      suggestion.question,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: SydneyColors.ink,
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      suggestion.answer,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SydneyColors.mutedInk,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: SydneySpacing.xs),
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 18,
-                  color: SydneyColors.primary,
+              const SizedBox(height: 4),
+              Text(
+                suggestion.answer,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SydneyColors.mutedInk,
+                  fontSize: 11,
+                  height: 1.25,
                 ),
               ),
             ],

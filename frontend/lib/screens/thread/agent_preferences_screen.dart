@@ -209,7 +209,8 @@ class _AgentPreferencesScreenState
               child: SwitchListTile(
                 value: _isPaused,
                 onChanged: (paused) => setState(() => _isPaused = paused),
-                activeThumbColor: SydneyColors.primary,
+                activeThumbColor: Colors.white,
+                activeTrackColor: SydneyColors.primary,
                 title: Text(
                   _isPaused ? 'Resume agent' : 'Pause agent',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
+import 'package:sydney/design/tokens.dart';
 import 'package:sydney/providers/agents_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/screens/thread/thread_screen.dart';
@@ -179,6 +180,11 @@ void main() {
       tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
       isTrue,
     );
+    final resumeSwitch = tester.widget<SwitchListTile>(
+      find.byType(SwitchListTile),
+    );
+    expect(resumeSwitch.activeThumbColor, Colors.white);
+    expect(resumeSwitch.activeTrackColor, SydneyColors.primary);
   });
 
   testWidgets('thread keeps its composer visible while messages load', (
