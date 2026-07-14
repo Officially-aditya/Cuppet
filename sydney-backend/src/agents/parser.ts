@@ -14,6 +14,7 @@ export interface ParsedIntent {
   safety_level: "read" | "suggest" | "act";
   risk_level: "low" | "medium" | "high";
   permissions_needed: string[];
+  realtime_enabled?: boolean;
   response_limit?: "concise" | "balanced" | "detailed";
   active_until?: string;
 }
@@ -1039,21 +1040,66 @@ function baseIntent(
   prompt: string,
   overrides: Partial<ParsedIntent>
 ): ParsedIntent {
+  const intent = overrides.intent ?? "custom_read_agent";
+  const realtimeEnabled =
+    overrides.realtime_enabled ??
+    (isIntrinsicallyRealtimeIntent(intent) ||
+      (supportsRealtimeIntent(intent) && requestsRealtime(prompt)));
+  const scheduleCron =
+    realtimeEnabled && parseSchedule(prompt) === null
+      ? null
+      : overrides.schedule_cron ?? null;
+
   return {
     name: overrides.name ?? "Custom Agent",
     avatar: overrides.avatar ?? "spark",
-    intent: overrides.intent ?? "custom_read_agent",
+    intent,
     connector: overrides.connector ?? null,
     connector_ids: overrides.connector_ids ?? [],
     unsupported_connector: overrides.unsupported_connector ?? null,
     action: overrides.action ?? prompt,
-    schedule_cron: overrides.schedule_cron ?? null,
+    schedule_cron: scheduleCron,
     output_template: overrides.output_template ?? "plain_text",
     template_config: templateConfig(overrides.output_template ?? "plain_text"),
     safety_level: "read",
     risk_level: "low",
-    permissions_needed: overrides.permissions_needed ?? []
+    permissions_needed: overrides.permissions_needed ?? [],
+    realtime_enabled: realtimeEnabled
   };
+}
+
+const REALTIME_INTENTS = new Set([
+  "github_activity_digest",
+  "slack_urgent_watcher",
+  "lead_response_monitor",
+  "calendar_agenda",
+  "drive_summary",
+  "pdf_summary",
+  "meeting_recap",
+  "portfolio_watch"
+]);
+
+function supportsRealtimeIntent(intent: string): boolean {
+  return REALTIME_INTENTS.has(intent);
+}
+
+function isIntrinsicallyRealtimeIntent(intent: string): boolean {
+  return intent === "slack_urgent_watcher" || intent === "lead_response_monitor";
+}
+
+function requestsRealtime(prompt: string): boolean {
+  const lower = prompt.toLowerCase();
+  return (
+    /\breal[ -]?time\b|\bimmediately\b|\binstantly\b|\bas soon as\b|\bthe moment\b/.test(
+      lower
+    ) ||
+    /\b(?:notify|alert|inform|tell|message|ping)\s+me\s+(?:when|whenever|if)\b/.test(
+      lower
+    ) ||
+    /\b(?:when|whenever|if)\b[^.!?]{0,100}\b(?:changes?|updates?|push(?:es)?|commits?|releases?|opens?|closes?|merges?)\b/.test(
+      lower
+    )
+  );
 }
 
 function templateConfig(template: string): Record<string, boolean> {

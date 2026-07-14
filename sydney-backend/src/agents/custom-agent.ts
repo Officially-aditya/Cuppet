@@ -1,11 +1,11 @@
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText,
-  totalAnthropicTokens,
-  type AnthropicContentBlock,
-  type AnthropicTextMessage
-} from "./anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText,
+  totalLlmTokens,
+  type LlmContentBlock,
+  type LlmTextMessage
+} from "./llm.js";
 import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
 import { responseLimitInstruction } from "./parser.js";
@@ -27,7 +27,7 @@ export async function renderLlmCustomAgent(input: {
   heading: string;
   responseLimit?: string;
 }): Promise<RenderedAgentMessage | null> {
-  if (!anthropicConfigured()) {
+  if (!llmConfigured()) {
     return null;
   }
 
@@ -47,7 +47,7 @@ export async function renderLlmCustomAgent(input: {
       responseLimitInstruction(input.responseLimit)
     ].join(" ");
 
-    const messages: AnthropicTextMessage[] = [
+    const messages: LlmTextMessage[] = [
       {
         role: "user",
         content: [
@@ -61,7 +61,7 @@ export async function renderLlmCustomAgent(input: {
 
     const maxTokens = input.responseLimit === "detailed" ? 1500 : input.responseLimit === "concise" ? 500 : 800;
 
-    let response = await createAnthropicMessage({
+    let response = await createLlmMessage({
       maxTokens,
       system,
       messages,
@@ -69,24 +69,23 @@ export async function renderLlmCustomAgent(input: {
         ? {
             tools: [
               {
-                type: "web_search_20250305",
                 name: "web_search",
-                max_uses: 3
+                maxUses: 3
               }
             ]
           }
         : {})
     });
 
-    let tokensUsed = totalAnthropicTokens(response);
-    const allContent: AnthropicContentBlock[] = [...response.content];
+    let tokensUsed = totalLlmTokens(response);
+    const allContent: LlmContentBlock[] = [...response.content];
 
     for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
       if (i >= maxContinuationTurns) {
         break;
       }
       messages.push({ role: "assistant", content: response.content });
-      response = await createAnthropicMessage({
+      response = await createLlmMessage({
         maxTokens,
         system,
         messages,
@@ -94,19 +93,18 @@ export async function renderLlmCustomAgent(input: {
           ? {
               tools: [
                 {
-                  type: "web_search_20250305",
                   name: "web_search",
-                  max_uses: 3
+                  maxUses: 3
                 }
               ]
             }
           : {})
       });
-      tokensUsed += totalAnthropicTokens(response);
+      tokensUsed += totalLlmTokens(response);
       allContent.push(...response.content);
     }
 
-    const body = extractAnthropicText(response.content) || extractAnthropicText(allContent);
+    const body = extractLlmText(response.content) || extractLlmText(allContent);
     if (!body) return null;
 
     const parsed = parseNewsBriefText(input.heading, body);
@@ -127,7 +125,7 @@ function shouldUseWebSearch(text: string): boolean {
   );
 }
 
-function extractSourceRefs(content: AnthropicContentBlock[]): SourceRef[] {
+function extractSourceRefs(content: LlmContentBlock[]): SourceRef[] {
   const citationRefs = extractCitationRefs(content);
   if (citationRefs.length > 0) {
     return citationRefs;
@@ -136,7 +134,7 @@ function extractSourceRefs(content: AnthropicContentBlock[]): SourceRef[] {
   return extractSearchResultRefs(content);
 }
 
-function extractCitationRefs(content: AnthropicContentBlock[]): SourceRef[] {
+function extractCitationRefs(content: LlmContentBlock[]): SourceRef[] {
   const byUrl = new Map<string, SourceRef>();
 
   for (const block of content) {
@@ -158,7 +156,7 @@ function extractCitationRefs(content: AnthropicContentBlock[]): SourceRef[] {
   return [...byUrl.values()];
 }
 
-function extractSearchResultRefs(content: AnthropicContentBlock[]): SourceRef[] {
+function extractSearchResultRefs(content: LlmContentBlock[]): SourceRef[] {
   const byUrl = new Map<string, SourceRef>();
 
   for (const block of content) {

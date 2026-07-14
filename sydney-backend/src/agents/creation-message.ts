@@ -58,3 +58,16 @@ export function agentCreationThreadMessage(input: {
     }
   };
 }
+
+export function agentCreationReadyDetail(
+  parsedIntent: ParsedIntent,
+  describeSchedule: (cron: string) => string = (cron) => `on schedule ${cron}`
+): string {
+  if (parsedIntent.realtime_enabled) {
+    return "It will react to matching activity and notify you immediately.";
+  }
+  if (parsedIntent.schedule_cron) {
+    return `It will run ${describeSchedule(parsedIntent.schedule_cron)}.`;
+  }
+  return "It is ready for manual runs.";
+}

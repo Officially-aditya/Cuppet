@@ -25,7 +25,7 @@ export type AgentPlanProposal = {
 export type ValidatedAgentPlan = {
   intent: ParsedIntent;
   trigger: {
-    type: "schedule" | "manual";
+    type: "event" | "schedule" | "manual";
     schedule_cron: string | null;
     event: string | null;
     config: Record<string, unknown>;
@@ -39,6 +39,7 @@ const supportedConnectors = new Set([
   "drive",
   "calendar",
   "github",
+  "slack",
   "web_search"
 ]);
 const supportedTemplates = new Set([
@@ -84,6 +85,12 @@ export function validateAgentPlan(
     connector_ids: connectors,
     action: cleanLongText(proposal.action) ?? base.action,
     schedule_cron: trigger.type === "schedule" ? trigger.schedule_cron : null,
+    realtime_enabled:
+      trigger.type === "event"
+        ? true
+        : trigger.type === "schedule"
+          ? false
+          : base.realtime_enabled ?? false,
     output_template: outputTemplate,
     template_config: templateConfig(outputTemplate),
     safety_level: safetyLevel,
@@ -138,6 +145,14 @@ function normalizeTrigger(
 ): ValidatedAgentPlan["trigger"] {
   const triggerType = proposal.trigger?.type?.trim().toLowerCase();
   if (triggerType === "event") {
+    if (supportsEventTrigger(base.intent)) {
+      return {
+        type: "event",
+        schedule_cron: null,
+        event: proposal.trigger?.event ?? defaultEventForIntent(base.intent),
+        config: proposal.trigger?.config ?? {}
+      };
+    }
     unsupported.add(`trigger:event:${proposal.trigger?.event ?? "unknown"}`);
     warnings.push("Event-based triggers are not supported yet; using manual runs until a connector watcher exists.");
     if (base.schedule_cron) {
@@ -152,6 +167,15 @@ function normalizeTrigger(
       type: "manual",
       schedule_cron: null,
       event: proposal.trigger?.event ?? null,
+      config: proposal.trigger?.config ?? {}
+    };
+  }
+
+  if (base.realtime_enabled && triggerType !== "schedule") {
+    return {
+      type: "event",
+      schedule_cron: null,
+      event: proposal.trigger?.event ?? defaultEventForIntent(base.intent),
       config: proposal.trigger?.config ?? {}
     };
   }
@@ -194,6 +218,35 @@ function normalizeTrigger(
     event: null,
     config: proposal.trigger?.config ?? {}
   };
+}
+
+const EVENT_TRIGGER_INTENTS = new Set([
+  "github_activity_digest",
+  "slack_urgent_watcher",
+  "lead_response_monitor",
+  "calendar_agenda",
+  "drive_summary",
+  "pdf_summary",
+  "meeting_recap",
+  "portfolio_watch"
+]);
+
+function supportsEventTrigger(intent: string): boolean {
+  return EVENT_TRIGGER_INTENTS.has(intent);
+}
+
+function defaultEventForIntent(intent: string): string {
+  const events: Record<string, string> = {
+    github_activity_digest: "github.repository_activity",
+    slack_urgent_watcher: "slack.urgent_message",
+    lead_response_monitor: "gmail.new_message",
+    calendar_agenda: "calendar.changed",
+    drive_summary: "drive.changed",
+    pdf_summary: "drive.changed",
+    meeting_recap: "drive.changed",
+    portfolio_watch: "stock.threshold_crossed"
+  };
+  return events[intent] ?? "connector.changed";
 }
 
 function normalizeOutputTemplate(

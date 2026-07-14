@@ -1,13 +1,13 @@
 import type { AgentRunTrigger } from "../queue/index.js";
 import {
-  createAnthropicMessage,
-  extractAnthropicText,
-  totalAnthropicTokens,
-  type AnthropicContentBlock,
-  type AnthropicTextMessage,
-  type AnthropicTextBlock,
-  type AnthropicWebSearchToolResultBlock
-} from "./anthropic.js";
+  createLlmMessage,
+  extractLlmText,
+  totalLlmTokens,
+  type LlmContentBlock,
+  type LlmTextMessage,
+  type LlmTextBlock,
+  type LlmWebSearchToolResultBlock
+} from "./llm.js";
 import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
 
@@ -23,7 +23,7 @@ type SourceRef = {
   page_age?: string;
 };
 
-type AnthropicWebSearchResult = {
+type LlmWebSearchResult = {
   type: "web_search_result";
   url: string;
   title?: string | null;
@@ -71,7 +71,7 @@ async function createWebNewsBrief(input: {
   systemPrompt: string;
   userMessage: string;
 }): Promise<RenderedAgentMessage> {
-  const messages: AnthropicTextMessage[] = [
+  const messages: LlmTextMessage[] = [
     {
       role: "user" as const,
       content: input.userMessage
@@ -79,12 +79,12 @@ async function createWebNewsBrief(input: {
   ];
 
   let response = await createNewsMessage(messages, input.systemPrompt);
-  let tokensUsed = totalAnthropicTokens(response);
+  let tokensUsed = totalLlmTokens(response);
   const allContent = [...response.content];
 
   for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
     if (i >= maxContinuationTurns) {
-      throw new Error("Anthropic web search paused too many times.");
+      throw new Error("LLM web search paused too many times.");
     }
 
     messages.push({
@@ -92,18 +92,18 @@ async function createWebNewsBrief(input: {
       content: response.content
     });
     response = await createNewsMessage(messages, input.systemPrompt);
-    tokensUsed += totalAnthropicTokens(response);
+    tokensUsed += totalLlmTokens(response);
     allContent.push(...response.content);
   }
 
   const searchErrors = extractSearchErrors(allContent);
   if (searchErrors.length > 0) {
-    throw new Error(`Anthropic web search failed: ${searchErrors.join(", ")}`);
+    throw new Error(`LLM web search failed: ${searchErrors.join(", ")}`);
   }
 
   const body = extractFinalText(response.content) || extractFinalText(allContent);
   if (!body) {
-    throw new Error("Anthropic returned no Tech News brief text.");
+    throw new Error("LLM provider returned no Tech News brief text.");
   }
 
   const heading = input.options.heading || "News brief";
@@ -115,18 +115,17 @@ async function createWebNewsBrief(input: {
 }
 
 async function createNewsMessage(
-  messages: AnthropicTextMessage[],
+  messages: LlmTextMessage[],
   systemPrompt: string
 ){
-  return createAnthropicMessage({
+  return createLlmMessage({
     messages,
     system: systemPrompt,
     maxTokens: 1200,
     tools: [
       {
-        type: "web_search_20250305",
         name: "web_search",
-        max_uses: 3
+        maxUses: 3
       }
     ]
   });
@@ -220,25 +219,25 @@ function withHeading(body: string, heading: string | undefined): string {
     : [cleanHeading, body].join("\n\n");
 }
 
-function extractFinalText(content: AnthropicContentBlock[]): string {
+function extractFinalText(content: LlmContentBlock[]): string {
   const lastSearchResultIndex = lastWebSearchResultIndex(content);
   const candidateBlocks =
     lastSearchResultIndex === -1
       ? content
       : content.slice(lastSearchResultIndex + 1);
 
-  const text = extractAnthropicText(candidateBlocks);
+  const text = extractLlmText(candidateBlocks);
 
   if (text) {
     return normalizeDigestText(text);
   }
 
-  const fallbackText = extractAnthropicText(content);
+  const fallbackText = extractLlmText(content);
 
   return normalizeDigestText(fallbackText);
 }
 
-function lastWebSearchResultIndex(content: AnthropicContentBlock[]): number {
+function lastWebSearchResultIndex(content: LlmContentBlock[]): number {
   for (let i = content.length - 1; i >= 0; i -= 1) {
     if (content[i]?.type === "web_search_tool_result") {
       return i;
@@ -248,7 +247,7 @@ function lastWebSearchResultIndex(content: AnthropicContentBlock[]): number {
   return -1;
 }
 
-function extractSourceRefs(content: AnthropicContentBlock[]): SourceRef[] {
+function extractSourceRefs(content: LlmContentBlock[]): SourceRef[] {
   const citationRefs = extractCitationRefs(content);
   if (citationRefs.length > 0) {
     return citationRefs;
@@ -257,7 +256,7 @@ function extractSourceRefs(content: AnthropicContentBlock[]): SourceRef[] {
   return extractSearchResultRefs(content);
 }
 
-function extractCitationRefs(content: AnthropicContentBlock[]): SourceRef[] {
+function extractCitationRefs(content: LlmContentBlock[]): SourceRef[] {
   const byUrl = new Map<string, SourceRef>();
 
   for (const block of content) {
@@ -279,7 +278,7 @@ function extractCitationRefs(content: AnthropicContentBlock[]): SourceRef[] {
   return [...byUrl.values()];
 }
 
-function extractSearchResultRefs(content: AnthropicContentBlock[]): SourceRef[] {
+function extractSearchResultRefs(content: LlmContentBlock[]): SourceRef[] {
   const byUrl = new Map<string, SourceRef>();
 
   for (const block of content) {
@@ -315,7 +314,7 @@ function normalizeDigestText(text: string): string {
     .trim();
 }
 
-function extractSearchErrors(content: AnthropicContentBlock[]): string[] {
+function extractSearchErrors(content: LlmContentBlock[]): string[] {
   return content.flatMap((block) => {
     if (
       block.type === "web_search_tool_result" &&

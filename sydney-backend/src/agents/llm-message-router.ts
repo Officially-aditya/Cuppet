@@ -1,8 +1,8 @@
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText
-} from "./anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText
+} from "./llm.js";
 import type { AgentMessageRoute, AgentMessageRouterContext } from "./message-router.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
 import { z } from "zod";
@@ -38,12 +38,12 @@ export async function refineAmbiguousAgentMessage(input: {
   text: string;
   route: AgentMessageRoute;
 }): Promise<AgentMessageRoute | null> {
-  if (!anthropicConfigured() || input.route.confidence >= 0.7) {
+  if (!llmConfigured() || input.route.confidence >= 0.7) {
     return null;
   }
 
   try {
-    const response = await createAnthropicMessage({
+    const response = await createLlmMessage({
       maxTokens: 420,
       system: [
         "You classify one message sent inside an existing Sydney agent thread.",
@@ -74,7 +74,7 @@ export async function refineAmbiguousAgentMessage(input: {
       ]
     });
 
-    const parsed = parseJson(extractAnthropicText(response.content));
+    const parsed = parseJson(extractLlmText(response.content));
     return toRoute(input.route, parsed);
   } catch {
     return null;

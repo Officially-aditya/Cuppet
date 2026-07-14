@@ -1,9 +1,9 @@
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText,
-  totalAnthropicTokens
-} from "./anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText,
+  totalLlmTokens
+} from "./llm.js";
 import {
   untrustedDataBlock,
   userInstructionBlock
@@ -21,12 +21,12 @@ export async function synthesizeConnectorDigest(input: {
   records: string[];
   maxItems?: number;
 }): Promise<ConnectorSynthesis | null> {
-  if (!anthropicConfigured() || input.records.length === 0) {
+  if (!llmConfigured() || input.records.length === 0) {
     return null;
   }
 
   try {
-    const response = await createAnthropicMessage({
+    const response = await createLlmMessage({
       maxTokens: 650,
       system: [
         "You write concise Sydney connector digests.",
@@ -55,12 +55,12 @@ export async function synthesizeConnectorDigest(input: {
       ]
     });
 
-    const summary = extractAnthropicText(response.content)
+    const summary = extractLlmText(response.content)
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
     return summary
-      ? { summary, tokensUsed: totalAnthropicTokens(response) }
+      ? { summary, tokensUsed: totalLlmTokens(response) }
       : null;
   } catch {
     return null;

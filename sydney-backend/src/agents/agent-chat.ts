@@ -1,10 +1,10 @@
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText,
-  type AnthropicContentBlock,
-  type AnthropicTextMessage
-} from "./anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText,
+  type LlmContentBlock,
+  type LlmTextMessage
+} from "./llm.js";
 import { responseLimitInstruction, stockSymbols, type ParsedIntent } from "./parser.js";
 import { fetchSourceReferenceDetail } from "../connectors/google-workspace.js";
 import {
@@ -26,7 +26,7 @@ export type AgentChatContext = {
 export async function createAgentChatReply(
   context: AgentChatContext
 ): Promise<string> {
-  if (!anthropicConfigured()) {
+  if (!llmConfigured()) {
     return fallbackAgentReply(context);
   }
 
@@ -114,7 +114,7 @@ export async function createAgentChatReply(
       liveStockContext
     );
     const baseMaxTokens = responseLimit === "detailed" ? 1500 : responseLimit === "concise" ? 500 : (useWebSearch ? 1100 : 700);
-    let response = await createAnthropicMessage({
+    let response = await createLlmMessage({
       maxTokens: baseMaxTokens,
       system,
       messages,
@@ -122,22 +122,21 @@ export async function createAgentChatReply(
         ? {
             tools: [
               {
-                type: "web_search_20250305",
                 name: "web_search",
-                max_uses: 3
+                maxUses: 3
               }
             ]
           }
         : {})
     });
-    const allContent: AnthropicContentBlock[] = [...response.content];
+    const allContent: LlmContentBlock[] = [...response.content];
 
     for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
       if (i >= maxContinuationTurns) {
         break;
       }
       messages.push({ role: "assistant", content: response.content });
-      response = await createAnthropicMessage({
+      response = await createLlmMessage({
         maxTokens: baseMaxTokens,
         system,
         messages,
@@ -145,9 +144,8 @@ export async function createAgentChatReply(
           ? {
               tools: [
                 {
-                  type: "web_search_20250305",
                   name: "web_search",
-                  max_uses: 3
+                  maxUses: 3
                 }
               ]
             }
@@ -157,8 +155,8 @@ export async function createAgentChatReply(
     }
 
     const reply =
-      extractAnthropicText(response.content) ||
-      extractAnthropicText(allContent);
+      extractLlmText(response.content) ||
+      extractLlmText(allContent);
     return reply || fallbackAgentReply(context);
   } catch {
     return fallbackAgentReply(context);
@@ -168,8 +166,8 @@ export async function createAgentChatReply(
 function buildMessages(
   context: AgentChatContext,
   fetchedReferencesText: string
-): AnthropicTextMessage[] {
-  const messages: AnthropicTextMessage[] = [];
+): LlmTextMessage[] {
+  const messages: LlmTextMessage[] = [];
   const agentContext = [
     userInstructionBlock("agent_name", context.agent.name, 120),
     userInstructionBlock(

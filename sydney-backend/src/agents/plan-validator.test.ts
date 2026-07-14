@@ -28,3 +28,24 @@ test("LLM refinement cannot reroute a deterministic Calendar agent", () => {
   assert.equal(result.intent.intent, "calendar_agenda");
   assert.deepEqual(result.intent.connector_ids, ["calendar"]);
 });
+
+test("accepts event triggers for realtime-capable connector agents", () => {
+  const githubIntent: ParsedIntent = {
+    ...calendarIntent,
+    name: "Repository Monitor",
+    intent: "github_activity_digest",
+    connector: "github",
+    connector_ids: ["github"],
+    schedule_cron: null,
+    realtime_enabled: true
+  };
+
+  const result = validateAgentPlan(githubIntent, {
+    trigger: { type: "event", event: "github.repository_activity" }
+  });
+
+  assert.equal(result.trigger.type, "event");
+  assert.equal(result.intent.realtime_enabled, true);
+  assert.equal(result.intent.schedule_cron, null);
+  assert.deepEqual(result.unsupported_requirements, []);
+});

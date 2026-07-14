@@ -18,7 +18,10 @@ import { pool } from "../db/index.js";
 import { enqueueAgentRun } from "../queue/index.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
-import { agentCreationThreadMessage } from "../agents/creation-message.js";
+import {
+  agentCreationReadyDetail,
+  agentCreationThreadMessage
+} from "../agents/creation-message.js";
 import {
   hasSecurityValidationIssue,
   validatedTextSchema
@@ -1072,9 +1075,7 @@ async function writeAgentCreatedMessage(
   const message = agentCreationThreadMessage({
     parsedIntent,
     githubConnected,
-    readyDetail: parsedIntent.schedule_cron
-      ? `It will run ${describeSchedule(parsedIntent.schedule_cron)}.`
-      : "It is ready for on-demand replies."
+    readyDetail: agentCreationReadyDetail(parsedIntent, describeSchedule)
   });
 
   await insertMessage(client, {
@@ -1182,9 +1183,7 @@ function assistantAgentCreatedContent(parsedIntent: ParsedIntent) {
     data: {
       body: [
         `${parsedIntent.name} is ready.`,
-        parsedIntent.schedule_cron
-          ? `It will run ${describeSchedule(parsedIntent.schedule_cron)}.`
-          : "I did not detect a schedule, so it is ready for manual runs.",
+        agentCreationReadyDetail(parsedIntent, describeSchedule),
         "I created it as a new contact in your inbox."
       ].join("\n")
     }

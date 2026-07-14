@@ -10,7 +10,10 @@ import type { ParsedIntent } from "./parser.js";
 import { removeScheduleForAgent, syncAgentSchedule } from "./scheduler.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
-import { agentCreationThreadMessage } from "./creation-message.js";
+import {
+  agentCreationReadyDetail,
+  agentCreationThreadMessage
+} from "./creation-message.js";
 import {
   cronSchema,
   hasSecurityValidationIssue,
@@ -644,9 +647,7 @@ async function writeAgentCreatedMessage(
   const message = agentCreationThreadMessage({
     parsedIntent,
     githubConnected,
-    readyDetail: parsedIntent.schedule_cron
-      ? `It will run on schedule ${parsedIntent.schedule_cron}.`
-      : "It is ready for on-demand replies."
+    readyDetail: agentCreationReadyDetail(parsedIntent)
   });
 
   await pool.query(

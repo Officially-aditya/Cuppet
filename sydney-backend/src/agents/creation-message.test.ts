@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { agentCreationThreadMessage } from "./creation-message.js";
+import {
+  agentCreationReadyDetail,
+  agentCreationThreadMessage
+} from "./creation-message.js";
 import { parseIntent } from "./parser.js";
 
 test("asks the user to connect GitHub in a new GitHub agent thread", () => {
@@ -43,4 +46,16 @@ test("keeps the ready system message when GitHub is connected", () => {
   assert.equal(message.role, "system");
   assert.equal(message.content.template, "system");
   assert.equal(message.content.data.message, "GitHub Activity is ready.");
+});
+
+test("describes realtime agents without inventing a daily schedule", () => {
+  const parsedIntent = parseIntent(
+    "Track changes in my GitHub repository and inform me immediately."
+  );
+
+  assert.equal(
+    agentCreationReadyDetail(parsedIntent),
+    "It will react to matching activity and notify you immediately."
+  );
+  assert.doesNotMatch(agentCreationReadyDetail(parsedIntent), /daily|9:00/i);
 });

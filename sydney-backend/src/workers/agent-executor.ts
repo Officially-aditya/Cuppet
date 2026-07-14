@@ -25,12 +25,12 @@ import {
   type NewsBriefItem
 } from "../agents/output.js";
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText,
-  totalAnthropicTokens,
-  type AnthropicTextMessage
-} from "../agents/anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText,
+  totalLlmTokens,
+  type LlmTextMessage
+} from "../agents/llm.js";
 import { pool } from "../db/index.js";
 import {
   agentExecutorQueueName,
@@ -1074,7 +1074,7 @@ async function renderStudyGuideAgent(context: {
 
   agentDebug("[StudyGuideAgent] running agentId:", agent.id, "previously_covered_topics:", topicsCovered);
 
-  if (!anthropicConfigured()) {
+  if (!llmConfigured()) {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
   }
 
@@ -1111,7 +1111,7 @@ async function renderStudyGuideAgent(context: {
         const currentChunkText = chunks[chunkIdx] || "";
         agentDebug(`[StudyGuideAgent] Studying chunk ${chunkIdx + 1}/${chunks.length} of ${selectedFile.name}`);
 
-        const response = await createAnthropicMessage({
+        const response = await createLlmMessage({
           maxTokens: 1200,
           system: [
             "You run a Sydney custom PDF study and revision agent.",
@@ -1143,7 +1143,7 @@ async function renderStudyGuideAgent(context: {
           ]
         });
 
-        const body = extractAnthropicText(response.content);
+        const body = extractLlmText(response.content);
         const match = body.match(/\{[\s\S]*\}/);
         if (!match) {
           throw new Error("Invalid LLM response format: No JSON object found.");
@@ -1183,7 +1183,7 @@ async function renderStudyGuideAgent(context: {
             initiallyCollapsed: true
           },
           {
-            tokensUsed: totalAnthropicTokens(response)
+            tokensUsed: totalLlmTokens(response)
           }
         );
       }
@@ -1194,7 +1194,7 @@ async function renderStudyGuideAgent(context: {
 
   // Fallback to standard standard course generator if no Drive PDF is available
   try {
-    const response = await createAnthropicMessage({
+    const response = await createLlmMessage({
       maxTokens: 1000,
       system: [
         "You run a Sydney custom study guide agent.",
@@ -1231,7 +1231,7 @@ async function renderStudyGuideAgent(context: {
       ]
     });
 
-    const body = extractAnthropicText(response.content);
+    const body = extractLlmText(response.content);
     const match = body.match(/\{[\s\S]*\}/);
     if (!match) {
       throw new Error("Invalid LLM response format: No JSON object found.");
@@ -1256,7 +1256,7 @@ async function renderStudyGuideAgent(context: {
         initiallyCollapsed: true
       },
       {
-        tokensUsed: totalAnthropicTokens(response)
+        tokensUsed: totalLlmTokens(response)
       }
     );
   } catch (error) {
@@ -1278,12 +1278,12 @@ async function generateDynamicDsaQuestion(params: {
 }): Promise<DsaQuestion> {
   const { agentPrompt, agentId, topicsCovered } = params;
 
-  if (anthropicConfigured()) {
+  if (llmConfigured()) {
     try {
       let chosenQuestion: DsaQuestion | null = null;
       let attempts = 0;
       while (attempts < 3) {
-        const response = await createAnthropicMessage({
+        const response = await createLlmMessage({
           maxTokens: 1000,
           system: [
             "You run a Sydney DSA (Data Structures & Algorithms) daily practice agent.",
@@ -1314,7 +1314,7 @@ async function generateDynamicDsaQuestion(params: {
           ]
         });
 
-        const body = extractAnthropicText(response.content);
+        const body = extractLlmText(response.content);
         const match = body.match(/\{[\s\S]*\}/);
         if (match) {
           const parsed = JSON.parse(match[0]);
@@ -1365,7 +1365,7 @@ async function renderDsaQuestionAgent(context: {
 
   agentDebug("[DsaQuestionAgent] running agentId:", agent.id, "previously_covered_problems:", topicsCovered);
 
-  if (!anthropicConfigured()) {
+  if (!llmConfigured()) {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
   }
 
@@ -1376,7 +1376,7 @@ async function renderDsaQuestionAgent(context: {
       topicsCovered
     });
 
-    const response = await createAnthropicMessage({
+    const response = await createLlmMessage({
       maxTokens: 1500,
       system: [
         "You run a Sydney DSA (Data Structures & Algorithms) daily practice agent.",
@@ -1416,7 +1416,7 @@ async function renderDsaQuestionAgent(context: {
       ]
     });
 
-    const body = extractAnthropicText(response.content);
+    const body = extractLlmText(response.content);
     const match = body.match(/\{[\s\S]*\}/);
     if (!match) {
       throw new Error("Invalid LLM response format: No JSON object found.");
@@ -1450,7 +1450,7 @@ async function renderDsaQuestionAgent(context: {
         actions
       },
       {
-        tokensUsed: totalAnthropicTokens(response)
+        tokensUsed: totalLlmTokens(response)
       }
     );
   } catch (error) {
@@ -1851,7 +1851,7 @@ async function renderContentExtractorAgent(context: {
 }): Promise<RenderedAgentMessage> {
   const { agent } = context;
 
-  if (!anthropicConfigured()) {
+  if (!llmConfigured()) {
     return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
   }
 
@@ -1880,7 +1880,7 @@ async function renderContentExtractorAgent(context: {
       "}"
     ].join("\n");
 
-    const messages: AnthropicTextMessage[] = [
+    const messages: LlmTextMessage[] = [
       {
         role: "user",
         content: [
@@ -1890,20 +1890,19 @@ async function renderContentExtractorAgent(context: {
       }
     ];
 
-    let response = await createAnthropicMessage({
+    let response = await createLlmMessage({
       maxTokens: 1200,
       system: systemPrompt,
       messages,
       tools: [
         {
-          type: "web_search_20250305",
           name: "web_search",
-          max_uses: 3
+          maxUses: 3
         }
       ]
     });
 
-    let tokensUsed = totalAnthropicTokens(response);
+    let tokensUsed = totalLlmTokens(response);
     const allContent = [...response.content];
 
     for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
@@ -1911,23 +1910,22 @@ async function renderContentExtractorAgent(context: {
         break;
       }
       messages.push({ role: "assistant", content: response.content });
-      response = await createAnthropicMessage({
+      response = await createLlmMessage({
         maxTokens: 1200,
         system: systemPrompt,
         messages,
         tools: [
           {
-            type: "web_search_20250305",
             name: "web_search",
-            max_uses: 3
+            maxUses: 3
           }
         ]
       });
-      tokensUsed += totalAnthropicTokens(response);
+      tokensUsed += totalLlmTokens(response);
       allContent.push(...response.content);
     }
 
-    const body = extractAnthropicText(response.content) || extractAnthropicText(allContent);
+    const body = extractLlmText(response.content) || extractLlmText(allContent);
     const match = body.match(/\{[\s\S]*\}/);
     if (!match) {
       throw new Error("Invalid LLM response format: No JSON object found.");

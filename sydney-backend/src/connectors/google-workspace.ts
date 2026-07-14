@@ -25,10 +25,10 @@ import {
 // @ts-ignore
 import pdfParse from "pdf-parse";
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText
-} from "../agents/anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText
+} from "../agents/llm.js";
 
 export type GoogleWorkspaceConnectorId = "gmail" | "drive" | "calendar";
 
@@ -164,9 +164,9 @@ function actionText(agent: WorkspaceAgent): string {
 }
 
 async function buildDynamicGmailQuery(prompt: string, action: string, defaultQuery: string): Promise<string> {
-  if (!anthropicConfigured()) return defaultQuery;
+  if (!llmConfigured()) return defaultQuery;
   try {
-    const response = await createAnthropicMessage({
+    const response = await createLlmMessage({
       maxTokens: 100,
       system: "You are a precise search query generator. Based on the user's agent prompt and action instructions, output ONLY the Gmail search query (using standard Gmail search operators like subject:, from:, newer_than:, has:attachment, etc.) that best retrieves the relevant messages. Do not explain, do not add quotes around the whole query unless needed by Gmail, just return the query string.",
       messages: [
@@ -176,7 +176,7 @@ async function buildDynamicGmailQuery(prompt: string, action: string, defaultQue
         }
       ]
     });
-    const query = extractAnthropicText(response.content).trim();
+    const query = extractLlmText(response.content).trim();
     return query || defaultQuery;
   } catch {
     return defaultQuery;
@@ -184,9 +184,9 @@ async function buildDynamicGmailQuery(prompt: string, action: string, defaultQue
 }
 
 async function buildDynamicDriveQuery(prompt: string, action: string, defaultQuery: string): Promise<string> {
-  if (!anthropicConfigured()) return defaultQuery;
+  if (!llmConfigured()) return defaultQuery;
   try {
-    const response = await createAnthropicMessage({
+    const response = await createLlmMessage({
       maxTokens: 150,
       system: "You are a precise Google Drive API search query generator. Based on the user's agent prompt and action, output ONLY the standard Google Drive API q parameter query string (e.g. name contains 'contract' or mimeType = 'application/pdf' or modifiedTime > '2023-01-01T00:00:00Z'). Do not add any markdown formatting, explanation, or quotes around the outer query. Just output the query string.",
       messages: [
@@ -196,7 +196,7 @@ async function buildDynamicDriveQuery(prompt: string, action: string, defaultQue
         }
       ]
     });
-    const query = extractAnthropicText(response.content).trim();
+    const query = extractLlmText(response.content).trim();
     return query || defaultQuery;
   } catch {
     return defaultQuery;

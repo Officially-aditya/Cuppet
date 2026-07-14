@@ -21,6 +21,7 @@ const envSchema = z.object({
   VAULT_ENCRYPTION_KEY: z
     .string()
     .regex(/^[a-f0-9]{64}$/i, "VAULT_ENCRYPTION_KEY must be 64 hex chars"),
+  LLM_PROVIDER: z.enum(["gemini", "anthropic"]).default("gemini"),
   ANTHROPIC_API_KEY: z.string().optional(),
   ANTHROPIC_MODEL: z.string().default("claude-haiku-4-5-20251001"),
   GEMINI_API_KEY: z.string().optional(),

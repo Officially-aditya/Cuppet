@@ -35,6 +35,31 @@ test("classifies GitHub repository activity as a GitHub connector agent", () => 
   assert.deepEqual(parsed.permissions_needed, [
     "GitHub profile and repository read access"
   ]);
+  assert.equal(parsed.realtime_enabled, false);
+});
+
+test("treats immediate repository change alerts as realtime, not daily", () => {
+  const parsed = parseIntent(
+    "Create an agent which tracks any changes in my repository Sydney, if there are any changes, inform me immediately"
+  );
+
+  assert.equal(parsed.intent, "github_activity_digest");
+  assert.equal(parsed.connector, "github");
+  assert.equal(parsed.realtime_enabled, true);
+  assert.equal(parsed.schedule_cron, null);
+});
+
+test("recognizes common realtime trigger language", () => {
+  for (const prompt of [
+    "Watch my GitHub repository in real time",
+    "Alert me whenever my GitHub repository changes",
+    "Notify me as soon as a GitHub pull request opens"
+  ]) {
+    const parsed = parseIntent(prompt);
+    assert.equal(parsed.intent, "github_activity_digest");
+    assert.equal(parsed.realtime_enabled, true, prompt);
+    assert.equal(parsed.schedule_cron, null, prompt);
+  }
 });
 
 test("content extractor is not classified as unsupported even when mentioning twitter or linkedin", () => {

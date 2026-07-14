@@ -169,8 +169,14 @@ behavior is safe. Keep connector permissions read-only, require deterministic
 authorization checks for every state-changing action, and maintain adversarial
 tests as connector capabilities expand.
 
-## Week 3 Tech News Agent
+## Model providers and web search
 
-The Tech News agent uses Anthropic Messages API server-side web search, so it only needs `ANTHROPIC_API_KEY`; there is no separate Brave Search key.
+The backend uses a provider-neutral model layer. Set `LLM_PROVIDER=gemini`
+(the default) with `GEMINI_API_KEY` to use Gemini and Google Search grounding.
+`GEMINI_MODEL` defaults to `gemini-3.1-flash-lite`.
 
-Anthropic web search must be enabled for the organization in Claude Console. `ANTHROPIC_MODEL` is optional and defaults to `claude-haiku-4-5-20251001`.
+Anthropic support remains available: set `LLM_PROVIDER=anthropic`,
+`ANTHROPIC_API_KEY`, and optionally `ANTHROPIC_MODEL`. Claude server-side web
+search must be enabled for the Anthropic organization when agents need current
+web results. The selected provider is used consistently by chat, intent
+refinement, connector summarization, and agent renderers.

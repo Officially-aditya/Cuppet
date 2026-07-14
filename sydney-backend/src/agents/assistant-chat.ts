@@ -1,27 +1,27 @@
 import {
-  anthropicConfigured,
-  createAnthropicMessage,
-  extractAnthropicText,
-  type AnthropicContentBlock,
-  type AnthropicTextMessage
-} from "./anthropic.js";
+  llmConfigured,
+  createLlmMessage,
+  extractLlmText,
+  type LlmContentBlock,
+  type LlmTextMessage
+} from "./llm.js";
 
 const maxContinuationTurns = 2;
 
 export async function createAssistantChatReply(text: string): Promise<string> {
-  if (!anthropicConfigured()) {
+  if (!llmConfigured()) {
     return fallbackAssistantReply(text);
   }
 
   try {
-    const messages: AnthropicTextMessage[] = [{ role: "user", content: text }];
+    const messages: LlmTextMessage[] = [{ role: "user", content: text }];
     const system = assistantSystemPrompt(shouldUseWebSearch(text));
     let response = await createAssistantMessage(messages, system, text);
-    const allContent: AnthropicContentBlock[] = [...response.content];
+    const allContent: LlmContentBlock[] = [...response.content];
 
     for (let i = 0; response.stop_reason === "pause_turn"; i += 1) {
       if (i >= maxContinuationTurns) {
-        throw new Error("Anthropic assistant chat paused too many times.");
+        throw new Error("LLM assistant chat paused too many times.");
       }
 
       messages.push({ role: "assistant", content: response.content });
@@ -37,12 +37,12 @@ export async function createAssistantChatReply(text: string): Promise<string> {
 }
 
 function createAssistantMessage(
-  messages: AnthropicTextMessage[],
+  messages: LlmTextMessage[],
   system: string,
   text: string
 ) {
   const useWebSearch = shouldUseWebSearch(text);
-  return createAnthropicMessage({
+  return createLlmMessage({
     maxTokens: useWebSearch ? 1100 : 700,
     system,
     messages,
@@ -50,9 +50,8 @@ function createAssistantMessage(
       ? {
           tools: [
             {
-              type: "web_search_20250305",
               name: "web_search",
-              max_uses: 3
+              maxUses: 3
             }
           ]
         }
@@ -83,16 +82,16 @@ function shouldUseWebSearch(text: string): boolean {
   );
 }
 
-function extractFinalText(content: AnthropicContentBlock[]): string {
+function extractFinalText(content: LlmContentBlock[]): string {
   const lastSearchResultIndex = lastWebSearchResultIndex(content);
   const candidateBlocks =
     lastSearchResultIndex === -1
       ? content
       : content.slice(lastSearchResultIndex + 1);
-  return extractAnthropicText(candidateBlocks) || extractAnthropicText(content);
+  return extractLlmText(candidateBlocks) || extractLlmText(content);
 }
 
-function lastWebSearchResultIndex(content: AnthropicContentBlock[]): number {
+function lastWebSearchResultIndex(content: LlmContentBlock[]): number {
   for (let i = content.length - 1; i >= 0; i -= 1) {
     if (content[i]?.type === "web_search_tool_result") {
       return i;
