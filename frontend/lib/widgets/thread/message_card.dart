@@ -16,6 +16,7 @@ import '../templates/study_guide_template.dart';
 import '../templates/dsa_question_template.dart';
 import '../templates/content_extractor_template.dart';
 import '../templates/portfolio_watch_template.dart';
+import '../templates/briefing_card_template.dart';
 
 class MessageCard extends StatelessWidget {
   const MessageCard({required this.message, this.onAction, super.key});
@@ -192,6 +193,20 @@ class _TemplateRouter extends StatelessWidget {
         },
       ),
       'portfolio_watch' => PortfolioWatchTemplate(data: data),
+      'briefing_card' => BriefingCardTemplate(
+        data: data,
+        onOpen:
+            data['assistant_context'] == true
+                ? null
+                : () {
+                  if (onAction != null) {
+                    onAction!({
+                      'type': 'open_in_assistant',
+                      'messageId': message.id,
+                    });
+                  }
+                },
+      ),
       _ => const PlainTextTemplate(
         data: {
           'text':

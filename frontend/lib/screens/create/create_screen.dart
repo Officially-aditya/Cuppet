@@ -76,7 +76,11 @@ class _CreateScreenState extends State<CreateScreen> {
                 padding: EdgeInsets.zero,
                 tooltip: 'Back',
                 onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 18,
+                  color: SydneyColors.ink,
+                ),
               ),
             ),
           ),
@@ -85,11 +89,11 @@ class _CreateScreenState extends State<CreateScreen> {
         title: Text(
           'New Agent',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: SydneyColors.ink,
-                letterSpacing: -0.5,
-              ),
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            color: SydneyColors.ink,
+            letterSpacing: -0.5,
+          ),
         ),
       ),
       body: SafeArea(
@@ -116,7 +120,9 @@ class _CreateScreenState extends State<CreateScreen> {
               const SizedBox(height: SydneySpacing.sm),
               Text(
                 _error!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: SydneyColors.danger),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: SydneyColors.danger),
               ),
             ],
             const SizedBox(height: SydneySpacing.lg),
@@ -242,10 +248,9 @@ class _PromptEditor extends StatelessWidget {
         maxLines: 12,
         textCapitalization: TextCapitalization.sentences,
         onChanged: onChanged,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: SydneyColors.ink,
-              height: 1.4,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: SydneyColors.ink, height: 1.4),
         decoration: const InputDecoration(
           hintText: 'What should this agent do?',
           hintStyle: TextStyle(color: SydneyColors.subtleInk),
@@ -275,13 +280,17 @@ class _AgentTemplateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: selected ? SydneyColors.primarySoft.withValues(alpha: 0.35) : SydneyColors.surface,
+        color:
+            selected
+                ? SydneyColors.primarySoft.withValues(alpha: 0.35)
+                : SydneyColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: selected
-                ? SydneyColors.primary.withValues(alpha: 0.06)
-                : const Color(0xFF17201C).withValues(alpha: 0.04),
+            color:
+                selected
+                    ? SydneyColors.primary.withValues(alpha: 0.06)
+                    : const Color(0xFF17201C).withValues(alpha: 0.04),
             offset: const Offset(4, 4),
             blurRadius: 8,
           ),
@@ -292,7 +301,10 @@ class _AgentTemplateCard extends StatelessWidget {
           ),
         ],
         border: Border.all(
-          color: selected ? SydneyColors.primary.withValues(alpha: 0.5) : SydneyColors.line.withValues(alpha: 0.35),
+          color:
+              selected
+                  ? SydneyColors.primary.withValues(alpha: 0.5)
+                  : SydneyColors.line.withValues(alpha: 0.35),
           width: selected ? 1.2 : 0.8,
         ),
       ),
@@ -309,7 +321,10 @@ class _AgentTemplateCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: selected ? SydneyColors.surfaceContainerLowest : SydneyColors.primarySoft,
+                    color:
+                        selected
+                            ? SydneyColors.surfaceContainerLowest
+                            : SydneyColors.primarySoft,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: SydneyColors.line.withValues(alpha: 0.35),
@@ -331,26 +346,29 @@ class _AgentTemplateCard extends StatelessWidget {
                       Text(
                         template.label,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: SydneyColors.ink,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          color: SydneyColors.ink,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         template.description,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SydneyColors.mutedInk,
-                              height: 1.3,
-                            ),
+                          color: SydneyColors.mutedInk,
+                          height: 1.3,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: SydneySpacing.sm),
                 Icon(
-                  selected ? Icons.check_circle_rounded : Icons.add_circle_outline,
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.add_circle_outline,
                   size: 20,
-                  color: selected ? SydneyColors.primary : SydneyColors.subtleInk,
+                  color:
+                      selected ? SydneyColors.primary : SydneyColors.subtleInk,
                 ),
               ],
             ),
@@ -391,7 +409,8 @@ const _agentTemplates = [
   _AgentTemplate(
     id: 'news',
     label: 'News agent',
-    description: 'A balanced daily newsletter with TL;DR, context, and sources.',
+    description:
+        'A balanced daily newsletter with TL;DR, context, and sources.',
     icon: Icons.newspaper_rounded,
     prompt: '''
 I need a quick, unbiased breakdown of news from the last 48 hours. Please format it like a smart, easy-to-read daily newsletter. Make a good balance of local news based on where I am and global news.
@@ -470,11 +489,58 @@ Focus on material price movement, earnings, regulatory updates, major news, and 
   _AgentTemplate(
     id: 'content_extractor',
     label: 'Content extractor',
-    description: 'Finds trending topics and drafts Reddit, LinkedIn, or Twitter posts.',
+    description:
+        'Finds trending topics and drafts Reddit, LinkedIn, or Twitter posts.',
     icon: Icons.post_add_rounded,
     prompt: '''
 Create a content extractor agent that searches the web every day at 8 AM for the latest trending topics in my niche to write Twitter posts.
 
 Provide 3 distinct content ideas first. Each idea should have a title and a brief hook. Let me select an idea to generate a complete draft for it.''',
+  ),
+  _AgentTemplate(
+    id: 'daily_briefing',
+    label: 'Daily briefing',
+    description: 'Calendar, important email, and Slack in one focused card.',
+    icon: Icons.space_dashboard_outlined,
+    connectedTools: ['Google Calendar', 'Gmail', 'Slack'],
+    prompt: '''
+Create a daily executive briefing agent using my Google Calendar, Gmail, and Slack every weekday at 7 AM.
+
+Show what is happening today, what needs attention, and the few things I should prioritize. Present it as one concise briefing card and never invent missing information.''',
+  ),
+  _AgentTemplate(
+    id: 'project_pulse',
+    label: 'Project pulse',
+    description:
+        'GitHub, Slack, Notion, and Drive activity in one project view.',
+    icon: Icons.monitor_heart_outlined,
+    connectedTools: ['GitHub', 'Slack', 'Notion', 'Google Drive'],
+    prompt: '''
+Create a project pulse agent using GitHub, Slack, Notion, and Google Drive every weekday at 9 AM.
+
+Show what moved, notable decisions, documentation changes, and anything blocked or needing attention. Present it as a structured briefing card.''',
+  ),
+  _AgentTemplate(
+    id: 'meeting_intelligence',
+    label: 'Meeting intelligence',
+    description:
+        'Calendar events enriched with relevant email and workspace context.',
+    icon: Icons.co_present_outlined,
+    connectedTools: ['Google Calendar', 'Gmail', 'Google Drive', 'Notion'],
+    prompt: '''
+Create a meeting intelligence agent using my Calendar, Gmail, Drive meeting notes, and Notion every weekday at 7 AM.
+
+Give me the context I need before upcoming conversations, grouped by source in a concise briefing card.''',
+  ),
+  _AgentTemplate(
+    id: 'weekly_review',
+    label: 'Weekly accomplishments',
+    description: 'An evidence-based review across your connected work tools.',
+    icon: Icons.workspace_premium_outlined,
+    connectedTools: ['Slack', 'GitHub', 'Google Drive', 'Notion'],
+    prompt: '''
+Create a weekly accomplishment report using Slack, GitHub, Google Drive, and Notion every Friday at 5 PM.
+
+Show what I contributed, what changed, and the strongest evidence of progress. Present it as a structured weekly review card.''',
   ),
 ];

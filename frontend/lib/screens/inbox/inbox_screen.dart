@@ -5,10 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
+import '../../models/message.dart';
 import '../../providers/agents_provider.dart';
+import '../../providers/messages_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
+import '../../widgets/templates/briefing_card_template.dart';
 
 class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
@@ -40,6 +43,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   @override
   Widget build(BuildContext context) {
     final agents = ref.watch(agentsProvider);
+    final briefings = ref.watch(briefingsProvider);
 
     return Scaffold(
       backgroundColor: SydneyColors.surface,
@@ -78,15 +82,24 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         bottom: false,
         child: RefreshIndicator(
           color: SydneyColors.primary,
-          onRefresh: () => ref.read(agentsProvider.notifier).refresh(),
+          onRefresh: () async {
+            ref.invalidate(briefingsProvider);
+            await ref.read(agentsProvider.notifier).refresh();
+          },
           child: agents.when(
-            data: (items) => _InboxList(agents: items),
+            data:
+                (items) => _InboxList(
+                  agents: items,
+                  briefings: briefings.value ?? const [],
+                  onOpenBriefing: _openBriefing,
+                ),
             loading: () => const _InboxLoading(),
-            error: (error, _) => SydneyErrorState(
-              title: 'Messages could not load',
-              message: error.toString(),
-              onRetry: () => ref.read(agentsProvider.notifier).refresh(),
-            ),
+            error:
+                (error, _) => SydneyErrorState(
+                  title: 'Messages could not load',
+                  message: error.toString(),
+                  onRetry: () => ref.read(agentsProvider.notifier).refresh(),
+                ),
           ),
         ),
       ),
@@ -124,7 +137,11 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                      const Icon(
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       if (_isExpanded) ...[
                         const SizedBox(width: 8),
                         const Text(
@@ -147,21 +164,52 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
-        onSelected: (index) => navigateToMainDestination(
-          context,
-          currentIndex: 0,
-          selectedIndex: index,
-        ),
+        onSelected:
+            (index) => navigateToMainDestination(
+              context,
+              currentIndex: 0,
+              selectedIndex: index,
+            ),
       ),
     );
   }
+
+  Future<void> _openBriefing(Message briefing) async {
+    try {
+      final assistantId = await ref
+          .read(messageServiceProvider)
+          .handoffToAssistant(
+            agentId: briefing.threadId,
+            messageId: briefing.id,
+          );
+      ref.invalidate(briefingsProvider);
+      ref.invalidate(agentsProvider);
+      final agents = await ref.read(agentServiceProvider).listAgents();
+      final assistant = agents.firstWhere((agent) => agent.id == assistantId);
+      ref.invalidate(messagesProvider(assistant.threadId));
+      if (!mounted) return;
+      await Navigator.of(
+        context,
+      ).pushNamed(AppRoutes.thread, arguments: assistant);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
 }
 
-
 class _InboxList extends StatelessWidget {
-  const _InboxList({required this.agents});
+  const _InboxList({
+    required this.agents,
+    required this.briefings,
+    required this.onOpenBriefing,
+  });
 
   final List<Agent> agents;
+  final List<Message> briefings;
+  final ValueChanged<Message> onOpenBriefing;
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +225,54 @@ class _InboxList extends StatelessWidget {
         118,
       ),
       children: [
+        if (briefings.isNotEmpty) ...[
+          Row(
+            children: [
+              Text(
+                'BRIEFINGS',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SydneyColors.mutedInk,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Tap to explore with Assistant',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SydneyColors.subtleInk,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: SydneySpacing.sm),
+          for (final briefing in briefings) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(SydneySpacing.md),
+              decoration: BoxDecoration(
+                color: SydneyColors.agentBubble,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: SydneyColors.line),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: BriefingCardTemplate(
+                data: briefing.data,
+                compact: true,
+                onOpen: () => onOpenBriefing(briefing),
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.md),
+          ],
+          const SizedBox(height: SydneySpacing.sm),
+        ],
         if (!hasCreatedAgent) ...[
           const SydneyNotice(
             text: 'Assistant is pinned so you always have a place to start.',
@@ -186,7 +282,10 @@ class _InboxList extends StatelessWidget {
         for (final agent in visibleAgents) ...[
           AgentListItem(
             agent: agent,
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.thread, arguments: agent),
+            onTap:
+                () => Navigator.of(
+                  context,
+                ).pushNamed(AppRoutes.thread, arguments: agent),
           ),
           const SizedBox(height: 6),
         ],
@@ -210,7 +309,9 @@ class _StartSentencePrompt extends StatelessWidget {
         children: [
           Text(
             'Start with one sentence',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 14),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontSize: 14),
           ),
           const SizedBox(height: SydneySpacing.xs),
           SizedBox(
@@ -219,9 +320,9 @@ class _StartSentencePrompt extends StatelessWidget {
               'Create an agent for something you want watched, summarized, or prepared.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SydneyColors.mutedInk,
-                    height: 1.35,
-                  ),
+                color: SydneyColors.mutedInk,
+                height: 1.35,
+              ),
             ),
           ),
         ],
@@ -262,7 +363,8 @@ Agent _assistantFallback() {
     name: 'Assistant',
     avatarInitials: 'S',
     description: 'Your home base for delegation.',
-    lastMessagePreview: 'I can help you turn a sentence into a useful micro-agent.',
+    lastMessagePreview:
+        'I can help you turn a sentence into a useful micro-agent.',
     latestMessageAt: DateTime.now(),
     isAssistant: true,
     isPinned: true,

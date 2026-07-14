@@ -80,6 +80,7 @@ import {
 } from "./stub-renderers.js";
 import { agentDebug } from "./debug-log.js";
 import { shouldRetryAgentRun } from "./run-lifecycle.js";
+import { isBriefingIntent, renderBriefingAgent } from "./briefing-agents.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -808,6 +809,10 @@ async function renderAgentMessage(
         tokensUsed: 0
       };
     }
+  }
+
+  if (isBriefingIntent(intentName(agent))) {
+    return renderBriefingAgent(agent, trigger);
   }
 
   const connectorPending = connectorPendingConfigs[intentName(agent)];
@@ -1826,6 +1831,12 @@ function extractNotificationBody(content: AgentMessageContent): string {
       } else {
         rawBody = title || "Comparison Update";
       }
+    } else if (content.template === "briefing_card") {
+      const firstSection = content.data.sections[0];
+      const firstItem = firstSection?.items[0];
+      rawBody = firstItem
+        ? `${content.data.title}: ${firstItem.title}`
+        : `${content.data.title}: ${content.data.summary}`;
     }
   } catch (err) {
     console.error("Error in extractNotificationBody:", err);

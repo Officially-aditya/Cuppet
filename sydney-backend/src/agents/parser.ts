@@ -40,6 +40,58 @@ type CapabilityDefinition = {
 
 const CAPABILITIES: CapabilityDefinition[] = [
   {
+    name: "Daily Executive Briefing",
+    avatar: "layout-dashboard",
+    intent: "daily_executive_briefing",
+    connector: "gmail",
+    connectorIds: ["gmail", "calendar", "slack"],
+    action: "Combines today's calendar, important email, and Slack activity into one prioritized briefing.",
+    defaultSchedule: "0 7 * * *",
+    outputTemplate: "briefing_card",
+    permissionsNeeded: ["Gmail read access", "Google Calendar event read access", "Slack message history access"],
+    priority: 80,
+    match: { any: [/\bexecutive briefing\b/, /\bmorning briefing\b.*\b(?:email|calendar|slack)\b/, /\bdaily briefing\b.*\b(?:email|calendar|slack)\b/] }
+  },
+  {
+    name: "Project Pulse",
+    avatar: "activity",
+    intent: "project_pulse",
+    connector: "github",
+    connectorIds: ["github", "slack", "notion", "drive"],
+    action: "Combines development, team, documentation, and file activity into a project pulse.",
+    defaultSchedule: "0 9 * * 1-5",
+    outputTemplate: "briefing_card",
+    permissionsNeeded: ["GitHub repository read access", "Slack message history access", "Read selected Notion pages", "Google Drive read access"],
+    priority: 79,
+    match: { any: [/\bproject pulse\b/, /\bproject health (?:brief|report|update)\b/] }
+  },
+  {
+    name: "Meeting Intelligence",
+    avatar: "presentation",
+    intent: "meeting_intelligence",
+    connector: "calendar",
+    connectorIds: ["calendar", "gmail", "drive", "notion"],
+    action: "Builds meeting context from the calendar, email, meeting notes, and Notion.",
+    defaultSchedule: "0 7 * * 1-5",
+    outputTemplate: "briefing_card",
+    permissionsNeeded: ["Google Calendar event read access", "Gmail read access", "Google Drive read access", "Read selected Notion pages"],
+    priority: 78,
+    match: { any: [/\bmeeting intelligence\b/, /\bpre[- ]meeting brief(?:ing)?\b/, /\bmeeting context brief(?:ing)?\b/] }
+  },
+  {
+    name: "Weekly Accomplishment Report",
+    avatar: "award",
+    intent: "weekly_accomplishment_report",
+    connector: "slack",
+    connectorIds: ["slack", "github", "drive", "notion"],
+    action: "Builds an evidence-based weekly accomplishment report across connected work tools.",
+    defaultSchedule: "0 17 * * 5",
+    outputTemplate: "briefing_card",
+    permissionsNeeded: ["Slack message history access", "GitHub repository read access", "Google Drive read access", "Read selected Notion pages"],
+    priority: 77,
+    match: { any: [/\bweekly accomplishments?\b/, /\bweekly achievement report\b/, /\bmy week in (?:review|evidence)\b/] }
+  },
+  {
     name: "GitHub Activity",
     avatar: "github",
     intent: "github_activity_digest",

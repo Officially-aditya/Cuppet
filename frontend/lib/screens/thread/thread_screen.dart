@@ -615,6 +615,30 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final actionId = action['id']?.toString() ?? '';
     final connectorId = _connectorIdFromAction(action);
 
+    if (actionType == 'open_in_assistant') {
+      final messageId = action['messageId']?.toString();
+      if (messageId == null || messageId.isEmpty) return;
+      try {
+        final assistantId = await ref
+            .read(messageServiceProvider)
+            .handoffToAssistant(agentId: _activeAgent.id, messageId: messageId);
+        final agents = await ref.read(agentServiceProvider).listAgents();
+        final assistant = agents.firstWhere((agent) => agent.id == assistantId);
+        ref.invalidate(messagesProvider(assistant.threadId));
+        ref.invalidate(agentsProvider);
+        if (!mounted) return;
+        await Navigator.of(
+          context,
+        ).pushNamed(AppRoutes.thread, arguments: assistant);
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+      return;
+    }
+
     if (actionType == 'generate_draft') {
       final title = action['title']?.toString() ?? '';
       await _sendReply('Generate draft for idea: "$title"');

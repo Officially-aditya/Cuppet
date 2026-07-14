@@ -220,6 +220,28 @@ export type PortfolioWatchMessageContent = {
   };
 };
 
+export type BriefingCardMessageContent = {
+  template: "briefing_card";
+  version: "1.0";
+  data: {
+    eyebrow: string;
+    title: string;
+    summary: string;
+    sections: Array<{
+      id: string;
+      title: string;
+      source: string;
+      tone?: "neutral" | "info" | "attention" | "positive";
+      items: Array<{
+        title: string;
+        detail?: string;
+        meta?: string;
+      }>;
+    }>;
+    missing_sources?: string[];
+  };
+};
+
 export type AgentMessageContent =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -233,7 +255,8 @@ export type AgentMessageContent =
   | StudyGuideMessageContent
   | DsaQuestionMessageContent
   | ContentExtractorMessageContent
-  | PortfolioWatchMessageContent;
+  | PortfolioWatchMessageContent
+  | BriefingCardMessageContent;
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;
@@ -349,6 +372,13 @@ export function renderedPortfolioWatch(
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("portfolio_watch", data, meta);
+}
+
+export function renderedBriefingCard(
+  data: BriefingCardMessageContent["data"],
+  meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
+): RenderedAgentMessage {
+  return rendered("briefing_card", data, meta);
 }
 
 export function parseNewsBriefText(title: string, body: string): NewsBriefMessageContent["data"] {

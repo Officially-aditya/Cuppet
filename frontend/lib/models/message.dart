@@ -49,6 +49,7 @@ class Message {
       'daily_task' => data['title']?.toString() ?? 'Daily task',
       'streak_counter' => data['label']?.toString() ?? 'Streak update',
       'comparison' => data['title']?.toString() ?? 'Comparison update',
+      'briefing_card' => data['title']?.toString() ?? 'Briefing ready',
       'system' =>
         data['text']?.toString() ??
             data['message']?.toString() ??

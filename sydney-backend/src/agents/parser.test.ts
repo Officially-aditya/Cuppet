@@ -2,6 +2,38 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseIntent, responseLimitInstruction } from "./parser.js";
 
+test("classifies the four multi-connector briefing agents", () => {
+  const cases = [
+    {
+      prompt: "Create a daily executive briefing from Gmail, Calendar, and Slack every weekday at 7 AM",
+      intent: "daily_executive_briefing",
+      connectors: ["gmail", "calendar", "slack"]
+    },
+    {
+      prompt: "Create a project pulse using GitHub, Slack, Notion, and Drive",
+      intent: "project_pulse",
+      connectors: ["github", "slack", "notion", "drive"]
+    },
+    {
+      prompt: "Create a pre-meeting briefing using Calendar, Gmail, Drive, and Notion",
+      intent: "meeting_intelligence",
+      connectors: ["calendar", "gmail", "drive", "notion"]
+    },
+    {
+      prompt: "Create a weekly accomplishment report from Slack, GitHub, Drive, and Notion",
+      intent: "weekly_accomplishment_report",
+      connectors: ["slack", "github", "drive", "notion"]
+    }
+  ];
+
+  for (const item of cases) {
+    const parsed = parseIntent(item.prompt);
+    assert.equal(parsed.intent, item.intent, item.prompt);
+    assert.equal(parsed.output_template, "briefing_card", item.prompt);
+    assert.deepEqual(parsed.connector_ids, item.connectors, item.prompt);
+  }
+});
+
 test("classifies a calendar agenda as a dedicated calendar connector", () => {
   const parsed = parseIntent(
     "Summarize my Google Calendar every morning and show my upcoming meetings."

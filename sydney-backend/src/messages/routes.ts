@@ -8,6 +8,7 @@ import {
 } from "../agents/instruction-updater.js";
 import { createAgentChatReply } from "../agents/agent-chat.js";
 import { createAssistantChatReply } from "../agents/assistant-chat.js";
+import { ensureAssistantContact } from "../agents/assistant.js";
 import { parseIntentHybrid } from "../agents/llm-intent.js";
 import { refineAmbiguousAgentMessage } from "../agents/llm-message-router.js";
 import { routeAgentMessage } from "../agents/message-router.js";
@@ -161,6 +162,130 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
     return { messages: rows.reverse() };
   });
+
+  app.get("/briefings", { preHandler: requireAuth }, async (request) => {
+    const userId = request.auth!.userId;
+    const { rows } = await pool.query(
+      `
+        SELECT * FROM (
+          SELECT DISTINCT ON (agent_id)
+            id, agent_id, user_id, role, content, source_refs, read_at, created_at
+          FROM agent_messages
+          WHERE user_id = $1
+            AND role = 'agent'
+            AND content->>'template' = 'briefing_card'
+            AND content #>> '{data,home_dismissed_at}' IS NULL
+          ORDER BY agent_id, created_at DESC
+        ) latest
+        ORDER BY created_at DESC
+        LIMIT 6
+      `,
+      [userId]
+    );
+    return { briefings: rows };
+  });
+
+  app.post(
+    "/agents/:agentId/messages/:messageId/assistant-handoff",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const { agentId, messageId } = request.params as {
+        agentId: string;
+        messageId: string;
+      };
+      const userId = request.auth!.userId;
+      if (!isUuid(agentId) || !isUuid(messageId)) return agentNotFound(reply);
+
+      const { rows } = await pool.query<{
+        content: Record<string, unknown>;
+        source_refs: unknown[];
+      }>(
+        `
+          SELECT content, COALESCE(source_refs, '[]'::jsonb) AS source_refs
+          FROM agent_messages
+          WHERE id = $1
+            AND agent_id = $2
+            AND user_id = $3
+            AND role = 'agent'
+            AND content->>'template' = 'briefing_card'
+        `,
+        [messageId, agentId, userId]
+      );
+      const source = rows[0];
+      if (!source) {
+        return reply.code(404).send({
+          error: { code: "MESSAGE_NOT_FOUND", message: "Briefing message not found." }
+        });
+      }
+
+      const assistantId = await ensureAssistantContact(userId);
+      const title = briefingTitle(source.content);
+      const question = `Open “${title}” as context. Give me a short orientation, then help me explore any part of the report in detail.`;
+      const sourceData = source.content.data;
+      const assistantBriefingContent = {
+        ...source.content,
+        data: {
+          ...(sourceData &&
+          typeof sourceData === "object" &&
+          !Array.isArray(sourceData)
+            ? (sourceData as Record<string, unknown>)
+            : {}),
+          assistant_context: true
+        }
+      };
+      const answer = await createAssistantChatReply(question, {
+        briefing: JSON.stringify(source.content),
+        sourceRefs: source.source_refs
+      });
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const now = new Date();
+        const briefingMessage = await insertMessage(client, {
+          agentId: assistantId,
+          userId,
+          role: "agent",
+          content: assistantBriefingContent,
+          sourceRefs: source.source_refs,
+          createdAt: now
+        });
+        const assistantMessage = await insertMessage(client, {
+          agentId: assistantId,
+          userId,
+          role: "agent",
+          content: plainTextContent(answer),
+          sourceRefs: source.source_refs,
+          createdAt: offsetDate(now, 1)
+        });
+        await client.query(
+          `
+            UPDATE agent_messages
+            SET content = jsonb_set(
+              content,
+              '{data,home_dismissed_at}',
+              to_jsonb(NOW()::text),
+              true
+            )
+            WHERE id = $1 AND agent_id = $2 AND user_id = $3
+          `,
+          [messageId, agentId, userId]
+        );
+        await touchAgentWithClient(client, userId, assistantId);
+        await client.query("COMMIT");
+        await publishMessageEvents(userId, [briefingMessage, assistantMessage]);
+        return reply.code(201).send({
+          assistant_agent_id: assistantId,
+          message: briefingMessage,
+          assistant_message: assistantMessage
+        });
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+  );
 
   app.delete("/agents/:agentId/messages", { preHandler: requireAuth }, async (request, reply) => {
     const { agentId } = request.params as { agentId: string };
@@ -391,7 +516,14 @@ async function handleAssistantTextMessage(
     });
 
     if (assistantMode === "chat") {
-      const reply = await createAssistantChatReply(text);
+      const briefingContext = await latestAssistantBriefingContext(
+        userId,
+        assistantId
+      );
+      const reply = await createAssistantChatReply(
+        text,
+        briefingContext ?? undefined
+      );
       const assistantMessage = await insertMessage(client, {
         agentId: assistantId,
         userId,
@@ -671,6 +803,23 @@ function extractBodyFromContent(content: any): string | null {
     return `${title}${summary}${desc}${footer}`.trim();
   }
 
+  if (template === "briefing_card") {
+    const sections = Array.isArray(data.sections)
+      ? data.sections
+          .map((section: any) => {
+            const heading = section.title || section.source || "Update";
+            const items = Array.isArray(section.items)
+              ? section.items
+                  .map((item: any) => `- ${item.title}${item.detail ? `: ${item.detail}` : ""}`)
+                  .join("\n")
+              : "";
+            return `${heading}\n${items}`.trim();
+          })
+          .join("\n\n")
+      : "";
+    return [data.title, data.summary, sections].filter(Boolean).join("\n\n");
+  }
+
   if (template === "urgency_list") {
     const title = data.title ? `${data.title}\n` : "";
     const items = Array.isArray(data.items)
@@ -746,6 +895,45 @@ async function latestAgentReplyText(
   );
 
   return rows[0] ? extractBodyFromContent(rows[0].content) : null;
+}
+
+async function latestAssistantBriefingContext(
+  userId: string,
+  assistantId: string
+): Promise<{ briefing: string; sourceRefs: unknown[] } | null> {
+  const { rows } = await pool.query<{
+    briefing_context: Record<string, unknown> | null;
+    source_refs: unknown[];
+  }>(
+    `
+      SELECT
+        CASE
+          WHEN content->'data'->'briefing_context' IS NOT NULL
+            THEN content->'data'->'briefing_context'
+          ELSE content
+        END AS briefing_context,
+        COALESCE(source_refs, '[]'::jsonb) AS source_refs
+      FROM agent_messages
+      WHERE user_id = $1
+        AND agent_id = $2
+        AND (
+          content->'data'->'briefing_context' IS NOT NULL
+          OR (
+            content->>'template' = 'briefing_card'
+            AND content #>> '{data,assistant_context}' = 'true'
+          )
+        )
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [userId, assistantId]
+  );
+  const context = rows[0];
+  if (!context?.briefing_context) return null;
+  return {
+    briefing: JSON.stringify(context.briefing_context),
+    sourceRefs: context.source_refs
+  };
 }
 
 async function latestAgentReply(
@@ -830,6 +1018,7 @@ async function insertMessage(
     content: Record<string, unknown>;
     readAtNow?: boolean;
     createdAt?: Date;
+    sourceRefs?: unknown[];
   }
 ): Promise<MessageRow> {
   const { rows } = await client.query<MessageRow>(
@@ -841,7 +1030,7 @@ async function insertMessage(
         $2,
         $3,
         $4,
-        '[]'::jsonb,
+        $6,
         ${input.readAtNow ? "COALESCE($5::timestamptz, NOW())" : "NULL"},
         COALESCE($5::timestamptz, NOW())
       )
@@ -852,11 +1041,21 @@ async function insertMessage(
       input.userId,
       input.role,
       JSON.stringify(input.content),
-      input.createdAt ?? null
+      input.createdAt ?? null,
+      JSON.stringify(input.sourceRefs ?? [])
     ]
   );
 
   return rows[0]!;
+}
+
+function briefingTitle(content: Record<string, unknown>): string {
+  const data = content.data;
+  if (data && typeof data === "object") {
+    const title = (data as Record<string, unknown>).title;
+    if (typeof title === "string" && title.trim()) return title.trim().slice(0, 160);
+  }
+  return "this briefing";
 }
 
 function offsetDate(date: Date, milliseconds: number): Date {

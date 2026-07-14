@@ -39,6 +39,22 @@ class MessageService {
     }
   }
 
+  Future<List<Message>> fetchBriefings() async {
+    if (Env.useMockData) return const [];
+    try {
+      final response = await _api.get<Map<String, dynamic>>('/briefings');
+      final rawBriefings = response.data?['briefings'];
+      return (rawBriefings is List ? rawBriefings : const [])
+          .whereType<Map>()
+          .map(
+            (message) => Message.fromJson(Map<String, dynamic>.from(message)),
+          )
+          .toList();
+    } catch (error) {
+      throw apiExceptionFrom(error, 'We could not load your briefings.');
+    }
+  }
+
   Future<Message> sendReply({
     required String threadId,
     required String text,
@@ -95,6 +111,30 @@ class MessageService {
       throw apiExceptionFrom(
         error,
         'Your reply was not sent. Please try again.',
+      );
+    }
+  }
+
+  Future<String> handoffToAssistant({
+    required String agentId,
+    required String messageId,
+  }) async {
+    if (Env.useMockData) return 'assistant';
+    try {
+      final response = await _api.post<Map<String, dynamic>>(
+        '/agents/$agentId/messages/$messageId/assistant-handoff',
+      );
+      final assistantId = response.data?['assistant_agent_id']?.toString();
+      if (assistantId == null || assistantId.isEmpty) {
+        throw const ApiException(
+          'The Assistant conversation was not returned.',
+        );
+      }
+      return assistantId;
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not open this briefing with Assistant.',
       );
     }
   }

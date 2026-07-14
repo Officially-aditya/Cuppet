@@ -22,11 +22,17 @@ final messagesProvider = FutureProvider.family<List<Message>, String>((
   ref,
   threadId,
 ) async {
-  final messages = await ref.watch(messageServiceProvider).fetchThread(threadId);
+  final messages = await ref
+      .watch(messageServiceProvider)
+      .fetchThread(threadId);
   Future.microtask(() {
     ref.invalidate(agentsProvider);
   });
   return messages;
+});
+
+final briefingsProvider = FutureProvider<List<Message>>((ref) {
+  return ref.watch(messageServiceProvider).fetchBriefings();
 });
 
 final liveEventsProvider = StreamProvider<RealtimeEvent>((ref) {

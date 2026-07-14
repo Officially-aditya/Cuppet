@@ -54,7 +54,8 @@ const supportedTemplates = new Set([
   "comparison",
   "system",
   "study_guide",
-  "dsa_question"
+  "dsa_question",
+  "briefing_card"
 ]);
 const supportedSafetyLevels = new Set(["read", "suggest", "act"]);
 
@@ -280,13 +281,19 @@ function connectorPermissions(
   connectors: string[],
   fallback: string[]
 ): string[] {
-  if (connectors.includes("gmail")) return ["Gmail read access"];
-  if (connectors.includes("drive")) return ["Google Drive read access"];
-  if (connectors.includes("calendar")) return ["Google Calendar event read access"];
-  if (connectors.includes("github")) return ["GitHub profile and repository read access"];
-  if (connectors.includes("notion")) return ["Read selected Notion pages"];
-  if (connectors.includes("web_search")) return ["Web search (no login needed)"];
-  return fallback;
+  const labels: Record<string, string> = {
+    gmail: "Gmail read access",
+    drive: "Google Drive read access",
+    calendar: "Google Calendar event read access",
+    github: "GitHub profile and repository read access",
+    slack: "Slack message history access",
+    notion: "Read selected Notion pages",
+    web_search: "Web search (no login needed)"
+  };
+  const permissions = connectors
+    .map((connector) => labels[connector])
+    .filter((value): value is string => Boolean(value));
+  return permissions.length > 0 ? [...new Set(permissions)] : fallback;
 }
 
 function templateConfig(template: string): Record<string, boolean> {
@@ -307,6 +314,10 @@ function templateConfig(template: string): Record<string, boolean> {
 }
 
 const SUPPORTED_INTENTS = new Set([
+  "daily_executive_briefing",
+  "project_pulse",
+  "meeting_intelligence",
+  "weekly_accomplishment_report",
   "tech_news_brief",
   "news_brief",
   "job_market_radar",
@@ -330,6 +341,10 @@ const SUPPORTED_INTENTS = new Set([
 ]);
 
 const CONNECTOR_BACKED_INTENTS = new Set([
+  "daily_executive_briefing",
+  "project_pulse",
+  "meeting_intelligence",
+  "weekly_accomplishment_report",
   "email_digest",
   "invoice_tracker",
   "subscription_auditor",

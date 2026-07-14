@@ -8,6 +8,7 @@ import 'package:sydney/widgets/templates/comparison_template.dart';
 import 'package:sydney/widgets/templates/data_summary_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/progress_tracker_template.dart';
+import 'package:sydney/widgets/templates/briefing_card_template.dart';
 
 Widget templateHost(Widget child) {
   return MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
@@ -15,6 +16,91 @@ Widget templateHost(Widget child) {
 
 void main() {
   group('template payload resilience', () {
+    testWidgets('briefing card opens from its full tappable surface', (
+      tester,
+    ) async {
+      var opened = false;
+      await tester.pumpWidget(
+        templateHost(
+          BriefingCardTemplate(
+            data: const {
+              'eyebrow': 'PROJECT PULSE',
+              'title': 'What moved',
+              'summary': '2 sources checked',
+              'sections': [
+                {
+                  'id': 'github',
+                  'title': 'GitHub',
+                  'source': 'GitHub',
+                  'tone': 'positive',
+                  'items': [
+                    {'title': 'Sydney received a new commit'},
+                  ],
+                },
+              ],
+            },
+            onOpen: () => opened = true,
+          ),
+        ),
+      );
+
+      expect(find.text('PROJECT PULSE'), findsOneWidget);
+      expect(find.text('GitHub'), findsOneWidget);
+      expect(find.text('Sydney received a new commit'), findsOneWidget);
+      expect(find.text('Open in Assistant'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('open_briefing_in_assistant')),
+      );
+      expect(opened, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('compact briefing shows at most three highlights', (
+      tester,
+    ) async {
+      var opened = false;
+      await tester.pumpWidget(
+        templateHost(
+          BriefingCardTemplate(
+            compact: true,
+            data: const {
+              'eyebrow': 'DAILY BRIEFING',
+              'title': 'Your morning overview',
+              'summary': 'Calendar and inbox checked',
+              'sections': [
+                {
+                  'title': 'Calendar',
+                  'items': [
+                    {'title': 'Design review at 10:00'},
+                    {'title': 'Customer call at 14:00'},
+                  ],
+                },
+                {
+                  'title': 'Gmail',
+                  'items': [
+                    {'title': 'Contract needs approval'},
+                    {'title': 'Fourth detail stays in the full report'},
+                  ],
+                },
+              ],
+            },
+            onOpen: () => opened = true,
+          ),
+        ),
+      );
+
+      expect(find.text('Design review at 10:00'), findsOneWidget);
+      expect(find.text('Customer call at 14:00'), findsOneWidget);
+      expect(find.text('Contract needs approval'), findsOneWidget);
+      expect(find.text('Fourth detail stays in the full report'), findsNothing);
+      expect(find.text('Open in Assistant'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey('open_briefing_in_assistant')),
+      );
+      expect(opened, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('empty payloads render useful fallback content', (
       tester,
     ) async {

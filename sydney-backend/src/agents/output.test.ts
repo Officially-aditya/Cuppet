@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseNewsBriefText } from "./output.js";
 import { stockSymbols } from "./parser.js";
+import { briefingItems } from "../workers/briefing-agents.js";
 
 test("merges a heading-only brief field with its following detail", () => {
   const result = parseNewsBriefText(
@@ -55,4 +56,25 @@ test("stockSymbols extracts capital tickers and maps names correctly", () => {
 
   const s4 = stockSymbols("Track muthoot and mrf");
   assert.deepEqual(s4, ["Muthoot", "Mrf"]);
+});
+
+test("briefing cards normalize different connector templates into blocks", () => {
+  const items = briefingItems({
+    content: {
+      template: "urgency_list",
+      version: "1.0",
+      data: {
+        title: "Needs attention",
+        items: [
+          { label: "Reply to launch thread", preview: "Decision needed", urgency: "high" }
+        ]
+      }
+    },
+    sourceRefs: [],
+    tokensUsed: 0
+  });
+
+  assert.deepEqual(items, [
+    { title: "Reply to launch thread", detail: "Decision needed", meta: "high" }
+  ]);
 });
