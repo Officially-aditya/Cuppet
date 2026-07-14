@@ -37,7 +37,13 @@ const envSchema = z.object({
   MOBILE_AUTH_CALLBACK_SCHEME: z.string().default("sydney"),
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
-  SLACK_REDIRECT_URI: z.string().optional(),
+  SLACK_REDIRECT_URI: z.string().url().optional(),
+  SLACK_SIGNING_SECRET: z.string().optional(),
+  SLACK_OAUTH_SCOPES: z
+    .string()
+    .default(
+      "channels:read,channels:history,groups:read,groups:history,users:read"
+    ),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_REDIRECT_URI: z.string().url().optional(),

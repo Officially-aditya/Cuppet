@@ -19,6 +19,14 @@ import {
   hasUsableGitHubToken,
   parseGitHubCallbackUrl
 } from "./github.js";
+import {
+  createSlackAuthUrl,
+  handleSlackOAuthCallback,
+  hasUsableSlackToken,
+  parseSlackCallbackUrl,
+  slackAuthConfigured,
+  slackScopesCoverReadAccess
+} from "./slack.js";
 import { callbackSchemeSchema } from "../security/input-validation.js";
 
 type ConnectorDefinition = {
@@ -79,8 +87,8 @@ const connectors: ConnectorDefinition[] = [
     description: "Read selected channels and prepare updates",
     icon_name: "MessageSquare",
     category: "EMAIL & COMMUNICATION",
-    required_scopes: ["Read selected channels", "Post drafts for approval"],
-    auth_configured: false
+    required_scopes: ["Read channels where Cuppet is a member", "Read member names"],
+    auth_configured: slackAuthConfigured()
   },
   {
     id: "drive",
@@ -160,6 +168,26 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  app.get("/connectors/slack/callback", async (request, reply) => {
+    const query = request.query as {
+      code?: string;
+      state?: string;
+      error?: string;
+    };
+    try {
+      const redirectUrl = await handleSlackOAuthCallback(query);
+      return reply.redirect(redirectUrl.toString());
+    } catch (error) {
+      request.log.warn({ error }, "Invalid Slack OAuth callback");
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+          message: "Invalid Slack OAuth callback."
+        }
+      });
+    }
+  });
+
   app.get("/connectors", { preHandler: requireAuth }, async (request) => {
     let statuses = new Map<string, string>();
     try {
@@ -231,6 +259,21 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
+      if (
+        status === "connected" &&
+        connector.id === "slack" &&
+        !(await hasUsableSlackToken(request.auth!.userId))
+      ) {
+        return reply.code(409).send({
+          error: {
+            code: "CONNECTOR_OAUTH_REQUIRED",
+            message:
+              "Slack authorization is required before this connector can be marked connected.",
+            connector_id: connector.id
+          }
+        });
+      }
+
       await setConnectorStatus(request.auth!.userId, connector.id, status);
       return connectorPayload(connector, status);
     }
@@ -280,6 +323,20 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         }
 
         const session = await createGitHubAuthUrl({
+          userId: request.auth!.userId,
+          callbackScheme: body.data.callbackScheme
+        });
+        return {
+          authUrl: session.authUrl,
+          callbackScheme: session.callbackScheme
+        };
+      }
+
+      if (connector.id === "slack") {
+        if (!slackAuthConfigured()) {
+          return connectorOAuthNotConfigured(reply, connector.id, "Slack");
+        }
+        const session = await createSlackAuthUrl({
           userId: request.auth!.userId,
           callbackScheme: body.data.callbackScheme
         });
@@ -396,6 +453,33 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
+      if (connector.id === "slack") {
+        try {
+          const callback = parseSlackCallbackUrl(body.data.callbackUrl);
+          if (callback.error) {
+            return reply.code(400).send({
+              error: {
+                code: "CONNECTOR_OAUTH_FAILED",
+                message: `Slack authorization failed: ${callback.error}`,
+                connector_id: connector.id
+              }
+            });
+          }
+          return connectorPayload(connector, "connected");
+        } catch (error) {
+          return reply.code(400).send({
+            error: {
+              code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Invalid Slack callback.",
+              connector_id: connector.id
+            }
+          });
+        }
+      }
+
       return reply.code(501).send({
         error: {
           code: "CONNECTOR_OAUTH_NOT_CONFIGURED",
@@ -442,6 +526,14 @@ async function connectorStatuses(userId: string): Promise<Map<string, string>> {
       row.status === "connected" &&
       isGoogleWorkspaceConnector(row.connector_id) &&
       !googleScopesCoverConnector(row.scopes ?? [], row.connector_id)
+    ) {
+      statuses.set(row.connector_id, "action_required");
+      continue;
+    }
+    if (
+      row.status === "connected" &&
+      row.connector_id === "slack" &&
+      !slackScopesCoverReadAccess(row.scopes ?? [])
     ) {
       statuses.set(row.connector_id, "action_required");
       continue;
@@ -553,5 +645,9 @@ function connectorOAuthNotConfigured(
 }
 
 function isTokenBackedConnector(connectorId: string): boolean {
-  return isGoogleWorkspaceConnector(connectorId) || connectorId === "github";
+  return (
+    isGoogleWorkspaceConnector(connectorId) ||
+    connectorId === "github" ||
+    connectorId === "slack"
+  );
 }

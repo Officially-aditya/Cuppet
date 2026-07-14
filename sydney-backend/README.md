@@ -108,6 +108,20 @@ profile information and public repository activity. Add `repo` only when
 private repository access is required; GitHub OAuth defines `repo` as a broad
 scope. GitHub access tokens are encrypted with the existing connector vault.
 
+Slack uses a read-only OAuth bot installation. Configure `SLACK_CLIENT_ID`,
+`SLACK_CLIENT_SECRET`, and `SLACK_REDIRECT_URI`, and add the exact production
+callback URL to the Slack app's OAuth & Permissions page:
+
+```text
+https://sydney-production.up.railway.app/connectors/slack/callback
+```
+
+The default `SLACK_OAUTH_SCOPES` value reads public/private channel history and
+member names; it does not grant message-writing access. After installation,
+invite the Cuppet Slack app to each channel that an agent should summarize.
+`SLACK_SIGNING_SECRET` is reserved for a future Events API receiver and is not
+required for scheduled or manually triggered Slack agents.
+
 ## LLM and Input Security
 
 Sydney treats connector records, fetched document/email contents, source

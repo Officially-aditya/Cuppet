@@ -91,4 +91,20 @@ void main() {
       expect(connector.shouldUseOAuth, isTrue);
     },
   );
+
+  test(
+    'known Slack connector always uses OAuth instead of a status toggle',
+    () {
+      const connector = Connector(
+        id: 'slack',
+        name: 'Slack',
+        description: 'Channel activity',
+        status: ConnectorStatus.disconnected,
+        requiredScopes: ['Read selected channels'],
+        authConfigured: false,
+      );
+
+      expect(connector.shouldUseOAuth, isTrue);
+    },
+  );
 }

@@ -192,7 +192,11 @@ List<Connector> _mockConnectorList() {
       status: ConnectorStatus.connecting,
       category: 'EMAIL & COMMUNICATION',
       iconName: 'MessageSquare',
-      requiredScopes: ['Read selected channels', 'Post drafts for approval'],
+      requiredScopes: [
+        'Read channels where Cuppet is a member',
+        'Read member names',
+      ],
+      authConfigured: true,
     ),
     Connector(
       id: 'outlook',

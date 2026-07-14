@@ -46,6 +46,7 @@ import {
   downloadAndParsePdf
 } from "../connectors/google-workspace.js";
 import { renderGitHubAgent } from "../connectors/github.js";
+import { renderSlackAgent } from "../connectors/slack.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { sendPushNotification } from "../notifications/push.js";
 import { agentExecutionKey } from "./execution-key.js";
@@ -768,6 +769,14 @@ async function renderAgentMessage(
     });
     if (githubMessage) {
       return githubMessage;
+    }
+
+    const slackMessage = await renderSlackAgent(agent, {
+      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
+      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
+    });
+    if (slackMessage) {
+      return slackMessage;
     }
 
     return renderConnectorPending(agent, connectorPending);
