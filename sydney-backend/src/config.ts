@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { ianaTimeZoneSchema } from "./users/time-zone.js";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -30,7 +31,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
-  AGENT_SCHEDULE_TIME_ZONE: z.string().default("Asia/Kolkata"),
+  AGENT_SCHEDULE_TIME_ZONE: ianaTimeZoneSchema.default("Asia/Kolkata"),
   RUN_AGENT_WORKER_IN_API: z
     .enum(["true", "false"])
     .default("true")

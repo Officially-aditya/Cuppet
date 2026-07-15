@@ -9,6 +9,8 @@ CREATE TABLE users (
   email           TEXT NOT NULL UNIQUE,
   email_verified  BOOLEAN NOT NULL DEFAULT FALSE,
   image           TEXT,
+  time_zone       TEXT,
+  follow_device_time_zone BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

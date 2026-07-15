@@ -85,11 +85,12 @@ export async function enqueueAgentEvent(input: {
 
 export async function scheduleAgentRun(
   agentId: string,
-  cronPattern: string
+  cronPattern: string,
+  timeZone: string
 ) {
   return agentExecutorQueue.upsertJobScheduler(
     agentSchedulerId(agentId),
-    { pattern: cronPattern, tz: config.AGENT_SCHEDULE_TIME_ZONE },
+    { pattern: cronPattern, tz: timeZone },
     {
       name: agentExecutorJobName,
       data: { agentId, trigger: "schedule" },

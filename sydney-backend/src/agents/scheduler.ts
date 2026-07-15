@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from "fastify";
+import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import {
   listAgentSchedules,
@@ -6,12 +7,20 @@ import {
   scheduleAgentRun
 } from "../queue/index.js";
 import { parseIntent, type ParsedIntent } from "./parser.js";
+import { effectiveTimeZone } from "../users/time-zone.js";
 
 type SchedulableAgent = {
   id: string;
   schedule_cron: string | null;
   status: "active" | "paused" | "error";
   is_assistant: boolean;
+  time_zone?: string | null;
+};
+
+export type ScheduleSyncSummary = {
+  attempted: number;
+  scheduled: number;
+  failed: number;
 };
 
 type ReclassifiableAgent = {
@@ -27,7 +36,101 @@ export async function syncAgentSchedule(agent: SchedulableAgent): Promise<void> 
     return;
   }
 
-  await scheduleAgentRun(agent.id, agent.schedule_cron);
+  await scheduleAgentRun(agent.id, agent.schedule_cron, await agentTimeZone(agent));
+}
+
+export async function syncAgentScheduleForUser(
+  agent: SchedulableAgent,
+  userId: string
+): Promise<void> {
+  if (agent.is_assistant || agent.status !== "active" || !agent.schedule_cron) {
+    await syncAgentSchedule(agent);
+    return;
+  }
+
+  await syncAgentSchedule({
+    ...agent,
+    time_zone: await getUserScheduleTimeZone(userId)
+  });
+}
+
+export async function getUserScheduleTimeZone(userId: string): Promise<string> {
+  const { rows } = await pool.query<{ time_zone: string | null }>(
+    "SELECT time_zone FROM users WHERE id = $1 FOR KEY SHARE",
+    [userId]
+  );
+
+  return effectiveTimeZone(
+    rows[0]?.time_zone,
+    config.AGENT_SCHEDULE_TIME_ZONE
+  );
+}
+
+async function agentTimeZone(agent: SchedulableAgent): Promise<string> {
+  if (agent.time_zone !== undefined) {
+    return effectiveTimeZone(
+      agent.time_zone,
+      config.AGENT_SCHEDULE_TIME_ZONE
+    );
+  }
+
+  const { rows } = await pool.query<{ time_zone: string | null }>(
+    `
+      SELECT u.time_zone
+      FROM agents a
+      JOIN users u ON u.id = a.user_id
+      WHERE a.id = $1
+    `,
+    [agent.id]
+  );
+
+  return effectiveTimeZone(
+    rows[0]?.time_zone,
+    config.AGENT_SCHEDULE_TIME_ZONE
+  );
+}
+
+export async function rescheduleActiveAgentSchedulesForUser(
+  userId: string,
+  timeZone: string,
+  logger?: FastifyBaseLogger
+): Promise<ScheduleSyncSummary> {
+  const { rows } = await pool.query<SchedulableAgent>(
+    `
+      SELECT id, schedule_cron, status, is_assistant
+      FROM agents
+      WHERE user_id = $1
+        AND is_assistant = FALSE
+        AND status = 'active'
+        AND schedule_cron IS NOT NULL
+    `,
+    [userId]
+  );
+
+  const summary: ScheduleSyncSummary = {
+    attempted: rows.length,
+    scheduled: 0,
+    failed: 0
+  };
+  const effective = effectiveTimeZone(
+    timeZone,
+    config.AGENT_SCHEDULE_TIME_ZONE
+  );
+
+  for (const agent of rows) {
+    try {
+      await syncAgentSchedule({ ...agent, time_zone: effective });
+      summary.scheduled += 1;
+    } catch (error) {
+      summary.failed += 1;
+      logger?.warn(
+        { error, userId, agentId: agent.id, timeZone: effective },
+        "Failed to reschedule agent after user time-zone update"
+      );
+    }
+  }
+
+  return summary;
 }
 
 export async function removeScheduleForAgent(agentId: string): Promise<void> {
@@ -41,11 +144,17 @@ export async function syncActiveAgentSchedules(
 
   const { rows } = await pool.query<SchedulableAgent>(
     `
-      SELECT id, schedule_cron, status, is_assistant
-      FROM agents
-      WHERE is_assistant = FALSE
-        AND status = 'active'
-        AND schedule_cron IS NOT NULL
+      SELECT
+        a.id,
+        a.schedule_cron,
+        a.status,
+        a.is_assistant,
+        u.time_zone
+      FROM agents a
+      JOIN users u ON u.id = a.user_id
+      WHERE a.is_assistant = FALSE
+        AND a.status = 'active'
+        AND a.schedule_cron IS NOT NULL
     `
   );
 

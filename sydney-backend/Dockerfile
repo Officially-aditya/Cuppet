@@ -32,4 +32,4 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/src/db/migrations ./src/db/migrations
 
 EXPOSE 3000
-CMD ["node", "dist/src/index.js"]
+CMD ["sh", "-c", "npm run migrate && node dist/src/index.js"]

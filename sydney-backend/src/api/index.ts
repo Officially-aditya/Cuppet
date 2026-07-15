@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { agentRoutes } from "../agents/routes.js";
-import { requireAuth } from "../auth/middleware.js";
 import { authRoutes } from "../auth/routes.js";
 import { connectorRoutes } from "../connectors/routes.js";
 import { messageRoutes } from "../messages/routes.js";
@@ -10,9 +9,11 @@ import { uploadRoutes } from "../uploads/routes.js";
 import { agentWorkerRuntimeStatus } from "../workers/runtime-status.js";
 import { config } from "../config.js";
 import { eventRoutes } from "../events/routes.js";
+import { userRoutes } from "../users/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
+  await app.register(userRoutes);
   await app.register(agentRoutes);
   await app.register(connectorRoutes);
   await app.register(messageRoutes);
@@ -46,8 +47,4 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
     return { agents: agents.rows, messages };
   });
 
-  app.get("/users/me", { preHandler: requireAuth }, async (request) => ({
-    user: request.auth!.user,
-    session: request.auth!.session
-  }));
 }

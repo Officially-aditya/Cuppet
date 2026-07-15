@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/timezone_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/sydney_primitives.dart';
 
@@ -74,6 +75,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _toggleAutomaticTimeZone(bool enable) async {
+    final updated = await ref
+        .read(timezonePreferencesProvider.notifier)
+        .setFollowDeviceTimeZone(enable);
+    if (!updated && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not update the time zone. We will try again when you are online.',
+          ),
+        ),
+      );
+    }
+  }
+
   String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
@@ -88,6 +104,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final displayName = user?.displayName ?? 'Cuppet User';
     final email = user?.email ?? '';
     final initials = _initials(displayName);
+    final timeZoneAsync = ref.watch(timezonePreferencesProvider);
+    final timeZoneState = timeZoneAsync.value;
+    final displayedTimeZone = timeZoneState?.displayedTimeZone;
+    final followsDevice = timeZoneState?.followDeviceTimeZone;
+    final timeZoneBusy =
+        timeZoneAsync.isLoading || timeZoneState?.isUpdating == true;
 
     return Scaffold(
       backgroundColor: SydneyColors.surface,
@@ -265,6 +287,102 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             const SizedBox(height: SydneySpacing.lg),
+            Container(
+              key: const ValueKey('settings-timezone-card'),
+              decoration: BoxDecoration(
+                color: SydneyColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
+                    offset: const Offset(4, 4),
+                    blurRadius: 8,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 8,
+                  ),
+                ],
+                border: Border.all(
+                  color: SydneyColors.line.withValues(alpha: 0.35),
+                  width: 0.8,
+                ),
+              ),
+              padding: const EdgeInsets.all(SydneySpacing.lg),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: SydneyColors.primarySoft,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: SydneyColors.line.withValues(alpha: 0.35),
+                        width: 0.8,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.public_rounded,
+                      size: 18,
+                      color: SydneyColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: SydneySpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          followsDevice == false
+                              ? 'Fixed time zone'
+                              : 'Automatic time zone',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: SydneyColors.ink,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _timeZoneDescription(
+                            displayedTimeZone: displayedTimeZone,
+                            followsDevice: followsDevice,
+                            syncPending: timeZoneState?.syncPending == true,
+                          ),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: SydneyColors.mutedInk,
+                                fontWeight: FontWeight.w400,
+                                height: 1.35,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: SydneySpacing.md),
+                  if (timeZoneBusy)
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: SydneyColors.primary,
+                      ),
+                    )
+                  else
+                    Switch.adaptive(
+                      key: const ValueKey('automatic-timezone-switch'),
+                      value: followsDevice ?? true,
+                      activeTrackColor: SydneyColors.primary,
+                      onChanged: timeZoneState?.preferencesLoaded == true
+                          ? _toggleAutomaticTimeZone
+                          : null,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.lg),
             const SydneySectionLabel('Security'),
             const SizedBox(height: SydneySpacing.sm),
             Container(
@@ -419,5 +537,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  String _timeZoneDescription({
+    required String? displayedTimeZone,
+    required bool? followsDevice,
+    required bool syncPending,
+  }) {
+    final timeZone = displayedTimeZone ?? 'Detecting your device time zone';
+    if (syncPending) {
+      return '$timeZone · Sync pending until Cuppet is online.';
+    }
+    if (followsDevice == false) {
+      return '$timeZone · Turn on automatic to follow this device.';
+    }
+    return '$timeZone · Follows this device when it changes.';
   }
 }

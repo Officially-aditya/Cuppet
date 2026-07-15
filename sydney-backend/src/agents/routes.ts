@@ -7,7 +7,11 @@ import { enqueueAgentRun, agentExecutorQueue, agentExecutorJobName } from "../qu
 import { ensureAssistantContact } from "./assistant.js";
 import { parseIntentHybrid } from "./llm-intent.js";
 import type { ParsedIntent } from "./parser.js";
-import { removeScheduleForAgent, syncAgentSchedule } from "./scheduler.js";
+import {
+  removeScheduleForAgent,
+  syncAgentSchedule,
+  syncAgentScheduleForUser
+} from "./scheduler.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
 import {
@@ -203,7 +207,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
 
     const agent = rows[0]!;
     await writeAgentCreatedMessage(userId, agent.id, parsedIntent);
-    await syncAgentSchedule(agent);
+    await syncAgentScheduleForUser(agent, userId);
     await publishRealtimeEvent({
       type: "agent.created",
       user_id: userId,
@@ -441,7 +445,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     );
 
     const updatedAgent = rows[0]!;
-    await syncAgentSchedule(updatedAgent);
+    await syncAgentScheduleForUser(updatedAgent, userId);
     await publishRealtimeEvent({
       type: "agent.updated",
       user_id: userId,

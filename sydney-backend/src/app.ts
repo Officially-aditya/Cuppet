@@ -64,7 +64,12 @@ export async function buildApp(): Promise<FastifyInstance> {
       callback(new Error("Origin not allowed"), false);
     },
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "X-Cuppet-Expected-User"
+    ],
     credentials: true,
     maxAge: 86400
   });

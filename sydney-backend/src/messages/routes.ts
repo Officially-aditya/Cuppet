@@ -13,7 +13,7 @@ import { parseIntentHybrid } from "../agents/llm-intent.js";
 import { refineAmbiguousAgentMessage } from "../agents/llm-message-router.js";
 import { routeAgentMessage } from "../agents/message-router.js";
 import type { ParsedIntent } from "../agents/parser.js";
-import { syncAgentSchedule } from "../agents/scheduler.js";
+import { syncAgentScheduleForUser } from "../agents/scheduler.js";
 import { requireAuth } from "../auth/middleware.js";
 import { pool } from "../db/index.js";
 import { enqueueAgentRun } from "../queue/index.js";
@@ -580,7 +580,7 @@ async function handleAssistantTextMessage(
 
     await touchAgentWithClient(client, userId, assistantId);
     await client.query("COMMIT");
-    await syncAgentSchedule(createdAgent);
+    await syncAgentScheduleForUser(createdAgent, userId);
     await publishMessageEvents(userId, [userMessage, assistantMessage]);
     await publishRealtimeEvent({
       type: "agent.created",
@@ -721,7 +721,7 @@ async function handleAgentTextMessage(
     committed = true;
 
     if (updatedAgent) {
-      await syncAgentSchedule(updatedAgent);
+      await syncAgentScheduleForUser(updatedAgent, userId);
     }
 
     await publishMessageEvents(userId, [userMessage, agentMessage]);

@@ -12,6 +12,7 @@ import 'models/thread_launch_request.dart';
 import 'providers/auth_provider.dart';
 import 'providers/agents_provider.dart';
 import 'providers/messages_provider.dart';
+import 'providers/timezone_provider.dart';
 import 'services/push_service.dart';
 import 'services/notification_clear_service.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -125,12 +126,15 @@ class _AuthGateState extends ConsumerState<AuthGate> {
         if (agentsReady) _revealedUserId = userId;
         final ready = alreadyRevealed || agentsReady;
 
-        return CuppetLaunchScreen(
-          ready: ready,
-          child:
-              ready
-                  ? const RealtimeBridge(child: InboxScreen())
-                  : const SizedBox.expand(),
+        return TimezoneSyncBridge(
+          key: ValueKey('timezone-sync-$userId'),
+          child: CuppetLaunchScreen(
+            ready: ready,
+            child:
+                ready
+                    ? const RealtimeBridge(child: InboxScreen())
+                    : const SizedBox.expand(),
+          ),
         );
       },
       loading:
@@ -140,6 +144,44 @@ class _AuthGateState extends ConsumerState<AuthGate> {
           (_, _) =>
               const CuppetLaunchScreen(ready: true, child: SignInScreen()),
     );
+  }
+}
+
+class TimezoneSyncBridge extends ConsumerStatefulWidget {
+  const TimezoneSyncBridge({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  ConsumerState<TimezoneSyncBridge> createState() => _TimezoneSyncBridgeState();
+}
+
+class _TimezoneSyncBridgeState extends ConsumerState<TimezoneSyncBridge> {
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () {
+        unawaited(
+          ref.read(timezonePreferencesProvider.notifier).syncDeviceTimeZone(),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Activating this auth-scoped provider starts the initial non-blocking sync.
+    ref.watch(timezonePreferencesProvider);
+    return widget.child;
   }
 }
 

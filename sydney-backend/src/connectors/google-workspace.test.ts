@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   fetchVisibleCalendarEvents,
+  formatCalendarDateTime,
   googleScopesCoverConnector,
   startGmailWatch
 } from "./google-workspace.js";
@@ -30,6 +31,19 @@ test("Calendar connections require both event and calendar-list grants", () => {
       "calendar"
     ),
     true
+  );
+});
+
+test("calendar event labels use the account time zone", () => {
+  const instant = "2026-07-14T12:00:00.000Z";
+
+  assert.match(
+    formatCalendarDateTime(instant, "America/New_York"),
+    /8:00\s*am/i
+  );
+  assert.match(
+    formatCalendarDateTime(instant, "Asia/Kolkata"),
+    /5:30\s*pm/i
   );
 });
 

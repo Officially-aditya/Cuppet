@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../providers/agents_provider.dart';
+import '../../providers/timezone_provider.dart';
 import '../../services/agent_service.dart';
 import '../../widgets/sydney_primitives.dart';
 import 'create_screen.dart';
@@ -47,12 +48,18 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     }
   }
 
-  String _describeTiming(Map<String, dynamic>? parsed) {
+  String _describeTiming(
+    Map<String, dynamic>? parsed, {
+    required String? timeZone,
+  }) {
     final cron = parsed?['schedule_cron']?.toString();
     if (cron == null) return 'Whenever you message it';
 
+    String scheduled(String label) =>
+        '$label · ${timeZone ?? 'your local time'}';
+
     final parts = cron.split(' ');
-    if (parts.length < 5) return 'Runs on schedule: $cron';
+    if (parts.length < 5) return scheduled('Runs on schedule: $cron');
 
     final minuteStr = parts[0];
     final hourStr = parts[1];
@@ -61,7 +68,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
 
     final minute = int.tryParse(minuteStr);
     final hour = int.tryParse(hourStr);
-    if (minute == null || hour == null) return 'Runs on schedule: $cron';
+    if (minute == null || hour == null) {
+      return scheduled('Runs on schedule: $cron');
+    }
 
     final hourNum = hour == 0 || hour == 12 ? 12 : hour % 12;
     final ampm = hour < 12 ? 'AM' : 'PM';
@@ -69,15 +78,15 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     final timeStr = '$hourNum:$minutePad $ampm';
 
     if (dow == '1-5') {
-      return 'Weekdays at $timeStr';
+      return scheduled('Weekdays at $timeStr');
     }
 
     if (dow == '*') {
       if (dom == '*') {
-        return 'Daily at $timeStr';
+        return scheduled('Daily at $timeStr');
       } else {
         final suffix = _daySuffix(dom);
-        return 'Monthly on the $dom$suffix at $timeStr';
+        return scheduled('Monthly on the $dom$suffix at $timeStr');
       }
     }
 
@@ -92,10 +101,10 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       '7': 'Sundays',
     };
     if (days.containsKey(dow)) {
-      return 'Weekly on ${days[dow]} at $timeStr';
+      return scheduled('Weekly on ${days[dow]} at $timeStr');
     }
 
-    return 'Runs on schedule: $cron';
+    return scheduled('Runs on schedule: $cron');
   }
 
   String _daySuffix(String dayStr) {
@@ -143,6 +152,8 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     final permissions = _parsedIntent?['permissions_needed'] is List
         ? List<String>.from(_parsedIntent?['permissions_needed'])
         : const <String>[];
+    final timeZone =
+        ref.watch(timezonePreferencesProvider).value?.displayedTimeZone;
 
     return Scaffold(
       backgroundColor: SydneyColors.surface,
@@ -280,7 +291,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                         icon: Icons.schedule_rounded,
                         title: 'When it runs',
                         child: Text(
-                          _describeTiming(_parsedIntent),
+                          _describeTiming(_parsedIntent, timeZone: timeZone),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: SydneyColors.onSurfaceVariant,
                                 height: 1.35,

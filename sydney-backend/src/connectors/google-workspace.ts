@@ -21,6 +21,7 @@ import {
   decryptConnectorSecret,
   encryptConnectorSecret
 } from "./token-vault.js";
+import { effectiveTimeZone } from "../users/time-zone.js";
 
 // @ts-ignore
 import pdfParse from "pdf-parse";
@@ -620,7 +621,8 @@ export async function renderGoogleWorkspaceAgent(
   if (calendarIntent(intent)) {
     const token = await googleAccessToken(agent.user_id, "calendar");
     if (!token) return null;
-    return renderCalendarAgent(agent, token, options);
+    const timeZone = await googleWorkspaceUserTimeZone(agent.user_id);
+    return renderCalendarAgent(agent, token, options, timeZone);
   }
 
   return null;
@@ -897,7 +899,8 @@ async function renderDriveAgent(
 async function renderCalendarAgent(
   agent: WorkspaceAgent,
   accessToken: string,
-  options: WorkspaceRenderOptions
+  options: WorkspaceRenderOptions,
+  timeZone: string
 ): Promise<RenderedAgentMessage> {
   const now = new Date();
   const days = calendarWindowInDays(agent.prompt, actionText(agent));
@@ -942,7 +945,7 @@ async function renderCalendarAgent(
       text: options.scheduledIntro(agent, "calendar agenda"),
       summary: digestSection(
         "Upcoming events",
-        events.map(calendarEventLine)
+        events.map((event) => calendarEventLine(event, timeZone))
       ),
       metrics: [
         { label: "Events", value: String(events.length) },
@@ -1602,24 +1605,17 @@ function calendarEventTitle(event: CalendarEvent): string {
   return event.summary?.trim() || "Untitled event";
 }
 
-function calendarEventLine(event: CalendarEvent): string {
-  const start = calendarEventStart(event);
+function calendarEventLine(event: CalendarEvent, timeZone: string): string {
+  const start = calendarEventStart(event, timeZone);
   const location = event.location?.trim();
   return [start, calendarEventTitle(event), location ? `at ${location}` : null]
     .filter(Boolean)
     .join(" — ");
 }
 
-function calendarEventStart(event: CalendarEvent): string {
+function calendarEventStart(event: CalendarEvent, timeZone: string): string {
   if (event.start?.dateTime) {
-    return new Intl.DateTimeFormat("en-IN", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: config.AGENT_SCHEDULE_TIME_ZONE
-    }).format(new Date(event.start.dateTime));
+    return formatCalendarDateTime(event.start.dateTime, timeZone);
   }
 
   if (event.start?.date) {
@@ -1635,6 +1631,31 @@ function calendarEventStart(event: CalendarEvent): string {
   }
 
   return "Time unavailable";
+}
+
+export function formatCalendarDateTime(
+  dateTime: string,
+  timeZone: string
+): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: effectiveTimeZone(timeZone, config.AGENT_SCHEDULE_TIME_ZONE)
+  }).format(new Date(dateTime));
+}
+
+async function googleWorkspaceUserTimeZone(userId: string): Promise<string> {
+  const { rows } = await pool.query<{ time_zone: string | null }>(
+    "SELECT time_zone FROM users WHERE id = $1",
+    [userId]
+  );
+  return effectiveTimeZone(
+    rows[0]?.time_zone,
+    config.AGENT_SCHEDULE_TIME_ZONE
+  );
 }
 
 function coveredConnectors(
@@ -2096,12 +2117,13 @@ export async function fetchSourceReferenceDetail(
     const token = await googleAccessToken(userId, "calendar");
     if (!token) throw new Error("Google Calendar connector is not connected.");
 
+    const timeZone = await googleWorkspaceUserTimeZone(userId);
     const eventId = encodeURIComponent(String(sourceRef.id || ""));
     const url = new URL(`${calendarApiBase}/calendars/primary/events/${eventId}`);
     const event = await googleJson<CalendarEvent>(url, token);
     return [
       `Event: ${calendarEventTitle(event)}`,
-      `Starts: ${calendarEventStart(event)}`,
+      `Starts: ${calendarEventStart(event, timeZone)}`,
       event.location ? `Location: ${event.location}` : null,
       event.description ? `Description: ${event.description}` : null
     ]
