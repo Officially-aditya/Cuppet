@@ -25,13 +25,22 @@ export type DataSummaryMessageContent = {
     }>;
     items?: unknown[];
     footer?: string;
-    kind?: "github_activity";
+    kind?: "github_activity" | "gmail_digest";
     timeline?: Array<{
       title: string;
       repository?: string;
       timestamp?: string;
       url?: string;
       type?: "commit" | "repository" | "issue" | "pull_request";
+    }>;
+    messages?: Array<{
+      id: string;
+      thread_id?: string;
+      subject: string;
+      sender: string;
+      preview?: string;
+      timestamp?: string;
+      category: "attention" | "reply" | "finance" | "system" | "update";
     }>;
   };
 };

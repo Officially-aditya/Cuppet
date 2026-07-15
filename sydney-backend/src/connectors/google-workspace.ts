@@ -69,7 +69,7 @@ type WorkspaceRenderOptions = {
   scheduledTitle: (agent: WorkspaceAgent, label: string) => string;
 };
 
-type GmailMessage = {
+export type GmailMessage = {
   id: string;
   threadId?: string;
   snippet?: string;
@@ -85,6 +85,16 @@ type GmailDigestItem = {
   snippet: string;
   category: "attention" | "reply" | "finance" | "system" | "update";
   line: string;
+};
+
+export type GmailDigestMessage = {
+  id: string;
+  thread_id?: string;
+  subject: string;
+  sender: string;
+  preview?: string;
+  timestamp?: string;
+  category: GmailDigestItem["category"];
 };
 
 export type DriveFile = {
@@ -680,12 +690,7 @@ async function renderProjectDeadlineWatcher(
     },
     {
       sourceRefs: [
-        ...messages.map((message) => ({
-          source: "Gmail",
-          id: message.id,
-          thread_id: message.threadId,
-          subject: header(message, "Subject")
-        })),
+        ...messages.map(gmailMessageSourceRef),
         ...files.map((file) => ({
           source: "Google Drive",
           id: file.id,
@@ -707,12 +712,7 @@ async function renderGmailAgent(
   const query = await buildDynamicGmailQuery(agent.prompt, actionText(agent), defaultQuery);
   const messages = await fetchGmailMessages(accessToken, query, 8);
   const title = options.scheduledTitle(agent, gmailOutputLabel(intent));
-  const sourceRefs = messages.map((message) => ({
-    source: "Gmail",
-    id: message.id,
-    thread_id: message.threadId,
-    subject: header(message, "Subject")
-  }));
+  const sourceRefs = messages.map(gmailMessageSourceRef);
 
   if (messages.length === 0) {
     return renderedDataSummary(
@@ -773,18 +773,29 @@ async function renderGmailAgent(
     userPrompt: gmailOnlyDigestPrompt(agent.prompt),
     records: messages.map(gmailDigestRecord)
   });
+  const digestMessages = buildGmailDigestMessages(messages);
+  const categoryCounts = digestMessages.reduce(
+    (counts, message) => {
+      counts[message.category] += 1;
+      return counts;
+    },
+    { attention: 0, reply: 0, finance: 0, system: 0, update: 0 }
+  );
 
   return renderedDataSummary(
     {
-      title: "Mailbox highlights",
+      title,
       text: options.scheduledIntro(agent, gmailOutputLabel(intent)),
       summary: synthesized?.summary ?? buildEmailDigestSummary(messages),
       metrics: [
         { label: "Messages", value: String(messages.length) },
         { label: "Needs review", value: String(reviewCount(messages)) },
-        { label: "Source", value: "Gmail" }
+        { label: "Replies", value: String(categoryCounts.reply) },
+        { label: "Finance", value: String(categoryCounts.finance) }
       ],
-      footer: "Summarized from Gmail metadata and snippets."
+      footer: "Read-only digest summarized from Gmail metadata and snippets.",
+      kind: "gmail_digest",
+      messages: digestMessages
     },
     { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
   );
@@ -1817,6 +1828,44 @@ function gmailDigestItem(message: GmailMessage): GmailDigestItem {
   };
 }
 
+export function buildGmailDigestMessages(
+  messages: GmailMessage[]
+): GmailDigestMessage[] {
+  return messages
+    .map((message) => {
+      const item = gmailDigestItem(message);
+      const timestamp = gmailTimestamp(message);
+      return {
+        id: message.id,
+        ...(message.threadId ? { thread_id: message.threadId } : {}),
+        subject: item.subject,
+        sender: item.sender,
+        ...(item.snippet ? { preview: item.snippet } : {}),
+        ...(timestamp ? { timestamp } : {}),
+        category: item.category
+      };
+    })
+    .sort((left, right) =>
+      String(right.timestamp ?? "").localeCompare(String(left.timestamp ?? ""))
+    );
+}
+
+export function gmailMessageSourceRef(message: GmailMessage): {
+  type: "gmail_message";
+  source: "Gmail";
+  id: string;
+  thread_id?: string;
+  subject: string | null;
+} {
+  return {
+    type: "gmail_message",
+    source: "Gmail",
+    id: message.id,
+    ...(message.threadId ? { thread_id: message.threadId } : {}),
+    subject: header(message, "Subject")
+  };
+}
+
 function gmailDigestRecord(message: GmailMessage): string {
   const item = gmailDigestItem(message);
   const date = messageDate(message);
@@ -1948,6 +1997,18 @@ function messageDate(message: GmailMessage): string | undefined {
 
   const parsed = Number(message.internalDate);
   return Number.isFinite(parsed) ? new Date(parsed).toLocaleString("en-US") : undefined;
+}
+
+function gmailTimestamp(message: GmailMessage): string | undefined {
+  const raw = header(message, "Date");
+  if (raw) {
+    const parsed = Date.parse(raw);
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString();
+  }
+
+  if (!message.internalDate) return undefined;
+  const parsed = Number(message.internalDate);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : undefined;
 }
 
 function driveFileLine(file: DriveFile): string {

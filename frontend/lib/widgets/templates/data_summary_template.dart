@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'gmail_digest_template.dart';
 import 'github_activity_template.dart';
 import 'template_utils.dart';
 
@@ -15,6 +16,9 @@ class DataSummaryTemplate extends StatelessWidget {
     final timeline = templateMaps(data['timeline']);
     if (data['kind'] == 'github_activity' && timeline.isNotEmpty) {
       return GitHubActivityTemplate(data: data, timeline: timeline);
+    }
+    if (data['kind'] == 'gmail_digest') {
+      return GmailDigestTemplate(data: data);
     }
 
     final title = data['title']?.toString() ?? 'Summary';

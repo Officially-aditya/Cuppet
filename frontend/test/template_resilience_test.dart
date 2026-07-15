@@ -442,6 +442,99 @@ void main() {
       },
     );
 
+    testWidgets(
+      'Gmail digest keeps four metrics on one row and expands message previews',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          templateHost(
+            const DataSummaryTemplate(
+              data: {
+                'kind': 'gmail_digest',
+                'title': 'Daily inbox digest',
+                'metrics': [
+                  {'label': 'Messages', 'value': '8'},
+                  {'label': 'Needs review', 'value': '2'},
+                  {'label': 'Replies', 'value': '1'},
+                  {'label': 'Finance', 'value': '1'},
+                ],
+                'messages': [
+                  {
+                    'id': 'mail-1',
+                    'subject':
+                        'A long security notice that still fits a narrow phone',
+                    'sender': 'Cuppet Security',
+                    'preview': 'Please verify this sign-in immediately.',
+                    'timestamp': '2026-07-15T09:30:00Z',
+                    'category': 'attention',
+                  },
+                  {
+                    'id': 'mail-2',
+                    'subject': 'Can you review the launch copy?',
+                    'sender': 'Product team',
+                    'preview': 'The draft is ready for your comments.',
+                    'timestamp': '2026-07-15T08:30:00Z',
+                    'category': 'reply',
+                  },
+                ],
+                'footer': 'Read-only Gmail digest.',
+              },
+            ),
+          ),
+        );
+
+        expect(find.text('GMAIL DIGEST'), findsOneWidget);
+        expect(find.text('Cuppet Security'), findsOneWidget);
+        expect(find.text('ATTENTION'), findsOneWidget);
+        expect(find.text('REPLY'), findsOneWidget);
+        expect(
+          find.text('Please verify this sign-in immediately.'),
+          findsNothing,
+        );
+        final metricTops = [
+          tester.getTopLeft(find.text('8')).dy,
+          tester.getTopLeft(find.text('2')).dy,
+          tester.getTopLeft(find.text('1').at(0)).dy,
+          tester.getTopLeft(find.text('1').at(1)).dy,
+        ];
+        expect(metricTops.toSet(), hasLength(1));
+
+        await tester.tap(find.byKey(const ValueKey('gmail-message-mail-1')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Please verify this sign-in immediately.'),
+          findsOneWidget,
+        );
+        expect(find.text('Read-only Gmail digest.'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('Gmail digest tolerates malformed message collections', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        templateHost(
+          const DataSummaryTemplate(
+            data: {
+              'kind': 'gmail_digest',
+              'title': 'Mailbox highlights',
+              'messages': 'not-a-list',
+            },
+          ),
+        ),
+      );
+
+      expect(
+        find.text('No matching Gmail messages were found for this run.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('progress tracker tolerates malformed steps', (tester) async {
       await tester.pumpWidget(
         templateHost(

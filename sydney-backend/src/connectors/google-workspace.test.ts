@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildGmailDigestMessages,
   fetchVisibleCalendarEvents,
   formatCalendarDateTime,
+  gmailMessageSourceRef,
   googleScopesCoverConnector,
   startGmailWatch
 } from "./google-workspace.js";
@@ -264,4 +266,57 @@ test("Gmail push watch targets Pub/Sub and filters to inbox changes", async () =
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("Gmail digest keeps structured mail details in newest-first order", () => {
+  const messages = buildGmailDigestMessages([
+    {
+      id: "older",
+      threadId: "thread-older",
+      snippet: "Your payment receipt is ready.",
+      internalDate: String(Date.parse("2026-07-15T08:00:00.000Z")),
+      payload: {
+        headers: [
+          { name: "Subject", value: "July receipt" },
+          { name: "From", value: "Billing <billing@example.com>" }
+        ]
+      }
+    },
+    {
+      id: "newer",
+      threadId: "thread-newer",
+      snippet: "Please verify this sign-in immediately.",
+      payload: {
+        headers: [
+          { name: "Subject", value: "Security alert &amp; action required" },
+          { name: "From", value: '"Cuppet Security" <security@example.com>' },
+          { name: "Date", value: "Wed, 15 Jul 2026 09:30:00 +0000" }
+        ]
+      }
+    }
+  ]);
+
+  assert.deepEqual(messages.map((message) => message.id), ["newer", "older"]);
+  assert.equal(messages[0]?.subject, "Security alert & action required");
+  assert.equal(messages[0]?.sender, "Cuppet Security");
+  assert.equal(messages[0]?.category, "attention");
+  assert.equal(messages[0]?.timestamp, "2026-07-15T09:30:00.000Z");
+  assert.equal(messages[1]?.category, "finance");
+});
+
+test("Gmail source references are explicitly routed as messages", () => {
+  assert.deepEqual(
+    gmailMessageSourceRef({
+      id: "message-1",
+      threadId: "thread-1",
+      payload: { headers: [{ name: "Subject", value: "Project update" }] }
+    }),
+    {
+      type: "gmail_message",
+      source: "Gmail",
+      id: "message-1",
+      thread_id: "thread-1",
+      subject: "Project update"
+    }
+  );
 });

@@ -1,27 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
 import 'digest_report_primitives.dart';
 import 'template_utils.dart';
 
-class GitHubActivityTemplate extends StatelessWidget {
-  const GitHubActivityTemplate({
-    required this.data,
-    required this.timeline,
-    super.key,
-  });
+class GmailDigestTemplate extends StatelessWidget {
+  const GmailDigestTemplate({required this.data, super.key});
 
   final Map<String, dynamic> data;
-  final List<Map<String, dynamic>> timeline;
 
   @override
   Widget build(BuildContext context) {
-    final title = data['title']?.toString() ?? 'GitHub activity';
+    final title = data['title']?.toString() ?? 'Mailbox highlights';
     final intro = data['text']?.toString();
     final footer = data['footer']?.toString();
     final metrics = templateMaps(data['metrics']);
+    final messages = templateMaps(data['messages']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +40,7 @@ class GitHubActivityTemplate extends StatelessWidget {
             ),
             const SizedBox(width: SydneySpacing.xs),
             Text(
-              'GITHUB ACTIVITY DIGEST',
+              'GMAIL DIGEST',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: SydneyColors.primary,
                 fontWeight: FontWeight.w800,
@@ -70,6 +65,8 @@ class GitHubActivityTemplate extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title.toUpperCase(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: SydneyColors.onSurface,
                         fontWeight: FontWeight.w800,
@@ -78,7 +75,7 @@ class GitHubActivityTemplate extends StatelessWidget {
                     ),
                   ),
                   const Icon(
-                    Icons.account_tree_outlined,
+                    Icons.mark_email_unread_outlined,
                     color: SydneyColors.primary,
                     size: 22,
                   ),
@@ -91,11 +88,20 @@ class GitHubActivityTemplate extends StatelessWidget {
               const SizedBox(height: SydneySpacing.md),
               const Divider(height: 1, color: SydneyColors.line),
               const SizedBox(height: SydneySpacing.md),
-              for (var index = 0; index < timeline.length; index++)
-                _GitHubTimelineItem(
-                  item: timeline[index],
-                  isLast: index == timeline.length - 1,
-                ),
+              if (messages.isEmpty)
+                Text(
+                  'No matching Gmail messages were found for this run.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: SydneyColors.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                )
+              else
+                for (var index = 0; index < messages.length; index++)
+                  _GmailMessageItem(
+                    message: messages[index],
+                    isLast: index == messages.length - 1,
+                  ),
               if (_hasContent(footer)) ...[
                 const SizedBox(height: SydneySpacing.sm),
                 const Divider(height: 1, color: SydneyColors.line),
@@ -116,21 +122,38 @@ class GitHubActivityTemplate extends StatelessWidget {
   }
 }
 
-class _GitHubTimelineItem extends StatelessWidget {
-  const _GitHubTimelineItem({required this.item, required this.isLast});
+class _GmailMessageItem extends StatefulWidget {
+  const _GmailMessageItem({required this.message, required this.isLast});
 
-  final Map<String, dynamic> item;
+  final Map<String, dynamic> message;
   final bool isLast;
 
   @override
+  State<_GmailMessageItem> createState() => _GmailMessageItemState();
+}
+
+class _GmailMessageItemState extends State<_GmailMessageItem> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final title = item['title']?.toString() ?? 'GitHub update';
-    final repository = item['repository']?.toString();
-    final timestamp = _githubTimestamp(item['timestamp']);
-    final url = item['url']?.toString();
+    final message = widget.message;
+    final id = message['id']?.toString() ?? message['subject']?.toString();
+    final subject = message['subject']?.toString() ?? 'Gmail message';
+    final sender = message['sender']?.toString() ?? 'Unknown sender';
+    final preview = message['preview']?.toString();
+    final timestamp = _gmailTimestamp(message['timestamp']);
+    final category = _categoryLabel(message['category']);
+    final canExpand = _hasContent(preview);
 
     return InkWell(
-      onTap: !_hasContent(url) ? null : () => _openExternalUrl(url!),
+      key: ValueKey('gmail-message-$id'),
+      onTap:
+          canExpand
+              ? () => setState(() {
+                _expanded = !_expanded;
+              })
+              : null,
       borderRadius: BorderRadius.circular(SydneyRadius.sm),
       child: Padding(
         padding: const EdgeInsets.only(bottom: SydneySpacing.sm),
@@ -150,7 +173,7 @@ class _GitHubTimelineItem extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    if (!isLast)
+                    if (!widget.isLast)
                       Expanded(
                         child: Container(
                           width: 2,
@@ -182,29 +205,28 @@ class _GitHubTimelineItem extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                          if (_hasContent(repository))
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: SydneySpacing.xs,
-                                vertical: SydneySpacing.xxs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: SydneyColors.surfaceContainerHigh,
-                                borderRadius: BorderRadius.circular(
-                                  SydneyRadius.full,
-                                ),
-                              ),
-                              child: Text(
-                                repository!,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.labelSmall?.copyWith(
-                                  color: SydneyColors.onSurfaceVariant,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: SydneySpacing.xs,
+                              vertical: SydneySpacing.xxs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: SydneyColors.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.full,
                               ),
                             ),
+                            child: Text(
+                              category.toUpperCase(),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelSmall?.copyWith(
+                                color: SydneyColors.onSurfaceVariant,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: SydneySpacing.xs),
@@ -212,28 +234,68 @@ class _GitHubTimelineItem extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              title,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurface,
-                                fontWeight: FontWeight.w700,
-                                height: 1.3,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  subject,
+                                  maxLines: _expanded ? null : 2,
+                                  overflow:
+                                      _expanded
+                                          ? TextOverflow.visible
+                                          : TextOverflow.ellipsis,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                    color: SydneyColors.onSurface,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: SydneySpacing.xxs),
+                                Text(
+                                  sender,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelSmall?.copyWith(
+                                    color: SydneyColors.mutedInk,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (_hasContent(url))
-                            const Padding(
-                              padding: EdgeInsets.only(left: SydneySpacing.xs),
-                              child: Icon(
-                                Icons.open_in_new_rounded,
-                                color: SydneyColors.mutedInk,
-                                size: 14,
+                          if (canExpand)
+                            AnimatedRotation(
+                              turns: _expanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 160),
+                              child: const Padding(
+                                padding: EdgeInsets.only(
+                                  left: SydneySpacing.xs,
+                                ),
+                                child: Icon(
+                                  Icons.expand_more_rounded,
+                                  color: SydneyColors.mutedInk,
+                                  size: 17,
+                                ),
                               ),
                             ),
                         ],
                       ),
+                      if (_expanded && canExpand) ...[
+                        const SizedBox(height: SydneySpacing.sm),
+                        Text(
+                          preview!,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: SydneyColors.onSurfaceVariant,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -248,7 +310,17 @@ class _GitHubTimelineItem extends StatelessWidget {
 
 bool _hasContent(String? value) => value != null && value.trim().isNotEmpty;
 
-String? _githubTimestamp(Object? raw) {
+String _categoryLabel(Object? value) {
+  return switch (value?.toString()) {
+    'attention' => 'Attention',
+    'reply' => 'Reply',
+    'finance' => 'Finance',
+    'system' => 'System',
+    _ => 'Update',
+  };
+}
+
+String? _gmailTimestamp(Object? raw) {
   final value = raw?.toString();
   if (!_hasContent(value)) return null;
   final parsed = DateTime.tryParse(value!);
@@ -259,11 +331,4 @@ String? _githubTimestamp(Object? raw) {
   final minute = local.minute.toString().padLeft(2, '0');
   final period = local.hour >= 12 ? 'PM' : 'AM';
   return '$hour:$minute $period';
-}
-
-Future<void> _openExternalUrl(String value) async {
-  final uri = Uri.tryParse(value);
-  if (uri != null && await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
 }
