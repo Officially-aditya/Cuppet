@@ -147,7 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Text(
                       initials,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: CuppetWorkspaceColors.primary,
+                        color: CuppetWorkspaceColors.primaryInk,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -307,7 +307,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   SizedBox(width: SydneySpacing.md),
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: CuppetWorkspaceColors.primary,
+                    color: CuppetWorkspaceColors.primaryInk,
                     size: 20,
                   ),
                 ],
@@ -360,7 +360,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: const Icon(Icons.logout_rounded, size: 18),
               label: const Text('Sign out'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: CuppetWorkspaceColors.primary,
+                foregroundColor: CuppetWorkspaceColors.primaryInk,
                 backgroundColor: CuppetWorkspaceColors.card,
                 side: const BorderSide(
                   color: CuppetWorkspaceColors.panelBorder,
@@ -418,7 +418,7 @@ class _SettingsIcon extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 19, color: CuppetWorkspaceColors.primary),
+      child: Icon(icon, size: 19, color: CuppetWorkspaceColors.primaryInk),
     );
   }
 }

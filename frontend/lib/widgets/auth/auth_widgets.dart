@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../workspace_primitives.dart';
 
 /// Shared logo badge used on sign-in / sign-up screens.
 class AuthLogo extends StatelessWidget {
@@ -47,6 +48,8 @@ class AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(SydneyRadius.md);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -55,8 +58,10 @@ class AuthField extends StatelessWidget {
           child: Text(
             label.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.onSurfaceVariant,
-              letterSpacing: 0.7,
+              color: CuppetWorkspaceColors.primaryInk,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.9,
             ),
           ),
         ),
@@ -67,29 +72,49 @@ class AuthField extends StatelessWidget {
           obscureText: obscureText,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: SydneyColors.ink),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: CuppetWorkspaceColors.ink,
+            height: 1.4,
+          ),
+          cursorColor: CuppetWorkspaceColors.primary,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 18, color: SydneyColors.outline),
+            prefixIcon: Icon(
+              icon,
+              size: 18,
+              color: CuppetWorkspaceColors.muted,
+            ),
             suffixIcon: suffix,
-            fillColor: SydneyColors.surfaceContainerLow,
+            fillColor: CuppetWorkspaceColors.card,
             filled: true,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: SydneySpacing.md,
               vertical: 14,
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SydneyColors.line),
+              borderRadius: radius,
+              borderSide: const BorderSide(color: CuppetWorkspaceColors.border),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SydneyColors.line),
+              borderRadius: radius,
+              borderSide: const BorderSide(color: CuppetWorkspaceColors.border),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: SydneyColors.primary),
+              borderRadius: radius,
+              borderSide: const BorderSide(
+                color: CuppetWorkspaceColors.primary,
+                width: 1.4,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: const BorderSide(color: SydneyColors.danger),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: const BorderSide(
+                color: SydneyColors.danger,
+                width: 1.4,
+              ),
             ),
           ),
         ),
@@ -104,22 +129,26 @@ class AuthDividerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Expanded(child: Divider(color: SydneyColors.line)),
+        const Expanded(
+          child: Divider(color: CuppetWorkspaceColors.border, height: 1),
+        ),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: SydneySpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.md),
           child: Text(
             'OR',
-            style: TextStyle(
-              color: SydneyColors.outline,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: CuppetWorkspaceColors.muted,
               fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.9,
             ),
           ),
         ),
-        Expanded(child: Divider(color: SydneyColors.line)),
+        const Expanded(
+          child: Divider(color: CuppetWorkspaceColors.border, height: 1),
+        ),
       ],
     );
   }
@@ -228,6 +257,7 @@ class _GoogleLogoPainter extends CustomPainter {
 }
 
 /// Tappable option card for Google / email sign-in paths.
+/// Matches the home-page [WorkspaceCard] surface treatment.
 class LoginOptionCard extends StatelessWidget {
   const LoginOptionCard({
     required this.title,
@@ -248,87 +278,153 @@ class LoginOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: SydneyColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF17201C).withValues(alpha: 0.04),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-          const BoxShadow(
-            color: Colors.white,
-            offset: Offset(-4, -4),
-            blurRadius: 8,
-          ),
-        ],
-        border: Border.all(
-          color: SydneyColors.line.withValues(alpha: 0.35),
-          width: 0.8,
-        ),
+    final usesSoftAvatar = leadingWidget == null;
+
+    return WorkspaceCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: SydneySpacing.lg,
+        vertical: 14,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: SydneyColors.surfaceContainerLowest,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: SydneyColors.line, width: 0.8),
-                  ),
-                  alignment: Alignment.center,
-                  child:
-                      leadingWidget ??
-                      Icon(
-                        icon,
-                        size: 20,
-                        color: leadingIconColor ?? SydneyColors.primary,
-                      ),
-                ),
-                const SizedBox(width: SydneySpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: SydneyColors.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.mutedInk,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: SydneySpacing.sm),
-                const Icon(
-                  Icons.chevron_right_rounded,
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color:
+                  usesSoftAvatar
+                      ? CuppetWorkspaceColors.softSage
+                      : CuppetWorkspaceColors.card,
+              borderRadius: BorderRadius.circular(SydneyRadius.md),
+              border: Border.all(color: CuppetWorkspaceColors.panelBorder),
+            ),
+            alignment: Alignment.center,
+            child:
+                leadingWidget ??
+                Icon(
+                  icon,
                   size: 20,
-                  color: SydneyColors.outline,
+                  color: leadingIconColor ?? CuppetWorkspaceColors.primaryInk,
+                ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontSize: 14,
+                    color: CuppetWorkspaceColors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: CuppetWorkspaceColors.muted,
+                    fontWeight: FontWeight.w400,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: SydneySpacing.sm),
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: CuppetWorkspaceColors.muted,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Primary filled action button styled like home / create workspace CTAs.
+class AuthPrimaryButton extends StatelessWidget {
+  const AuthPrimaryButton({
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: CuppetWorkspaceColors.primary,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: CuppetWorkspaceColors.secondary,
+        disabledForegroundColor: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+        ),
+        minimumSize: const Size.fromHeight(50),
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: 14,
+          letterSpacing: 0.1,
         ),
       ),
+      child: Text(label),
+    );
+  }
+}
+
+/// Secondary outlined action button matching create-flow cancel buttons.
+class AuthSecondaryButton extends StatelessWidget {
+  const AuthSecondaryButton({
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Widget? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final child =
+        icon == null
+            ? Text(label)
+            : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                icon!,
+                const SizedBox(width: SydneySpacing.sm),
+                Text(label),
+              ],
+            );
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: CuppetWorkspaceColors.ink,
+        side: const BorderSide(color: CuppetWorkspaceColors.border),
+        backgroundColor: CuppetWorkspaceColors.card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+        ),
+        minimumSize: const Size.fromHeight(50),
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
+      child: child,
     );
   }
 }

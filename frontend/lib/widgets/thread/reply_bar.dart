@@ -36,9 +36,12 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
+      key: const ValueKey('thread-composer'),
       decoration: const BoxDecoration(
-        color: SydneyColors.surfaceContainerLowest,
-        border: Border(top: BorderSide(color: SydneyColors.line)),
+        color: CuppetWorkspaceColors.background,
+        border: Border(
+          top: BorderSide(color: CuppetWorkspaceColors.panelBorder),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -53,9 +56,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: SydneyColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(SydneyRadius.sm),
-                  border: Border.all(color: SydneyColors.line),
+                  color: CuppetWorkspaceColors.softSage,
+                  borderRadius: BorderRadius.circular(SydneyRadius.md),
+                  border: Border.all(color: CuppetWorkspaceColors.panelBorder),
                 ),
                 child: Row(
                   children: [
@@ -63,7 +66,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                       width: 4,
                       height: 48,
                       decoration: const BoxDecoration(
-                        color: SydneyColors.primary,
+                        color: CuppetWorkspaceColors.primary,
                         borderRadius: BorderRadius.horizontal(
                           left: Radius.circular(SydneyRadius.sm),
                         ),
@@ -78,8 +81,10 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                             widget.replyToMessage!.sender == MessageSender.user
                                 ? 'Replying to your message'
                                 : 'Replying to agent',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SydneyColors.primary,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: CuppetWorkspaceColors.primaryInk,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -88,15 +93,18 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                             widget.replyToMessage!.preview,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SydneyColors.subtleInk,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: CuppetWorkspaceColors.muted),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 16, color: SydneyColors.mutedInk),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: CuppetWorkspaceColors.muted,
+                      ),
                       onPressed: widget.onCancelReply,
                     ),
                   ],
@@ -112,18 +120,31 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                 IconButton(
                   icon: const Icon(
                     Icons.add_circle_outline_rounded,
-                    color: SydneyColors.mutedInk,
+                    color: CuppetWorkspaceColors.primaryInk,
                     size: 28,
                   ),
-                  onPressed: _sending ? null : () => _showAttachmentOptions(context),
+                  style: IconButton.styleFrom(
+                    backgroundColor: CuppetWorkspaceColors.card,
+                    disabledBackgroundColor: CuppetWorkspaceColors.border,
+                    side: const BorderSide(color: CuppetWorkspaceColors.border),
+                  ),
+                  onPressed:
+                      _sending ? null : () => _showAttachmentOptions(context),
                 ),
                 const SizedBox(width: SydneySpacing.xs),
                 Expanded(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: SydneyColors.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(SydneyRadius.md),
-                      border: Border.all(color: SydneyColors.line),
+                      color: CuppetWorkspaceColors.card,
+                      borderRadius: BorderRadius.circular(SydneyRadius.lg),
+                      border: Border.all(color: CuppetWorkspaceColors.border),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A1C1A17),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: TextField(
                       controller: _controller,
@@ -132,6 +153,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                       textCapitalization: TextCapitalization.sentences,
                       decoration: const InputDecoration(
                         hintText: 'Message agent',
+                        hintStyle: TextStyle(
+                          color: CuppetWorkspaceColors.muted,
+                        ),
                         filled: false,
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -151,9 +175,13 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                   child: FilledButton(
                     onPressed: _sending ? null : _send,
                     style: FilledButton.styleFrom(
+                      backgroundColor: CuppetWorkspaceColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: CuppetWorkspaceColors.softSage,
+                      disabledForegroundColor: CuppetWorkspaceColors.muted,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderRadius: BorderRadius.circular(SydneyRadius.lg),
                       ),
                     ),
                     child: Icon(
@@ -203,9 +231,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
       }
 
       setState(() => _sending = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Uploading ${file.name}...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Uploading ${file.name}...')));
 
       final multipartFile = MultipartFile.fromBytes(
         file.bytes!,
@@ -231,9 +259,16 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
       }
 
       final fileUrl = fileData['url'] as String;
-      final isImage = isPhotoOnly || 
-          (file.extension != null && 
-           ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(file.extension!.toLowerCase()));
+      final isImage =
+          isPhotoOnly ||
+          (file.extension != null &&
+              [
+                'jpg',
+                'jpeg',
+                'png',
+                'gif',
+                'webp',
+              ].contains(file.extension!.toLowerCase()));
 
       String markdown;
       if (isImage) {
@@ -254,9 +289,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       }
     } finally {
       if (mounted) {
@@ -283,10 +318,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
 }
 
 class _AttachmentSheet extends StatefulWidget {
-  const _AttachmentSheet({
-    required this.onPickFile,
-    required this.onPickPhoto,
-  });
+  const _AttachmentSheet({required this.onPickFile, required this.onPickPhoto});
 
   final ValueChanged<bool> onPickFile;
   final ValueChanged<bool> onPickPhoto;
@@ -302,7 +334,7 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: SydneyColors.surface,
+        color: CuppetWorkspaceColors.background,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(SydneyRadius.lg),
         ),
@@ -323,16 +355,16 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: SydneySpacing.lg),
               decoration: BoxDecoration(
-                color: SydneyColors.outlineVariant.withValues(alpha: 0.5),
+                color: CuppetWorkspaceColors.panelBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           Text(
             'Add Attachment',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: SydneySpacing.md),
@@ -349,20 +381,32 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
             onChanged: (val) {
               setState(() => _saveToDrive = val);
             },
-            activeTrackColor: SydneyColors.primary,
+            activeTrackColor: CuppetWorkspaceColors.primary,
           ),
-          const Divider(color: SydneyColors.line),
+          const Divider(color: CuppetWorkspaceColors.panelBorder),
           ListTile(
-            leading: const Icon(Icons.photo_library_outlined, color: SydneyColors.primary),
-            title: const Text('Upload Photo', style: TextStyle(fontWeight: FontWeight.w600)),
+            leading: const Icon(
+              Icons.photo_library_outlined,
+              color: CuppetWorkspaceColors.primaryInk,
+            ),
+            title: const Text(
+              'Upload Photo',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             onTap: () {
               Navigator.pop(context);
               widget.onPickPhoto(_saveToDrive);
             },
           ),
           ListTile(
-            leading: const Icon(Icons.description_outlined, color: SydneyColors.primary),
-            title: const Text('Upload Document / File', style: TextStyle(fontWeight: FontWeight.w600)),
+            leading: const Icon(
+              Icons.description_outlined,
+              color: CuppetWorkspaceColors.primaryInk,
+            ),
+            title: const Text(
+              'Upload Document / File',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             onTap: () {
               Navigator.pop(context);
               widget.onPickFile(_saveToDrive);

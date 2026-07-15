@@ -50,8 +50,11 @@ Widget threadHost({
   );
 }
 
-void setMobileViewport(WidgetTester tester) {
-  tester.view.physicalSize = const Size(390, 844);
+void setMobileViewport(
+  WidgetTester tester, {
+  Size size = const Size(390, 844),
+}) {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -59,7 +62,7 @@ void setMobileViewport(WidgetTester tester) {
 
 void main() {
   testWidgets('thread layout fits a narrow mobile viewport', (tester) async {
-    setMobileViewport(tester);
+    setMobileViewport(tester, size: const Size(320, 700));
     final messages = [
       Message.plainText(
         id: 'agent-message',
@@ -86,6 +89,34 @@ void main() {
     expect(find.text('Message agent'), findsOneWidget);
     expect(find.byIcon(Icons.send_rounded), findsOneWidget);
     expect(find.byType(AppBottomNav), findsNothing);
+
+    final scaffold = tester.widget<Scaffold>(
+      find.byKey(const ValueKey('thread-scaffold')),
+    );
+    expect(scaffold.backgroundColor, CuppetWorkspaceColors.background);
+
+    final appBar = tester.widget<AppBar>(
+      find.byKey(const ValueKey('thread-app-bar')),
+    );
+    expect(appBar.backgroundColor, CuppetWorkspaceColors.background);
+
+    final composer = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('thread-composer')),
+    );
+    final composerDecoration = composer.decoration as BoxDecoration;
+    expect(composerDecoration.color, CuppetWorkspaceColors.background);
+
+    final agentSurface = tester.widget<Container>(
+      find.byKey(const ValueKey('message-surface-agent-message')),
+    );
+    final agentDecoration = agentSurface.decoration! as BoxDecoration;
+    expect(agentDecoration.color, CuppetWorkspaceColors.card);
+
+    final userSurface = tester.widget<Container>(
+      find.byKey(const ValueKey('message-surface-user-message')),
+    );
+    final userDecoration = userSurface.decoration! as BoxDecoration;
+    expect(userDecoration.color, CuppetWorkspaceColors.softSage);
     expect(tester.takeException(), isNull);
   });
 
@@ -114,6 +145,38 @@ void main() {
     expect(find.text('Agent response'), findsOneWidget);
     expect(find.text('User reply'), findsOneWidget);
     expect(find.text(testAgent.name), findsOneWidget);
+  });
+
+  testWidgets('message selection and reply remain available after refresh', (
+    tester,
+  ) async {
+    setMobileViewport(tester, size: const Size(360, 800));
+    final message = Message.plainText(
+      id: 'selectable-agent-message',
+      threadId: testAgent.threadId,
+      sender: MessageSender.agent,
+      text: 'Reply to this update',
+      createdAt: _testDate,
+    );
+
+    await tester.pumpWidget(threadHost(loadMessages: () async => [message]));
+    await tester.pumpAndSettle();
+
+    await tester.longPress(
+      find.byKey(const ValueKey('message-surface-selectable-agent-message')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 message selected'), findsOneWidget);
+    expect(find.byTooltip('Copy text'), findsOneWidget);
+    expect(find.byTooltip('Reply to message'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Reply to message'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Replying to agent'), findsOneWidget);
+    expect(find.text('Reply to this update'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('agent menu exposes the focused action set in order', (

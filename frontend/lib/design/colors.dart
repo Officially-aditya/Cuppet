@@ -21,7 +21,12 @@ class SydneyColors {
   static const outlineVariant = Color(0xFFBEC9C2);
   static const line = Color(0xFFE7E4DD);
 
+  /// Global brand green used across the product.
   static const primary = Color(0xFF006046);
+
+  /// Secondary green for supporting accents.
+  static const secondary = Color(0xFF3F7D57);
+
   static const primaryContainer = Color(0xFF1D7A5C);
   static const primaryDark = Color(0xFF004D39);
   static const primaryHover = Color(0xFF1D7A5C);

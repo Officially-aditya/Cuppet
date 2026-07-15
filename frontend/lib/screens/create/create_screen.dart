@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
-import '../../widgets/sydney_primitives.dart';
+import '../../widgets/workspace_primitives.dart';
+import 'creation_workspace_widgets.dart';
 
 class AgentCreationDraft {
   const AgentCreationDraft({
@@ -47,66 +48,51 @@ class _CreateScreenState extends State<CreateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SydneyColors.surface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x04000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 18,
-                  color: SydneyColors.ink,
-                ),
-              ),
-            ),
-          ),
-        ),
-        titleSpacing: 12,
-        title: Text(
-          'New Agent',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-            color: SydneyColors.ink,
-            letterSpacing: -0.5,
-          ),
-        ),
+      key: const ValueKey('create-agent-screen'),
+      backgroundColor: CuppetWorkspaceColors.background,
+      appBar: CreationBackAppBar(
+        backButtonKey: const ValueKey('create-agent-back'),
+        onBack: () => Navigator.of(context).maybePop(),
       ),
       body: SafeArea(
         bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
-            SydneySpacing.md,
+            SydneySpacing.xs,
             SydneySpacing.page,
-            104,
+            SydneySpacing.xl,
           ),
           children: [
-            const SydneySectionLabel('What does this agent do?'),
+            Text(
+              'Agent setup',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: CuppetWorkspaceColors.primaryInk,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.sm),
+            Text(
+              'Create an agent',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: CuppetWorkspaceColors.ink,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+                letterSpacing: -0.7,
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.sm),
+            Text(
+              'Describe the work in your own words, or begin with an example.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: CuppetWorkspaceColors.muted,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.xl),
+            const WorkspaceSectionLabel('Describe the work'),
             const SizedBox(height: SydneySpacing.sm),
             _PromptEditor(
               controller: _promptController,
@@ -125,8 +111,8 @@ class _CreateScreenState extends State<CreateScreen> {
                 ).textTheme.bodySmall?.copyWith(color: SydneyColors.danger),
               ),
             ],
-            const SizedBox(height: SydneySpacing.lg),
-            const SydneySectionLabel('Examples'),
+            const SizedBox(height: SydneySpacing.xl),
+            const WorkspaceSectionLabel('Start with an example'),
             const SizedBox(height: SydneySpacing.sm),
             Column(
               children: [
@@ -143,40 +129,11 @@ class _CreateScreenState extends State<CreateScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SydneyFooter(
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SydneyColors.ink,
-                  side: const BorderSide(color: SydneyColors.line),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('Cancel'),
-              ),
-            ),
-            const SizedBox(width: SydneySpacing.md),
-            Expanded(
-              child: FilledButton(
-                onPressed: _continue,
-                style: FilledButton.styleFrom(
-                  backgroundColor: SydneyColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('Submit'),
-              ),
-            ),
-          ],
-        ),
+      bottomNavigationBar: CreationFooter(
+        secondaryLabel: 'Cancel',
+        onSecondary: () => Navigator.of(context).maybePop(),
+        primaryLabel: 'Continue',
+        onPrimary: _continue,
       ),
     );
   }
@@ -220,40 +177,22 @@ class _PromptEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: SydneyColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF17201C).withValues(alpha: 0.05),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-          const BoxShadow(
-            color: Colors.white,
-            offset: Offset(-4, -4),
-            blurRadius: 8,
-          ),
-        ],
-        border: Border.all(
-          color: SydneyColors.line.withValues(alpha: 0.35),
-          width: 0.8,
-        ),
-      ),
+    return WorkspaceCard(
+      key: const ValueKey('creation-prompt-card'),
       padding: const EdgeInsets.all(SydneySpacing.md),
       child: TextField(
         controller: controller,
-        minLines: 7,
+        minLines: 6,
         maxLines: 12,
         textCapitalization: TextCapitalization.sentences,
         onChanged: onChanged,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: SydneyColors.ink, height: 1.4),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: CuppetWorkspaceColors.ink,
+          height: 1.4,
+        ),
         decoration: const InputDecoration(
-          hintText: 'What should this agent do?',
-          hintStyle: TextStyle(color: SydneyColors.subtleInk),
+          hintText: 'For example: Send me a concise news brief every morning.',
+          hintStyle: TextStyle(color: CuppetWorkspaceColors.muted),
           filled: false,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -278,102 +217,70 @@ class _AgentTemplateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color:
-            selected
-                ? SydneyColors.primarySoft.withValues(alpha: 0.35)
-                : SydneyColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color:
-                selected
-                    ? SydneyColors.primary.withValues(alpha: 0.06)
-                    : const Color(0xFF17201C).withValues(alpha: 0.04),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-          const BoxShadow(
-            color: Colors.white,
-            offset: Offset(-4, -4),
-            blurRadius: 8,
-          ),
-        ],
-        border: Border.all(
-          color:
-              selected
-                  ? SydneyColors.primary.withValues(alpha: 0.5)
-                  : SydneyColors.line.withValues(alpha: 0.35),
-          width: selected ? 1.2 : 0.8,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color:
-                        selected
-                            ? SydneyColors.surfaceContainerLowest
-                            : SydneyColors.primarySoft,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: SydneyColors.line.withValues(alpha: 0.35),
-                      width: 0.8,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    template.icon,
-                    size: 18,
-                    color: SydneyColors.primary,
-                  ),
-                ),
-                const SizedBox(width: SydneySpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        template.label,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: SydneyColors.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        template.description,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.mutedInk,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: SydneySpacing.sm),
-                Icon(
+    return WorkspaceCard(
+      key: ValueKey('agent-template-${template.id}'),
+      color:
+          selected
+              ? CuppetWorkspaceColors.softSage
+              : CuppetWorkspaceColors.card,
+      borderColor:
+          selected
+              ? CuppetWorkspaceColors.panelBorder
+              : CuppetWorkspaceColors.border,
+      padding: const EdgeInsets.all(14),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color:
                   selected
-                      ? Icons.check_circle_rounded
-                      : Icons.add_circle_outline,
-                  size: 20,
-                  color:
-                      selected ? SydneyColors.primary : SydneyColors.subtleInk,
+                      ? CuppetWorkspaceColors.card
+                      : CuppetWorkspaceColors.background,
+              borderRadius: BorderRadius.circular(SydneyRadius.md),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              template.icon,
+              size: 20,
+              color: CuppetWorkspaceColors.primaryInk,
+            ),
+          ),
+          const SizedBox(width: SydneySpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  template.label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: CuppetWorkspaceColors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  template.description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: CuppetWorkspaceColors.muted,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: SydneySpacing.sm),
+          Icon(
+            selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
+            size: 21,
+            color:
+                selected
+                    ? CuppetWorkspaceColors.primaryInk
+                    : CuppetWorkspaceColors.muted,
+          ),
+        ],
       ),
     );
   }

@@ -116,7 +116,7 @@ class _AgentAvatar extends StatelessWidget {
     final foreground =
         agent.isAssistant
             ? CuppetWorkspaceColors.card
-            : CuppetWorkspaceColors.primary;
+            : CuppetWorkspaceColors.primaryInk;
 
     return Container(
       width: 44,

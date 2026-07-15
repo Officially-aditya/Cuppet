@@ -250,7 +250,7 @@ class _InboxList extends StatelessWidget {
               children: [
                 Icon(
                   Icons.push_pin_outlined,
-                  color: CuppetWorkspaceColors.primary,
+                  color: CuppetWorkspaceColors.primaryInk,
                   size: 16,
                 ),
                 SizedBox(width: SydneySpacing.sm),
@@ -364,14 +364,14 @@ class _OnboardingSuggestionCard extends StatelessWidget {
                 child: Icon(
                   suggestion.icon,
                   size: 17,
-                  color: CuppetWorkspaceColors.primary,
+                  color: CuppetWorkspaceColors.primaryInk,
                 ),
               ),
               const Spacer(),
               const Icon(
                 Icons.arrow_forward_rounded,
                 size: 17,
-                color: CuppetWorkspaceColors.primary,
+                color: CuppetWorkspaceColors.primaryInk,
               ),
             ],
           ),
@@ -451,6 +451,6 @@ Agent _assistantFallback() {
     latestMessageAt: DateTime.now(),
     isAssistant: true,
     isPinned: true,
-    accentColor: 0xFF1D7A5C,
+    accentColor: 0xFF006046,
   );
 }

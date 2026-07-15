@@ -38,7 +38,7 @@ PopupMenuItem<String> _agentMenuItem(
     value: value,
     child: Row(
       children: [
-        Icon(icon, size: 18, color: SydneyColors.onSurfaceVariant),
+        Icon(icon, size: 18, color: CuppetWorkspaceColors.primaryInk),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
@@ -46,7 +46,7 @@ PopupMenuItem<String> _agentMenuItem(
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: SydneyColors.ink,
+              color: CuppetWorkspaceColors.ink,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -166,14 +166,22 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final messages = ref.watch(messagesProvider(agent.threadId));
 
     return Scaffold(
+      key: const ValueKey('thread-scaffold'),
+      backgroundColor: CuppetWorkspaceColors.background,
       appBar:
           _selectedMessage != null
               ? AppBar(
+                key: const ValueKey('thread-selection-app-bar'),
                 titleSpacing: 0,
-                backgroundColor: SydneyColors.surfaceContainerLowest,
+                backgroundColor: CuppetWorkspaceColors.background,
+                foregroundColor: CuppetWorkspaceColors.ink,
+                surfaceTintColor: Colors.transparent,
                 bottom: const PreferredSize(
                   preferredSize: Size.fromHeight(1),
-                  child: Divider(height: 1, color: SydneyColors.line),
+                  child: Divider(
+                    height: 1,
+                    color: CuppetWorkspaceColors.panelBorder,
+                  ),
                 ),
                 leading: IconButton(
                   tooltip: 'Cancel selection',
@@ -192,7 +200,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     icon: const Icon(
                       Icons.copy_rounded,
                       size: 18,
-                      color: SydneyColors.ink,
+                      color: CuppetWorkspaceColors.ink,
                     ),
                     onPressed: () {
                       Clipboard.setData(
@@ -211,7 +219,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     icon: const Icon(
                       Icons.reply_rounded,
                       size: 18,
-                      color: SydneyColors.ink,
+                      color: CuppetWorkspaceColors.ink,
                     ),
                     onPressed: () {
                       final msg = _selectedMessage;
@@ -225,11 +233,17 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 ],
               )
               : AppBar(
+                key: const ValueKey('thread-app-bar'),
                 titleSpacing: 0,
-                backgroundColor: SydneyColors.surfaceContainerLowest,
+                backgroundColor: CuppetWorkspaceColors.background,
+                foregroundColor: CuppetWorkspaceColors.ink,
+                surfaceTintColor: Colors.transparent,
                 bottom: const PreferredSize(
                   preferredSize: Size.fromHeight(1),
-                  child: Divider(height: 1, color: SydneyColors.line),
+                  child: Divider(
+                    height: 1,
+                    color: CuppetWorkspaceColors.panelBorder,
+                  ),
                 ),
                 leading: IconButton(
                   tooltip: 'Back',
@@ -249,8 +263,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: Color(agent.accentColor),
+                          color: CuppetWorkspaceColors.softSage,
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: CuppetWorkspaceColors.panelBorder,
+                          ),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -258,7 +275,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                           style: Theme.of(
                             context,
                           ).textTheme.labelMedium?.copyWith(
-                            color: Colors.white,
+                            color: CuppetWorkspaceColors.primaryInk,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -278,12 +295,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const SizedBox(
+                                SizedBox(
                                   width: 6,
                                   height: 6,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: SydneyColors.primary,
+                                      color:
+                                          agent.availability ==
+                                                  AgentAvailability.paused
+                                              ? CuppetWorkspaceColors.muted
+                                              : CuppetWorkspaceColors.primary,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -296,7 +317,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                                   style: Theme.of(
                                     context,
                                   ).textTheme.labelSmall?.copyWith(
-                                    color: SydneyColors.primary,
+                                    color:
+                                        agent.availability ==
+                                                AgentAvailability.paused
+                                            ? CuppetWorkspaceColors.muted
+                                            : CuppetWorkspaceColors.primaryInk,
                                     fontSize: 10,
                                     letterSpacing: 0.8,
                                   ),
@@ -319,13 +344,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: CuppetWorkspaceColors.card,
                         shape: BoxShape.circle,
-                        border: Border.all(color: SydneyColors.line),
+                        border: Border.all(color: CuppetWorkspaceColors.border),
                         boxShadow: const [
                           BoxShadow(
-                            color: Color(0x04000000),
-                            blurRadius: 3,
+                            color: Color(0x0A1C1A17),
+                            blurRadius: 6,
                             offset: Offset(0, 1),
                           ),
                         ],
@@ -333,18 +358,18 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                       child: const Icon(
                         Icons.more_vert_rounded,
                         size: 18,
-                        color: SydneyColors.ink,
+                        color: CuppetWorkspaceColors.ink,
                       ),
                     ),
                     tooltip: 'More options',
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: const BorderSide(
-                        color: SydneyColors.line,
+                        color: CuppetWorkspaceColors.border,
                         width: 0.8,
                       ),
                     ),
-                    color: Colors.white,
+                    color: CuppetWorkspaceColors.card,
                     elevation: 4,
                     shadowColor: Colors.black.withValues(alpha: 0.1),
                     surfaceTintColor: Colors.transparent,
@@ -461,9 +486,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             decoration: BoxDecoration(
                               color:
                                   isSelected
-                                      ? SydneyColors.primary.withValues(
-                                        alpha: 0.08,
-                                      )
+                                      ? CuppetWorkspaceColors.primary
+                                          .withValues(alpha: 0.08)
                                       : Colors.transparent,
                             ),
                             padding: const EdgeInsets.symmetric(
@@ -472,6 +496,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             child: MessageCard(
                               message: message,
                               onAction: _handleMessageAction,
+                              useWorkspacePalette: true,
                             ),
                           ),
                         );
@@ -925,14 +950,16 @@ class _ThreadDayPill extends StatelessWidget {
             vertical: SydneySpacing.xs,
           ),
           decoration: BoxDecoration(
-            color: SydneyColors.surfaceContainer,
+            color: CuppetWorkspaceColors.softSage,
             borderRadius: BorderRadius.circular(SydneyRadius.full),
+            border: Border.all(color: CuppetWorkspaceColors.panelBorder),
           ),
           child: Text(
             'TODAY',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.mutedInk,
+              color: CuppetWorkspaceColors.primaryInk,
               letterSpacing: 1.1,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
@@ -955,9 +982,9 @@ class _ThreadLoading extends StatelessWidget {
             width: 220,
             height: 72,
             decoration: BoxDecoration(
-              color: SydneyColors.surfaceRaised,
+              color: CuppetWorkspaceColors.card,
               borderRadius: SydneyRadius.bubbleAgent,
-              border: Border.all(color: SydneyColors.line),
+              border: Border.all(color: CuppetWorkspaceColors.border),
             ),
           ),
         ),
@@ -968,7 +995,7 @@ class _ThreadLoading extends StatelessWidget {
             width: 180,
             height: 54,
             decoration: const BoxDecoration(
-              color: SydneyColors.userBubble,
+              color: CuppetWorkspaceColors.softSage,
               borderRadius: SydneyRadius.bubbleUser,
             ),
           ),

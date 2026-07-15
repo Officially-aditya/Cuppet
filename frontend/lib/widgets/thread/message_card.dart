@@ -19,10 +19,16 @@ import '../templates/portfolio_watch_template.dart';
 import '../templates/briefing_card_template.dart';
 
 class MessageCard extends StatelessWidget {
-  const MessageCard({required this.message, this.onAction, super.key});
+  const MessageCard({
+    required this.message,
+    this.onAction,
+    this.useWorkspacePalette = false,
+    super.key,
+  });
 
   final Message message;
   final ValueChanged<Map<String, dynamic>>? onAction;
+  final bool useWorkspacePalette;
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +43,21 @@ class MessageCard extends StatelessWidget {
               vertical: 10,
             ),
             decoration: BoxDecoration(
-              color: SydneyColors.systemBubble,
+              color:
+                  useWorkspacePalette
+                      ? CuppetWorkspaceColors.softSage
+                      : SydneyColors.systemBubble,
               borderRadius: BorderRadius.circular(SydneyRadius.md),
-              border: Border.all(color: SydneyColors.line),
+              border: Border.all(
+                color:
+                    useWorkspacePalette
+                        ? CuppetWorkspaceColors.panelBorder
+                        : SydneyColors.line,
+              ),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x08000000),
-                  blurRadius: 6,
+                  color: Color(0x0A1C1A17),
+                  blurRadius: 8,
                   offset: Offset(0, 2),
                 ),
               ],
@@ -52,9 +66,12 @@ class MessageCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.info_outline_rounded,
-                  color: SydneyColors.info,
+                  color:
+                      useWorkspacePalette
+                          ? CuppetWorkspaceColors.primaryInk
+                          : SydneyColors.info,
                   size: 16,
                 ),
                 const SizedBox(width: 10),
@@ -73,21 +90,39 @@ class MessageCard extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(SydneySpacing.lg),
       decoration: BoxDecoration(
-        color: isUser ? SydneyColors.userBubble : SydneyColors.agentBubble,
+        color:
+            useWorkspacePalette
+                ? (isUser
+                    ? CuppetWorkspaceColors.softSage
+                    : CuppetWorkspaceColors.card)
+                : (isUser ? SydneyColors.userBubble : SydneyColors.agentBubble),
         borderRadius:
             isUser ? SydneyRadius.bubbleUser : SydneyRadius.bubbleAgent,
-        border: isUser ? null : Border.all(color: SydneyColors.line),
+        border:
+            useWorkspacePalette
+                ? Border.all(
+                  color:
+                      isUser
+                          ? CuppetWorkspaceColors.panelBorder
+                          : CuppetWorkspaceColors.border,
+                )
+                : isUser
+                ? null
+                : Border.all(color: SydneyColors.line),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 6,
+            color: Color(0x0A1C1A17),
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
       ),
       child: DefaultTextStyle.merge(
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isUser ? SydneyColors.ink : SydneyColors.onSurface,
+          color:
+              useWorkspacePalette
+                  ? CuppetWorkspaceColors.ink
+                  : (isUser ? SydneyColors.ink : SydneyColors.onSurface),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +139,11 @@ class MessageCard extends StatelessWidget {
               child: Text(
                 _formatMessageTime(message.createdAt),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: (isUser ? SydneyColors.ink : SydneyColors.mutedInk)
+                  color: (useWorkspacePalette
+                          ? (isUser
+                              ? CuppetWorkspaceColors.ink
+                              : CuppetWorkspaceColors.muted)
+                          : (isUser ? SydneyColors.ink : SydneyColors.mutedInk))
                       .withValues(alpha: 0.68),
                   fontSize: 10,
                   fontWeight: FontWeight.w600,

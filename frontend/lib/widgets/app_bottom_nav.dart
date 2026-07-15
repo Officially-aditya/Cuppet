@@ -101,7 +101,9 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground =
-        selected ? CuppetWorkspaceColors.primary : CuppetWorkspaceColors.muted;
+        selected
+            ? CuppetWorkspaceColors.primaryInk
+            : CuppetWorkspaceColors.muted;
 
     return Tooltip(
       message: tooltip,

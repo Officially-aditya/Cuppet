@@ -159,7 +159,7 @@ class _CompactConnector extends StatelessWidget {
                               : Icons.error_outline_rounded,
                           color:
                               connector.isConnected
-                                  ? SydneyColors.primary
+                                  ? CuppetWorkspaceColors.primaryInk
                                   : SydneyColors.warning,
                           size: 10,
                         ),
@@ -171,7 +171,7 @@ class _CompactConnector extends StatelessWidget {
                           ).textTheme.labelSmall?.copyWith(
                             color:
                                 connector.isConnected
-                                    ? SydneyColors.primary
+                                    ? CuppetWorkspaceColors.primaryInk
                                     : SydneyColors.warning,
                             fontSize: 9,
                           ),
@@ -226,18 +226,20 @@ class _ConnectorStatusLine extends StatelessWidget {
     final statusColor =
         linking
             ? workspace
-                ? CuppetWorkspaceColors.sage
+                ? CuppetWorkspaceColors.primaryInk
                 : SydneyColors.info
             : connected
             ? workspace
-                ? CuppetWorkspaceColors.primary
+                ? CuppetWorkspaceColors.primaryInk
                 : SydneyColors.primary
             : actionRequired
             ? SydneyColors.warning
             : workspace
             ? CuppetWorkspaceColors.muted
             : SydneyColors.onSurfaceVariant;
-    final primaryColor =
+    final connectedForeground =
+        workspace ? CuppetWorkspaceColors.primaryInk : SydneyColors.primary;
+    final activeTrackColor =
         workspace ? CuppetWorkspaceColors.primary : SydneyColors.primary;
     final inactiveColor =
         workspace ? CuppetWorkspaceColors.muted : SydneyColors.outline;
@@ -257,10 +259,10 @@ class _ConnectorStatusLine extends StatelessWidget {
           color:
               linking
                   ? workspace
-                      ? CuppetWorkspaceColors.sage
+                      ? CuppetWorkspaceColors.primaryInk
                       : SydneyColors.info
                   : connected
-                  ? primaryColor
+                  ? connectedForeground
                   : actionRequired
                   ? SydneyColors.warning
                   : inactiveColor,
@@ -290,7 +292,7 @@ class _ConnectorStatusLine extends StatelessWidget {
           child: Switch.adaptive(
             value: connected,
             activeThumbColor: SydneyColors.onPrimary,
-            activeTrackColor: primaryColor,
+            activeTrackColor: activeTrackColor,
             inactiveThumbColor: SydneyColors.onPrimary,
             inactiveTrackColor: inactiveTrackColor,
             onChanged: linking ? null : onConnectedChanged,

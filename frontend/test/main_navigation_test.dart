@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/config/routes.dart';
+import 'package:sydney/design/colors.dart';
 import 'package:sydney/design/workspace_palette.dart';
 import 'package:sydney/models/connector.dart';
 import 'package:sydney/providers/auth_provider.dart';
@@ -63,6 +64,15 @@ Widget navigationHost(Widget screen) {
 }
 
 void main() {
+  test('workspace palette keeps brand primary and secondary greens', () {
+    expect(CuppetWorkspaceColors.primary, const Color(0xFF006046));
+    expect(CuppetWorkspaceColors.secondary, const Color(0xFF3F7D57));
+    expect(CuppetWorkspaceColors.sage, CuppetWorkspaceColors.secondary);
+    expect(CuppetWorkspaceColors.primaryInk, const Color(0xFF004D39));
+    expect(SydneyColors.primary, CuppetWorkspaceColors.primary);
+    expect(SydneyColors.secondary, CuppetWorkspaceColors.secondary);
+  });
+
   testWidgets('connectors is a main destination with persistent navigation', (
     tester,
   ) async {
@@ -184,7 +194,7 @@ void main() {
     );
     expect(
       tester.widget<Icon>(find.byIcon(Icons.settings_outlined)).color,
-      CuppetWorkspaceColors.primary,
+      CuppetWorkspaceColors.primaryInk,
     );
 
     await tester.tap(find.byKey(const ValueKey('bottom-nav-inbox')));

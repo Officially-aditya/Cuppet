@@ -35,7 +35,7 @@ class WorkspaceAppBar extends StatelessWidget implements PreferredSizeWidget {
           Text(
             eyebrow,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: CuppetWorkspaceColors.primary,
+              color: CuppetWorkspaceColors.primaryInk,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
             ),
@@ -131,7 +131,7 @@ class WorkspaceSectionLabel extends StatelessWidget {
           child: Text(
             text.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: CuppetWorkspaceColors.primary,
+              color: CuppetWorkspaceColors.primaryInk,
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.9,
@@ -171,14 +171,14 @@ class WorkspacePrivacyPanel extends StatelessWidget {
             children: [
               const Icon(
                 Icons.shield_outlined,
-                color: CuppetWorkspaceColors.primary,
+                color: CuppetWorkspaceColors.primaryInk,
                 size: 18,
               ),
               const SizedBox(width: SydneySpacing.sm),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: CuppetWorkspaceColors.primary,
+                  color: CuppetWorkspaceColors.primaryInk,
                   fontWeight: FontWeight.w800,
                 ),
               ),
