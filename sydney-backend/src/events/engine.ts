@@ -1,4 +1,8 @@
 import { pool } from "../db/index.js";
+import {
+  githubRepositoryMatches,
+  githubRepositoryScope
+} from "../agents/github-scope.js";
 
 export type EventSource =
   | "slack"
@@ -29,6 +33,7 @@ export type EventIngestionResult = {
 
 type EventAgent = {
   id: string;
+  prompt: string;
   parsed_intent: Record<string, unknown> | string;
 };
 
@@ -121,7 +126,7 @@ export async function ingestAgentEvent(
 
     const agents = await client.query<EventAgent>(
       `
-        SELECT id, parsed_intent
+        SELECT id, prompt, parsed_intent
         FROM agents
         WHERE user_id = ANY($1::text[])
           AND status = 'active'
@@ -135,7 +140,7 @@ export async function ingestAgentEvent(
 
     for (const agent of agents.rows) {
       const parsedIntent = parseIntent(agent.parsed_intent);
-      if (!shouldTriggerAgentEvent(parsedIntent, event)) continue;
+      if (!shouldTriggerAgentEvent(parsedIntent, event, agent.prompt)) continue;
 
       const cooldownSeconds = eventCooldownSeconds(parsedIntent, event.source);
       const recent = await client.query<{ exists: boolean }>(
@@ -204,7 +209,8 @@ export async function ingestAgentEvent(
 
 export function shouldTriggerAgentEvent(
   parsedIntent: Record<string, unknown>,
-  event: Pick<NormalizedAgentEvent, "source" | "eventType" | "payload">
+  event: Pick<NormalizedAgentEvent, "source" | "eventType" | "payload">,
+  fallbackPrompt?: string
 ): boolean {
   if (parsedIntent.realtime_enabled !== true) return false;
   if (
@@ -226,13 +232,21 @@ export function shouldTriggerAgentEvent(
         )
       );
     }
-    case "github":
-      return (
-        intent === "github_activity_digest" &&
-        ["push", "pull_request", "issues", "release", "workflow_run"].some(
-          (type) => event.eventType === `github.${type}`
-        )
+    case "github": {
+      const supportedEvent = [
+        "push",
+        "pull_request",
+        "issues",
+        "release",
+        "workflow_run"
+      ].some((type) => event.eventType === `github.${type}`);
+      if (intent !== "github_activity_digest" || !supportedEvent) return false;
+
+      return githubRepositoryMatches(
+        githubRepositoryScope(parsedIntent, fallbackPrompt),
+        event.payload.repository
       );
+    }
     case "gmail":
       return intent === "lead_response_monitor";
     case "calendar":

@@ -1,4 +1,5 @@
 import { UNSUPPORTED_CONNECTORS } from "./unsupported-connectors.js";
+import { extractGitHubRepository } from "./github-scope.js";
 
 export interface ParsedIntent {
   name: string;
@@ -15,6 +16,7 @@ export interface ParsedIntent {
   risk_level: "low" | "medium" | "high";
   permissions_needed: string[];
   realtime_enabled?: boolean;
+  github_repository?: string;
   response_limit?: "concise" | "balanced" | "detailed";
   active_until?: string;
 }
@@ -105,6 +107,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     match: {
       any: [
         /\bgithub\b/,
+        /\brepos?\b/,
         /\bpull requests?\b/,
         /\brepositor(?:y|ies)\b/,
         /\bprs?\b.*\b(?:review|open|merged|activity|digest)\b/
@@ -1117,6 +1120,10 @@ function baseIntent(
     realtimeEnabled && parseSchedule(prompt) === null
       ? null
       : overrides.schedule_cron ?? null;
+  const githubRepository =
+    intent === "github_activity_digest"
+      ? overrides.github_repository ?? extractGitHubRepository(prompt)
+      : null;
 
   return {
     name: overrides.name ?? "Custom Agent",
@@ -1132,7 +1139,8 @@ function baseIntent(
     safety_level: "read",
     risk_level: "low",
     permissions_needed: overrides.permissions_needed ?? [],
-    realtime_enabled: realtimeEnabled
+    realtime_enabled: realtimeEnabled,
+    ...(githubRepository ? { github_repository: githubRepository } : {})
   };
 }
 

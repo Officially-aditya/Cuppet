@@ -107,6 +107,21 @@ test("treats immediate repository change alerts as realtime, not daily", () => {
   assert.equal(parsed.connector, "github");
   assert.equal(parsed.realtime_enabled, true);
   assert.equal(parsed.schedule_cron, null);
+  assert.equal(parsed.github_repository, "Sydney");
+});
+
+test("persists full GitHub repository scope without narrowing generic agents", () => {
+  const scoped = parseIntent(
+    "Create an agent that watches repo officially-aditya/Sydney in real time"
+  );
+  assert.equal(scoped.intent, "github_activity_digest");
+  assert.equal(scoped.github_repository, "officially-aditya/Sydney");
+
+  const generic = parseIntent(
+    "Send me a daily GitHub digest of repositories, open issues, and pull requests."
+  );
+  assert.equal(generic.intent, "github_activity_digest");
+  assert.equal(generic.github_repository, undefined);
 });
 
 test("recognizes common realtime trigger language", () => {

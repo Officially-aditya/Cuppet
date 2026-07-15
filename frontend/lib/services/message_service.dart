@@ -171,7 +171,9 @@ List<Message> deduplicateMessages(
         message.createdAt.difference(previous.createdAt).abs() <= window &&
         jsonEncode(message.content) == jsonEncode(previous.content);
 
-    if (!isAdjacentAgentDuplicate) {
+    if (isAdjacentAgentDuplicate) {
+      result[result.length - 1] = message;
+    } else {
       result.add(message);
     }
   }
