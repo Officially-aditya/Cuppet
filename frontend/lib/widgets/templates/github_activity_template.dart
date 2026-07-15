@@ -85,15 +85,19 @@ class GitHubActivityTemplate extends StatelessWidget {
               ),
               if (metrics.isNotEmpty) ...[
                 const SizedBox(height: SydneySpacing.md),
-                Wrap(
-                  spacing: SydneySpacing.sm,
-                  runSpacing: SydneySpacing.sm,
+                Row(
                   children: [
-                    for (final metric in metrics)
-                      _GitHubMetric(
-                        label: metric['label']?.toString() ?? 'Metric',
-                        value: metric['value']?.toString() ?? '-',
+                    for (var index = 0; index < metrics.length; index++) ...[
+                      Expanded(
+                        child: _GitHubMetric(
+                          label:
+                              metrics[index]['label']?.toString() ?? 'Metric',
+                          value: metrics[index]['value']?.toString() ?? '-',
+                        ),
                       ),
+                      if (index < metrics.length - 1)
+                        const SizedBox(width: SydneySpacing.xs),
+                    ],
                   ],
                 ),
               ],
@@ -134,9 +138,9 @@ class _GitHubMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 78,
+      height: 62,
       padding: const EdgeInsets.symmetric(
-        horizontal: SydneySpacing.xs,
+        horizontal: SydneySpacing.xxs,
         vertical: SydneySpacing.sm,
       ),
       decoration: BoxDecoration(

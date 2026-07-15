@@ -69,6 +69,7 @@ class MessageCard extends StatelessWidget {
     final isUser = message.sender == MessageSender.user;
     final maxWidth = MediaQuery.sizeOf(context).width * 0.84;
     final content = Container(
+      key: ValueKey('message-surface-${message.id}'),
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(SydneySpacing.lg),
       decoration: BoxDecoration(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sydney/design/tokens.dart';
+import 'package:sydney/models/message.dart';
 import 'package:sydney/screens/auth/sign_in_screen.dart';
 import 'package:sydney/screens/auth/sign_up_screen.dart';
 import 'package:sydney/widgets/templates/checklist_template.dart';
@@ -10,6 +12,7 @@ import 'package:sydney/widgets/templates/dsa_question_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/progress_tracker_template.dart';
 import 'package:sydney/widgets/templates/briefing_card_template.dart';
+import 'package:sydney/widgets/thread/message_card.dart';
 
 Widget templateHost(Widget child) {
   return MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child)));
@@ -170,7 +173,7 @@ void main() {
       expect(find.text('invalid'), findsNothing);
     });
 
-    testWidgets('news brief expansion reveals and hides additional items', (
+    testWidgets('news brief renders every item without a show-more control', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -188,50 +191,150 @@ void main() {
       );
 
       expect(find.text('First item'), findsOneWidget);
-      expect(find.text('Second item'), findsNothing);
-      await tester.tap(find.text('Show more (1 remaining)'));
-      await tester.pumpAndSettle();
       expect(find.text('Second item'), findsOneWidget);
-      await tester.tap(find.text('Show less'));
-      await tester.pumpAndSettle();
-      expect(find.text('Second item'), findsNothing);
+      expect(find.textContaining('Show more'), findsNothing);
+      expect(find.text('Show less'), findsNothing);
     });
 
-    testWidgets(
-      'DSA question presents generated practice details in sections',
-      (tester) async {
-        await tester.pumpWidget(
-          templateHost(
-            const DsaQuestionTemplate(
-              data: {
-                'title': 'Longest Palindromic Subsequence',
-                'difficulty': 'Medium',
-                'problem': 'Find the longest palindromic subsequence.',
-                'constraints': '1 <= s.length <= 1000',
-                'time_complexity': 'O(n^2)',
-                'space_complexity': 'O(n^2)',
-                'approach': 'Dynamic programming',
-                'examples': [
-                  {
-                    'input': 's = "bbbab"',
-                    'output': '4',
-                    'explanation': 'The subsequence is "bbbb".',
+    testWidgets('DSA question presents generated practice details in sections', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        templateHost(
+          const DsaQuestionTemplate(
+            data: {
+              'title': 'Longest Palindromic Subsequence',
+              'difficulty': 'Medium',
+              'problem': 'Find the longest palindromic subsequence.',
+              'constraints': '1 <= s.length <= 1000',
+              'time_complexity': 'O(n^2)',
+              'space_complexity': 'O(n^2)',
+              'approach': 'Dynamic programming',
+              'examples': [
+                {
+                  'input': 's = "bbbab"',
+                  'output': '4',
+                  'explanation': 'The subsequence is "bbbb".',
+                },
+              ],
+              'references': [
+                {
+                  'title': 'LeetCode: Longest Palindromic Subsequence',
+                  'url':
+                      'https://leetcode.com/problems/longest-palindromic-subsequence/',
+                },
+              ],
+            },
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('dsa-question-content')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('dsa-example-rule-0')), findsOneWidget);
+      expect(find.text('Problem Description'), findsOneWidget);
+      expect(find.text('Structured Examples'), findsOneWidget);
+      expect(find.text('Constraints'), findsOneWidget);
+      expect(find.text('Complexity'), findsOneWidget);
+      expect(find.text('LeetCode'), findsOneWidget);
+      expect(find.text('Example 1:'), findsOneWidget);
+      expect(
+        find.textContaining('O(n^2)', findRichText: true),
+        findsNWidgets(2),
+      );
+      expect(find.text('Dynamic programming'), findsOneWidget);
+
+      final constraintsPanel = tester.widget<Container>(
+        find.byKey(const ValueKey('dsa-constraints-panel')),
+      );
+      final constraintsDecoration =
+          constraintsPanel.decoration! as BoxDecoration;
+      expect(constraintsDecoration.color, SydneyColors.surfaceContainerHigh);
+      expect(constraintsDecoration.border, isNull);
+
+      final complexityPanel = tester.widget<Container>(
+        find.byKey(const ValueKey('dsa-complexity-panel')),
+      );
+      final complexityDecoration = complexityPanel.decoration! as BoxDecoration;
+      expect(complexityDecoration.color, SydneyColors.surfaceContainerHigh);
+      expect(complexityDecoration.border, isNull);
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('dsa-approach'))).dy,
+        greaterThan(
+          tester
+              .getBottomLeft(find.byKey(const ValueKey('dsa-complexity-panel')))
+              .dy,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('DSA uses a normal message bubble and example-only rules', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MessageCard(
+              message: Message(
+                id: 'dsa-message',
+                threadId: 'dsa-thread',
+                sender: MessageSender.agent,
+                createdAt: DateTime(2026, 7, 15),
+                content: const {
+                  'template': 'dsa_question',
+                  'data': {
+                    'title': 'Add Two Numbers',
+                    'difficulty': 'Medium',
+                    'problem': 'Add the represented numbers.',
+                    'examples': [
+                      {
+                        'input': 'l1 = [2,4,3], l2 = [5,6,4]',
+                        'output': '[7,0,8]',
+                        'explanation': '342 + 465 = 807.',
+                      },
+                    ],
                   },
-                ],
-              },
+                },
+              ),
             ),
           ),
-        );
+        ),
+      );
 
-        expect(find.text('PROBLEM DESCRIPTION'), findsOneWidget);
-        expect(find.text('STRUCTURED EXAMPLES'), findsOneWidget);
-        expect(find.text('CONSTRAINTS'), findsOneWidget);
-        expect(find.text('COMPLEXITY'), findsOneWidget);
-        expect(find.text('O(n^2)'), findsNWidgets(2));
-        expect(find.text('Dynamic programming'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      },
-    );
+      final surface = tester.widget<Container>(
+        find.byKey(const ValueKey('message-surface-dsa-message')),
+      );
+      final surfaceDecoration = surface.decoration! as BoxDecoration;
+      expect(surfaceDecoration.color, SydneyColors.agentBubble);
+      expect(surfaceDecoration.border, isNotNull);
+      expect(surface.padding, const EdgeInsets.all(SydneySpacing.lg));
+
+      final exampleRule = tester.widget<Container>(
+        find.byKey(const ValueKey('dsa-example-rule-0')),
+      );
+      expect(exampleRule.color, SydneyColors.primary);
+      final ruleSize = tester.getSize(
+        find.byKey(const ValueKey('dsa-example-rule-0')),
+      );
+      expect(ruleSize.width, 3);
+      expect(ruleSize.height, greaterThan(40));
+      expect(
+        tester.getTopLeft(find.text('Example 1:')).dy,
+        lessThan(
+          tester
+              .getTopLeft(find.byKey(const ValueKey('dsa-example-rule-0')))
+              .dy,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets(
       'news brief emphasizes a lead story and labels compact updates',
@@ -286,6 +389,10 @@ void main() {
     testWidgets(
       'GitHub activity uses a connected timeline for multiple updates',
       (tester) async {
+        tester.view.physicalSize = const Size(360, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
         await tester.pumpWidget(
           templateHost(
             const DataSummaryTemplate(
@@ -293,8 +400,10 @@ void main() {
                 'kind': 'github_activity',
                 'title': 'Daily GitHub digest',
                 'metrics': [
+                  {'label': 'Repositories', 'value': '8'},
                   {'label': 'Commits', 'value': '2'},
                   {'label': 'Open PRs', 'value': '1'},
+                  {'label': 'Open issues', 'value': '0'},
                 ],
                 'timeline': [
                   {
@@ -321,6 +430,14 @@ void main() {
         expect(find.text('Fix account cache isolation'), findsOneWidget);
         expect(find.text('Officially-aditya/Sydney'), findsNWidgets(2));
         expect(find.text('Read-only GitHub digest.'), findsOneWidget);
+        final metricTops =
+            [
+              '8',
+              '2',
+              '1',
+              '0',
+            ].map((value) => tester.getTopLeft(find.text(value)).dy).toList();
+        expect(metricTops.toSet(), hasLength(1));
         expect(tester.takeException(), isNull);
       },
     );
