@@ -29,6 +29,10 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
     final inputFormat = widget.data['input_format']?.toString();
     final outputFormat = widget.data['output_format']?.toString();
     final constraints = widget.data['constraints']?.toString();
+    final complexity = widget.data['complexity']?.toString();
+    final timeComplexity = widget.data['time_complexity']?.toString();
+    final spaceComplexity = widget.data['space_complexity']?.toString();
+    final approach = widget.data['approach']?.toString();
     final examples = templateMaps(widget.data['examples']);
     final hint = widget.data['hint']?.toString();
     final references = templateMaps(widget.data['references']);
@@ -78,6 +82,8 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            diffBadge,
+            const SizedBox(width: SydneySpacing.sm),
             const Icon(
               Icons.code_rounded,
               color: SydneyColors.primary,
@@ -107,11 +113,14 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                 ],
               ),
             ),
-            const SizedBox(width: SydneySpacing.sm),
-            diffBadge,
           ],
         ),
-        const SizedBox(height: SydneySpacing.md),
+        const SizedBox(height: SydneySpacing.lg),
+        const _SectionHeading(
+          icon: Icons.description_outlined,
+          label: 'Problem description',
+        ),
+        const SizedBox(height: SydneySpacing.sm),
         MarkdownText(
           text: problem,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -157,34 +166,11 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
             ),
           ),
         ],
-        if (constraints != null && constraints.isNotEmpty) ...[
-          const SizedBox(height: SydneySpacing.md),
-          Text(
-            'CONSTRAINTS',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.mutedInk,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: SydneySpacing.xs),
-          MarkdownText(
-            text: constraints,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: SydneyColors.onSurfaceVariant,
-              height: 1.35,
-            ),
-          ),
-        ],
         if (examples.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.lg),
-          Text(
-            'EXAMPLES',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
+          const _SectionHeading(
+            icon: Icons.terminal_rounded,
+            label: 'Structured examples',
           ),
           const SizedBox(height: SydneySpacing.sm),
           for (var i = 0; i < examples.length; i++) ...[
@@ -204,7 +190,7 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
                     'Example ${i + 1}',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: SydneyColors.onSurface,
+                      color: SydneyColors.primary,
                     ),
                   ),
                   const SizedBox(height: SydneySpacing.xs),
@@ -276,6 +262,29 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
             ),
           ],
         ],
+        if (constraints != null && constraints.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.md),
+          const _SectionHeading(icon: Icons.tune_rounded, label: 'Constraints'),
+          const SizedBox(height: SydneySpacing.sm),
+          _DetailPanel(text: constraints),
+        ],
+        if (_hasText(complexity) ||
+            _hasText(timeComplexity) ||
+            _hasText(spaceComplexity) ||
+            _hasText(approach)) ...[
+          const SizedBox(height: SydneySpacing.md),
+          const _SectionHeading(
+            icon: Icons.query_stats_rounded,
+            label: 'Complexity',
+          ),
+          const SizedBox(height: SydneySpacing.sm),
+          _ComplexityPanel(
+            complexity: complexity,
+            time: timeComplexity,
+            space: spaceComplexity,
+            approach: approach,
+          ),
+        ],
         if (hint != null && hint.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.md),
           InkWell(
@@ -345,13 +354,9 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
         ],
         if (references.isNotEmpty) ...[
           const SizedBox(height: SydneySpacing.md),
-          Text(
-            'REFERENCES',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-            ),
+          const _SectionHeading(
+            icon: Icons.menu_book_outlined,
+            label: 'References & discuss',
           ),
           const SizedBox(height: SydneySpacing.xs),
           Column(
@@ -385,6 +390,140 @@ class _DsaQuestionTemplateState extends State<DsaQuestionTemplate> {
           ),
         ],
       ],
+    );
+  }
+}
+
+bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
+
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: SydneyColors.primary, size: 17),
+        const SizedBox(width: SydneySpacing.sm),
+        Expanded(
+          child: Text(
+            label.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: SydneyColors.onSurface,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailPanel extends StatelessWidget {
+  const _DetailPanel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      decoration: BoxDecoration(
+        color: SydneyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+        border: Border.all(color: SydneyColors.line),
+      ),
+      child: MarkdownText(
+        text: text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: SydneyColors.onSurfaceVariant,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+}
+
+class _ComplexityPanel extends StatelessWidget {
+  const _ComplexityPanel({
+    required this.complexity,
+    required this.time,
+    required this.space,
+    required this.approach,
+  });
+
+  final String? complexity;
+  final String? time;
+  final String? space;
+  final String? approach;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <(String, String)>[
+      if (_hasText(time)) ('Time', time!.trim()),
+      if (_hasText(space)) ('Space', space!.trim()),
+      if (_hasText(approach)) ('Approach', approach!.trim()),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      decoration: BoxDecoration(
+        color: SydneyColors.primarySoft,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+        border: Border.all(color: SydneyColors.primary.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_hasText(complexity))
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: rows.isEmpty ? 0 : SydneySpacing.sm,
+              ),
+              child: MarkdownText(
+                text: complexity!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SydneyColors.onSurface,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          for (var index = 0; index < rows.length; index++) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 58,
+                  child: Text(
+                    rows[index].$1,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: SydneyColors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    rows[index].$2,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SydneyColors.onSurface,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (index < rows.length - 1)
+              const SizedBox(height: SydneySpacing.xs),
+          ],
+        ],
+      ),
     );
   }
 }

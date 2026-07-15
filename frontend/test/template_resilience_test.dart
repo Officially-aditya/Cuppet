@@ -6,6 +6,7 @@ import 'package:sydney/screens/auth/sign_up_screen.dart';
 import 'package:sydney/widgets/templates/checklist_template.dart';
 import 'package:sydney/widgets/templates/comparison_template.dart';
 import 'package:sydney/widgets/templates/data_summary_template.dart';
+import 'package:sydney/widgets/templates/dsa_question_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/progress_tracker_template.dart';
 import 'package:sydney/widgets/templates/briefing_card_template.dart';
@@ -176,7 +177,7 @@ void main() {
         templateHost(
           const NewsBriefTemplate(
             data: {
-              'initial_item_count': 1,
+              'initialItemCount': 1,
               'items': [
                 {'summary': 'First item'},
                 {'summary': 'Second item'},
@@ -195,6 +196,134 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Second item'), findsNothing);
     });
+
+    testWidgets(
+      'DSA question presents generated practice details in sections',
+      (tester) async {
+        await tester.pumpWidget(
+          templateHost(
+            const DsaQuestionTemplate(
+              data: {
+                'title': 'Longest Palindromic Subsequence',
+                'difficulty': 'Medium',
+                'problem': 'Find the longest palindromic subsequence.',
+                'constraints': '1 <= s.length <= 1000',
+                'time_complexity': 'O(n^2)',
+                'space_complexity': 'O(n^2)',
+                'approach': 'Dynamic programming',
+                'examples': [
+                  {
+                    'input': 's = "bbbab"',
+                    'output': '4',
+                    'explanation': 'The subsequence is "bbbb".',
+                  },
+                ],
+              },
+            ),
+          ),
+        );
+
+        expect(find.text('PROBLEM DESCRIPTION'), findsOneWidget);
+        expect(find.text('STRUCTURED EXAMPLES'), findsOneWidget);
+        expect(find.text('CONSTRAINTS'), findsOneWidget);
+        expect(find.text('COMPLEXITY'), findsOneWidget);
+        expect(find.text('O(n^2)'), findsNWidgets(2));
+        expect(find.text('Dynamic programming'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'news brief emphasizes a lead story and labels compact updates',
+      (tester) async {
+        await tester.pumpWidget(
+          templateHost(
+            const NewsBriefTemplate(
+              data: {
+                'title': 'Morning news',
+                'items': [
+                  {'summary': 'Here is your morning briefing.'},
+                  {
+                    'headline': 'New AI safety standards proposed',
+                    'summary': 'Industry leaders proposed shared benchmarks.',
+                  },
+                  {
+                    'headline': 'Government publishes policy blueprint',
+                    'summary': 'The proposal enters public consultation.',
+                  },
+                ],
+              },
+            ),
+          ),
+        );
+
+        expect(
+          find.byKey(const ValueKey('news-featured-story')),
+          findsOneWidget,
+        );
+        expect(find.text('TOP STORY'), findsOneWidget);
+        expect(find.text('AI'), findsOneWidget);
+        expect(find.text('POLICY'), findsOneWidget);
+        expect(
+          find.text('Industry leaders proposed shared benchmarks.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('The proposal enters public consultation.').hitTestable(),
+          findsNothing,
+        );
+
+        await tester.tap(find.text('Government publishes policy blueprint'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('The proposal enters public consultation.').hitTestable(),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'GitHub activity uses a connected timeline for multiple updates',
+      (tester) async {
+        await tester.pumpWidget(
+          templateHost(
+            const DataSummaryTemplate(
+              data: {
+                'kind': 'github_activity',
+                'title': 'Daily GitHub digest',
+                'metrics': [
+                  {'label': 'Commits', 'value': '2'},
+                  {'label': 'Open PRs', 'value': '1'},
+                ],
+                'timeline': [
+                  {
+                    'title': 'Improve news presentation',
+                    'repository': 'Officially-aditya/Sydney',
+                    'timestamp': '2026-07-15T09:30:00Z',
+                    'type': 'commit',
+                  },
+                  {
+                    'title': 'Fix account cache isolation',
+                    'repository': 'Officially-aditya/Sydney',
+                    'timestamp': '2026-07-15T08:30:00Z',
+                    'type': 'commit',
+                  },
+                ],
+                'footer': 'Read-only GitHub digest.',
+              },
+            ),
+          ),
+        );
+
+        expect(find.text('GITHUB ACTIVITY DIGEST'), findsOneWidget);
+        expect(find.text('Improve news presentation'), findsOneWidget);
+        expect(find.text('Fix account cache isolation'), findsOneWidget);
+        expect(find.text('Officially-aditya/Sydney'), findsNWidgets(2));
+        expect(find.text('Read-only GitHub digest.'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('progress tracker tolerates malformed steps', (tester) async {
       await tester.pumpWidget(

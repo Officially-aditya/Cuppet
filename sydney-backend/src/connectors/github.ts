@@ -326,6 +326,13 @@ export async function renderGitHubAgent(
 
   let commitRecords: string[] = [];
   const commitSourceRefs: any[] = [];
+  const timeline: Array<{
+    title: string;
+    repository?: string;
+    timestamp?: string;
+    url?: string;
+    type: "commit" | "repository" | "issue" | "pull_request";
+  }> = [];
   if (wantsCommits) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const commitsLists = await Promise.all(
@@ -347,9 +354,43 @@ export async function renderGitHubAgent(
           name: c.commit.message,
           url: c.html_url
         });
+        timeline.push({
+          title: c.commit.message.split("\n")[0]?.trim() || "Commit pushed",
+          repository: repoName,
+          timestamp: c.commit.author.date,
+          url: c.html_url,
+          type: "commit"
+        });
       }
     }
   }
+
+  timeline.push(
+    ...pullRequests.map((pullRequest) => ({
+      title: pullRequest.title,
+      repository: repositoryName(pullRequest),
+      timestamp: pullRequest.updated_at,
+      url: pullRequest.html_url,
+      type: "pull_request" as const
+    })),
+    ...issues.map((issue) => ({
+      title: issue.title,
+      repository: repositoryName(issue),
+      timestamp: issue.updated_at,
+      url: issue.html_url,
+      type: "issue" as const
+    })),
+    ...repositories.slice(0, 3).map((repository) => ({
+      title: repository.description?.trim() || "Repository updated",
+      repository: repository.full_name,
+      timestamp: repository.pushed_at || repository.updated_at,
+      url: repository.html_url,
+      type: "repository" as const
+    }))
+  );
+  timeline.sort((left, right) =>
+    String(right.timestamp ?? "").localeCompare(String(left.timestamp ?? ""))
+  );
 
   const records = [
     ...repositories.map(repositoryRecord),
@@ -405,7 +446,9 @@ export async function renderGitHubAgent(
       ],
       footer: githubPrivateRepositoryAccessEnabled()
         ? "Read-only digest generated from repositories available to your GitHub account."
-        : "Read-only digest generated from public GitHub repositories."
+        : "Read-only digest generated from public GitHub repositories.",
+      kind: "github_activity",
+      timeline: timeline.slice(0, 10)
     },
     { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
   );

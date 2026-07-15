@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import 'github_activity_template.dart';
 import 'template_utils.dart';
 
 class DataSummaryTemplate extends StatelessWidget {
@@ -11,6 +12,11 @@ class DataSummaryTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final timeline = templateMaps(data['timeline']);
+    if (data['kind'] == 'github_activity' && timeline.isNotEmpty) {
+      return GitHubActivityTemplate(data: data, timeline: timeline);
+    }
+
     final title = data['title']?.toString() ?? 'Summary';
     final intro = data['text']?.toString();
     final summary =

@@ -25,6 +25,14 @@ export type DataSummaryMessageContent = {
     }>;
     items?: unknown[];
     footer?: string;
+    kind?: "github_activity";
+    timeline?: Array<{
+      title: string;
+      repository?: string;
+      timestamp?: string;
+      url?: string;
+      type?: "commit" | "repository" | "issue" | "pull_request";
+    }>;
   };
 };
 
@@ -131,6 +139,9 @@ export type ComparisonMessageContent = {
 export type NewsBriefItem = {
   headline?: string;
   summary: string;
+  category?: string;
+  source?: string;
+  url?: string;
 };
 
 export type NewsBriefMessageContent = {
@@ -173,6 +184,10 @@ export type DsaQuestionMessageContent = {
     input_format?: string;
     output_format?: string;
     constraints?: string;
+    complexity?: string;
+    time_complexity?: string;
+    space_complexity?: string;
+    approach?: string;
     examples: Array<{
       input: string;
       output: string;

@@ -21,7 +21,8 @@ class _NewsBriefTemplateState extends State<NewsBriefTemplate> {
     final itemsList = widget.data['items'];
     final items = _normalizedItems(itemsList);
 
-    final initialCountVal = widget.data['initial_item_count'];
+    final initialCountVal =
+        widget.data['initial_item_count'] ?? widget.data['initialItemCount'];
     final initialCount =
         initialCountVal is num ? initialCountVal.toInt() : null;
 
@@ -30,6 +31,9 @@ class _NewsBriefTemplateState extends State<NewsBriefTemplate> {
         (shouldTruncate && !_isExpanded)
             ? items.take(initialCount).toList()
             : items;
+    final featuredIndex = visibleItems.indexWhere(
+      (item) => _hasVisibleText(item['headline']?.toString() ?? ''),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,8 +73,11 @@ class _NewsBriefTemplateState extends State<NewsBriefTemplate> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (final item in visibleItems) ...[
-                  _NewsItemCard(item: item),
+                for (var index = 0; index < visibleItems.length; index++) ...[
+                  _NewsItemCard(
+                    item: visibleItems[index],
+                    featured: index == featuredIndex,
+                  ),
                   const SizedBox(height: SydneySpacing.sm),
                 ],
               ],
@@ -198,9 +205,10 @@ bool _isDetailLabel(String value) {
 }
 
 class _NewsItemCard extends StatefulWidget {
-  const _NewsItemCard({required this.item});
+  const _NewsItemCard({required this.item, required this.featured});
 
   final Map<String, dynamic> item;
+  final bool featured;
 
   @override
   State<_NewsItemCard> createState() => _NewsItemCardState();
@@ -214,6 +222,7 @@ class _NewsItemCardState extends State<_NewsItemCard> {
     final headline = widget.item['headline']?.toString();
     final summary = widget.item['summary']?.toString() ?? '';
     final hasSummary = _hasVisibleText(summary);
+    final category = _newsCategory(widget.item);
 
     if (headline == null || headline.isEmpty || !hasSummary) {
       return Padding(
@@ -231,8 +240,59 @@ class _NewsItemCardState extends State<_NewsItemCard> {
       );
     }
 
-    return GestureDetector(
+    if (widget.featured) {
+      return Container(
+        key: const ValueKey('news-featured-story'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(SydneySpacing.md),
+        decoration: BoxDecoration(
+          color: SydneyColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+          border: Border.all(
+            color: SydneyColors.primary.withValues(alpha: 0.28),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                _NewsLabel(label: 'Top story', prominent: true),
+                Spacer(),
+                Icon(
+                  Icons.newspaper_rounded,
+                  color: SydneyColors.primary,
+                  size: 18,
+                ),
+              ],
+            ),
+            const SizedBox(height: SydneySpacing.md),
+            MarkdownText(
+              text: headline,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: SydneyColors.onSurface,
+                fontWeight: FontWeight.w800,
+                height: 1.25,
+              ),
+            ),
+            const SizedBox(height: SydneySpacing.sm),
+            _NewsLabel(label: category),
+            const SizedBox(height: SydneySpacing.sm),
+            MarkdownText(
+              text: summary,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: SydneyColors.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
+      borderRadius: BorderRadius.circular(SydneyRadius.sm),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(SydneySpacing.md),
@@ -248,25 +308,34 @@ class _NewsItemCardState extends State<_NewsItemCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(
-                    top: 6,
-                    right: SydneySpacing.sm,
+                  width: 32,
+                  height: 32,
+                  margin: const EdgeInsets.only(right: SydneySpacing.sm),
+                  decoration: BoxDecoration(
+                    color: SydneyColors.primarySoft,
+                    borderRadius: BorderRadius.circular(SydneyRadius.sm),
                   ),
-                  decoration: const BoxDecoration(
+                  child: const Icon(
+                    Icons.article_outlined,
                     color: SydneyColors.primary,
-                    shape: BoxShape.circle,
+                    size: 17,
                   ),
                 ),
                 Expanded(
-                  child: MarkdownText(
-                    text: headline,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurface,
-                      fontWeight: FontWeight.w700,
-                      height: 1.3,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MarkdownText(
+                        text: headline,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SydneyColors.onSurface,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: SydneySpacing.xs),
+                      _NewsLabel(label: category),
+                    ],
                   ),
                 ),
                 const SizedBox(width: SydneySpacing.xs),
@@ -284,7 +353,7 @@ class _NewsItemCardState extends State<_NewsItemCard> {
             AnimatedCrossFade(
               firstChild: const SizedBox(width: double.infinity),
               secondChild: Padding(
-                padding: const EdgeInsets.only(top: SydneySpacing.xs, left: 14),
+                padding: const EdgeInsets.only(top: SydneySpacing.sm, left: 40),
                 child: MarkdownText(
                   text: summary,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -305,4 +374,70 @@ class _NewsItemCardState extends State<_NewsItemCard> {
       ),
     );
   }
+}
+
+class _NewsLabel extends StatelessWidget {
+  const _NewsLabel({required this.label, this.prominent = false});
+
+  final String label;
+  final bool prominent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: SydneySpacing.sm,
+        vertical: SydneySpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color:
+            prominent
+                ? SydneyColors.primary
+                : SydneyColors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(SydneyRadius.full),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color:
+              prominent
+                  ? SydneyColors.onPrimary
+                  : SydneyColors.onSurfaceVariant,
+          fontWeight: FontWeight.w800,
+          fontSize: 9,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+String _newsCategory(Map<String, dynamic> item) {
+  final supplied = item['category']?.toString().trim();
+  if (supplied != null && supplied.isNotEmpty) return supplied;
+
+  final text = [item['headline'], item['summary']].join(' ').toLowerCase();
+  if (RegExp(r'\b(ai|artificial intelligence|llm|model)\b').hasMatch(text)) {
+    return 'AI';
+  }
+  if (RegExp(r'\b(policy|government|regulation|law|court)\b').hasMatch(text)) {
+    return 'Policy';
+  }
+  if (RegExp(
+    r'\b(market|economy|economic|funding|business)\b',
+  ).hasMatch(text)) {
+    return 'Business';
+  }
+  if (RegExp(r'\b(science|research|space|climate|health)\b').hasMatch(text)) {
+    return 'Science';
+  }
+  if (RegExp(r'\b(india|indian|delhi|mumbai)\b').hasMatch(text)) {
+    return 'India';
+  }
+  if (RegExp(
+    r'\b(software|developer|security|technology|tech)\b',
+  ).hasMatch(text)) {
+    return 'Technology';
+  }
+  return 'Update';
 }
