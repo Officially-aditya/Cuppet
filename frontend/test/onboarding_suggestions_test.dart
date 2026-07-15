@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/config/routes.dart';
+import 'package:sydney/design/workspace_palette.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
 import 'package:sydney/models/thread_launch_request.dart';
 import 'package:sydney/providers/agents_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/screens/inbox/inbox_screen.dart';
+import 'package:sydney/widgets/workspace_primitives.dart';
 
 final _assistant = Agent(
   id: 'assistant-id',
@@ -55,6 +57,12 @@ Widget _host({required List<Agent> agents, ValueChanged<Object?>? onRoute}) {
             builder: (_) => const Scaffold(body: Text('Assistant opened')),
           );
         }
+        if (settings.name == AppRoutes.create) {
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Create opened')),
+          );
+        }
         return null;
       },
     ),
@@ -65,6 +73,9 @@ void main() {
   testWidgets('onboarding card opens Assistant with a creation request', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     Object? routeArguments;
     await tester.pumpWidget(
       _host(
@@ -134,5 +145,67 @@ void main() {
     expect(find.text('TRY CUPPET'), findsNothing);
     expect(find.byKey(const ValueKey('onboarding_daily_news')), findsNothing);
     expect(find.byKey(const ValueKey('onboarding_daily_coding')), findsNothing);
+  });
+
+  testWidgets('workspace layout preserves agent thread navigation', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    Object? routeArguments;
+    await tester.pumpWidget(
+      _host(
+        agents: [_assistant, _createdAgent],
+        onRoute: (arguments) => routeArguments = arguments,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WorkspaceAppBar), findsOneWidget);
+    expect(find.text('Your workspace'), findsOneWidget);
+    expect(find.text('Cuppet'), findsOneWidget);
+    expect(find.text('Your delegation agents'), findsOneWidget);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      CuppetWorkspaceColors.background,
+    );
+    expect(tester.takeException(), isNull);
+
+    final agentCard = find.byKey(const ValueKey('agent_news-agent'));
+    expect(agentCard, findsOneWidget);
+    expect(tester.widget(agentCard), isA<WorkspaceCard>());
+
+    await tester.tap(agentCard);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Assistant opened'), findsOneWidget);
+    expect(routeArguments, same(_createdAgent));
+  });
+
+  testWidgets('create action expands, collapses, and keeps navigation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_host(agents: [_assistant, _createdAgent]));
+    await tester.pumpAndSettle();
+
+    final createAction = find.byKey(const ValueKey('create_agent_fab'));
+    expect(createAction, findsOneWidget);
+    expect(tester.getSize(createAction).width, 132);
+    expect(find.bySemanticsLabel('Create new agent'), findsOneWidget);
+
+    final decoration =
+        tester.widget<AnimatedContainer>(createAction).decoration
+            as BoxDecoration;
+    expect(decoration.color, CuppetWorkspaceColors.primary);
+    expect(decoration.boxShadow, isNull);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.getSize(createAction).width, 48);
+
+    await tester.tap(createAction);
+    await tester.pumpAndSettle();
+    expect(find.text('Create opened'), findsOneWidget);
   });
 }

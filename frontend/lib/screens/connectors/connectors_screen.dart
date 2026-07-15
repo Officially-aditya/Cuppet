@@ -7,6 +7,7 @@ import '../../providers/connectors_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
+import '../../widgets/workspace_primitives.dart';
 
 class ConnectorsScreen extends ConsumerWidget {
   const ConnectorsScreen({super.key});
@@ -16,42 +17,33 @@ class ConnectorsScreen extends ConsumerWidget {
     final connectors = ref.watch(connectorsProvider);
 
     return Scaffold(
-      backgroundColor: SydneyColors.surface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        titleSpacing: SydneySpacing.page,
-        title: Text(
-          'Connectors',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: SydneyColors.ink,
-                letterSpacing: -0.5,
-              ),
-        ),
+      backgroundColor: CuppetWorkspaceColors.background,
+      appBar: const WorkspaceAppBar(
+        eyebrow: 'Workspace setup',
+        title: 'Connect your tools',
+        subtitle: 'Choose which services Cuppet can connect to.',
       ),
       body: SafeArea(
         bottom: false,
         child: connectors.when(
           data: (items) => _ConnectorList(connectors: items),
           loading: () => const _ConnectorLoading(),
-          error: (error, _) => SydneyErrorState(
-            title: 'Connectors could not load',
-            message: error.toString(),
-            onRetry: () => ref.invalidate(connectorsProvider),
-          ),
+          error:
+              (error, _) => SydneyErrorState(
+                title: 'Connectors could not load',
+                message: error.toString(),
+                onRetry: () => ref.invalidate(connectorsProvider),
+              ),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: 1,
-        onSelected: (index) => navigateToMainDestination(
-          context,
-          currentIndex: 1,
-          selectedIndex: index,
-        ),
+        onSelected:
+            (index) => navigateToMainDestination(
+              context,
+              currentIndex: 1,
+              selectedIndex: index,
+            ),
       ),
     );
   }
@@ -73,13 +65,7 @@ class _ConnectorList extends ConsumerWidget {
         SydneySpacing.lg,
       ),
       children: [
-        Text(
-          'Connectors are approved here, but tokens stay with the backend.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
-                height: 1.35,
-              ),
-        ),
+        const WorkspaceSectionLabel('AVAILABLE SERVICES'),
         const SizedBox(height: SydneySpacing.lg),
         if (connectors.isEmpty)
           const SydneyEmptyState(
@@ -98,14 +84,20 @@ class _ConnectorList extends ConsumerWidget {
                       .setConnected(connector.id, connected: connected);
                 } catch (error) {
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(error.toString())),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error.toString())));
                 }
               },
             ),
             const SizedBox(height: SydneySpacing.md),
           ],
+        const SizedBox(height: SydneySpacing.sm),
+        const WorkspacePrivacyPanel(
+          title: 'Access & privacy',
+          message:
+              'Cuppet only uses the access you approve. Connector tokens stay encrypted on Cuppet\'s backend, and agents stay within each connector\'s granted scopes.',
+        ),
       ],
     );
   }
@@ -116,12 +108,25 @@ class _ConnectorLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
+    return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(SydneySpacing.page),
-      itemBuilder: (_, _) => const SydneyLoadingBlock(height: 112, radius: SydneyRadius.md),
-      separatorBuilder: (_, _) => const SizedBox(height: SydneySpacing.md),
-      itemCount: 3,
+      padding: const EdgeInsets.fromLTRB(
+        SydneySpacing.page,
+        SydneySpacing.lg,
+        SydneySpacing.page,
+        SydneySpacing.lg,
+      ),
+      children: [
+        const WorkspaceSectionLabel('AVAILABLE SERVICES'),
+        const SizedBox(height: SydneySpacing.lg),
+        for (var index = 0; index < 3; index++) ...[
+          const WorkspaceCard(
+            padding: EdgeInsets.zero,
+            child: SydneyLoadingBlock(height: 112, radius: SydneyRadius.lg),
+          ),
+          if (index < 2) const SizedBox(height: SydneySpacing.md),
+        ],
+      ],
     );
   }
 }

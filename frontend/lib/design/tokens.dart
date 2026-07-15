@@ -3,3 +3,4 @@ export 'colors.dart';
 export 'radius.dart';
 export 'spacing.dart';
 export 'typography.dart';
+export 'workspace_palette.dart';
