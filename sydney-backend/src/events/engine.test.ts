@@ -93,6 +93,72 @@ test("scheduled and legacy agents never consume realtime events", () => {
   );
 });
 
+test("GitHub repository scopes accept only matching webhook repositories", () => {
+  const intent = {
+    intent: "github_activity_digest",
+    realtime_enabled: true,
+    github_repository: "Officially-aditya/Sydney"
+  };
+
+  assert.equal(
+    shouldTriggerAgentEvent(intent, {
+      source: "github",
+      eventType: "github.push",
+      payload: { repository: "officially-aditya/sydney" }
+    }),
+    true
+  );
+  assert.equal(
+    shouldTriggerAgentEvent(intent, {
+      source: "github",
+      eventType: "github.push",
+      payload: { repository: "officially-aditya/another-repo" }
+    }),
+    false
+  );
+  assert.equal(
+    shouldTriggerAgentEvent(intent, {
+      source: "github",
+      eventType: "github.push",
+      payload: {}
+    }),
+    false
+  );
+});
+
+test("GitHub event matching derives repository scope for existing agents", () => {
+  const legacyIntent = {
+    intent: "github_activity_digest",
+    realtime_enabled: true
+  };
+  const prompt = "Track changes in my repository Sydney and alert me immediately";
+
+  assert.equal(
+    shouldTriggerAgentEvent(
+      legacyIntent,
+      {
+        source: "github",
+        eventType: "github.pull_request",
+        payload: { repository: "some-owner/Sydney" }
+      },
+      prompt
+    ),
+    true
+  );
+  assert.equal(
+    shouldTriggerAgentEvent(
+      legacyIntent,
+      {
+        source: "github",
+        eventType: "github.pull_request",
+        payload: { repository: "some-owner/Other" }
+      },
+      prompt
+    ),
+    false
+  );
+});
+
 test("event cooldowns are bounded to prevent notification storms", () => {
   assert.equal(eventCooldownSeconds({}, "slack"), 120);
   assert.equal(eventCooldownSeconds({ event_cooldown_seconds: 1 }, "slack"), 30);

@@ -10,10 +10,12 @@ import { agentWorkerRuntimeStatus } from "../workers/runtime-status.js";
 import { config } from "../config.js";
 import { eventRoutes } from "../events/routes.js";
 import { userRoutes } from "../users/routes.js";
+import { assistantMemoryRoutes } from "../assistant/memory-routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
   await app.register(userRoutes);
+  await app.register(assistantMemoryRoutes);
   await app.register(agentRoutes);
   await app.register(connectorRoutes);
   await app.register(messageRoutes);

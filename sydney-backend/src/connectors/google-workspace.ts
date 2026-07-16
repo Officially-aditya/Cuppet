@@ -1229,6 +1229,32 @@ async function fetchGmailMessages(
   );
 }
 
+export async function readGmailForAssistant(
+  userId: string,
+  input: { query?: string; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await googleAccessToken(userId, "gmail");
+  if (!accessToken) {
+    throw connectorAuthRequired("gmail", "gmail_not_connected");
+  }
+  const messages = await fetchGmailMessages(
+    accessToken,
+    input.query?.trim() || "newer_than:7d",
+    Math.min(input.limit ?? 8, 10)
+  );
+  return {
+    summary: messages.length === 0
+      ? "No matching Gmail messages were found."
+      : messages.map((message) =>
+          `- ${subjectOrFallback(message)} — ${header(message, "From") ?? "Unknown sender"}${message.snippet ? `: ${message.snippet.slice(0, 240)}` : ""}`
+        ).join("\n"),
+    sourceRefs: messages.map((message) => ({
+      ...gmailMessageSourceRef(message),
+      url: `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(message.threadId ?? message.id)}`
+    }))
+  };
+}
+
 async function fetchGmailMessage(
   accessToken: string,
   id: string
@@ -1258,6 +1284,51 @@ export async function fetchDriveFiles(
 
   const body = await googleJson<{ files?: DriveFile[] }>(url, accessToken);
   return body.files ?? [];
+}
+
+export async function readDriveForAssistant(
+  userId: string,
+  input: { query?: string; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await googleAccessToken(userId, "drive");
+  if (!accessToken) {
+    throw connectorAuthRequired("drive", "drive_not_connected");
+  }
+  const clean = input.query?.trim().replace(/'/g, "\\'").slice(0, 120);
+  const query = clean
+    ? `trashed = false and name contains '${clean}'`
+    : "trashed = false";
+  const files = await fetchDriveFiles(accessToken, query, Math.min(input.limit ?? 8, 10));
+  const excerpts = await Promise.all(
+    files.slice(0, 3).map(async (file) => {
+      try {
+        const text = await fetchDriveFileContent(
+          accessToken,
+          file.id,
+          file.mimeType ?? "",
+          file.name
+        );
+        return text.replace(/\s+/g, " ").trim().slice(0, 1200);
+      } catch {
+        return "";
+      }
+    })
+  );
+  return {
+    summary: files.length === 0
+      ? "No matching Google Drive files were found."
+      : files.map((file, index) =>
+          `- ${file.name}${file.modifiedTime ? ` (updated ${file.modifiedTime})` : ""}${excerpts[index] ? `\n  Excerpt: ${excerpts[index]}` : ""}`
+        ).join("\n"),
+    sourceRefs: files.map((file) => ({
+      type: "drive_file",
+      source: "Google Drive",
+      id: file.id,
+      name: file.name,
+      mimeType: file.mimeType,
+      url: file.webViewLink
+    }))
+  };
 }
 
 async function fetchDriveDocExcerpts(
@@ -1407,6 +1478,41 @@ export async function fetchVisibleCalendarEvents(
       return true;
     })
     .slice(0, maxResults);
+}
+
+export async function readCalendarForAssistant(
+  userId: string,
+  input: { timeMin: Date; timeMax: Date; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await googleAccessToken(userId, "calendar");
+  if (!accessToken) {
+    throw connectorAuthRequired("calendar", "calendar_not_connected");
+  }
+  const [events, timeZone] = await Promise.all([
+    fetchVisibleCalendarEvents(
+      accessToken,
+      input.timeMin,
+      input.timeMax,
+      Math.min(input.limit ?? 12, 20)
+    ),
+    googleWorkspaceUserTimeZone(userId)
+  ]);
+  return {
+    summary: events.length === 0
+      ? "No calendar events were found in that time range."
+      : events.map((event) => `- ${calendarEventLine(event, timeZone)}`).join("\n"),
+    sourceRefs: events.map((event) => ({
+      type: "calendar_event",
+      source: "Google Calendar",
+      id: event.id,
+      title: calendarEventTitle(event),
+      url: event.htmlLink,
+      start: event.start,
+      end: event.end,
+      calendar_id: event.calendarId,
+      calendar_name: event.calendarName
+    }))
+  };
 }
 
 function calendarEventTimestamp(event: CalendarEvent): number {

@@ -428,6 +428,7 @@ void main() {
         expect(find.text('GITHUB ACTIVITY DIGEST'), findsOneWidget);
         expect(find.text('Improve news presentation'), findsOneWidget);
         expect(find.text('Fix account cache isolation'), findsOneWidget);
+        expect(find.text('COMMIT'), findsNWidgets(2));
         expect(find.text('Officially-aditya/Sydney'), findsNWidgets(2));
         expect(find.text('Read-only GitHub digest.'), findsOneWidget);
         final metricTops =
@@ -438,6 +439,80 @@ void main() {
               '0',
             ].map((value) => tester.getTopLeft(find.text(value)).dy).toList();
         expect(metricTops.toSet(), hasLength(1));
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'GitHub activity identifies update types and keeps dates visible',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day, 9, 30);
+        final yesterday = today.subtract(const Duration(days: 1));
+        final older = today.subtract(const Duration(days: 4));
+        const monthLabels = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
+
+        await tester.pumpWidget(
+          templateHost(
+            DataSummaryTemplate(
+              data: {
+                'kind': 'github_activity',
+                'title': 'Repository activity',
+                'timeline': [
+                  {
+                    'title': 'Ship the latest change',
+                    'timestamp': today.toUtc().toIso8601String(),
+                    'type': 'commit',
+                  },
+                  {
+                    'title': 'Review the open fix',
+                    'timestamp': yesterday.toUtc().toIso8601String(),
+                    'type': 'pull_request',
+                  },
+                  {
+                    'title': 'Repository metadata changed',
+                    'timestamp': older.toUtc().toIso8601String(),
+                    'type': 'repository',
+                  },
+                  {
+                    'title': 'Investigate regression',
+                    'timestamp': older.toUtc().toIso8601String(),
+                    'type': 'issue',
+                  },
+                ],
+              },
+            ),
+          ),
+        );
+
+        expect(find.text('COMMIT'), findsOneWidget);
+        expect(find.text('PULL REQUEST'), findsOneWidget);
+        expect(find.text('REPOSITORY'), findsOneWidget);
+        expect(find.text('ISSUE'), findsOneWidget);
+        expect(find.textContaining('Today •'), findsOneWidget);
+        expect(find.textContaining('Yesterday •'), findsOneWidget);
+        expect(
+          find.textContaining('${monthLabels[older.month - 1]} ${older.day} •'),
+          findsNWidgets(2),
+        );
         expect(tester.takeException(), isNull);
       },
     );

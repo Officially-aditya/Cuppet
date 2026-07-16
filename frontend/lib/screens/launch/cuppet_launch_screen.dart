@@ -77,7 +77,7 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
                     )
                     : Scaffold(
                       key: const ValueKey('cuppet-launch-loading'),
-                      backgroundColor: SydneyColors.surfaceContainerLowest,
+                      backgroundColor: CuppetWorkspaceColors.background,
                       body: Center(
                         child: FadeTransition(
                           opacity: _opacity,
@@ -101,7 +101,7 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
                                   style: Theme.of(
                                     context,
                                   ).textTheme.headlineMedium?.copyWith(
-                                    color: SydneyColors.primary,
+                                    color: CuppetWorkspaceColors.primary,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: -0.8,
                                   ),

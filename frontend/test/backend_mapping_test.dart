@@ -74,7 +74,7 @@ void main() {
     expect(message.preview, 'Tech news brief for today.');
   });
 
-  test('adjacent duplicate agent deliveries are collapsed', () {
+  test('adjacent duplicate agent deliveries retain the newest message', () {
     final first = Message.plainText(
       id: 'message_1',
       threadId: 'agent_1',
@@ -90,7 +90,7 @@ void main() {
       createdAt: DateTime.utc(2026, 6, 20, 9, 1),
     );
 
-    expect(deduplicateMessages([first, duplicate]), [first]);
+    expect(deduplicateMessages([first, duplicate]), [duplicate]);
   });
 
   test(

@@ -13,6 +13,7 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/templates/briefing_card_template.dart';
+import '../../widgets/workspace_primitives.dart';
 
 class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
@@ -47,42 +48,17 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final briefings = ref.watch(briefingsProvider);
 
     return Scaffold(
-      backgroundColor: SydneyColors.surface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        titleSpacing: SydneySpacing.page,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Cuppet',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: SydneyColors.ink,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Your delegation agents',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.subtleInk,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+      backgroundColor: CuppetWorkspaceColors.background,
+      appBar: const WorkspaceAppBar(
+        eyebrow: 'Your workspace',
+        title: 'Cuppet',
+        subtitle: 'Your delegation agents',
       ),
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          color: SydneyColors.primary,
+          color: CuppetWorkspaceColors.primary,
+          backgroundColor: CuppetWorkspaceColors.card,
           onRefresh: () async {
             ref.invalidate(briefingsProvider);
             await ref.read(agentsProvider.notifier).refresh();
@@ -106,58 +82,56 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           ),
         ),
       ),
-      floatingActionButton: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        width: _isExpanded ? 132 : 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: SydneyColors.primary,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: SydneyColors.primary.withValues(alpha: 0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+      floatingActionButton: Semantics(
+        button: true,
+        label: 'Create new agent',
+        child: Tooltip(
+          message: 'Create new agent',
+          child: AnimatedContainer(
+            key: const ValueKey('create_agent_fab'),
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: _isExpanded ? 132 : 48,
+            height: 48,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: CuppetWorkspaceColors.primary,
+              borderRadius: BorderRadius.circular(SydneyRadius.full),
             ),
-          ],
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.create),
-            child: Center(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      if (_isExpanded) ...[
-                        const SizedBox(width: 8),
-                        const Text(
-                          'New Agent',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            fontSize: 13,
-                            letterSpacing: 0.3,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(SydneyRadius.full),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.create),
+                child: Center(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.add_rounded,
+                            color: CuppetWorkspaceColors.card,
+                            size: 20,
                           ),
-                        ),
-                      ],
-                    ],
+                          if (_isExpanded) ...[
+                            const SizedBox(width: SydneySpacing.sm),
+                            const Text(
+                              'New Agent',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: CuppetWorkspaceColors.card,
+                                fontSize: 13,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -236,43 +210,20 @@ class _InboxList extends StatelessWidget {
       ),
       children: [
         if (briefings.isNotEmpty) ...[
-          Row(
-            children: [
-              Text(
-                'BRIEFINGS',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.mutedInk,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                ),
+          WorkspaceSectionLabel(
+            'Briefings',
+            trailing: Text(
+              'Tap to explore with Assistant',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: CuppetWorkspaceColors.muted,
+                fontSize: 10,
               ),
-              const Spacer(),
-              Text(
-                'Tap to explore with Assistant',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.subtleInk,
-                  fontSize: 10,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: SydneySpacing.sm),
           for (final briefing in briefings) ...[
-            Container(
-              width: double.infinity,
+            WorkspaceCard(
               padding: const EdgeInsets.all(SydneySpacing.md),
-              decoration: BoxDecoration(
-                color: SydneyColors.agentBubble,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0A000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
               child: BriefingCardTemplate(
                 data: briefing.data,
                 compact: true,
@@ -288,8 +239,34 @@ class _InboxList extends StatelessWidget {
           const SizedBox(height: SydneySpacing.md),
         ],
         if (!hasCreatedAgent) ...[
-          const SydneyNotice(
-            text: 'Assistant is pinned so you always have a place to start.',
+          const WorkspaceCard(
+            padding: EdgeInsets.symmetric(
+              horizontal: SydneySpacing.lg,
+              vertical: SydneySpacing.md,
+            ),
+            color: CuppetWorkspaceColors.softSage,
+            borderColor: CuppetWorkspaceColors.panelBorder,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.push_pin_outlined,
+                  color: CuppetWorkspaceColors.primaryInk,
+                  size: 16,
+                ),
+                SizedBox(width: SydneySpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Assistant is pinned so you always have a place to start.',
+                    style: TextStyle(
+                      color: CuppetWorkspaceColors.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: SydneySpacing.md),
         ],
@@ -318,14 +295,7 @@ class _OnboardingSuggestions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'TRY CUPPET',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: SydneyColors.mutedInk,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.1,
-          ),
-        ),
+        const WorkspaceSectionLabel('Try Cuppet'),
         const SizedBox(height: SydneySpacing.sm),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,79 +343,62 @@ class _OnboardingSuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: SydneyColors.agentBubble,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        key: ValueKey('onboarding_${suggestion.id}'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(SydneySpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: SydneyColors.line),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x08000000),
-                blurRadius: 5,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return WorkspaceCard(
+      key: ValueKey('onboarding_${suggestion.id}'),
+      onTap: onTap,
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      radius: SydneyRadius.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: SydneyColors.primarySoft,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      suggestion.icon,
-                      size: 17,
-                      color: SydneyColors.primary,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 17,
-                    color: SydneyColors.primary,
-                  ),
-                ],
-              ),
-              const SizedBox(height: SydneySpacing.sm),
-              Text(
-                suggestion.question,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: SydneyColors.ink,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  height: 1.2,
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: CuppetWorkspaceColors.softSage,
+                  borderRadius: BorderRadius.circular(SydneyRadius.sm),
+                  border: Border.all(color: CuppetWorkspaceColors.panelBorder),
+                ),
+                child: Icon(
+                  suggestion.icon,
+                  size: 17,
+                  color: CuppetWorkspaceColors.primaryInk,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                suggestion.answer,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SydneyColors.mutedInk,
-                  fontSize: 11,
-                  height: 1.25,
-                ),
+              const Spacer(),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                size: 17,
+                color: CuppetWorkspaceColors.primaryInk,
               ),
             ],
           ),
-        ),
+          const SizedBox(height: SydneySpacing.sm),
+          Text(
+            suggestion.question,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: CuppetWorkspaceColors.ink,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: SydneySpacing.xs),
+          Text(
+            suggestion.answer,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: CuppetWorkspaceColors.muted,
+              fontSize: 11,
+              height: 1.25,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -498,6 +451,6 @@ Agent _assistantFallback() {
     latestMessageAt: DateTime.now(),
     isAssistant: true,
     isPinned: true,
-    accentColor: 0xFF1D7A5C,
+    accentColor: 0xFF006046,
   );
 }

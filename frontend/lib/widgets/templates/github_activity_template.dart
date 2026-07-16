@@ -127,6 +127,7 @@ class _GitHubTimelineItem extends StatelessWidget {
     final title = item['title']?.toString() ?? 'GitHub update';
     final repository = item['repository']?.toString();
     final timestamp = _githubTimestamp(item['timestamp']);
+    final type = _githubActivityType(item['type']);
     final url = item['url']?.toString();
 
     return InkWell(
@@ -172,6 +173,40 @@ class _GitHubTimelineItem extends StatelessWidget {
                         runSpacing: SydneySpacing.xs,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: SydneySpacing.xs,
+                              vertical: SydneySpacing.xxs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: SydneyColors.primarySoft,
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.full,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  type.icon,
+                                  color: SydneyColors.primary,
+                                  size: 11,
+                                ),
+                                const SizedBox(width: SydneySpacing.xxs),
+                                Text(
+                                  type.label,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelSmall?.copyWith(
+                                    color: SydneyColors.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           if (_hasContent(timestamp))
                             Text(
                               timestamp!,
@@ -254,11 +289,44 @@ String? _githubTimestamp(Object? raw) {
   final parsed = DateTime.tryParse(value!);
   if (parsed == null) return value;
   final local = parsed.toLocal();
+  final now = DateTime.now();
   final hour =
       local.hour == 0 ? 12 : (local.hour > 12 ? local.hour - 12 : local.hour);
   final minute = local.minute.toString().padLeft(2, '0');
   final period = local.hour >= 12 ? 'PM' : 'AM';
-  return '$hour:$minute $period';
+  final time = '$hour:$minute $period';
+  final localDay = DateTime(local.year, local.month, local.day);
+  final today = DateTime(now.year, now.month, now.day);
+  final dayDifference = today.difference(localDay).inDays;
+  if (dayDifference == 0) return 'Today • $time';
+  if (dayDifference == 1) return 'Yesterday • $time';
+
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[local.month - 1]} ${local.day} • $time';
+}
+
+({String label, IconData icon}) _githubActivityType(Object? raw) {
+  return switch (raw?.toString().trim().toLowerCase()) {
+    'commit' => (label: 'COMMIT', icon: Icons.commit_rounded),
+    'repository' => (label: 'REPOSITORY', icon: Icons.folder_outlined),
+    'issue' => (label: 'ISSUE', icon: Icons.error_outline_rounded),
+    'pull_request' ||
+    'pull-request' => (label: 'PULL REQUEST', icon: Icons.call_merge_rounded),
+    _ => (label: 'UPDATE', icon: Icons.bolt_outlined),
+  };
 }
 
 Future<void> _openExternalUrl(String value) async {

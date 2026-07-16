@@ -374,7 +374,12 @@ async function executeAgentJob(
     const targetSnoozedId = isSnooze ? job.data.snoozedMessageId : skippedMessageId;
     const targetTrigger = isSnooze || skippedMessageId ? ("snooze" as const) : job.data.trigger;
 
-    const rendered = await renderAgentMessage(agent, targetTrigger, targetSnoozedId);
+    const rendered = await renderAgentMessage(
+      agent,
+      targetTrigger,
+      targetSnoozedId,
+      job.data.eventId
+    );
     const message = await persistRunMessage({
       agent,
       runId: run.id,
@@ -792,7 +797,8 @@ async function publishRealtimeEventsSafely(
 async function renderAgentMessage(
   agent: AgentRow,
   trigger: AgentExecutorJobData["trigger"],
-  snoozedMessageId?: string
+  snoozedMessageId?: string,
+  eventId?: string
 ): Promise<RenderedAgentMessage> {
   if (trigger === "snooze" && snoozedMessageId) {
     const { rows } = await pool.query(
@@ -831,7 +837,9 @@ async function renderAgentMessage(
 
     const githubMessage = await renderGitHubAgent(agent, {
       scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
-      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
+      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger),
+      trigger,
+      eventId
     });
     if (githubMessage) {
       return githubMessage;

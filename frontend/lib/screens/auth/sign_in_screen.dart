@@ -6,6 +6,7 @@ import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/auth/auth_widgets.dart';
 import '../../widgets/sydney_primitives.dart';
+import '../../widgets/workspace_primitives.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -34,25 +35,31 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final loading = auth.isLoading;
 
     return Scaffold(
-      backgroundColor: SydneyColors.surface,
+      backgroundColor: CuppetWorkspaceColors.background,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 28),
+              padding: const EdgeInsets.fromLTRB(
+                SydneySpacing.page,
+                SydneySpacing.xxl,
+                SydneySpacing.page,
+                SydneySpacing.xl,
+              ),
               children: [
-                const SizedBox(height: SydneySpacing.xxl),
+                const SizedBox(height: SydneySpacing.xl),
                 const AuthLogo(),
                 const SizedBox(height: SydneySpacing.lg),
                 Text(
                   'Welcome back',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: SydneyColors.ink,
-                    letterSpacing: -0.5,
+                    fontWeight: FontWeight.w800,
+                    color: CuppetWorkspaceColors.ink,
+                    height: 1.05,
+                    letterSpacing: -0.7,
                   ),
                 ),
                 const SizedBox(height: SydneySpacing.sm),
@@ -60,58 +67,33 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   'Delegate work through conversations with agents you trust.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: SydneyColors.mutedInk,
+                    color: CuppetWorkspaceColors.muted,
+                    height: 1.35,
                   ),
                 ),
                 const SizedBox(height: SydneySpacing.xxl),
-                Column(
-                  children: [
-                    LoginOptionCard(
-                      title: 'Sign in with Google',
-                      subtitle: 'Access your account instantly with Google',
-                      leadingWidget: const GoogleMark(),
-                      onTap: loading ? null : _continueWithGoogle,
-                    ),
-                    const SizedBox(height: SydneySpacing.md),
-                    LoginOptionCard(
-                      title: 'Sign in with Email',
-                      subtitle: 'Use your email address and password',
-                      icon: Icons.mail_outline_rounded,
-                      leadingIconColor: SydneyColors.primary,
-                      onTap:
-                          () =>
-                              setState(() => _showEmailForm = !_showEmailForm),
-                    ),
-                  ],
+                const WorkspaceSectionLabel('Sign in'),
+                const SizedBox(height: SydneySpacing.sm),
+                LoginOptionCard(
+                  title: 'Sign in with Google',
+                  subtitle: 'Access your account instantly with Google',
+                  leadingWidget: const GoogleMark(),
+                  onTap: loading ? null : _continueWithGoogle,
+                ),
+                const SizedBox(height: SydneySpacing.sm),
+                LoginOptionCard(
+                  title: 'Sign in with Email',
+                  subtitle: 'Use your email address and password',
+                  icon: Icons.mail_outline_rounded,
+                  leadingIconColor: CuppetWorkspaceColors.primaryInk,
+                  onTap: () => setState(() => _showEmailForm = !_showEmailForm),
                 ),
                 if (_showEmailForm) ...[
-                  const SizedBox(height: SydneySpacing.lg),
+                  const SizedBox(height: SydneySpacing.md),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInOut,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: SydneyColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF17201C,
-                            ).withValues(alpha: 0.05),
-                            offset: const Offset(4, 4),
-                            blurRadius: 8,
-                          ),
-                          const BoxShadow(
-                            color: Colors.white,
-                            offset: Offset(-4, -4),
-                            blurRadius: 8,
-                          ),
-                        ],
-                        border: Border.all(
-                          color: SydneyColors.line.withValues(alpha: 0.35),
-                          width: 0.8,
-                        ),
-                      ),
+                    child: WorkspaceCard(
                       padding: const EdgeInsets.all(SydneySpacing.lg),
                       child: Form(
                         key: _formKey,
@@ -150,7 +132,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
                                   size: 18,
-                                  color: SydneyColors.outline,
+                                  color: CuppetWorkspaceColors.muted,
                                 ),
                               ),
                               validator:
@@ -164,6 +146,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               alignment: Alignment.centerRight,
                               child: TextButton(
                                 onPressed: loading ? null : () {},
+                                style: TextButton.styleFrom(
+                                  foregroundColor:
+                                      CuppetWorkspaceColors.primary,
+                                  textStyle: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                                 child: const Text('Forgot Password?'),
                               ),
                             ),
@@ -178,22 +167,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               ),
                               const SizedBox(height: SydneySpacing.md),
                             ],
-                            FilledButton(
+                            AuthPrimaryButton(
+                              label: loading ? 'Signing in...' : 'Sign In',
                               onPressed: loading ? null : _submit,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: SydneyColors.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                minimumSize: const Size.fromHeight(48),
-                                textStyle: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              child: Text(
-                                loading ? 'Signing in...' : 'Sign In',
-                              ),
                             ),
                           ],
                         ),
@@ -211,7 +187,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     Text(
                       "Don't have an account?",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SydneyColors.onSurfaceVariant,
+                        color: CuppetWorkspaceColors.muted,
                       ),
                     ),
                     TextButton(
@@ -221,13 +197,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               : () => Navigator.of(
                                 context,
                               ).pushNamed(AppRoutes.signUp),
-                      child: const Text(
-                        'Create one',
-                        style: TextStyle(
-                          color: SydneyColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: CuppetWorkspaceColors.primary,
+                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
                       ),
+                      child: const Text('Create one'),
                     ),
                   ],
                 ),

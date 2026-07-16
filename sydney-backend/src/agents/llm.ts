@@ -83,6 +83,7 @@ export function totalLlmTokens(response: LlmMessageResponse): number {
 export type {
   LlmCitation,
   LlmContentBlock,
+  LlmImageBlock,
   LlmMessageInput,
   LlmMessageResponse,
   LlmServerToolUseBlock,

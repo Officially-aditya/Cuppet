@@ -10,6 +10,11 @@ import { pool } from "../db/index.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
 import { upsertConnectorInstallation } from "../events/engine.js";
 import {
+  githubRepositoryMatches,
+  githubRepositoryScope
+} from "../agents/github-scope.js";
+import type { AgentRunTrigger } from "../queue/index.js";
+import {
   decryptConnectorSecret,
   encryptConnectorSecret
 } from "./token-vault.js";
@@ -87,6 +92,8 @@ type GitHubAgent = {
 type GitHubRenderOptions = {
   scheduledIntro: (agent: GitHubAgent, label: string) => string;
   scheduledTitle: (agent: GitHubAgent, label: string) => string;
+  trigger?: AgentRunTrigger;
+  eventId?: string;
 };
 
 type OAuthState = {
@@ -271,24 +278,66 @@ type GitHubCommit = {
       name: string;
       date: string;
     };
+    committer?: {
+      name: string;
+      date: string;
+    };
   };
   html_url: string;
 };
 
+type GitHubTimelineItem = {
+  title: string;
+  repository?: string;
+  timestamp?: string;
+  url?: string;
+  type: "commit" | "repository" | "issue" | "pull_request";
+};
+
+export type GitHubInboundEvent = {
+  event_type: string;
+  payload: Record<string, unknown>;
+  occurred_at: Date | string;
+};
+
+export type GitHubActivityWindow = {
+  since: Date;
+  until: Date;
+  resumedFromPreviousRun: boolean;
+};
+
+export type PreparedGitHubWebhookActivity = {
+  repository: string;
+  summary: string;
+  metrics: Array<{ label: string; value: string }>;
+  timeline: GitHubTimelineItem[];
+  sourceRefs: Array<Record<string, unknown>>;
+};
+
+const githubInitialLookbackMs = 24 * 60 * 60 * 1000;
+const githubMaximumLookbackMs = 7 * githubInitialLookbackMs;
+
 function checkWantsCommits(prompt: string, action: string): boolean {
   const lower = [prompt, action].join("\n").toLowerCase();
-  return /\b(commit|commits|push|pushes|code change|code changes)\b/.test(lower);
+  return (
+    /\b(commit|commits|push|pushes|code change|code changes)\b/.test(lower) ||
+    /\b(?:repo|repository|github)\b[^.!?]{0,80}\b(?:change|changes|activity|update|updates)\b/.test(
+      lower
+    )
+  );
 }
 
 async function fetchCommits(
   accessToken: string,
   userId: string,
   repoFullName: string,
-  sinceIsoString: string
+  sinceIsoString: string,
+  untilIsoString: string
 ): Promise<GitHubCommit[]> {
   try {
     const url = new URL(`${githubApiBase}/repos/${repoFullName}/commits`);
     url.searchParams.set("since", sinceIsoString);
+    url.searchParams.set("until", untilIsoString);
     url.searchParams.set("per_page", "5");
     return await githubJson<GitHubCommit[]>(url, accessToken, userId);
   } catch (error) {
@@ -305,47 +354,97 @@ export async function renderGitHubAgent(
     return null;
   }
 
+  if (options.trigger === "event") {
+    if (!options.eventId) {
+      throw new Error("github_event_context_missing");
+    }
+    const event = await loadGitHubInboundEvent(options.eventId, agent.id);
+    if (!event) {
+      throw new Error("github_event_not_found");
+    }
+    return renderGitHubInboundEvent(agent, event, options);
+  }
+
   const accessToken = await githubAccessToken(agent.user_id);
   if (!accessToken) return null;
 
-  const user = await githubJson<GitHubUser>(
-    new URL(`${githubApiBase}/user`),
-    accessToken,
-    agent.user_id
-  );
-  const [repositories, issueSearch, pullRequestSearch] = await Promise.all([
+  const until = new Date();
+  const [user, allRepositories, previousRun] = await Promise.all([
+    githubJson<GitHubUser>(
+      new URL(`${githubApiBase}/user`),
+      accessToken,
+      agent.user_id
+    ),
     fetchRepositories(accessToken, agent.user_id),
-    searchAssignedActivity(accessToken, agent.user_id, user.login, "issue"),
+    latestSuccessfulGitHubRun(agent.id)
+  ]);
+  const [issueSearch, pullRequestSearch] = await Promise.all([
+    searchAssignedActivity(
+      accessToken,
+      agent.user_id,
+      user.login,
+      "issue"
+    ),
     searchAssignedActivity(accessToken, agent.user_id, user.login, "pr")
   ]);
-  const issues = issueSearch.items ?? [];
-  const pullRequests = pullRequestSearch.items ?? [];
+  const window = resolveGitHubActivityWindow(previousRun, until);
+  const repositoryScope = githubRepositoryScope(
+    agent.parsed_intent,
+    agent.prompt
+  );
+  const repositories = allRepositories.filter((repository) =>
+    githubRepositoryMatches(repositoryScope, repository.full_name)
+  );
+  const issues = (issueSearch.items ?? []).filter(
+    (issue) =>
+      githubRepositoryMatches(repositoryScope, repositoryName(issue)) &&
+      githubTimestampInWindow(issue.updated_at, window)
+  );
+  const pullRequests = (pullRequestSearch.items ?? []).filter(
+    (pullRequest) =>
+      githubRepositoryMatches(repositoryScope, repositoryName(pullRequest)) &&
+      githubTimestampInWindow(pullRequest.updated_at, window)
+  );
+  const recentRepositories = repositories.filter((repository) =>
+    githubTimestampInWindow(
+      repository.pushed_at || repository.updated_at,
+      window
+    )
+  );
 
   const promptAction = String(agent.parsed_intent.action ?? agent.prompt).trim();
   const wantsCommits = checkWantsCommits(agent.prompt, promptAction);
 
-  let commitRecords: string[] = [];
+  const commitRecords: string[] = [];
   const commitSourceRefs: any[] = [];
-  const timeline: Array<{
-    title: string;
-    repository?: string;
-    timestamp?: string;
-    url?: string;
-    type: "commit" | "repository" | "issue" | "pull_request";
-  }> = [];
+  const timeline: GitHubTimelineItem[] = [];
   if (wantsCommits) {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const commitsLists = await Promise.all(
       repositories.slice(0, 5).map((repo) =>
-        fetchCommits(accessToken, agent.user_id, repo.full_name, since)
+        fetchCommits(
+          accessToken,
+          agent.user_id,
+          repo.full_name,
+          window.since.toISOString(),
+          window.until.toISOString()
+        )
       )
     );
+    const deliveredShas = new Set<string>();
     for (let i = 0; i < commitsLists.length; i++) {
       const repoCommits = commitsLists[i]!;
       const repoName = repositories[i]!.full_name;
       for (const c of repoCommits) {
+        const timestamp = githubCommitTimestamp(c);
+        if (
+          deliveredShas.has(c.sha) ||
+          !githubTimestampInWindow(timestamp, window)
+        ) {
+          continue;
+        }
+        deliveredShas.add(c.sha);
         commitRecords.push(
-          `Commit: ${repoName} | Message: ${c.commit.message} | Author: ${c.commit.author.name} | Date: ${c.commit.author.date}`
+          `Commit: ${repoName} | Message: ${c.commit.message} | Author: ${c.commit.author.name} | Date: ${timestamp}`
         );
         commitSourceRefs.push({
           type: "github_commit",
@@ -357,7 +456,7 @@ export async function renderGitHubAgent(
         timeline.push({
           title: c.commit.message.split("\n")[0]?.trim() || "Commit pushed",
           repository: repoName,
-          timestamp: c.commit.author.date,
+          timestamp,
           url: c.html_url,
           type: "commit"
         });
@@ -380,7 +479,7 @@ export async function renderGitHubAgent(
       url: issue.html_url,
       type: "issue" as const
     })),
-    ...repositories.slice(0, 3).map((repository) => ({
+    ...recentRepositories.slice(0, 3).map((repository) => ({
       title: repository.description?.trim() || "Repository updated",
       repository: repository.full_name,
       timestamp: repository.pushed_at || repository.updated_at,
@@ -393,19 +492,25 @@ export async function renderGitHubAgent(
   );
 
   const records = [
-    ...repositories.map(repositoryRecord),
+    ...recentRepositories.map(repositoryRecord),
     ...issues.map((issue) => issueRecord(issue, "Issue")),
     ...pullRequests.map((issue) => issueRecord(issue, "Pull request")),
     ...commitRecords
   ];
-  const synthesized = await synthesizeConnectorDigest({
-    connectorName: "GitHub",
-    agentName: agent.name,
-    userPrompt: agent.prompt,
-    records
-  });
+  const synthesized =
+    records.length > 0
+      ? await synthesizeConnectorDigest({
+          connectorName: "GitHub",
+          agentName: agent.name,
+          userPrompt: agent.prompt,
+          records
+        })
+      : null;
   const fallbackSummary = [
-    digestSection("Recently updated repositories", repositories.map(repositoryLine)),
+    digestSection(
+      "Recently updated repositories",
+      recentRepositories.map(repositoryLine)
+    ),
     wantsCommits && commitRecords.length > 0
       ? digestSection("Recent commits", commitRecords.map((r) => r.replace(/^Commit:\s*/i, "")))
       : null,
@@ -415,7 +520,7 @@ export async function renderGitHubAgent(
     .filter(Boolean)
     .join("\n\n");
   const sourceRefs = [
-    ...repositories.map((repository) => ({
+    ...recentRepositories.map((repository) => ({
       type: "github_repository",
       source: "GitHub",
       id: String(repository.id),
@@ -436,22 +541,435 @@ export async function renderGitHubAgent(
         fallbackSummary ||
         "No recent GitHub activity was found for this run.",
       metrics: [
-        { label: "Repositories", value: String(repositories.length) },
-        { label: "Open issues", value: String(issueSearch.total_count ?? issues.length) },
+        { label: "Repositories", value: String(recentRepositories.length) },
+        { label: "Open issues", value: String(issues.length) },
         {
           label: "Open PRs",
-          value: String(pullRequestSearch.total_count ?? pullRequests.length)
+          value: String(pullRequests.length)
         },
         ...(wantsCommits ? [{ label: "Commits", value: String(commitSourceRefs.length) }] : [])
       ],
-      footer: githubPrivateRepositoryAccessEnabled()
-        ? "Read-only digest generated from repositories available to your GitHub account."
-        : "Read-only digest generated from public GitHub repositories.",
+      footer: window.resumedFromPreviousRun
+        ? "Read-only activity since this agent's previous successful run."
+        : "Read-only activity from the previous 24 hours.",
       kind: "github_activity",
       timeline: timeline.slice(0, 10)
     },
     { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
   );
+}
+
+async function loadGitHubInboundEvent(
+  eventId: string,
+  agentId: string
+): Promise<GitHubInboundEvent | null> {
+  const { rows } = await pool.query<GitHubInboundEvent>(
+    `
+      SELECT event.event_type, event.payload, event.occurred_at
+      FROM inbound_events event
+      JOIN event_deliveries delivery ON delivery.event_id = event.id
+      WHERE event.id = $1
+        AND delivery.agent_id = $2
+        AND event.source = 'github'
+      LIMIT 1
+    `,
+    [eventId, agentId]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    ...row,
+    payload: githubPayloadRecord(row.payload)
+  };
+}
+
+function renderGitHubInboundEvent(
+  agent: GitHubAgent,
+  event: GitHubInboundEvent,
+  options: GitHubRenderOptions
+): RenderedAgentMessage {
+  const scope = githubRepositoryScope(agent.parsed_intent, agent.prompt);
+  if (!githubRepositoryMatches(scope, event.payload.repository)) {
+    throw new Error("github_event_repository_mismatch");
+  }
+  const activity = prepareGitHubWebhookActivity(event);
+
+  return renderedDataSummary(
+    {
+      title: options.scheduledTitle(agent, "GitHub activity"),
+      text: options.scheduledIntro(agent, "GitHub activity"),
+      summary: activity.summary,
+      metrics: activity.metrics,
+      footer: "Realtime update delivered from GitHub.",
+      kind: "github_activity",
+      timeline: activity.timeline
+    },
+    { sourceRefs: activity.sourceRefs, tokensUsed: 0 }
+  );
+}
+
+export function prepareGitHubWebhookActivity(
+  event: GitHubInboundEvent
+): PreparedGitHubWebhookActivity {
+  const payload = githubPayloadRecord(event.payload);
+  const repository =
+    githubString(payload.repository) ?? "GitHub repository";
+  const occurredAt = githubEventTimestamp(event.occurred_at);
+  const eventType = event.event_type.replace(/^github\./, "");
+  const action = githubString(payload.action);
+  const repositoryUrl = githubString(payload.repository_url);
+
+  if (eventType === "push") {
+    const commits = githubCommitPayloads(payload);
+    const timeline: GitHubTimelineItem[] = commits.map((commit) => ({
+      title:
+        githubFirstLine(githubString(commit.message)) ??
+        `Commit ${githubString(commit.sha)?.slice(0, 7) ?? "pushed"}`,
+      repository,
+      timestamp: githubString(commit.timestamp) ?? occurredAt,
+      url: githubString(commit.url),
+      type: "commit"
+    }));
+    const sourceRefs = commits.map((commit) => ({
+      type: "github_commit",
+      source: "GitHub",
+      id: githubString(commit.sha)!,
+      name:
+        githubFirstLine(githubString(commit.message)) ??
+        `Commit ${githubString(commit.sha)!.slice(0, 7)}`,
+      url: githubString(commit.url),
+      repository
+    }));
+    const branch = githubBranchName(githubString(payload.ref));
+    if (timeline.length === 0) {
+      timeline.push({
+        title: branch ? `Push to ${branch}` : "Repository push received",
+        repository,
+        timestamp: occurredAt,
+        url: githubString(payload.compare) ?? repositoryUrl,
+        type: "repository"
+      });
+      sourceRefs.push({
+        type: "github_repository",
+        source: "GitHub",
+        id: repository,
+        name: repository,
+        url: repositoryUrl,
+        repository
+      });
+    }
+    const reportedCount = githubNumber(payload.commit_count) ?? commits.length;
+    const truncated = payload.commits_truncated === true;
+    const target = branch ? `${repository} on ${branch}` : repository;
+    return {
+      repository,
+      summary:
+        reportedCount === 0
+          ? `A push updated ${target}.`
+          : `${reportedCount} ${reportedCount === 1 ? "commit was" : "commits were"} pushed to ${target}.${
+              truncated ? " The webhook contained additional commits." : ""
+            }`,
+      metrics: [
+        { label: "Commits", value: String(reportedCount) },
+        ...(branch ? [{ label: "Branch", value: branch }] : [])
+      ],
+      timeline,
+      sourceRefs
+    };
+  }
+
+  if (eventType === "pull_request") {
+    const pullRequest = githubPayloadRecord(payload.pull_request);
+    const number = githubNumber(pullRequest.number);
+    const title = githubString(pullRequest.title) ?? "Pull request updated";
+    const state = githubString(pullRequest.state) ?? action ?? "updated";
+    const url = githubString(pullRequest.url);
+    return githubSingleEventActivity({
+      repository,
+      summary: `${number ? `Pull request #${number}` : "A pull request"} was ${action ?? state} in ${repository}.`,
+      metricLabel: "Pull request",
+      metricValue: number ? `#${number}` : state,
+      timeline: {
+        title,
+        repository,
+        timestamp:
+          githubString(pullRequest.updated_at) ??
+          githubString(pullRequest.created_at) ??
+          occurredAt,
+        url,
+        type: "pull_request"
+      },
+      sourceRef: {
+        type: "github_pull_request",
+        source: "GitHub",
+        id: String(githubString(pullRequest.id) ?? number ?? title),
+        number,
+        repository,
+        title,
+        url
+      }
+    });
+  }
+
+  if (eventType === "issues") {
+    const issue = githubPayloadRecord(payload.issue);
+    const number = githubNumber(issue.number);
+    const title = githubString(issue.title) ?? "Issue updated";
+    const state = githubString(issue.state) ?? action ?? "updated";
+    const url = githubString(issue.url);
+    return githubSingleEventActivity({
+      repository,
+      summary: `${number ? `Issue #${number}` : "An issue"} was ${action ?? state} in ${repository}.`,
+      metricLabel: "Issue",
+      metricValue: number ? `#${number}` : state,
+      timeline: {
+        title,
+        repository,
+        timestamp:
+          githubString(issue.updated_at) ??
+          githubString(issue.created_at) ??
+          occurredAt,
+        url,
+        type: "issue"
+      },
+      sourceRef: {
+        type: "github_issue",
+        source: "GitHub",
+        id: String(githubString(issue.id) ?? number ?? title),
+        number,
+        repository,
+        title,
+        url
+      }
+    });
+  }
+
+  if (eventType === "release") {
+    const release = githubPayloadRecord(payload.release);
+    const tag = githubString(release.tag_name);
+    const title = githubString(release.name) ?? tag ?? "Release updated";
+    const url = githubString(release.url);
+    return githubSingleEventActivity({
+      repository,
+      summary: `${tag ? `Release ${tag}` : "A release"} was ${action ?? "updated"} in ${repository}.`,
+      metricLabel: "Release",
+      metricValue: tag ?? action ?? "Updated",
+      timeline: {
+        title,
+        repository,
+        timestamp:
+          githubString(release.published_at) ??
+          githubString(release.created_at) ??
+          occurredAt,
+        url,
+        type: "repository"
+      },
+      sourceRef: {
+        type: "github_release",
+        source: "GitHub",
+        id: String(githubString(release.id) ?? tag ?? title),
+        repository,
+        name: title,
+        url
+      }
+    });
+  }
+
+  if (eventType === "workflow_run") {
+    const workflow = githubPayloadRecord(payload.workflow_run);
+    const name = githubString(workflow.name) ?? "Workflow run";
+    const conclusion =
+      githubString(workflow.conclusion) ??
+      githubString(workflow.status) ??
+      action ??
+      "updated";
+    const url = githubString(workflow.url);
+    return githubSingleEventActivity({
+      repository,
+      summary: `${name} ${conclusion} in ${repository}.`,
+      metricLabel: "Workflow",
+      metricValue: conclusion,
+      timeline: {
+        title: name,
+        repository,
+        timestamp:
+          githubString(workflow.updated_at) ??
+          githubString(workflow.run_started_at) ??
+          occurredAt,
+        url,
+        type: "repository"
+      },
+      sourceRef: {
+        type: "github_workflow_run",
+        source: "GitHub",
+        id: String(githubString(workflow.id) ?? name),
+        repository,
+        name,
+        url
+      }
+    });
+  }
+
+  return githubSingleEventActivity({
+    repository,
+    summary: `GitHub reported ${eventType.replaceAll("_", " ")} activity in ${repository}.`,
+    metricLabel: "Event",
+    metricValue: eventType.replaceAll("_", " "),
+    timeline: {
+      title: action ? `${eventType.replaceAll("_", " ")} ${action}` : "Repository activity",
+      repository,
+      timestamp: occurredAt,
+      url: repositoryUrl,
+      type: "repository"
+    },
+    sourceRef: {
+      type: "github_repository",
+      source: "GitHub",
+      id: repository,
+      repository,
+      name: repository,
+      url: repositoryUrl
+    }
+  });
+}
+
+function githubSingleEventActivity(input: {
+  repository: string;
+  summary: string;
+  metricLabel: string;
+  metricValue: string;
+  timeline: GitHubTimelineItem;
+  sourceRef: Record<string, unknown>;
+}): PreparedGitHubWebhookActivity {
+  return {
+    repository: input.repository,
+    summary: input.summary,
+    metrics: [{ label: input.metricLabel, value: input.metricValue }],
+    timeline: [input.timeline],
+    sourceRefs: [input.sourceRef]
+  };
+}
+
+function githubCommitPayloads(
+  payload: Record<string, unknown>
+): Array<Record<string, unknown>> {
+  const candidates = Array.isArray(payload.commits)
+    ? payload.commits.map(githubPayloadRecord)
+    : [];
+  const headCommit = githubPayloadRecord(payload.head_commit);
+  if (Object.keys(headCommit).length > 0) candidates.push(headCommit);
+
+  const seen = new Set<string>();
+  return candidates.filter((commit) => {
+    const sha = githubString(commit.sha);
+    if (!sha || seen.has(sha)) return false;
+    seen.add(sha);
+    return true;
+  });
+}
+
+function githubPayloadRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return githubPayloadRecord(parsed);
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function githubString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function githubNumber(value: unknown): number | undefined {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function githubFirstLine(value: string | undefined): string | undefined {
+  return githubString(value?.split("\n")[0]);
+}
+
+function githubBranchName(ref: string | undefined): string | undefined {
+  return githubString(ref?.replace(/^refs\/heads\//, ""));
+}
+
+function githubEventTimestamp(value: Date | string): string {
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? new Date().toISOString()
+    : parsed.toISOString();
+}
+
+async function latestSuccessfulGitHubRun(
+  agentId: string
+): Promise<Date | string | null> {
+  const { rows } = await pool.query<{ completed_at: Date | string }>(
+    `
+      SELECT completed_at
+      FROM agent_runs
+      WHERE agent_id = $1
+        AND status IN ('success', 'partial')
+        AND completed_at IS NOT NULL
+      ORDER BY completed_at DESC
+      LIMIT 1
+    `,
+    [agentId]
+  );
+  return rows[0]?.completed_at ?? null;
+}
+
+export function resolveGitHubActivityWindow(
+  previousCompletedAt: Date | string | null,
+  runStartedAt: Date = new Date()
+): GitHubActivityWindow {
+  const until = Number.isNaN(runStartedAt.getTime())
+    ? new Date()
+    : new Date(runStartedAt);
+  const fallback = new Date(until.getTime() - githubInitialLookbackMs);
+  const lowerBound = new Date(until.getTime() - githubMaximumLookbackMs);
+  const previous = previousCompletedAt
+    ? new Date(previousCompletedAt)
+    : null;
+  const usablePrevious =
+    previous &&
+    !Number.isNaN(previous.getTime()) &&
+    previous.getTime() < until.getTime()
+      ? previous
+      : null;
+  const since = usablePrevious
+    ? new Date(Math.max(usablePrevious.getTime(), lowerBound.getTime()))
+    : fallback;
+
+  return {
+    since,
+    until,
+    resumedFromPreviousRun: usablePrevious !== null
+  };
+}
+
+export function githubTimestampInWindow(
+  value: string | null | undefined,
+  window: GitHubActivityWindow
+): boolean {
+  if (!value) return false;
+  const timestamp = new Date(value).getTime();
+  return (
+    Number.isFinite(timestamp) &&
+    timestamp > window.since.getTime() &&
+    timestamp <= window.until.getTime()
+  );
+}
+
+function githubCommitTimestamp(commit: GitHubCommit): string {
+  return commit.commit.committer?.date ?? commit.commit.author.date;
 }
 
 async function exchangeAuthorizationCode(code: string): Promise<GitHubTokenResponse> {
@@ -633,9 +1151,49 @@ async function fetchRepositories(
   const url = new URL(`${githubApiBase}/user/repos`);
   url.searchParams.set("sort", "updated");
   url.searchParams.set("direction", "desc");
-  url.searchParams.set("per_page", "8");
+  url.searchParams.set("per_page", "100");
   url.searchParams.set("affiliation", "owner,collaborator,organization_member");
   return githubJson<GitHubRepository[]>(url, accessToken, userId);
+}
+
+export async function readGitHubForAssistant(
+  userId: string,
+  input: { query?: string; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await githubAccessToken(userId);
+  if (!accessToken) throw githubAuthRequired("github_not_connected");
+  const query = input.query?.trim().toLowerCase();
+  const repos = (await fetchRepositories(accessToken, userId))
+    .filter((repo) =>
+      !query ||
+      repo.full_name.toLowerCase().includes(query) ||
+      repo.description?.toLowerCase().includes(query)
+    )
+    .slice(0, Math.min(input.limit ?? 8, 10));
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const until = new Date().toISOString();
+  const commits = await Promise.all(
+    repos.slice(0, 3).map((repo) =>
+      fetchCommits(accessToken, userId, repo.full_name, since, until)
+    )
+  );
+  return {
+    summary: repos.length === 0
+      ? "No matching GitHub repositories were found."
+      : repos.map((repo, index) => {
+          const recent = (commits[index] ?? []).slice(0, 3)
+            .map((commit) => commit.commit.message.split("\n")[0])
+            .join("; ");
+          return `- ${repo.full_name}${repo.description ? ` — ${repo.description}` : ""}${recent ? `\n  Recent commits: ${recent}` : ""}`;
+        }).join("\n"),
+    sourceRefs: repos.map((repo) => ({
+      type: "github_repository",
+      source: "GitHub",
+      id: String(repo.id),
+      name: repo.full_name,
+      url: repo.html_url
+    }))
+  };
 }
 
 async function searchAssignedActivity(

@@ -10,7 +10,7 @@ const ASSISTANT_CONTENT = {
     items: [
       {
         title: "Try this",
-        summary: "\"deliver me tech news at 7am daily\""
+        summary: "\"Create an agent that delivers tech news every day at 7am.\""
       }
     ],
     footer: "What would you like to do?"

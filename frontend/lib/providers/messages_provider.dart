@@ -59,10 +59,35 @@ class MessageActions {
   Future<Message> sendReply({
     required String threadId,
     required String text,
+    List<String> attachmentIds = const [],
   }) async {
     final result = await _ref
         .read(messageServiceProvider)
-        .sendReply(threadId: threadId, text: text);
+        .sendReply(
+          threadId: threadId,
+          text: text,
+          attachmentIds: attachmentIds,
+        );
+    final updatedAgent = result.updatedAgent;
+    if (updatedAgent != null) {
+      _ref.read(agentsProvider.notifier).upsertAgent(updatedAgent);
+    }
+    _ref.invalidate(messagesProvider(threadId));
+    return result.message;
+  }
+
+  Future<Message> sendAssistantAction({
+    required String threadId,
+    required String decision,
+    required String pendingActionId,
+  }) async {
+    final result = await _ref
+        .read(messageServiceProvider)
+        .sendAssistantAction(
+          threadId: threadId,
+          decision: decision,
+          pendingActionId: pendingActionId,
+        );
     final updatedAgent = result.updatedAgent;
     if (updatedAgent != null) {
       _ref.read(agentsProvider.notifier).upsertAgent(updatedAgent);

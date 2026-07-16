@@ -5,6 +5,7 @@ export type LlmTextMessage = {
 
 export type LlmContentBlock =
   | LlmTextBlock
+  | LlmImageBlock
   | LlmServerToolUseBlock
   | LlmWebSearchToolResultBlock;
 
@@ -12,6 +13,15 @@ export type LlmTextBlock = {
   type: "text";
   text: string;
   citations?: LlmCitation[];
+};
+
+export type LlmImageBlock = {
+  type: "image";
+  source: {
+    type: "base64";
+    media_type: "image/jpeg" | "image/png" | "image/webp";
+    data: string;
+  };
 };
 
 export type LlmCitation = {

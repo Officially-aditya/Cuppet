@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../models/message.dart';
+import '../../models/attachment.dart';
 import '../../providers/auth_provider.dart';
 
 class ReplyBar extends ConsumerStatefulWidget {
@@ -15,7 +16,10 @@ class ReplyBar extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Future<void> Function(String text) onSend;
+  final Future<void> Function(
+    String text,
+    List<ComposerAttachment> attachments,
+  ) onSend;
   final Message? replyToMessage;
   final VoidCallback? onCancelReply;
 
@@ -26,6 +30,7 @@ class ReplyBar extends ConsumerStatefulWidget {
 class _ReplyBarState extends ConsumerState<ReplyBar> {
   final _controller = TextEditingController();
   bool _sending = false;
+  final List<ComposerAttachment> _attachments = [];
 
   @override
   void dispose() {
@@ -36,9 +41,12 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
+      key: const ValueKey('thread-composer'),
       decoration: const BoxDecoration(
-        color: SydneyColors.surfaceContainerLowest,
-        border: Border(top: BorderSide(color: SydneyColors.line)),
+        color: CuppetWorkspaceColors.background,
+        border: Border(
+          top: BorderSide(color: CuppetWorkspaceColors.panelBorder),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -53,9 +61,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: SydneyColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(SydneyRadius.sm),
-                  border: Border.all(color: SydneyColors.line),
+                  color: CuppetWorkspaceColors.softSage,
+                  borderRadius: BorderRadius.circular(SydneyRadius.md),
+                  border: Border.all(color: CuppetWorkspaceColors.panelBorder),
                 ),
                 child: Row(
                   children: [
@@ -63,7 +71,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                       width: 4,
                       height: 48,
                       decoration: const BoxDecoration(
-                        color: SydneyColors.primary,
+                        color: CuppetWorkspaceColors.primary,
                         borderRadius: BorderRadius.horizontal(
                           left: Radius.circular(SydneyRadius.sm),
                         ),
@@ -78,8 +86,10 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                             widget.replyToMessage!.sender == MessageSender.user
                                 ? 'Replying to your message'
                                 : 'Replying to agent',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SydneyColors.primary,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: CuppetWorkspaceColors.primaryInk,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -88,15 +98,18 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                             widget.replyToMessage!.preview,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SydneyColors.subtleInk,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: CuppetWorkspaceColors.muted),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 16, color: SydneyColors.mutedInk),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: CuppetWorkspaceColors.muted,
+                      ),
                       onPressed: widget.onCancelReply,
                     ),
                   ],
@@ -104,6 +117,53 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
               ),
             ),
           ],
+          if (_attachments.isNotEmpty)
+            Padding(
+              key: const ValueKey('attachment-chip-list'),
+              padding: const EdgeInsets.fromLTRB(
+                SydneySpacing.lg,
+                SydneySpacing.sm,
+                SydneySpacing.lg,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: SydneySpacing.sm,
+                  runSpacing: SydneySpacing.sm,
+                  children: [
+                    for (final attachment in _attachments)
+                      InputChip(
+                        key: ValueKey('attachment-chip-${attachment.id}'),
+                        avatar: Icon(
+                          attachment.isImage
+                              ? Icons.image_outlined
+                              : Icons.description_outlined,
+                          size: 17,
+                          color: CuppetWorkspaceColors.primaryInk,
+                        ),
+                        label: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            attachment.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        onDeleted:
+                            _sending
+                                ? null
+                                : () => setState(
+                                  () => _attachments.remove(attachment),
+                                ),
+                        backgroundColor: CuppetWorkspaceColors.softSage,
+                        side: const BorderSide(
+                          color: CuppetWorkspaceColors.panelBorder,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(SydneySpacing.lg),
             child: Row(
@@ -112,18 +172,31 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                 IconButton(
                   icon: const Icon(
                     Icons.add_circle_outline_rounded,
-                    color: SydneyColors.mutedInk,
+                    color: CuppetWorkspaceColors.primaryInk,
                     size: 28,
                   ),
-                  onPressed: _sending ? null : () => _showAttachmentOptions(context),
+                  style: IconButton.styleFrom(
+                    backgroundColor: CuppetWorkspaceColors.card,
+                    disabledBackgroundColor: CuppetWorkspaceColors.border,
+                    side: const BorderSide(color: CuppetWorkspaceColors.border),
+                  ),
+                  onPressed:
+                      _sending ? null : () => _showAttachmentOptions(context),
                 ),
                 const SizedBox(width: SydneySpacing.xs),
                 Expanded(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: SydneyColors.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(SydneyRadius.md),
-                      border: Border.all(color: SydneyColors.line),
+                      color: CuppetWorkspaceColors.card,
+                      borderRadius: BorderRadius.circular(SydneyRadius.lg),
+                      border: Border.all(color: CuppetWorkspaceColors.border),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A1C1A17),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: TextField(
                       controller: _controller,
@@ -132,6 +205,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                       textCapitalization: TextCapitalization.sentences,
                       decoration: const InputDecoration(
                         hintText: 'Message agent',
+                        hintStyle: TextStyle(
+                          color: CuppetWorkspaceColors.muted,
+                        ),
                         filled: false,
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -151,9 +227,13 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                   child: FilledButton(
                     onPressed: _sending ? null : _send,
                     style: FilledButton.styleFrom(
+                      backgroundColor: CuppetWorkspaceColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: CuppetWorkspaceColors.softSage,
+                      disabledForegroundColor: CuppetWorkspaceColors.muted,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderRadius: BorderRadius.circular(SydneyRadius.lg),
                       ),
                     ),
                     child: Icon(
@@ -185,7 +265,23 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
   Future<void> _pickAndUploadFile(bool storeInDrive, bool isPhotoOnly) async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: isPhotoOnly ? FileType.image : FileType.any,
+        type: FileType.custom,
+        allowedExtensions:
+            isPhotoOnly
+                ? const ['jpg', 'jpeg', 'png', 'webp']
+                : const [
+                  'jpg',
+                  'jpeg',
+                  'png',
+                  'webp',
+                  'pdf',
+                  'txt',
+                  'md',
+                  'markdown',
+                  'csv',
+                  'json',
+                ],
+        allowMultiple: true,
         withData: true,
       );
 
@@ -194,69 +290,67 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
         return;
       }
 
-      final file = result.files.first;
-      if (file.bytes == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read file data.')),
-        );
-        return;
-      }
-
       setState(() => _sending = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Uploading ${file.name}...')),
-      );
-
-      final multipartFile = MultipartFile.fromBytes(
-        file.bytes!,
-        filename: file.name,
-      );
-
-      final formData = FormData.fromMap({
-        'file': multipartFile,
-        'store_in_drive': storeInDrive ? 'true' : 'false',
-      });
-
-      final api = ref.read(apiClientProvider);
-      final response = await api.post<Map<String, dynamic>>(
-        '/uploads',
-        data: formData,
-        queryParameters: {'store_in_drive': storeInDrive ? 'true' : 'false'},
-      );
-
+      final remaining = 4 - _attachments.length;
+      if (remaining <= 0) {
+        throw Exception('A message can include at most four attachments.');
+      }
+      final selected = result.files.take(remaining).toList();
+      final uploaded = <ComposerAttachment>[];
+      for (final file in selected) {
+        if (file.bytes == null) {
+          throw Exception('Could not read ${file.name}.');
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          throw Exception('${file.name} is larger than 15 MB.');
+        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Uploading ${file.name}...')));
+        final formData = FormData.fromMap({
+          'file': MultipartFile.fromBytes(file.bytes!, filename: file.name),
+          'store_in_drive': storeInDrive ? 'true' : 'false',
+        });
+        final response = await ref
+            .read(apiClientProvider)
+            .post<Map<String, dynamic>>(
+              '/uploads',
+              data: formData,
+              queryParameters: {
+                'store_in_drive': storeInDrive ? 'true' : 'false',
+              },
+            );
+        final raw = response.data?['file'];
+        if (raw is! Map || raw['id'] == null) {
+          throw Exception('Invalid response for ${file.name}.');
+        }
+        uploaded.add(
+          ComposerAttachment(
+            id: raw['id'].toString(),
+            name: raw['name']?.toString() ?? file.name,
+            mimeType:
+                raw['mime_type']?.toString() ?? 'application/octet-stream',
+            size: int.tryParse(raw['size']?.toString() ?? '') ?? file.size,
+          ),
+        );
+      }
       if (!mounted) return;
-      final fileData = response.data?['file'];
-      if (fileData == null || fileData['url'] == null) {
-        throw Exception('Invalid response from server.');
-      }
-
-      final fileUrl = fileData['url'] as String;
-      final isImage = isPhotoOnly || 
-          (file.extension != null && 
-           ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(file.extension!.toLowerCase()));
-
-      String markdown;
-      if (isImage) {
-        markdown = '![${file.name}]($fileUrl)';
-      } else {
-        markdown = '📎 [${file.name}]($fileUrl)';
-      }
-
-      final currentText = _controller.text;
-      if (currentText.trim().isEmpty) {
-        _controller.text = markdown;
-      } else {
-        _controller.text = '$currentText\n$markdown';
-      }
-
+      setState(() => _attachments.addAll(uploaded));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload complete! Press send to post.')),
+        SnackBar(
+          content: Text(
+            uploaded.length == 1
+                ? 'Attachment ready to send.'
+                : '${uploaded.length} attachments ready to send.',
+          ),
+        ),
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       }
     } finally {
       if (mounted) {
@@ -267,13 +361,17 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
 
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) {
+    if (text.isEmpty && _attachments.isEmpty) {
       return;
     }
     setState(() => _sending = true);
     try {
-      await widget.onSend(text);
+      await widget.onSend(
+        text,
+        List<ComposerAttachment>.unmodifiable(_attachments),
+      );
       _controller.clear();
+      if (mounted) setState(_attachments.clear);
     } finally {
       if (mounted) {
         setState(() => _sending = false);
@@ -283,10 +381,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
 }
 
 class _AttachmentSheet extends StatefulWidget {
-  const _AttachmentSheet({
-    required this.onPickFile,
-    required this.onPickPhoto,
-  });
+  const _AttachmentSheet({required this.onPickFile, required this.onPickPhoto});
 
   final ValueChanged<bool> onPickFile;
   final ValueChanged<bool> onPickPhoto;
@@ -302,7 +397,7 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: SydneyColors.surface,
+        color: CuppetWorkspaceColors.background,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(SydneyRadius.lg),
         ),
@@ -323,16 +418,16 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: SydneySpacing.lg),
               decoration: BoxDecoration(
-                color: SydneyColors.outlineVariant.withValues(alpha: 0.5),
+                color: CuppetWorkspaceColors.panelBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           Text(
             'Add Attachment',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: SydneySpacing.md),
@@ -349,20 +444,32 @@ class _AttachmentSheetState extends State<_AttachmentSheet> {
             onChanged: (val) {
               setState(() => _saveToDrive = val);
             },
-            activeTrackColor: SydneyColors.primary,
+            activeTrackColor: CuppetWorkspaceColors.primary,
           ),
-          const Divider(color: SydneyColors.line),
+          const Divider(color: CuppetWorkspaceColors.panelBorder),
           ListTile(
-            leading: const Icon(Icons.photo_library_outlined, color: SydneyColors.primary),
-            title: const Text('Upload Photo', style: TextStyle(fontWeight: FontWeight.w600)),
+            leading: const Icon(
+              Icons.photo_library_outlined,
+              color: CuppetWorkspaceColors.primaryInk,
+            ),
+            title: const Text(
+              'Upload Photo',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             onTap: () {
               Navigator.pop(context);
               widget.onPickPhoto(_saveToDrive);
             },
           ),
           ListTile(
-            leading: const Icon(Icons.description_outlined, color: SydneyColors.primary),
-            title: const Text('Upload Document / File', style: TextStyle(fontWeight: FontWeight.w600)),
+            leading: const Icon(
+              Icons.description_outlined,
+              color: CuppetWorkspaceColors.primaryInk,
+            ),
+            title: const Text(
+              'Upload Document / File',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             onTap: () {
               Navigator.pop(context);
               widget.onPickFile(_saveToDrive);

@@ -364,6 +364,36 @@ export async function fetchSlackActivity(
   );
 }
 
+export async function readSlackForAssistant(
+  userId: string,
+  input: { oldest?: number; channel?: string; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await slackAccessToken(userId);
+  if (!accessToken) throw slackAuthRequired("slack_not_connected");
+  const channel = input.channel?.replace(/^#/, "").toLowerCase();
+  const activity = (await fetchSlackActivity(accessToken, {
+    userId,
+    oldest: input.oldest ?? Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000)
+  }))
+    .filter((item) => !channel || item.channelName.toLowerCase().includes(channel))
+    .slice(0, Math.min(input.limit ?? 12, 20));
+  return {
+    summary: activity.length === 0
+      ? "No matching recent Slack activity was found."
+      : activity.map((item) =>
+          `- #${item.channelName} · ${item.authorName}: ${(item.message.text ?? "").slice(0, 360)}`
+        ).join("\n"),
+    sourceRefs: activity.map((item) => ({
+      type: "slack_message",
+      source: "Slack",
+      id: item.message.ts ?? `${item.channelId}-message`,
+      channel_id: item.channelId,
+      channel_name: item.channelName,
+      author: item.authorName
+    }))
+  };
+}
+
 async function fetchSlackChannels(
   accessToken: string,
   userId?: string

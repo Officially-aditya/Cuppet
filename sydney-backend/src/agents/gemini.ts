@@ -30,6 +30,10 @@ interface GeminiResponse {
   };
 }
 
+type GeminiInputPart =
+  | { text: string }
+  | { inlineData: { mimeType: string; data: string } };
+
 export function geminiConfigured(): boolean {
   return Boolean(config.GEMINI_API_KEY);
 }
@@ -45,11 +49,20 @@ export async function createGeminiMessage(
   const contents = input.messages.slice(-20).map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: Array.isArray(message.content)
-      ? message.content
-          .filter((block) => block.type === "text")
-          .map((block) => ({
-            text: (block as LlmTextBlock).text.slice(0, 24_000)
-          }))
+      ? message.content.flatMap<GeminiInputPart>((block) => {
+          if (block.type === "text") {
+            return [{ text: (block as LlmTextBlock).text.slice(0, 24_000) }];
+          }
+          if (block.type === "image") {
+            return [{
+              inlineData: {
+                mimeType: block.source.media_type,
+                data: block.source.data
+              }
+            }];
+          }
+          return [];
+        })
       : [{ text: message.content.slice(0, 24_000) }]
   }));
   const hasWebSearch = input.tools?.some((tool) => tool.name === "web_search");

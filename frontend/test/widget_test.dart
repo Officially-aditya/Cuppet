@@ -87,7 +87,12 @@ void main() {
   testWidgets('email template remains Gmail-only', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: CreateScreen()));
 
-    await tester.ensureVisible(find.text('Email agent'));
+    await tester.scrollUntilVisible(
+      find.text('Email agent'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Email agent'));
     await tester.pump();
 

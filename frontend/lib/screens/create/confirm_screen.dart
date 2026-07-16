@@ -5,8 +5,9 @@ import '../../design/tokens.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/timezone_provider.dart';
 import '../../services/agent_service.dart';
-import '../../widgets/sydney_primitives.dart';
+import '../../widgets/workspace_primitives.dart';
 import 'create_screen.dart';
+import 'creation_workspace_widgets.dart';
 
 class ConfirmScreen extends ConsumerStatefulWidget {
   const ConfirmScreen({required this.draft, super.key});
@@ -31,7 +32,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
 
   Future<void> _loadParsedIntent() async {
     try {
-      final parsed = await ref.read(agentServiceProvider).parseAgentPrompt(widget.draft.prompt);
+      final parsed = await ref
+          .read(agentServiceProvider)
+          .parseAgentPrompt(widget.draft.prompt);
       if (mounted) {
         setState(() {
           _parsedIntent = parsed;
@@ -112,17 +115,23 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     if (day == null) return '';
     if (day >= 11 && day <= 13) return 'th';
     switch (day % 10) {
-      case 1: return 'st';
-      case 2: return 'nd';
-      case 3: return 'rd';
-      default: return 'th';
+      case 1:
+        return 'st';
+      case 2:
+        return 'nd';
+      case 3:
+        return 'rd';
+      default:
+        return 'th';
     }
   }
 
   IconData _permissionIcon(String perm) {
     final lower = perm.toLowerCase();
     if (lower.contains('calendar')) return Icons.calendar_month_outlined;
-    if (lower.contains('gmail') || lower.contains('email')) return Icons.mail_outline_rounded;
+    if (lower.contains('gmail') || lower.contains('email')) {
+      return Icons.mail_outline_rounded;
+    }
     if (lower.contains('drive')) return Icons.description_outlined;
     if (lower.contains('web')) return Icons.search_rounded;
     return Icons.security_outlined;
@@ -140,8 +149,10 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       'comparison' => 'A structured comparison overview',
       'news_brief' => 'A summarized brief of recent articles',
       'study_guide' => 'A study topic, explanation, and reference links',
-      'dsa_question' => 'A daily practice DSA coding problem with examples and hints',
-      'content_extractor' => 'A set of content creation ideas with tapable draft post generation',
+      'dsa_question' =>
+        'A daily practice DSA coding problem with examples and hints',
+      'content_extractor' =>
+        'A set of content creation ideas with tapable draft post generation',
       'portfolio_watch' => 'A custom stock portfolio tracker layout',
       _ => 'A detailed summary report',
     };
@@ -149,231 +160,225 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final permissions = _parsedIntent?['permissions_needed'] is List
-        ? List<String>.from(_parsedIntent?['permissions_needed'])
-        : const <String>[];
+    final permissions =
+        _parsedIntent?['permissions_needed'] is List
+            ? List<String>.from(_parsedIntent?['permissions_needed'])
+            : const <String>[];
     final timeZone =
         ref.watch(timezonePreferencesProvider).value?.displayedTimeZone;
 
     return Scaffold(
-      backgroundColor: SydneyColors.surface,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x04000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                tooltip: 'Back',
-                onPressed: _creating ? null : () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded, size: 18, color: SydneyColors.ink),
-              ),
-            ),
-          ),
-        ),
-        titleSpacing: 12,
-        title: Text(
-          'Confirm',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: SydneyColors.ink,
-                letterSpacing: -0.5,
-              ),
-        ),
+      key: const ValueKey('confirm-agent-screen'),
+      backgroundColor: CuppetWorkspaceColors.background,
+      appBar: CreationBackAppBar(
+        backButtonKey: const ValueKey('confirm-agent-back'),
+        onBack: _creating ? null : () => Navigator.of(context).maybePop(),
       ),
       body: SafeArea(
         bottom: false,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
+        child:
+            _loading
+                ? const Center(
+                  child: CircularProgressIndicator(
+                    color: CuppetWorkspaceColors.primary,
+                  ),
+                )
+                : _error != null
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(SydneySpacing.lg),
-                      child: Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: SydneyColors.danger),
+                  child: Padding(
+                    padding: const EdgeInsets.all(SydneySpacing.lg),
+                    child: WorkspaceCard(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: SydneyColors.danger,
+                          ),
+                          const SizedBox(height: SydneySpacing.sm),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: CuppetWorkspaceColors.ink,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  )
+                  ),
+                )
                 : ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      SydneySpacing.page,
-                      SydneySpacing.md,
-                      SydneySpacing.page,
-                      140,
+                  padding: const EdgeInsets.fromLTRB(
+                    SydneySpacing.page,
+                    SydneySpacing.xs,
+                    SydneySpacing.page,
+                    SydneySpacing.xl,
+                  ),
+                  children: [
+                    Text(
+                      'Final review',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: CuppetWorkspaceColors.primaryInk,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: SydneyColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF17201C).withValues(alpha: 0.05),
-                              offset: const Offset(4, 4),
-                              blurRadius: 8,
+                    const SizedBox(height: SydneySpacing.sm),
+                    Text(
+                      'Confirm your agent',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(
+                        color: CuppetWorkspaceColors.ink,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        height: 1.05,
+                        letterSpacing: -0.7,
+                      ),
+                    ),
+                    const SizedBox(height: SydneySpacing.sm),
+                    Text(
+                      'Review what it will do, when it will run, and which services it needs.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: CuppetWorkspaceColors.muted,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: SydneySpacing.xl),
+                    WorkspaceCard(
+                      key: const ValueKey('agent-review-card'),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: CuppetWorkspaceColors.softSage,
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.md,
+                              ),
                             ),
-                            const BoxShadow(
-                              color: Colors.white,
-                              offset: Offset(-4, -4),
-                              blurRadius: 8,
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'C',
+                              style: TextStyle(
+                                color: CuppetWorkspaceColors.primaryInk,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
+                              ),
                             ),
-                          ],
-                          border: Border.all(
-                            color: SydneyColors.line.withValues(alpha: 0.35),
-                            width: 0.8,
                           ),
-                        ),
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            const SydneyIconBadge(
-                              size: 48,
-                              color: SydneyColors.primarySoft,
-                              foregroundColor: SydneyColors.primary,
-                              radius: SydneyRadius.full,
-                              child: Text('M'),
-                            ),
-                            const SizedBox(height: SydneySpacing.md),
-                            Text(
-                              _parsedIntent?['name']?.toString() ?? _agentName(widget.draft),
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                          const SizedBox(width: SydneySpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _parsedIntent?['name']?.toString() ??
+                                      _agentName(widget.draft),
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium?.copyWith(
+                                    color: CuppetWorkspaceColors.ink,
+                                    fontWeight: FontWeight.w800,
                                   ),
-                            ),
-                            const SizedBox(height: SydneySpacing.md),
-                            Text(
-                              '"${widget.draft.prompt}"',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: SydneyColors.onSurfaceVariant,
+                                ),
+                                const SizedBox(height: SydneySpacing.sm),
+                                Text(
+                                  widget.draft.prompt,
+                                  maxLines: 5,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                    color: CuppetWorkspaceColors.muted,
                                     height: 1.45,
                                   ),
+                                ),
+                              ],
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: SydneySpacing.xl),
+                    const WorkspaceSectionLabel('Agent details'),
+                    const SizedBox(height: SydneySpacing.sm),
+                    _InfoCard(
+                      icon: Icons.assignment_outlined,
+                      title: 'What it does',
+                      child: Text(
+                        _parsedIntent?['action']?.toString() ??
+                            'No description generated.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CuppetWorkspaceColors.muted,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: SydneySpacing.md),
+                    _InfoCard(
+                      icon: Icons.schedule_rounded,
+                      title: 'When it runs',
+                      child: Text(
+                        _describeTiming(_parsedIntent, timeZone: timeZone),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CuppetWorkspaceColors.muted,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: SydneySpacing.md),
+                    _InfoCard(
+                      icon: Icons.output_rounded,
+                      title: 'Output layout',
+                      child: Text(
+                        _describeOutput(_parsedIntent),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CuppetWorkspaceColors.muted,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    if (permissions.isNotEmpty) ...[
+                      const SizedBox(height: SydneySpacing.md),
+                      _InfoCard(
+                        icon: Icons.security_rounded,
+                        title: 'Connected tools required',
+                        child: Wrap(
+                          spacing: SydneySpacing.sm,
+                          runSpacing: SydneySpacing.sm,
+                          children: [
+                            for (final perm in permissions)
+                              _AccessPill(
+                                icon: _permissionIcon(perm),
+                                label: perm,
+                              ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: SydneySpacing.md),
-                      _InfoCard(
-                        icon: Icons.assignment_outlined,
-                        title: 'What it does',
-                        child: Text(
-                          _parsedIntent?['action']?.toString() ?? 'No description generated.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurfaceVariant,
-                                height: 1.35,
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: SydneySpacing.md),
-                      _InfoCard(
-                        icon: Icons.schedule_rounded,
-                        title: 'When it runs',
-                        child: Text(
-                          _describeTiming(_parsedIntent, timeZone: timeZone),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurfaceVariant,
-                                height: 1.35,
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: SydneySpacing.md),
-                      _InfoCard(
-                        icon: Icons.output_rounded,
-                        title: 'Output layout',
-                        child: Text(
-                          _describeOutput(_parsedIntent),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: SydneyColors.onSurfaceVariant,
-                                height: 1.35,
-                              ),
-                        ),
-                      ),
-                      if (permissions.isNotEmpty) ...[
-                        const SizedBox(height: SydneySpacing.md),
-                        _InfoCard(
-                          icon: Icons.security_rounded,
-                          title: 'Connected tools required',
-                          child: Wrap(
-                            spacing: SydneySpacing.sm,
-                            runSpacing: SydneySpacing.sm,
-                            children: [
-                              for (final perm in permissions)
-                                _AccessPill(
-                                  icon: _permissionIcon(perm),
-                                  label: perm,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
+                ),
       ),
-      bottomNavigationBar: SydneyFooter(
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _creating ? null : () => Navigator.of(context).maybePop(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SydneyColors.ink,
-                  side: const BorderSide(color: SydneyColors.line),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+      bottomNavigationBar: CreationFooter(
+        secondaryLabel: 'Back',
+        onSecondary: _creating ? null : () => Navigator.of(context).maybePop(),
+        primaryLabel: 'Create Agent',
+        onPrimary: _creating ? null : _createAgent,
+        primaryChild:
+            _creating
+                ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: const Text('Cancel'),
-              ),
-            ),
-            const SizedBox(width: SydneySpacing.md),
-            Expanded(
-              child: FilledButton(
-                onPressed: _creating ? null : _createAgent,
-                style: FilledButton.styleFrom(
-                  backgroundColor: SydneyColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: _creating
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Create Agent'),
-              ),
-            ),
-          ],
-        ),
+                )
+                : null,
       ),
     );
   }
@@ -381,7 +386,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   Future<void> _createAgent() async {
     setState(() => _creating = true);
     try {
-      await ref.read(agentsProvider.notifier).createAgent(
+      await ref
+          .read(agentsProvider.notifier)
+          .createAgent(
             CreateAgentRequest(
               prompt: widget.draft.prompt,
               templateId: widget.draft.templateId,
@@ -394,7 +401,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) {
         setState(() => _creating = false);
@@ -416,47 +425,45 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: SydneyColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF17201C).withValues(alpha: 0.05),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-          const BoxShadow(
-            color: Colors.white,
-            offset: Offset(-4, -4),
-            blurRadius: 8,
-          ),
-        ],
-        border: Border.all(
-          color: SydneyColors.line.withValues(alpha: 0.35),
-          width: 0.8,
-        ),
-      ),
+    return WorkspaceCard(
       padding: const EdgeInsets.all(SydneySpacing.lg),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: SydneyColors.primary, size: 16),
-              const SizedBox(width: SydneySpacing.sm),
-              Text(
-                title.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: SydneyColors.primary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.7,
-                    ),
-              ),
-            ],
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: CuppetWorkspaceColors.background,
+              borderRadius: BorderRadius.circular(SydneyRadius.md),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              color: CuppetWorkspaceColors.primaryInk,
+              size: 18,
+            ),
           ),
-          const SizedBox(height: SydneySpacing.md),
-          child,
+          const SizedBox(width: SydneySpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: CuppetWorkspaceColors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: SydneySpacing.sm),
+                DefaultTextStyle.merge(
+                  style: const TextStyle(color: CuppetWorkspaceColors.muted),
+                  child: child,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -472,24 +479,24 @@ class _AccessPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: SydneyColors.surface,
+        color: CuppetWorkspaceColors.background,
         borderRadius: BorderRadius.circular(SydneyRadius.sm),
-        border: Border.all(color: SydneyColors.line),
+        border: Border.all(color: CuppetWorkspaceColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: SydneyColors.onSurfaceVariant, size: 12),
+          Icon(icon, color: CuppetWorkspaceColors.primaryInk, size: 13),
           const SizedBox(width: SydneySpacing.xs),
           Text(
-            label.toUpperCase(),
+            label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SydneyColors.onSurfaceVariant,
-                  fontSize: 10,
-                  letterSpacing: 0.4,
-                ),
+              color: CuppetWorkspaceColors.ink,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

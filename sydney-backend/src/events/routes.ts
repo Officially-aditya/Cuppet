@@ -31,26 +31,454 @@ const slackEnvelopeSchema = z
   })
   .passthrough();
 
+const githubAccountSchema = z
+  .object({
+    login: z.string().max(1_000).optional()
+  })
+  .passthrough();
+
+const githubGitActorSchema = z
+  .object({
+    name: z.string().max(1_000).optional(),
+    username: z.string().max(1_000).nullable().optional()
+  })
+  .passthrough();
+
+const githubPushCommitSchema = z
+  .object({
+    id: z.string().max(100).optional(),
+    message: z.string().max(100_000).optional(),
+    timestamp: z.string().max(200).optional(),
+    url: z.string().max(5_000).optional(),
+    distinct: z.boolean().optional(),
+    author: githubGitActorSchema.optional(),
+    committer: githubGitActorSchema.optional(),
+    added: z.array(z.string().max(5_000)).optional(),
+    removed: z.array(z.string().max(5_000)).optional(),
+    modified: z.array(z.string().max(5_000)).optional()
+  })
+  .passthrough();
+
+const githubPullRequestSchema = z
+  .object({
+    id: z.number().or(z.string()).optional(),
+    number: z.number().int().nonnegative().optional(),
+    title: z.string().max(20_000).optional(),
+    state: z.string().max(100).optional(),
+    draft: z.boolean().optional(),
+    merged: z.boolean().optional(),
+    merge_commit_sha: z.string().max(100).nullable().optional(),
+    html_url: z.string().max(5_000).optional(),
+    created_at: z.string().max(200).optional(),
+    updated_at: z.string().max(200).optional(),
+    closed_at: z.string().max(200).nullable().optional(),
+    merged_at: z.string().max(200).nullable().optional(),
+    user: githubAccountSchema.optional(),
+    base: z
+      .object({
+        ref: z.string().max(1_000).optional(),
+        sha: z.string().max(100).optional()
+      })
+      .passthrough()
+      .optional(),
+    head: z
+      .object({
+        ref: z.string().max(1_000).optional(),
+        sha: z.string().max(100).optional()
+      })
+      .passthrough()
+      .optional()
+  })
+  .passthrough();
+
+const githubIssueSchema = z
+  .object({
+    id: z.number().or(z.string()).optional(),
+    number: z.number().int().nonnegative().optional(),
+    title: z.string().max(20_000).optional(),
+    state: z.string().max(100).optional(),
+    state_reason: z.string().max(200).nullable().optional(),
+    html_url: z.string().max(5_000).optional(),
+    created_at: z.string().max(200).optional(),
+    updated_at: z.string().max(200).optional(),
+    closed_at: z.string().max(200).nullable().optional(),
+    user: githubAccountSchema.optional(),
+    labels: z
+      .array(
+        z
+          .object({ name: z.string().max(1_000).optional() })
+          .passthrough()
+      )
+      .optional()
+  })
+  .passthrough();
+
+const githubReleaseSchema = z
+  .object({
+    id: z.number().or(z.string()).optional(),
+    tag_name: z.string().max(1_000).optional(),
+    target_commitish: z.string().max(1_000).optional(),
+    name: z.string().max(20_000).nullable().optional(),
+    draft: z.boolean().optional(),
+    prerelease: z.boolean().optional(),
+    html_url: z.string().max(5_000).optional(),
+    created_at: z.string().max(200).optional(),
+    published_at: z.string().max(200).nullable().optional(),
+    author: githubAccountSchema.optional()
+  })
+  .passthrough();
+
+const githubWorkflowRunSchema = z
+  .object({
+    id: z.number().or(z.string()).optional(),
+    name: z.string().max(20_000).nullable().optional(),
+    event: z.string().max(200).optional(),
+    status: z.string().max(200).nullable().optional(),
+    conclusion: z.string().max(200).nullable().optional(),
+    head_branch: z.string().max(1_000).nullable().optional(),
+    head_sha: z.string().max(100).optional(),
+    html_url: z.string().max(5_000).optional(),
+    run_number: z.number().int().nonnegative().optional(),
+    run_attempt: z.number().int().nonnegative().optional(),
+    created_at: z.string().max(200).optional(),
+    updated_at: z.string().max(200).optional(),
+    run_started_at: z.string().max(200).optional(),
+    actor: githubAccountSchema.optional()
+  })
+  .passthrough();
+
 const githubPayloadSchema = z
   .object({
-    action: z.string().max(100).optional(),
+    action: z.string().max(1_000).optional(),
+    ref: z.string().max(2_000).optional(),
+    base_ref: z.string().max(2_000).nullable().optional(),
+    before: z.string().max(100).optional(),
+    after: z.string().max(100).optional(),
+    compare: z.string().max(5_000).optional(),
+    created: z.boolean().optional(),
+    deleted: z.boolean().optional(),
+    forced: z.boolean().optional(),
+    size: z.number().int().nonnegative().optional(),
+    distinct_size: z.number().int().nonnegative().optional(),
+    pusher: githubGitActorSchema.optional(),
+    commits: z.array(githubPushCommitSchema).optional(),
+    head_commit: githubPushCommitSchema.nullable().optional(),
+    number: z.number().int().nonnegative().optional(),
+    pull_request: githubPullRequestSchema.optional(),
+    issue: githubIssueSchema.optional(),
+    release: githubReleaseSchema.optional(),
+    workflow_run: githubWorkflowRunSchema.optional(),
     installation: z
       .object({
         id: z.number().or(z.string()),
-        account: z
-          .object({ login: z.string().max(300).optional() })
-          .optional()
+        account: githubAccountSchema.optional()
       })
+      .passthrough()
       .optional(),
     repository: z
       .object({
         id: z.number().or(z.string()),
-        full_name: z.string().max(500).optional()
+        full_name: z.string().max(2_000).optional(),
+        html_url: z.string().max(5_000).optional(),
+        default_branch: z.string().max(1_000).optional(),
+        private: z.boolean().optional()
       })
+      .passthrough()
       .optional(),
-    sender: z.object({ login: z.string().max(300).optional() }).optional()
+    sender: githubAccountSchema.optional()
   })
   .passthrough();
+
+export const GITHUB_WEBHOOK_COMMIT_LIMIT = 20;
+const githubWebhookFileLimit = 50;
+const githubWebhookLabelLimit = 20;
+
+type NormalizedGitHubWebhook = {
+  eventName: string;
+  externalAccountId: string | null;
+  externalAccountAliases?: string[];
+  subjectId?: string;
+  payload: Record<string, unknown>;
+  occurredAt: Date;
+};
+
+/**
+ * Converts GitHub's broad webhook envelopes into a small, stable event shape.
+ * Text remains untrusted and is bounded here before it is persisted or later
+ * supplied to an agent renderer.
+ */
+export function normalizeGitHubWebhookPayload(
+  eventName: string,
+  input: unknown,
+  occurredAt: Date = new Date()
+): NormalizedGitHubWebhook | null {
+  const normalizedEventName = githubText(eventName, 100);
+  if (!normalizedEventName || !/^[a-z][a-z0-9_]*$/.test(normalizedEventName)) {
+    return null;
+  }
+
+  const parsed = githubPayloadSchema.safeParse(input);
+  if (!parsed.success) return null;
+
+  const data = parsed.data;
+  const repository = githubText(data.repository?.full_name, 2_000);
+  const repositoryId = githubIdentifier(data.repository?.id);
+  const installationId = githubIdentifier(data.installation?.id);
+  const installationLogin = githubText(data.installation?.account?.login, 300);
+  const payload = definedValues({
+    action: githubText(data.action, 100),
+    repository,
+    repository_id: repositoryId,
+    repository_url: githubUrl(data.repository?.html_url),
+    default_branch: githubText(data.repository?.default_branch, 1_000),
+    repository_private: data.repository?.private,
+    sender: githubText(data.sender?.login, 300),
+    installation_id: installationId
+  });
+
+  if (normalizedEventName === "push") {
+    const allCommits = data.commits ?? [];
+    const commits = allCommits
+      .slice(0, GITHUB_WEBHOOK_COMMIT_LIMIT)
+      .map((commit) => normalizeGitHubPushCommit(commit, repository))
+      .filter((commit): commit is Record<string, unknown> => commit !== null);
+    const headCommit = data.head_commit
+      ? normalizeGitHubPushCommit(data.head_commit, repository)
+      : null;
+
+    Object.assign(
+      payload,
+      definedValues({
+        ref: githubText(data.ref, 2_000),
+        base_ref: githubText(data.base_ref, 2_000),
+        before: githubSha(data.before),
+        after: githubSha(data.after),
+        compare: githubUrl(data.compare),
+        created: data.created,
+        deleted: data.deleted,
+        forced: data.forced,
+        size: data.size,
+        distinct_size: data.distinct_size,
+        pusher: normalizeGitHubActor(data.pusher),
+        commit_count: allCommits.length,
+        commits_truncated: allCommits.length > GITHUB_WEBHOOK_COMMIT_LIMIT,
+        commits,
+        head_commit: headCommit ?? undefined
+      })
+    );
+  } else if (normalizedEventName === "pull_request" && data.pull_request) {
+    payload.pull_request = normalizeGitHubPullRequest(
+      data.pull_request,
+      data.number
+    );
+  } else if (normalizedEventName === "issues" && data.issue) {
+    payload.issue = normalizeGitHubIssue(data.issue, data.number);
+  } else if (normalizedEventName === "release" && data.release) {
+    payload.release = normalizeGitHubRelease(data.release);
+  } else if (normalizedEventName === "workflow_run" && data.workflow_run) {
+    payload.workflow_run = normalizeGitHubWorkflowRun(data.workflow_run);
+  }
+
+  const safeOccurredAt = Number.isNaN(occurredAt.getTime())
+    ? new Date()
+    : new Date(occurredAt);
+  return {
+    eventName: normalizedEventName,
+    externalAccountId: installationId ?? installationLogin ?? null,
+    ...(installationLogin
+      ? { externalAccountAliases: [installationLogin] }
+      : {}),
+    ...(repositoryId ? { subjectId: repositoryId } : {}),
+    payload,
+    occurredAt: safeOccurredAt
+  };
+}
+
+function normalizeGitHubPushCommit(
+  commit: z.infer<typeof githubPushCommitSchema>,
+  repository: string | undefined
+): Record<string, unknown> | null {
+  const sha = githubSha(commit.id);
+  if (!sha) return null;
+
+  return definedValues({
+    sha,
+    message: githubText(commit.message, 4_000, false),
+    timestamp: githubTimestamp(commit.timestamp),
+    url: githubUrl(commit.url),
+    distinct: commit.distinct,
+    repository,
+    author: normalizeGitHubActor(commit.author),
+    committer: normalizeGitHubActor(commit.committer),
+    added: githubStringList(commit.added, githubWebhookFileLimit, 2_000),
+    removed: githubStringList(commit.removed, githubWebhookFileLimit, 2_000),
+    modified: githubStringList(commit.modified, githubWebhookFileLimit, 2_000)
+  });
+}
+
+function normalizeGitHubPullRequest(
+  pullRequest: z.infer<typeof githubPullRequestSchema>,
+  envelopeNumber: number | undefined
+): Record<string, unknown> {
+  return definedValues({
+    id: githubIdentifier(pullRequest.id),
+    number: pullRequest.number ?? envelopeNumber,
+    title: githubText(pullRequest.title, 4_000, false),
+    state: githubText(pullRequest.state, 100),
+    draft: pullRequest.draft,
+    merged: pullRequest.merged,
+    merge_commit_sha: githubSha(pullRequest.merge_commit_sha),
+    url: githubUrl(pullRequest.html_url),
+    created_at: githubTimestamp(pullRequest.created_at),
+    updated_at: githubTimestamp(pullRequest.updated_at),
+    closed_at: githubTimestamp(pullRequest.closed_at),
+    merged_at: githubTimestamp(pullRequest.merged_at),
+    author: githubText(pullRequest.user?.login, 300),
+    base_ref: githubText(pullRequest.base?.ref, 1_000),
+    base_sha: githubSha(pullRequest.base?.sha),
+    head_ref: githubText(pullRequest.head?.ref, 1_000),
+    head_sha: githubSha(pullRequest.head?.sha)
+  });
+}
+
+function normalizeGitHubIssue(
+  issue: z.infer<typeof githubIssueSchema>,
+  envelopeNumber: number | undefined
+): Record<string, unknown> {
+  const labels = githubStringList(
+    issue.labels?.map((label) => label.name).filter((name): name is string => Boolean(name)),
+    githubWebhookLabelLimit,
+    1_000
+  );
+  return definedValues({
+    id: githubIdentifier(issue.id),
+    number: issue.number ?? envelopeNumber,
+    title: githubText(issue.title, 4_000, false),
+    state: githubText(issue.state, 100),
+    state_reason: githubText(issue.state_reason, 200),
+    url: githubUrl(issue.html_url),
+    created_at: githubTimestamp(issue.created_at),
+    updated_at: githubTimestamp(issue.updated_at),
+    closed_at: githubTimestamp(issue.closed_at),
+    author: githubText(issue.user?.login, 300),
+    labels,
+    labels_truncated:
+      issue.labels === undefined
+        ? undefined
+        : issue.labels.length > githubWebhookLabelLimit
+  });
+}
+
+function normalizeGitHubRelease(
+  release: z.infer<typeof githubReleaseSchema>
+): Record<string, unknown> {
+  return definedValues({
+    id: githubIdentifier(release.id),
+    tag_name: githubText(release.tag_name, 1_000),
+    target_commitish: githubText(release.target_commitish, 1_000),
+    name: githubText(release.name, 4_000, false),
+    draft: release.draft,
+    prerelease: release.prerelease,
+    url: githubUrl(release.html_url),
+    created_at: githubTimestamp(release.created_at),
+    published_at: githubTimestamp(release.published_at),
+    author: githubText(release.author?.login, 300)
+  });
+}
+
+function normalizeGitHubWorkflowRun(
+  workflowRun: z.infer<typeof githubWorkflowRunSchema>
+): Record<string, unknown> {
+  return definedValues({
+    id: githubIdentifier(workflowRun.id),
+    name: githubText(workflowRun.name, 4_000, false),
+    event: githubText(workflowRun.event, 200),
+    status: githubText(workflowRun.status, 200),
+    conclusion: githubText(workflowRun.conclusion, 200),
+    head_branch: githubText(workflowRun.head_branch, 1_000),
+    head_sha: githubSha(workflowRun.head_sha),
+    url: githubUrl(workflowRun.html_url),
+    run_number: workflowRun.run_number,
+    run_attempt: workflowRun.run_attempt,
+    created_at: githubTimestamp(workflowRun.created_at),
+    updated_at: githubTimestamp(workflowRun.updated_at),
+    run_started_at: githubTimestamp(workflowRun.run_started_at),
+    actor: githubText(workflowRun.actor?.login, 300)
+  });
+}
+
+function normalizeGitHubActor(
+  actor: z.infer<typeof githubGitActorSchema> | undefined
+): Record<string, unknown> | undefined {
+  if (!actor) return undefined;
+  const normalized = definedValues({
+    name: githubText(actor.name, 300),
+    username: githubText(actor.username, 300)
+  });
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function githubStringList(
+  values: string[] | undefined,
+  limit: number,
+  itemLength: number
+): string[] | undefined {
+  if (!values) return undefined;
+  return values
+    .slice(0, limit)
+    .map((value) => githubText(value, itemLength))
+    .filter((value): value is string => Boolean(value));
+}
+
+function githubIdentifier(value: string | number | undefined): string | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : undefined;
+  return githubText(value, 200);
+}
+
+function githubSha(value: string | null | undefined): string | undefined {
+  const sha = githubText(value, 100);
+  return sha && /^[0-9a-f]{7,64}$/i.test(sha) ? sha : undefined;
+}
+
+function githubTimestamp(value: string | null | undefined): string | undefined {
+  const timestamp = githubText(value, 200);
+  return timestamp && Number.isFinite(Date.parse(timestamp)) ? timestamp : undefined;
+}
+
+function githubUrl(value: string | undefined): string | undefined {
+  const candidate = githubText(value, 5_000);
+  if (!candidate) return undefined;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? candidate
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function githubText(
+  value: string | null | undefined,
+  maxLength: number,
+  trim = true
+): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const withoutUnsafeControls = value.replace(
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+    ""
+  );
+  const normalized = trim ? withoutUnsafeControls.trim() : withoutUnsafeControls;
+  return normalized.length > 0 ? normalized.slice(0, maxLength) : undefined;
+}
+
+function definedValues(
+  values: Record<string, unknown | undefined>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(values).filter((entry) => entry[1] !== undefined)
+  );
+}
 
 const gmailPushSchema = z.object({
   message: z.object({
@@ -125,41 +553,28 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     }
     const deliveryId = header(request, "x-github-delivery");
     const eventName = header(request, "x-github-event");
-    const parsed = githubPayloadSchema.safeParse(request.body);
-    if (!deliveryId || !eventName || !parsed.success) {
+    const normalized = eventName
+      ? normalizeGitHubWebhookPayload(eventName, request.body)
+      : null;
+    if (!deliveryId || !normalized) {
       return reply.code(400).send({ error: "invalid_github_event" });
     }
-    if (eventName === "ping") {
+    if (normalized.eventName === "ping") {
       return reply.code(202).send({ accepted: true, ping: true });
     }
-    const installation = parsed.data.installation;
-    const externalAccountId =
-      installation?.id === undefined
-        ? installation?.account?.login ?? null
-        : String(installation.id);
-    if (!externalAccountId) {
+    if (!normalized.externalAccountId) {
       return reply.code(202).send({ accepted: true, ignored: true });
     }
 
     const result = await ingestAgentEvent({
       source: "github",
       externalEventId: deliveryId,
-      eventType: `github.${eventName}`,
-      externalAccountId,
-      externalAccountAliases: installation?.account?.login
-        ? [installation.account.login]
-        : undefined,
-      subjectId:
-        parsed.data.repository?.id === undefined
-          ? undefined
-          : String(parsed.data.repository.id),
-      payload: {
-        action: parsed.data.action,
-        repository: parsed.data.repository?.full_name,
-        sender: parsed.data.sender?.login,
-        installation_id: installation?.id
-      },
-      occurredAt: new Date()
+      eventType: `github.${normalized.eventName}`,
+      externalAccountId: normalized.externalAccountId,
+      externalAccountAliases: normalized.externalAccountAliases,
+      subjectId: normalized.subjectId,
+      payload: normalized.payload,
+      occurredAt: normalized.occurredAt
     });
     return reply.code(202).send(eventResponse(result));
   });

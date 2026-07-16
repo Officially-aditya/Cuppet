@@ -316,6 +316,46 @@ async function fetchPageMarkdown(
   }
 }
 
+export async function readNotionForAssistant(
+  userId: string,
+  input: { query?: string; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await notionAccessToken(userId);
+  if (!accessToken) throw notionAuthRequired("notion_not_connected");
+  const body: Record<string, unknown> = {
+    filter: { property: "object", value: "page" },
+    sort: { direction: "descending", timestamp: "last_edited_time" },
+    page_size: Math.min(input.limit ?? 8, 10)
+  };
+  if (input.query?.trim()) body.query = input.query.trim().slice(0, 200);
+  const search = await notionJson<NotionSearchResponse>(
+    `${notionApiBase}/search`,
+    accessToken,
+    userId,
+    { method: "POST", body: JSON.stringify(body) }
+  );
+  const pages = (search.results ?? []).filter(
+    (page) => !page.archived && !page.in_trash
+  );
+  const excerpts = await Promise.all(
+    pages.slice(0, 5).map((page) => fetchPageMarkdown(page, accessToken, userId))
+  );
+  return {
+    summary: pages.length === 0
+      ? "No matching shared Notion pages were found."
+      : pages.map((page, index) =>
+          `- ${notionPageTitle(page)}${excerpts[index] ? `: ${excerpts[index]!.replace(/\s+/g, " ").slice(0, 1200)}` : ""}`
+        ).join("\n"),
+    sourceRefs: pages.map((page) => ({
+      type: "notion_page",
+      source: "Notion",
+      id: page.id,
+      name: notionPageTitle(page),
+      url: page.url
+    }))
+  };
+}
+
 async function exchangeAuthorizationCode(
   code: string
 ): Promise<NotionTokenResponse> {

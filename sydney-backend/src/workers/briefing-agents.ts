@@ -150,7 +150,8 @@ function source(
 function renderOptions(trigger: AgentRunTrigger) {
   return {
     scheduledIntro: (agent: AgentRow, label: string) => scheduledIntro(agent, label, trigger),
-    scheduledTitle: (agent: AgentRow, label: string) => scheduledTitle(agent, label, trigger)
+    scheduledTitle: (agent: AgentRow, label: string) => scheduledTitle(agent, label, trigger),
+    trigger
   };
 }
 

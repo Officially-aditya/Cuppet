@@ -27,6 +27,10 @@ import {
   hasSecurityValidationIssue,
   validatedTextSchema
 } from "../security/input-validation.js";
+import { handleAssistantMessage } from "../assistant/handler.js";
+import { clearUnconfirmedAssistantState } from "../assistant/memory.js";
+import { AttachmentValidationError } from "../uploads/attachment-analysis.js";
+import { config } from "../config.js";
 
 const sendMessageSchema = z
   .object({
@@ -38,11 +42,12 @@ const sendMessageSchema = z
       .max(80)
       .regex(/^[a-z0-9_.:-]+$/i, "Invalid action identifier.")
       .optional(),
-    payload: z.record(z.unknown()).optional()
+    payload: z.record(z.unknown()).optional(),
+    attachment_ids: z.array(z.string().uuid()).max(4).optional()
   })
   .strict()
-  .refine((body) => body.text || body.action, {
-    message: "Either text or action is required."
+  .refine((body) => body.text || body.action || (body.attachment_ids?.length ?? 0) > 0, {
+    message: "Text, an attachment, or an action is required."
   });
 
 type AgentRow = {
@@ -146,6 +151,10 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         SELECT id, agent_id, user_id, role, content, source_refs, read_at, created_at
         FROM agent_messages
         WHERE user_id = $1 AND agent_id = $2
+          AND (
+            $4::boolean = FALSE OR
+            created_at >= NOW() - ($5::int * INTERVAL '1 day')
+          )
           AND (content->'data'->>'action_taken' IS NULL OR content->'data'->>'action_taken' != 'skip')
         ORDER BY
           created_at DESC,
@@ -157,7 +166,13 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           END ASC
         LIMIT $3
       `,
-      [userId, agentId, limit]
+      [
+        userId,
+        agentId,
+        limit,
+        agent.is_assistant,
+        config.ASSISTANT_CHAT_RETENTION_DAYS
+      ]
     );
 
     return { messages: rows.reverse() };
@@ -304,6 +319,9 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       "DELETE FROM agent_messages WHERE user_id = $1 AND agent_id = $2",
       [userId, agentId]
     );
+    if (agent.is_assistant) {
+      await clearUnconfirmedAssistantState(userId, agentId);
+    }
 
     await publishRealtimeEvent({
       type: "messages.cleared",
@@ -346,14 +364,58 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
-    if (agent.is_assistant && body.data.text) {
-      const result = await handleAssistantTextMessage(
-        userId,
-        agentId,
-        body.data.text
-      );
+    if (agent.is_assistant) {
+      const assistantTurnStartedAt = Date.now();
+      try {
+        const result = await handleAssistantMessage({
+          userId,
+          assistantId: agentId,
+          text: body.data.text,
+          attachmentIds: body.data.attachment_ids,
+          action: body.data.action,
+          payload: body.data.payload
+        });
+        request.log.info(
+          {
+            userId,
+            assistantId: agentId,
+            duration_ms: Date.now() - assistantTurnStartedAt,
+            attachment_count: body.data.attachment_ids?.length ?? 0,
+            source_count: result.source_references?.length ?? 0,
+            pending_action_type: result.pending_action?.action_type ?? null,
+            updated_agent_id: result.agent?.id ?? null
+          },
+          "Assistant turn completed"
+        );
 
-      return reply.code(201).send(result);
+        return reply.code(201).send(result);
+      } catch (error) {
+        if (error instanceof AttachmentValidationError) {
+          return reply.code(400).send({
+            error: { code: error.code, message: error.message }
+          });
+        }
+        request.log.error(
+          {
+            userId,
+            assistantId: agentId,
+            duration_ms: Date.now() - assistantTurnStartedAt,
+            attachment_count: body.data.attachment_ids?.length ?? 0,
+            error_name: error instanceof Error ? error.name : "unknown"
+          },
+          "Assistant turn failed"
+        );
+        throw error;
+      }
+    }
+
+    if ((body.data.attachment_ids?.length ?? 0) > 0) {
+      return reply.code(400).send({
+        error: {
+          code: "ATTACHMENTS_ASSISTANT_ONLY",
+          message: "Open the Assistant contact to discuss attachments."
+        }
+      });
     }
 
     if (!agent.is_assistant && body.data.text) {
