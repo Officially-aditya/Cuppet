@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { isUuid } from "../api/ids.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { createAssistantChatReply } from "../agents/assistant-chat.js";
@@ -48,6 +49,19 @@ import {
   executeAssistantConnectorReads
 } from "./connector-tools.js";
 import { classifyAssistantIntent } from "./intent-classifier.js";
+import {
+  assistantActionSummary,
+  confirmableRouteFor,
+  confirmedAssistantRoute,
+  requiresActionConfirmation,
+  type ConfirmableAssistantRoute
+} from "./action-confirmation.js";
+import {
+  agentSelectionQuestion,
+  selectedAgentRoute,
+  selectionIntentForRoute,
+  type AgentSelectionIntent
+} from "./agent-selection.js";
 import { routeAssistantMessage, type AssistantRoute } from "./router.js";
 
 export type AssistantMessageRow = {
@@ -80,7 +94,12 @@ type PendingAction = {
   assistant_id: string;
   target_agent_id: string | null;
   source_message_id: string | null;
-  action_type: "delete_agent" | "forget_everything" | "confirm_memory";
+  action_type:
+    | "delete_agent"
+    | "forget_everything"
+    | "confirm_memory"
+    | "select_agent"
+    | "confirm_intent";
   payload: Record<string, unknown>;
   expires_at: Date | string;
 };
@@ -97,15 +116,24 @@ export async function handleAssistantMessage(input: {
   const currentInstruction = text || "Please analyze the attached files.";
   const activePending = await activePendingAction(input.userId, input.assistantId);
   let route = input.action
-    ? actionRoute(input.action, Boolean(activePending))
+    ? actionRoute(input.action, input.payload, Boolean(activePending))
     : routeAssistantMessage(currentInstruction, {
         hasPendingAction: Boolean(activePending)
       });
+  let confirmClassifiedAgentTarget = false;
+  let confirmLowConfidenceAction = false;
   if (!input.action && text && route.kind === "chat") {
-    route =
-      (await classifyAssistantIntent(text, {
-        hasPendingAction: Boolean(activePending)
-      })) ?? route;
+    const classified = await classifyAssistantIntent(text, {
+      hasPendingAction: Boolean(activePending)
+    });
+    if (classified) {
+      route = classified.route;
+      confirmClassifiedAgentTarget = selectionIntentForRoute(route) !== null;
+      confirmLowConfidenceAction = requiresActionConfirmation(
+        route,
+        classified.confidence
+      );
+    }
   }
   const kernel = config.ASSISTANT_MEMORY_ENABLED
     ? await assembleAssistantKernel(input.userId, input.assistantId)
@@ -136,12 +164,26 @@ export async function handleAssistantMessage(input: {
 
   let outcome: AssistantOutcome;
   if (route.kind === "confirm") {
-    outcome = await handlePendingDecision(
-      input.userId,
-      input.assistantId,
-      route.decision,
-      input.payload?.pending_action_id?.toString()
-    );
+    outcome = await handlePendingDecision({
+      userId: input.userId,
+      assistantId: input.assistantId,
+      decision: route.decision,
+      expectedId: input.payload?.pending_action_id?.toString(),
+      sourceMessageId: written.userMessage.id,
+      text: currentInstruction,
+      attachments,
+      kernel
+    });
+  } else if (route.kind === "agent_selection") {
+    outcome = await handleAgentSelection({
+      route,
+      userId: input.userId,
+      assistantId: input.assistantId,
+      sourceMessageId: written.userMessage.id,
+      text: currentInstruction,
+      attachments,
+      kernel
+    });
   } else if (written.memoryResult?.rejected) {
     outcome = {
       content: plainText(
@@ -178,7 +220,9 @@ export async function handleAssistantMessage(input: {
       sourceMessageId: written.userMessage.id,
       text: currentInstruction,
       attachments,
-      kernel
+      kernel,
+      confirmAgentTarget: confirmClassifiedAgentTarget,
+      confirmLowConfidenceAction
     });
   }
 
@@ -228,8 +272,30 @@ async function executeRoute(input: {
   text: string;
   attachments: AnalyzedAttachment[];
   kernel: Awaited<ReturnType<typeof assembleAssistantKernel>>;
+  confirmAgentTarget?: boolean;
+  confirmLowConfidenceAction?: boolean;
 }): Promise<AssistantOutcome> {
   const { route } = input;
+  if (input.confirmAgentTarget) {
+    const intent = selectionIntentForRoute(route);
+    if (intent) {
+      if (
+        intent.kind !== "agent_status" &&
+        !config.ASSISTANT_AGENT_MANAGEMENT_ENABLED
+      ) {
+        return {
+          content: plainText("Assistant agent management is not enabled yet.")
+        };
+      }
+      return createAgentSelection(input, route, intent);
+    }
+  }
+  if (input.confirmLowConfidenceAction) {
+    const confirmedRoute = confirmableRouteFor(route);
+    if (confirmedRoute) {
+      return createLowConfidenceActionConfirmation(input, confirmedRoute);
+    }
+  }
   if (route.kind === "clarify") {
     const prompts = {
       agent:
@@ -407,6 +473,191 @@ function sourceLinks(sourceRefs: unknown[]): string {
   return links.join("\n");
 }
 
+async function createLowConfidenceActionConfirmation(
+  input: Parameters<typeof executeRoute>[0],
+  route: ConfirmableAssistantRoute
+): Promise<AssistantOutcome> {
+  const summary = assistantActionSummary(route);
+  const pending = await createPendingAction({
+    userId: input.userId,
+    assistantId: input.assistantId,
+    sourceMessageId: input.sourceMessageId,
+    actionType: "confirm_intent",
+    payload: {
+      confirmed_route: route,
+      attachment_ids: input.attachments.map((attachment) => attachment.id)
+    }
+  });
+  return {
+    content: {
+      template: "action_confirmation",
+      version: "1.0",
+      data: {
+        title: "Confirm this action",
+        question: "Is this what you want me to do?",
+        action_label: summary.label,
+        action_detail: summary.detail,
+        context:
+          "I’m less than 80% confident I understood your request, so nothing has run yet. This confirmation expires in 10 minutes and can be used once.",
+        actions: [
+          {
+            id: "assistant_confirm",
+            type: "assistant_pending_action",
+            decision: "confirm",
+            pending_action_id: pending.id,
+            label: "Yes, continue",
+            style: "primary"
+          },
+          {
+            id: "assistant_cancel",
+            type: "assistant_pending_action",
+            decision: "cancel",
+            pending_action_id: pending.id,
+            label: "Cancel",
+            style: "secondary"
+          }
+        ]
+      }
+    },
+    pendingAction: publicPendingAction(pending)
+  };
+}
+
+async function createAgentSelection(
+  input: Parameters<typeof executeRoute>[0],
+  route: AssistantRoute,
+  intent: AgentSelectionIntent
+): Promise<AssistantOutcome> {
+  const agents = await listManagedAgents(input.userId);
+  if (agents.length === 0) {
+    return { content: plainText("You don’t have any specialist agents yet.") };
+  }
+  const proposedTarget = targetForAgentRoute(route);
+  const resolution = proposedTarget
+    ? await resolveAgentTarget(input.userId, proposedTarget)
+    : null;
+  const suggested = resolution?.kind === "resolved" ? resolution.agent : null;
+  const ordered = suggested
+    ? [suggested, ...agents.filter((agent) => agent.id !== suggested.id)]
+    : agents;
+  const visible = ordered.slice(0, 8);
+  const pending = await createPendingAction({
+    userId: input.userId,
+    assistantId: input.assistantId,
+    sourceMessageId: input.sourceMessageId,
+    ...(suggested ? { targetAgentId: suggested.id } : {}),
+    actionType: "select_agent",
+    payload: { selection_intent: intent }
+  });
+  return {
+    content: {
+      template: "agent_selection",
+      version: "1.0",
+      data: {
+        title: "Confirm the agent",
+        question: agentSelectionQuestion(intent),
+        context: input.confirmLowConfidenceAction
+          ? suggested
+            ? `I’m less than 80% confident I understood the action. I matched it to ${suggested.name}; confirm that agent or choose another.`
+            : "I’m less than 80% confident I understood the action and couldn’t identify one exact agent. Choose an agent below."
+          : suggested
+            ? `I matched your request to ${suggested.name}. Confirm it or choose another agent.`
+            : "I couldn’t safely identify one exact agent. Choose from your agents below.",
+        pending_action_id: pending.id,
+        suggested_agent_id: suggested?.id ?? null,
+        options: visible.map((agent) => ({
+          id: agent.id,
+          name: agent.name,
+          detail: agent.schedule_cron
+            ? `${agent.status} · ${describeSchedule(agent.schedule_cron)}`
+            : `${agent.status} · manual runs`
+        })),
+        truncated: agents.length > visible.length,
+        cancel_action: {
+          id: "assistant_cancel",
+          type: "assistant_pending_action",
+          decision: "cancel",
+          pending_action_id: pending.id,
+          label: "Cancel"
+        }
+      }
+    },
+    pendingAction: publicPendingAction(pending)
+  };
+}
+
+async function handleAgentSelection(
+  input: Parameters<typeof executeRoute>[0] & {
+    route: Extract<AssistantRoute, { kind: "agent_selection" }>;
+  }
+): Promise<AssistantOutcome> {
+  if (
+    !isUuid(input.route.pendingActionId) ||
+    !isUuid(input.route.selectedAgentId)
+  ) {
+    return { content: plainText("That agent selection is invalid.") };
+  }
+  const { rows } = await pool.query<PendingAction>(
+    `UPDATE assistant_pending_actions
+     SET consumed_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND assistant_id = $3
+       AND action_type = 'select_agent'
+       AND consumed_at IS NULL AND expires_at > NOW()
+     RETURNING *`,
+    [input.route.pendingActionId, input.userId, input.assistantId]
+  );
+  const pending = rows[0];
+  if (!pending) {
+    return {
+      content: plainText("That agent selection expired or was already used.")
+    };
+  }
+  const agents = await listManagedAgents(input.userId);
+  const selected = agents.find(
+    (agent) => agent.id === input.route.selectedAgentId
+  );
+  if (!selected) {
+    return { content: plainText("That agent is no longer available.") };
+  }
+  const resumedRoute = selectedAgentRoute(
+    pending.payload.selection_intent,
+    selected.name
+  );
+  if (!resumedRoute) {
+    return { content: plainText("That agent request could not be resumed safely.") };
+  }
+  if (resumedRoute.kind === "agent_list") {
+    return { content: plainText(agentStatusText(selected)) };
+  }
+  if (
+    resumedRoute.kind !== "agent_manage" &&
+    resumedRoute.kind !== "agent_rename" &&
+    resumedRoute.kind !== "agent_update"
+  ) {
+    return { content: plainText("That agent request could not be resumed safely.") };
+  }
+  if (!config.ASSISTANT_AGENT_MANAGEMENT_ENABLED) {
+    return { content: plainText("Assistant agent management is not enabled yet.") };
+  }
+  return applyManagedAgentRoute(input, resumedRoute, selected);
+}
+
+function targetForAgentRoute(route: AssistantRoute): string | null {
+  if (
+    route.kind === "agent_list" ||
+    route.kind === "agent_manage" ||
+    route.kind === "agent_rename" ||
+    route.kind === "agent_update"
+  ) {
+    return route.target ?? null;
+  }
+  return null;
+}
+
+function agentStatusText(agent: ManagedAgent): string {
+  return `${agent.name} is ${agent.status}${agent.schedule_cron ? ` and runs ${describeSchedule(agent.schedule_cron)}` : " with manual runs"}.`;
+}
+
 async function manageAgentRoute(
   input: Parameters<typeof executeRoute>[0],
   route: Extract<AssistantRoute, { kind: "agent_manage" | "agent_rename" | "agent_update" }>
@@ -423,6 +674,14 @@ async function manageAgentRoute(
     };
   }
   const target = resolution.agent;
+  return applyManagedAgentRoute(input, route, target);
+}
+
+async function applyManagedAgentRoute(
+  input: Parameters<typeof executeRoute>[0],
+  route: Extract<AssistantRoute, { kind: "agent_manage" | "agent_rename" | "agent_update" }>,
+  target: ManagedAgent
+): Promise<AssistantOutcome> {
   try {
     if (route.kind === "agent_manage") {
       if (route.operation === "delete") {
@@ -565,12 +824,19 @@ async function createAgentFromAssistant(
   };
 }
 
-async function handlePendingDecision(
-  userId: string,
-  assistantId: string,
-  decision: "confirm" | "cancel",
-  expectedId?: string
-): Promise<AssistantOutcome> {
+async function handlePendingDecision(input: {
+  userId: string;
+  assistantId: string;
+  decision: "confirm" | "cancel";
+  expectedId?: string;
+  sourceMessageId: string;
+  text: string;
+  attachments: AnalyzedAttachment[];
+  kernel: Awaited<ReturnType<typeof assembleAssistantKernel>>;
+}): Promise<AssistantOutcome> {
+  if (input.expectedId && !isUuid(input.expectedId)) {
+    return { content: plainText("That confirmation is invalid.") };
+  }
   const client = await pool.connect();
   let pending: PendingAction | null = null;
   try {
@@ -587,7 +853,7 @@ async function handlePendingDecision(
          AND user_id = $1 AND assistant_id = $2
          AND consumed_at IS NULL AND expires_at > NOW()
        RETURNING *`,
-      [userId, assistantId, expectedId ?? null]
+      [input.userId, input.assistantId, input.expectedId ?? null]
     );
     pending = rows[0] ?? null;
     if (pending?.action_type === "confirm_memory") {
@@ -595,11 +861,20 @@ async function handlePendingDecision(
       if (memoryId) {
         await setMemoryStatus(
           client,
-          userId,
+          input.userId,
           memoryId,
-          decision === "confirm" ? "confirmed" : "dismissed"
+          input.decision === "confirm" ? "confirmed" : "dismissed"
         );
       }
+    }
+    if (
+      pending?.action_type === "select_agent" &&
+      input.decision === "confirm"
+    ) {
+      await client.query(
+        `UPDATE assistant_pending_actions SET consumed_at = NULL WHERE id = $1`,
+        [pending.id]
+      );
     }
     await client.query("COMMIT");
   } catch (error) {
@@ -611,21 +886,59 @@ async function handlePendingDecision(
   if (!pending) {
     return { content: plainText("That confirmation expired or was already used.") };
   }
-  if (decision === "cancel") {
+  if (input.decision === "cancel") {
     return { content: plainText("Cancelled. Nothing was changed.") };
   }
   if (pending.action_type === "confirm_memory") {
     return { content: plainText("Got it. I’ll remember that.") };
   }
+  if (pending.action_type === "select_agent") {
+    return {
+      content: plainText("Choose an agent from the selection card so I use the right one.")
+    };
+  }
+  if (pending.action_type === "confirm_intent") {
+    const route = confirmedAssistantRoute(pending.payload.confirmed_route);
+    if (!route) {
+      return {
+        content: plainText("That action could not be confirmed safely. Nothing was changed.")
+      };
+    }
+    const attachmentIds = pendingAttachmentIds(
+      pending.payload.attachment_ids
+    );
+    const [originalText, originalAttachments] = await Promise.all([
+      pendingSourceText(pending, input.text),
+      loadAndAnalyzeAttachments(input.userId, attachmentIds)
+    ]);
+    return executeRoute({
+      route,
+      userId: input.userId,
+      assistantId: input.assistantId,
+      sourceMessageId: pending.source_message_id ?? input.sourceMessageId,
+      text: originalText,
+      attachments: originalAttachments,
+      kernel: input.kernel,
+      confirmAgentTarget: false,
+      confirmLowConfidenceAction: false
+    });
+  }
   if (pending.action_type === "forget_everything") {
-    const count = await deleteAllMemories(userId);
+    const count = await deleteAllMemories(input.userId);
     return { content: plainText(`Deleted ${count} Assistant ${count === 1 ? "memory" : "memories"}.`) };
   }
   if (pending.action_type === "delete_agent" && pending.target_agent_id) {
     try {
-      const deleted = await deleteManagedAgent(userId, pending.target_agent_id);
+      const deleted = await deleteManagedAgent(
+        input.userId,
+        pending.target_agent_id
+      );
       await auditAction(
-        { userId, assistantId, sourceMessageId: pending.source_message_id ?? "" },
+        {
+          userId: input.userId,
+          assistantId: input.assistantId,
+          sourceMessageId: pending.source_message_id ?? ""
+        },
         deleted.id,
         "delete",
         "applied"
@@ -643,6 +956,29 @@ async function handlePendingDecision(
     }
   }
   return { content: plainText("Confirmed.") };
+}
+
+function pendingAttachmentIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((id): id is string => typeof id === "string" && isUuid(id))
+    .slice(0, 4);
+}
+
+async function pendingSourceText(
+  pending: PendingAction,
+  fallback: string
+): Promise<string> {
+  if (!pending.source_message_id) return fallback;
+  const { rows } = await pool.query<{ body: string | null }>(
+    `SELECT content #>> '{data,body}' AS body
+     FROM agent_messages
+     WHERE id = $1 AND user_id = $2 AND agent_id = $3
+     LIMIT 1`,
+    [pending.source_message_id, pending.user_id, pending.assistant_id]
+  );
+  const body = rows[0]?.body?.trim();
+  return body || fallback;
 }
 
 async function loadAndAnalyzeAttachments(
@@ -675,7 +1011,11 @@ async function writeUserTurn(input: {
     await client.query("BEGIN");
     const content = input.action && !input.text
       ? plainText(
-          /cancel/i.test(input.action) ? "Cancel" : "Confirm"
+          /cancel/i.test(input.action)
+            ? "Cancel"
+            : /select_agent/i.test(input.action)
+              ? "Selected agent"
+              : "Confirm"
         )
       : plainText(input.text, attachmentMetadata(input.attachments));
     const userMessage = await insertMessage(client, {
@@ -880,7 +1220,18 @@ function plainText(body: string, attachments?: unknown[]) {
   };
 }
 
-function actionRoute(action: string, _hasPending: boolean): AssistantRoute {
+function actionRoute(
+  action: string,
+  payload: Record<string, unknown> | undefined,
+  _hasPending: boolean
+): AssistantRoute {
+  if (/^assistant_select_agent$/i.test(action)) {
+    const pendingActionId = payload?.pending_action_id?.toString() ?? "";
+    const selectedAgentId = payload?.selected_agent_id?.toString() ?? "";
+    return pendingActionId && selectedAgentId
+      ? { kind: "agent_selection", pendingActionId, selectedAgentId }
+      : { kind: "clarify", subject: "agent" };
+  }
   if (/^(?:confirm|assistant_confirm)$/i.test(action)) {
     return { kind: "confirm", decision: "confirm" };
   }

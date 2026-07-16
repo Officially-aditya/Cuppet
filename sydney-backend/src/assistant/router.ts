@@ -16,6 +16,11 @@ export type AssistantRoute =
       connectors: Array<"gmail" | "calendar" | "drive" | "github" | "slack" | "notion">;
     }
   | { kind: "clarify"; subject: "agent" | "memory" | "connector" }
+  | {
+      kind: "agent_selection";
+      pendingActionId: string;
+      selectedAgentId: string;
+    }
   | { kind: "chat" };
 
 export function routeAssistantMessage(

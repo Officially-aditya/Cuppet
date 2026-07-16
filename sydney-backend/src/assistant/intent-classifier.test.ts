@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseClassifiedAssistantRoute } from "./intent-classifier.js";
+import {
+  parseClassifiedAssistantIntent,
+  parseClassifiedAssistantRoute
+} from "./intent-classifier.js";
 
 const noPending = { hasPendingAction: false };
 
@@ -90,14 +93,24 @@ test("pending decisions require both high confidence and active server state", (
   );
 });
 
-test("rejects low-confidence, unknown, and schema-expanding model output", () => {
-  assert.equal(
-    parseClassifiedAssistantRoute(
+test("preserves low-confidence operations so execution can require confirmation", () => {
+  assert.deepEqual(
+    parseClassifiedAssistantIntent(
       '{"intent":"agent_manage","operation":"delete","target":"News Agent","confidence":0.5}',
       noPending
     ),
-    null
+    {
+      route: {
+        kind: "agent_manage",
+        operation: "delete",
+        target: "News Agent"
+      },
+      confidence: 0.5
+    }
   );
+});
+
+test("rejects unknown and schema-expanding model output", () => {
   assert.equal(
     parseClassifiedAssistantRoute(
       '{"intent":"connector_query","connectors":["agent_management"],"confidence":0.99}',

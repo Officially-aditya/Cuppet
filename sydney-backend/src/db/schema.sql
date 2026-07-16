@@ -379,7 +379,7 @@ CREATE TABLE assistant_pending_actions (
   assistant_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   target_agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
   source_message_id UUID REFERENCES agent_messages(id) ON DELETE SET NULL,
-  action_type TEXT NOT NULL CHECK (action_type IN ('delete_agent', 'forget_everything', 'confirm_memory')),
+  action_type TEXT NOT NULL CHECK (action_type IN ('delete_agent', 'forget_everything', 'confirm_memory', 'select_agent', 'confirm_intent')),
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '10 minutes'),
   consumed_at TIMESTAMPTZ,

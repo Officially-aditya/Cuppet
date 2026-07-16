@@ -17,6 +17,8 @@ import '../templates/dsa_question_template.dart';
 import '../templates/content_extractor_template.dart';
 import '../templates/portfolio_watch_template.dart';
 import '../templates/briefing_card_template.dart';
+import '../templates/agent_selection_template.dart';
+import '../templates/action_confirmation_template.dart';
 
 class MessageCard extends StatelessWidget {
   const MessageCard({
@@ -204,6 +206,14 @@ class _TemplateRouter extends StatelessWidget {
       'data_summary' => DataSummaryTemplate(data: data),
       'checklist' => ChecklistTemplate(data: data),
       'daily_task' => DailyTaskTemplate(data: data, onAction: onAction),
+      'agent_selection' => AgentSelectionTemplate(
+        data: data,
+        onAction: onAction,
+      ),
+      'action_confirmation' => ActionConfirmationTemplate(
+        data: data,
+        onAction: onAction,
+      ),
       'streak_counter' => StreakCounterTemplate(data: data),
       'comparison' => ComparisonTemplate(data: data),
       'system' => SystemTemplate(data: data),

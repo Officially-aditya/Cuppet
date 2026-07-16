@@ -146,13 +146,14 @@ class MessageService {
     required String threadId,
     required String decision,
     required String pendingActionId,
+    Map<String, dynamic> payload = const {},
   }) async {
     try {
       final response = await _api.post<Map<String, dynamic>>(
         '/agents/$threadId/messages',
         data: {
           'action': decision,
-          'payload': {'pending_action_id': pendingActionId},
+          'payload': {'pending_action_id': pendingActionId, ...payload},
         },
       );
       final data = response.data?['message'];

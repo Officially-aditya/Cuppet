@@ -82,6 +82,7 @@ class MessageActions {
     required String threadId,
     required String decision,
     required String pendingActionId,
+    Map<String, dynamic> payload = const {},
   }) async {
     final result = await _ref
         .read(messageServiceProvider)
@@ -89,6 +90,7 @@ class MessageActions {
           threadId: threadId,
           decision: decision,
           pendingActionId: pendingActionId,
+          payload: payload,
         );
     final updatedAgent = result.updatedAgent;
     if (result.deletedAgentId case final deletedAgentId?) {

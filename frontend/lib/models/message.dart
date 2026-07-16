@@ -51,6 +51,9 @@ class Message {
       'data_summary' => data['title']?.toString() ?? 'Summary ready',
       'checklist' => data['title']?.toString() ?? 'Checklist update',
       'daily_task' => data['title']?.toString() ?? 'Daily task',
+      'agent_selection' => data['question']?.toString() ?? 'Choose an agent',
+      'action_confirmation' =>
+        data['action_label']?.toString() ?? 'Confirm an action',
       'streak_counter' => data['label']?.toString() ?? 'Streak update',
       'comparison' => data['title']?.toString() ?? 'Comparison update',
       'briefing_card' => data['title']?.toString() ?? 'Briefing ready',

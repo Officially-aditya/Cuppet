@@ -773,6 +773,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       final decision = action['decision']?.toString();
       final pendingActionId = action['pending_action_id']?.toString();
       if (decision == null || pendingActionId == null) return;
+      final selectedAgentId = action['selected_agent_id']?.toString();
       try {
         await ref
             .read(messageActionsProvider)
@@ -780,6 +781,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               threadId: _activeAgent.threadId,
               decision: decision,
               pendingActionId: pendingActionId,
+              payload: {
+                if (selectedAgentId != null)
+                  'selected_agent_id': selectedAgentId,
+              },
             );
         ref.invalidate(messagesProvider(_activeAgent.threadId));
         ref.invalidate(agentsProvider);
