@@ -19,6 +19,7 @@ import '../../widgets/thread/sydney_heatmap.dart';
 import '../../widgets/thread/reply_bar.dart';
 import '../../widgets/thread/typing_indicator.dart';
 import '../../services/notification_clear_service.dart';
+import '../../services/api.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class ThreadScreen extends ConsumerStatefulWidget {
@@ -554,7 +555,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 error:
                     (error, _) => SydneyErrorState(
                       title: 'Conversation could not load',
-                      message: error.toString(),
+                      message: friendlyErrorMessage(
+                        error,
+                        fallback: 'This conversation couldn’t be loaded.',
+                      ),
                       onRetry:
                           () => ref.invalidate(
                             messagesProvider(_activeAgent.threadId),
@@ -594,7 +598,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _archiveError = error.toString());
+      setState(
+        () =>
+            _archiveError = friendlyErrorMessage(
+              error,
+              fallback: 'Older messages couldn’t be loaded from Drive.',
+            ),
+      );
     } finally {
       if (mounted) setState(() => _archiveLoading = false);
     }
@@ -678,9 +688,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         _pendingUserMessage = null;
         _awaitingResponse = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            friendlyErrorMessage(
+              error,
+              fallback: 'Your message couldn’t be sent.',
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -756,9 +773,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         ).pushNamed(AppRoutes.thread, arguments: assistant);
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'Assistant couldn’t open that message right now.',
+              ),
+            ),
+          ),
+        );
       }
       return;
     }
@@ -798,9 +822,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       } catch (error) {
         if (!mounted) return;
         ref.invalidate(messagesProvider(_activeAgent.threadId));
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'That action couldn’t be completed right now.',
+              ),
+            ),
+          ),
+        );
       } finally {
         if (mounted) {
           setState(() => _awaitingResponse = false);
@@ -834,9 +865,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         ref.invalidate(agentsProvider);
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'That study action couldn’t be saved right now.',
+              ),
+            ),
+          ),
+        );
       }
       return;
     }
@@ -883,9 +921,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            friendlyErrorMessage(
+              error,
+              fallback: 'That connection couldn’t be completed right now.',
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -963,9 +1008,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to run agent: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'That agent couldn’t start right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -1006,9 +1058,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'This conversation couldn’t be cleared right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -1033,9 +1092,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'Notification settings couldn’t be updated.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }

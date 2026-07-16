@@ -5,6 +5,7 @@ import {
   wantsDsaQuestion,
   questionForDate,
   dateKey,
+  renderDsaQuestion,
   type DsaQuestion
 } from "../agents/dsa-question.js";
 import {
@@ -77,7 +78,8 @@ import {
   renderHabitTracker,
   renderLanguageWord,
   renderParentingMilestone,
-  renderRelationshipNudge
+  renderRelationshipNudge,
+  renderStudyPlan
 } from "./stub-renderers.js";
 import { agentDebug } from "./debug-log.js";
 import { shouldRetryAgentRun } from "./run-lifecycle.js";
@@ -500,7 +502,7 @@ async function executeAgentJob(
 
     const errorMsg = errorMessage(error);
     const rendered = renderedPlainText(
-      `⚠️ **Run Failed**\n\n${agent.name} encountered an error during this run:\n> ${errorMsg}\n\nThis may be due to a temporary network issue or service disruption. Please try running the agent again.`
+      `${agent.name} couldn’t finish this update right now. Please wait a moment and try running the agent again.`
     );
     const message = await persistRunMessage({
       agent,
@@ -533,7 +535,11 @@ async function executeAgentJob(
         user_id: agent.user_id,
         agent_id: agent.id,
         run_id: run.id,
-        data: { trigger: job.data.trigger, error: errorMsg }
+        data: {
+          trigger: job.data.trigger,
+          error_code: "agent_run_failed",
+          retryable: false
+        }
       }
     );
     return { runId: run.id, messageId: message.id };
@@ -1110,7 +1116,7 @@ async function renderStudyGuideAgent(context: {
   agentDebug("[StudyGuideAgent] running agentId:", agent.id, "previously_covered_topics:", topicsCovered);
 
   if (!llmConfigured()) {
-    return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
+    return renderStudyPlan(agent);
   }
 
   // 1. Try to get Google Drive access token
@@ -1296,13 +1302,7 @@ async function renderStudyGuideAgent(context: {
     );
   } catch (error) {
     console.error("Study Guide generation failed:", error);
-    return renderedPlainText(
-      [
-        scheduledIntro(agent, "study session"),
-        "Failed to generate study guide lesson. Please try running the agent again.",
-        `Details: ${error instanceof Error ? error.message : String(error)}`
-      ].join("\n")
-    );
+    return renderStudyPlan(agent);
   }
 }
 
@@ -1401,7 +1401,9 @@ async function renderDsaQuestionAgent(context: {
   agentDebug("[DsaQuestionAgent] running agentId:", agent.id, "previously_covered_problems:", topicsCovered);
 
   if (!llmConfigured()) {
-    return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
+    return renderedDsaQuestion(
+      renderDsaQuestion({ agentId: agent.id, topicsCovered })
+    );
   }
 
   try {
@@ -1497,12 +1499,8 @@ async function renderDsaQuestionAgent(context: {
     );
   } catch (error) {
     console.error("DSA Question generation failed:", error);
-    return renderedPlainText(
-      [
-        scheduledIntro(agent, "DSA practice"),
-        "Failed to generate the DSA question. Please try running the agent again.",
-        `Details: ${error instanceof Error ? error.message : String(error)}`
-      ].join("\n")
+    return renderedDsaQuestion(
+      renderDsaQuestion({ agentId: agent.id, topicsCovered })
     );
   }
 }
@@ -1514,9 +1512,9 @@ async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessa
   if (!apiKey) {
     return renderedPortfolioWatch({
       title: scheduledTitle(agent, "portfolio watch"),
-      text: "Stock API key is missing. Please set the STOCK_API_KEY environment variable.",
+      text: "Live market data isn’t available right now. Please wait a little and try running this agent again.",
       stocks: [],
-      footer: "Config missing"
+      footer: "Data temporarily unavailable"
     });
   }
 
@@ -1617,9 +1615,9 @@ async function renderPortfolioWatch(agent: AgentRow): Promise<RenderedAgentMessa
     console.error("Error in renderPortfolioWatch:", error);
     return renderedPortfolioWatch({
       title: scheduledTitle(agent, "portfolio watch"),
-      text: "An error occurred while fetching stock market data.",
+      text: "Market data couldn’t be loaded right now. Please wait a moment and try again.",
       stocks: [],
-      footer: "API error"
+      footer: "Data temporarily unavailable"
     });
   }
 }
@@ -1900,7 +1898,9 @@ async function renderContentExtractorAgent(context: {
   const { agent } = context;
 
   if (!llmConfigured()) {
-    return renderedPlainText("Agent execution failed: Gemini API key is not configured.");
+    return renderedPlainText(
+      "Content ideas aren’t available right now. Please wait a little and try running this agent again."
+    );
   }
 
   try {
@@ -1991,7 +1991,7 @@ async function renderContentExtractorAgent(context: {
   } catch (error: any) {
     console.error("[ContentExtractorAgent] failed:", error);
     return renderedPlainText(
-      `Content Extractor run failed: ${error?.message || error}`
+      "I couldn’t prepare fresh content ideas right now. Please wait a moment and try running this agent again."
     );
   }
 }

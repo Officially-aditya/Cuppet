@@ -937,7 +937,9 @@ async function renderDriveAgent(
         pdfRecords.push(`File: ${file.name}\nContent:\n${snippet}`);
       } catch (err) {
         console.error(`Failed to parse PDF ${file.name}:`, err);
-        pdfRecords.push(`File: ${file.name}\nStatus: Failed to retrieve content: ${err instanceof Error ? err.message : String(err)}`);
+        pdfRecords.push(
+          `File: ${file.name}\nStatus: Content could not be retrieved for this run.`
+        );
       }
     }
 
@@ -952,7 +954,9 @@ async function renderDriveAgent(
       {
         title: "PDF Highlights",
         text: options.scheduledIntro(agent, "PDF summary"),
-        summary: synthesized?.summary ?? "Could not extract or summarize the PDF contents.",
+        summary:
+          synthesized?.summary ??
+          "The PDF contents couldn’t be summarized right now. Please wait a moment and try again.",
         metrics: [
           { label: "Files", value: String(pdfFiles.length) },
           { label: "Source", value: "Google Drive" }

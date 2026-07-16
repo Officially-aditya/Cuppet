@@ -25,9 +25,7 @@ class PlainTextTemplate extends StatelessWidget {
             : const <dynamic>[])
         .whereType<Map>()
         .map(
-          (item) => MessageAttachment.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) => MessageAttachment.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList(growable: false);
 
@@ -185,7 +183,7 @@ class _PlainTextBlockView extends StatelessWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Failed to load image',
+                      'This image couldn’t be loaded. Please try again.',
                       style: TextStyle(color: SydneyColors.mutedInk),
                     ),
                   ],

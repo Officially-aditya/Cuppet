@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +14,9 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(secureStorage: ref.watch(secureStorageProvider));
+  final client = ApiClient(secureStorage: ref.watch(secureStorageProvider));
+  ref.onDispose(() => unawaited(client.dispose()));
+  return client;
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -57,8 +61,20 @@ class AuthState {
 }
 
 class AuthController extends AsyncNotifier<AuthState> {
+  StreamSubscription<void>? _sessionExpiredSubscription;
+
   @override
   Future<AuthState> build() async {
+    await _sessionExpiredSubscription?.cancel();
+    _sessionExpiredSubscription = ref
+        .watch(apiClientProvider)
+        .sessionExpired
+        .listen((_) {
+          state = const AsyncValue<AuthState>.data(AuthState.signedOut());
+        });
+    ref.onDispose(
+      () => unawaited(_sessionExpiredSubscription?.cancel() ?? Future.value()),
+    );
     final session = await ref.watch(authServiceProvider).restoreSession();
     if (session == null) {
       return const AuthState.signedOut();
@@ -105,8 +121,8 @@ class AuthController extends AsyncNotifier<AuthState> {
 }
 
 String readableAuthError(Object error) {
-  if (error is ApiException) {
-    return error.message;
-  }
-  return 'Something went wrong with your session. Please try again.';
+  return friendlyErrorMessage(
+    error,
+    fallback: 'We couldn’t update your session right now.',
+  );
 }

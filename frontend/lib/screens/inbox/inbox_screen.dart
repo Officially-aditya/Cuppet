@@ -9,6 +9,7 @@ import '../../models/message.dart';
 import '../../models/thread_launch_request.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/messages_provider.dart';
+import '../../services/api.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
@@ -76,7 +77,10 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             error:
                 (error, _) => SydneyErrorState(
                   title: 'Messages could not load',
-                  message: error.toString(),
+                  message: friendlyErrorMessage(
+                    error,
+                    fallback: 'Your inbox couldn’t be loaded right now.',
+                  ),
                   onRetry: () => ref.read(agentsProvider.notifier).refresh(),
                 ),
           ),
@@ -170,9 +174,16 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       ).pushNamed(AppRoutes.thread, arguments: assistant);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            friendlyErrorMessage(
+              error,
+              fallback: 'That briefing couldn’t be opened right now.',
+            ),
+          ),
+        ),
+      );
     }
   }
 }

@@ -3,6 +3,7 @@ import multipart from "@fastify/multipart";
 import Fastify, { type FastifyInstance } from "fastify";
 import { config } from "./config.js";
 import { registerApi } from "./api/index.js";
+import { registerPublicErrorHandling } from "./api/public-errors.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -27,6 +28,8 @@ export async function buildApp(): Promise<FastifyInstance> {
           }
         : true
   });
+
+  registerPublicErrorHandling(app);
 
   // Webhook signatures cover the exact request bytes. Preserve those bytes
   // while continuing to expose parsed JSON to existing route handlers.

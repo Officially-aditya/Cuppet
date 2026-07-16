@@ -264,11 +264,27 @@ class SydneyErrorState extends StatelessWidget {
       padding: const EdgeInsets.all(SydneySpacing.page),
       children: [
         SydneyPanel(
-          borderColor: SydneyColors.dangerSoft,
+          color: SydneyColors.warningSoft,
+          borderColor: SydneyColors.warning,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleSmall),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 18,
+                    color: SydneyColors.warning,
+                  ),
+                  const SizedBox(width: SydneySpacing.sm),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: SydneySpacing.sm),
               Text(
                 message,
@@ -392,21 +408,27 @@ class _MarkdownTextState extends State<MarkdownText> {
             break;
         }
 
-        final headingStyle = (baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
-          fontWeight: FontWeight.w800,
-          fontSize: baseStyle?.fontSize != null ? baseStyle!.fontSize! * sizeScale : null,
-          color: SydneyColors.onSurface,
-        );
+        final headingStyle =
+            (baseStyle ?? Theme.of(context).textTheme.bodyMedium)?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize:
+                  baseStyle?.fontSize != null
+                      ? baseStyle!.fontSize! * sizeScale
+                      : null,
+              color: SydneyColors.onSurface,
+            );
 
         children.add(
           TextSpan(
-            children: _parseLineSegments(headingText, defaultColor, headingStyle),
+            children: _parseLineSegments(
+              headingText,
+              defaultColor,
+              headingStyle,
+            ),
           ),
         );
       } else {
-        children.addAll(
-          _parseLineSegments(rawLine, defaultColor, baseStyle),
-        );
+        children.addAll(_parseLineSegments(rawLine, defaultColor, baseStyle));
       }
 
       if (i < lines.length - 1) {
@@ -495,11 +517,7 @@ class _MarkdownTextState extends State<MarkdownText> {
 
     if (cursor < line.length) {
       spans.addAll(
-        _parseInlineFormatting(
-          line.substring(cursor),
-          defaultColor,
-          baseStyle,
-        ),
+        _parseInlineFormatting(line.substring(cursor), defaultColor, baseStyle),
       );
     }
 

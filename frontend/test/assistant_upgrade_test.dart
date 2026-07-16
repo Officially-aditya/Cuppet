@@ -6,8 +6,31 @@ import 'package:sydney/providers/memory_provider.dart';
 import 'package:sydney/screens/settings/memory_screen.dart';
 import 'package:sydney/widgets/templates/daily_task_template.dart';
 import 'package:sydney/widgets/templates/plain_text_template.dart';
+import 'package:sydney/widgets/sydney_primitives.dart';
 
 void main() {
+  testWidgets('Recoverable error states use calm retry presentation', (
+    tester,
+  ) async {
+    var retried = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SydneyErrorState(
+            title: 'Conversation couldn’t load',
+            message: 'Check your connection and try again.',
+            onRetry: () => retried = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline_rounded), findsNothing);
+    await tester.tap(find.text('Try again'));
+    expect(retried, isTrue);
+  });
+
   testWidgets('message attachment metadata renders as an attachment chip', (
     tester,
   ) async {
@@ -50,6 +73,7 @@ void main() {
             data: const {
               'title': 'Delete News Agent?',
               'task': 'Deletion is permanent.',
+              'pending_action_id': 'pending-1',
               'actions': [
                 {
                   'id': 'assistant_confirm',
@@ -75,8 +99,42 @@ void main() {
     );
 
     await tester.tap(find.text('Delete agent'));
+    await tester.pump();
     expect(selected?['decision'], 'confirm');
     expect(selected?['pending_action_id'], 'pending-1');
+    expect(find.text('Delete agent'), findsNothing);
+    expect(find.text('Cancel'), findsNothing);
+    expect(find.text('Request submitted'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('resolved-daily-task-action')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Resolved delete confirmation remains hidden after refresh', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: DailyTaskTemplate(
+            data: {
+              'title': 'Delete News Agent?',
+              'task': 'Deletion is permanent.',
+              'pending_action_id': 'pending-1',
+              'resolved': true,
+              'resolution': 'confirmed',
+              'result_label': 'Deleted News Agent',
+              'actions': [],
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Delete agent'), findsNothing);
+    expect(find.text('Cancel'), findsNothing);
+    expect(find.text('Deleted News Agent'), findsOneWidget);
   });
 
   testWidgets('Memory settings lists and protects bulk deletion', (

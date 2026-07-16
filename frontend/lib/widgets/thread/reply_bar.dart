@@ -7,6 +7,7 @@ import '../../design/tokens.dart';
 import '../../models/message.dart';
 import '../../models/attachment.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api.dart';
 
 class ReplyBar extends ConsumerStatefulWidget {
   const ReplyBar({
@@ -16,10 +17,8 @@ class ReplyBar extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Future<void> Function(
-    String text,
-    List<ComposerAttachment> attachments,
-  ) onSend;
+  final Future<void> Function(String text, List<ComposerAttachment> attachments)
+  onSend;
   final Message? replyToMessage;
   final VoidCallback? onCancelReply;
 
@@ -293,16 +292,22 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
       setState(() => _sending = true);
       final remaining = 4 - _attachments.length;
       if (remaining <= 0) {
-        throw Exception('A message can include at most four attachments.');
+        throw const ApiException(
+          'You can attach up to four files at a time. Choose fewer files and try again.',
+        );
       }
       final selected = result.files.take(remaining).toList();
       final uploaded = <ComposerAttachment>[];
       for (final file in selected) {
         if (file.bytes == null) {
-          throw Exception('Could not read ${file.name}.');
+          throw ApiException(
+            '${file.name} couldn’t be read. Choose the file again and retry.',
+          );
         }
         if (file.size > 15 * 1024 * 1024) {
-          throw Exception('${file.name} is larger than 15 MB.');
+          throw ApiException(
+            '${file.name} is larger than 15 MB. Choose a smaller file and try again.',
+          );
         }
         if (!mounted) return;
         ScaffoldMessenger.of(
@@ -323,7 +328,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
             );
         final raw = response.data?['file'];
         if (raw is! Map || raw['id'] == null) {
-          throw Exception('Invalid response for ${file.name}.');
+          throw ApiException(
+            '${file.name} couldn’t be prepared right now. Please try again.',
+          );
         }
         uploaded.add(
           ComposerAttachment(
@@ -348,9 +355,16 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'That attachment couldn’t be uploaded.',
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {

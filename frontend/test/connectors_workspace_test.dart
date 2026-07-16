@@ -164,7 +164,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Connectors could not load'), findsOneWidget);
-    expect(find.textContaining('offline'), findsOneWidget);
+    expect(find.textContaining('couldn’t be loaded'), findsOneWidget);
+    expect(find.textContaining('offline'), findsNothing);
+    expect(find.text('Try again'), findsOneWidget);
   });
 
   testWidgets('Drive card keeps archive settings out of Connectors', (

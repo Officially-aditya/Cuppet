@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../design/tokens.dart';
 import '../../models/assistant_memory.dart';
 import '../../providers/memory_provider.dart';
+import '../../services/api.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class MemoryScreen extends ConsumerWidget {
@@ -35,7 +36,13 @@ class MemoryScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(error.toString(), textAlign: TextAlign.center),
+                      Text(
+                        friendlyErrorMessage(
+                          error,
+                          fallback: 'Assistant memory couldn’t be loaded.',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: SydneySpacing.md),
                       OutlinedButton(
                         onPressed:
@@ -111,9 +118,16 @@ class MemoryScreen extends ConsumerWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'That memory couldn’t be deleted right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -147,9 +161,16 @@ class MemoryScreen extends ConsumerWidget {
       ref.invalidate(compactedMemoryProvider);
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'Compacted memory couldn’t be deleted right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -182,9 +203,16 @@ class MemoryScreen extends ConsumerWidget {
       ref.invalidate(compactedMemoryProvider);
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'Assistant memories couldn’t be deleted right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }

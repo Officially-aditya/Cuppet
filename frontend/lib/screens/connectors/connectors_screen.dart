@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../design/tokens.dart';
 import '../../models/connector.dart';
 import '../../providers/connectors_provider.dart';
+import '../../services/api.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
@@ -31,7 +32,10 @@ class ConnectorsScreen extends ConsumerWidget {
           error:
               (error, _) => SydneyErrorState(
                 title: 'Connectors could not load',
-                message: error.toString(),
+                message: friendlyErrorMessage(
+                  error,
+                  fallback: 'Connector status couldn’t be loaded right now.',
+                ),
                 onRetry: () => ref.invalidate(connectorsProvider),
               ),
         ),
@@ -84,9 +88,17 @@ class _ConnectorList extends ConsumerWidget {
                       .setConnected(connector.id, connected: connected);
                 } catch (error) {
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(error.toString())));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        friendlyErrorMessage(
+                          error,
+                          fallback:
+                              'That connection couldn’t be updated right now.',
+                        ),
+                      ),
+                    ),
+                  );
                 }
               },
             ),

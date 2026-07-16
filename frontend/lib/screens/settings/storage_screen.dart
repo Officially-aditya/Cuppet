@@ -7,6 +7,7 @@ import '../../design/tokens.dart';
 import '../../models/message_archive.dart';
 import '../../providers/connectors_provider.dart';
 import '../../providers/message_archive_provider.dart';
+import '../../services/api.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class StorageScreen extends ConsumerWidget {
@@ -195,7 +196,9 @@ class _ArchiveCard extends ConsumerWidget {
             Row(
               children: [
                 const Expanded(
-                  child: Text('Drive archive status could not be loaded.'),
+                  child: Text(
+                    'Drive archive status couldn’t be loaded. Please wait a moment and try again.',
+                  ),
                 ),
                 TextButton(
                   onPressed: () => ref.invalidate(messageArchiveProvider),
@@ -270,9 +273,16 @@ class _ArchiveCard extends ConsumerWidget {
       await ref.read(messageArchiveProvider.notifier).setEnabled(enabled);
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'Drive archive settings couldn’t be updated.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -321,9 +331,16 @@ class _ArchiveCard extends ConsumerWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'Drive archives couldn’t be deleted right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
@@ -353,7 +370,7 @@ class _ArchiveStatus extends StatelessWidget {
             : 'Archive off';
     final statusColor =
         actionRequired
-            ? Theme.of(context).colorScheme.error
+            ? SydneyColors.warning
             : enabled
             ? CuppetWorkspaceColors.primary
             : CuppetWorkspaceColors.muted;

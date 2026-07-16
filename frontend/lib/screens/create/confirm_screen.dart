@@ -5,6 +5,7 @@ import '../../design/tokens.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/timezone_provider.dart';
 import '../../services/agent_service.dart';
+import '../../services/api.dart';
 import '../../widgets/workspace_primitives.dart';
 import 'create_screen.dart';
 import 'creation_workspace_widgets.dart';
@@ -44,7 +45,10 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = friendlyErrorMessage(
+            e,
+            fallback: 'That agent description couldn’t be checked right now.',
+          );
           _loading = false;
         });
       }
@@ -401,9 +405,16 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            friendlyErrorMessage(
+              error,
+              fallback: 'That connection couldn’t be opened right now.',
+            ),
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _creating = false);

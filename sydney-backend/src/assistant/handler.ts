@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { isUuid } from "../api/ids.js";
+import { publicMessage } from "../api/public-errors.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { createAssistantChatReply } from "../agents/assistant-chat.js";
@@ -926,7 +927,11 @@ async function applyManagedAgentRoute(
       await auditAction(input, target.id, route.kind, "rejected", {
         code: error.code
       });
-      return { content: plainText(error.message) };
+      return {
+        content: plainText(
+          publicMessage(error.message, error.statusCode, error.code)
+        )
+      };
     }
     throw error;
   }
@@ -1068,6 +1073,14 @@ async function handlePendingDecision(input: {
     if (pending.action_type === "select_agent") {
       await resolveAgentSelectionCard(pending, { resolution: "cancelled" });
     }
+    if (pending.action_type === "delete_agent") {
+      await resolveDeleteConfirmationCard(pending, {
+        resolution: "cancelled",
+        resultLabel: "Deletion cancelled"
+      }).catch((error) => {
+        console.error("Failed to persist cancelled delete confirmation:", error);
+      });
+    }
     return { content: plainText("Cancelled. Nothing was changed.") };
   }
   if (pending.action_type === "confirm_memory") {
@@ -1114,6 +1127,12 @@ async function handlePendingDecision(input: {
         input.userId,
         pending.target_agent_id
       );
+      await resolveDeleteConfirmationCard(pending, {
+        resolution: "confirmed",
+        resultLabel: `Deleted ${deleted.name}`
+      }).catch((error) => {
+        console.error("Failed to persist completed delete confirmation:", error);
+      });
       await auditAction(
         {
           userId: input.userId,
@@ -1129,9 +1148,17 @@ async function handlePendingDecision(input: {
         deletedAgentId: deleted.id
       };
     } catch (error) {
+      await resolveDeleteConfirmationCard(pending, {
+        resolution: "failed",
+        resultLabel: "Deletion failed"
+      }).catch((cardError) => {
+        console.error("Failed to persist failed delete confirmation:", cardError);
+      });
       return {
         content: plainText(
-          error instanceof AgentServiceError ? error.message : "I couldn’t delete that agent."
+          error instanceof AgentServiceError
+            ? publicMessage(error.message, error.statusCode, error.code)
+            : "I couldn’t delete that agent right now. Please wait a moment and try again."
         )
       };
     }
@@ -1194,6 +1221,44 @@ async function resolveAgentSelectionCard(
        AND role = 'agent'
        AND content->>'template' = 'agent_selection'
        AND content #>> '{data,pending_action_id}' = $3`,
+    [
+      pending.user_id,
+      pending.assistant_id,
+      pending.id,
+      JSON.stringify(resolvedData)
+    ]
+  );
+}
+
+async function resolveDeleteConfirmationCard(
+  pending: PendingAction,
+  result: {
+    resolution: "confirmed" | "cancelled" | "failed";
+    resultLabel: string;
+  }
+): Promise<void> {
+  const resolvedData = {
+    resolved: true,
+    resolution: result.resolution,
+    result_label: result.resultLabel,
+    actions: []
+  };
+  await pool.query(
+    `UPDATE agent_messages
+     SET content = jsonb_set(
+       content,
+       '{data}',
+       COALESCE(content->'data', '{}'::jsonb) || $4::jsonb
+     )
+     WHERE user_id = $1
+       AND agent_id = $2
+       AND role = 'agent'
+       AND content->>'template' = 'daily_task'
+       AND (
+         content #>> '{data,pending_action_id}' = $3
+         OR content #>> '{data,actions,0,pending_action_id}' = $3
+         OR content #>> '{data,actions,1,pending_action_id}' = $3
+       )`,
     [
       pending.user_id,
       pending.assistant_id,
@@ -1400,6 +1465,7 @@ function confirmationContent(input: {
       title: input.title,
       task: input.detail,
       context: "This confirmation expires in 10 minutes and can be used once.",
+      pending_action_id: input.pending.id,
       actions: [
         {
           id: "assistant_confirm",

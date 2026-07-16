@@ -352,7 +352,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Conversation could not load'), findsOneWidget);
-    expect(find.textContaining('offline'), findsOneWidget);
+    expect(find.textContaining('couldn’t be loaded'), findsOneWidget);
+    expect(find.textContaining('offline'), findsNothing);
+    expect(find.text('Try again'), findsOneWidget);
     expect(find.text('Message agent'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

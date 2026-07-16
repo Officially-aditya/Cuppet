@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
 import '../../providers/agents_provider.dart';
+import '../../services/api.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class AgentPreferencesScreen extends ConsumerStatefulWidget {
@@ -695,7 +696,14 @@ class _AgentPreferencesScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save preferences: $e')),
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'Agent preferences couldn’t be saved right now.',
+              ),
+            ),
+          ),
         );
       }
     }
@@ -800,9 +808,16 @@ class _AgentPreferencesScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'That agent couldn’t be deleted right now.',
+              ),
+            ),
+          ),
+        );
       }
     }
   }
