@@ -10,6 +10,7 @@ import {
   renewGmailPushWatches,
   renewGooglePushWatches
 } from "./connectors/google-workspace.js";
+import { cleanAssistantRetention } from "./assistant/retention.js";
 
 // Initialize Firebase on startup
 initializeFirebase();
@@ -53,6 +54,17 @@ async function cleanExpiredUploads(): Promise<void> {
   }
 }
 
+async function runAssistantRetentionCleanup(): Promise<void> {
+  try {
+    const counts = await cleanAssistantRetention();
+    if (Object.values(counts).some((count) => count > 0)) {
+      app.log.info({ counts }, "Applied Assistant storage retention");
+    }
+  } catch (error) {
+    app.log.error(error, "Failed to apply Assistant storage retention");
+  }
+}
+
 try {
   if (embeddedWorker) {
     await waitForWorkerReady(embeddedWorker.waitUntilReady(), 15_000);
@@ -60,10 +72,12 @@ try {
   }
   await syncActiveAgentSchedules(app.log);
   
-  // Prune expired uploads immediately and run hourly
-  await cleanExpiredUploads();
+  // Prune temporary binaries and Assistant records immediately and hourly.
+  await Promise.all([cleanExpiredUploads(), runAssistantRetentionCleanup()]);
   const cleanupTimer = setInterval(() => {
-    cleanExpiredUploads().catch((err) => app.log.error(err, "Cleanup error"));
+    Promise.all([cleanExpiredUploads(), runAssistantRetentionCleanup()]).catch(
+      (error) => app.log.error(error, "Cleanup error")
+    );
   }, 60 * 60 * 1000);
   // Keep track of the timer so we can clear it on shutdown if needed, or let it run
   cleanupTimer.unref();

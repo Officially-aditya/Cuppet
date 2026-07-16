@@ -58,7 +58,32 @@ const envSchema = z.object({
   NOTION_CLIENT_SECRET: z.string().optional(),
   NOTION_AUTHORIZATION_URL: z.string().url().optional(),
   NOTION_API_VERSION: z.string().default("2026-03-11"),
-  FIREBASE_SERVICE_ACCOUNT: z.string().optional()
+  FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
+  ASSISTANT_MEMORY_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  ASSISTANT_AGENT_MANAGEMENT_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  ASSISTANT_CONNECTOR_TOOLS_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  ASSISTANT_ATTACHMENT_ANALYSIS_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  ASSISTANT_MAX_CONFIRMED_MEMORIES: z.coerce.number().int().min(1).max(200).default(200),
+  ASSISTANT_MEMORY_SOURCE_MESSAGE_LIMIT: z.coerce.number().int().min(3).max(5).default(5),
+  ASSISTANT_PENDING_ACTION_RETENTION_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+  ASSISTANT_AGENT_AUDIT_RETENTION_DAYS: z.coerce.number().int().min(90).max(180).default(180),
+  ASSISTANT_CHAT_RETENTION_DAYS: z.coerce.number().int().min(30).max(90).default(60),
+  ASSISTANT_ATTACHMENT_CONTEXT_AFTER_BINARY_DAYS: z.coerce.number().int().min(1).max(2).default(1),
+  ASSISTANT_STORED_ATTACHMENT_CONTEXT_KB: z.coerce.number().int().min(128).max(256).default(256),
+  USER_ACTIVE_UPLOAD_FILE_LIMIT: z.coerce.number().int().min(4).max(500).default(40),
+  USER_ACTIVE_UPLOAD_BYTES_MB: z.coerce.number().int().min(15).max(2048).default(250)
 });
 
 export const config = envSchema.parse(process.env);

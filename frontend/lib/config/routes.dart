@@ -11,4 +11,5 @@ class AppRoutes {
   static const connectors = '/connectors';
   static const addConnector = '/connectors/add';
   static const settings = '/settings';
+  static const memory = '/settings/memory';
 }

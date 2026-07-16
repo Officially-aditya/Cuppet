@@ -66,10 +66,11 @@ class MessageService {
   Future<SendReplyResult> sendReply({
     required String threadId,
     required String text,
+    List<String> attachmentIds = const [],
   }) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) {
-      throw const ApiException('Write a reply before sending.');
+    if (trimmed.isEmpty && attachmentIds.isEmpty) {
+      throw const ApiException('Write a reply or attach a file before sending.');
     }
 
     if (Env.useMockData) {
@@ -108,7 +109,10 @@ class MessageService {
     try {
       final response = await _api.post<Map<String, dynamic>>(
         '/agents/$threadId/messages',
-        data: {'text': trimmed},
+        data: {
+          if (trimmed.isNotEmpty) 'text': trimmed,
+          if (attachmentIds.isNotEmpty) 'attachment_ids': attachmentIds,
+        },
       );
       final data = response.data?['message'];
       if (data is! Map) {
@@ -127,6 +131,36 @@ class MessageService {
         error,
         'Your reply was not sent. Please try again.',
       );
+    }
+  }
+
+  Future<SendReplyResult> sendAssistantAction({
+    required String threadId,
+    required String decision,
+    required String pendingActionId,
+  }) async {
+    try {
+      final response = await _api.post<Map<String, dynamic>>(
+        '/agents/$threadId/messages',
+        data: {
+          'action': decision,
+          'payload': {'pending_action_id': pendingActionId},
+        },
+      );
+      final data = response.data?['message'];
+      if (data is! Map) {
+        throw const ApiException('The action response was not returned.');
+      }
+      final rawAgent = response.data?['agent'];
+      return SendReplyResult(
+        message: Message.fromJson(Map<String, dynamic>.from(data)),
+        updatedAgent:
+            rawAgent is Map
+                ? Agent.fromJson(Map<String, dynamic>.from(rawAgent))
+                : null,
+      );
+    } catch (error) {
+      throw apiExceptionFrom(error, 'That action could not be completed.');
     }
   }
 

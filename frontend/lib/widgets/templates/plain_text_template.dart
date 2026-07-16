@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
+import '../../models/attachment.dart';
 
 class PlainTextTemplate extends StatelessWidget {
   const PlainTextTemplate({required this.data, this.textColor, super.key});
@@ -19,6 +20,16 @@ class PlainTextTemplate extends StatelessWidget {
     final blocks = _parseBlocks(text);
     final color = textColor ?? SydneyColors.ink;
     final sections = _groupIntoSections(blocks);
+    final attachments = (data['attachments'] is List
+            ? data['attachments'] as List
+            : const <dynamic>[])
+        .whereType<Map>()
+        .map(
+          (item) => MessageAttachment.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,6 +53,50 @@ class PlainTextTemplate extends StatelessWidget {
             _SectionCard(section: sections[index], textColor: color),
           if (index < sections.length - 1 && sections[index].heading == null)
             const SizedBox(height: SydneySpacing.md),
+        ],
+        if (attachments.isNotEmpty) ...[
+          if (blocks.isNotEmpty) const SizedBox(height: SydneySpacing.md),
+          Wrap(
+            spacing: SydneySpacing.sm,
+            runSpacing: SydneySpacing.sm,
+            children: [
+              for (final attachment in attachments)
+                Container(
+                  key: ValueKey('message-attachment-${attachment.id}'),
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: SydneySpacing.md,
+                    vertical: SydneySpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: SydneyColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(SydneyRadius.md),
+                    border: Border.all(color: SydneyColors.outlineVariant),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        attachment.mimeType.startsWith('image/')
+                            ? Icons.image_outlined
+                            : Icons.description_outlined,
+                        size: 17,
+                        color: SydneyColors.primary,
+                      ),
+                      const SizedBox(width: SydneySpacing.sm),
+                      Flexible(
+                        child: Text(
+                          attachment.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ],
       ],
     );

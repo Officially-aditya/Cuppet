@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
 import '../../models/message.dart';
+import '../../models/attachment.dart';
 import '../../providers/auth_provider.dart';
 
 class ReplyBar extends ConsumerStatefulWidget {
@@ -15,7 +16,10 @@ class ReplyBar extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Future<void> Function(String text) onSend;
+  final Future<void> Function(
+    String text,
+    List<ComposerAttachment> attachments,
+  ) onSend;
   final Message? replyToMessage;
   final VoidCallback? onCancelReply;
 
@@ -26,6 +30,7 @@ class ReplyBar extends ConsumerStatefulWidget {
 class _ReplyBarState extends ConsumerState<ReplyBar> {
   final _controller = TextEditingController();
   bool _sending = false;
+  final List<ComposerAttachment> _attachments = [];
 
   @override
   void dispose() {
@@ -112,6 +117,53 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
               ),
             ),
           ],
+          if (_attachments.isNotEmpty)
+            Padding(
+              key: const ValueKey('attachment-chip-list'),
+              padding: const EdgeInsets.fromLTRB(
+                SydneySpacing.lg,
+                SydneySpacing.sm,
+                SydneySpacing.lg,
+                0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: SydneySpacing.sm,
+                  runSpacing: SydneySpacing.sm,
+                  children: [
+                    for (final attachment in _attachments)
+                      InputChip(
+                        key: ValueKey('attachment-chip-${attachment.id}'),
+                        avatar: Icon(
+                          attachment.isImage
+                              ? Icons.image_outlined
+                              : Icons.description_outlined,
+                          size: 17,
+                          color: CuppetWorkspaceColors.primaryInk,
+                        ),
+                        label: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            attachment.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        onDeleted:
+                            _sending
+                                ? null
+                                : () => setState(
+                                  () => _attachments.remove(attachment),
+                                ),
+                        backgroundColor: CuppetWorkspaceColors.softSage,
+                        side: const BorderSide(
+                          color: CuppetWorkspaceColors.panelBorder,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(SydneySpacing.lg),
             child: Row(
@@ -213,7 +265,23 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
   Future<void> _pickAndUploadFile(bool storeInDrive, bool isPhotoOnly) async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: isPhotoOnly ? FileType.image : FileType.any,
+        type: FileType.custom,
+        allowedExtensions:
+            isPhotoOnly
+                ? const ['jpg', 'jpeg', 'png', 'webp']
+                : const [
+                  'jpg',
+                  'jpeg',
+                  'png',
+                  'webp',
+                  'pdf',
+                  'txt',
+                  'md',
+                  'markdown',
+                  'csv',
+                  'json',
+                ],
+        allowMultiple: true,
         withData: true,
       );
 
@@ -222,70 +290,61 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
         return;
       }
 
-      final file = result.files.first;
-      if (file.bytes == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read file data.')),
-        );
-        return;
-      }
-
       setState(() => _sending = true);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Uploading ${file.name}...')));
-
-      final multipartFile = MultipartFile.fromBytes(
-        file.bytes!,
-        filename: file.name,
-      );
-
-      final formData = FormData.fromMap({
-        'file': multipartFile,
-        'store_in_drive': storeInDrive ? 'true' : 'false',
-      });
-
-      final api = ref.read(apiClientProvider);
-      final response = await api.post<Map<String, dynamic>>(
-        '/uploads',
-        data: formData,
-        queryParameters: {'store_in_drive': storeInDrive ? 'true' : 'false'},
-      );
-
+      final remaining = 4 - _attachments.length;
+      if (remaining <= 0) {
+        throw Exception('A message can include at most four attachments.');
+      }
+      final selected = result.files.take(remaining).toList();
+      final uploaded = <ComposerAttachment>[];
+      for (final file in selected) {
+        if (file.bytes == null) {
+          throw Exception('Could not read ${file.name}.');
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          throw Exception('${file.name} is larger than 15 MB.');
+        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Uploading ${file.name}...')));
+        final formData = FormData.fromMap({
+          'file': MultipartFile.fromBytes(file.bytes!, filename: file.name),
+          'store_in_drive': storeInDrive ? 'true' : 'false',
+        });
+        final response = await ref
+            .read(apiClientProvider)
+            .post<Map<String, dynamic>>(
+              '/uploads',
+              data: formData,
+              queryParameters: {
+                'store_in_drive': storeInDrive ? 'true' : 'false',
+              },
+            );
+        final raw = response.data?['file'];
+        if (raw is! Map || raw['id'] == null) {
+          throw Exception('Invalid response for ${file.name}.');
+        }
+        uploaded.add(
+          ComposerAttachment(
+            id: raw['id'].toString(),
+            name: raw['name']?.toString() ?? file.name,
+            mimeType:
+                raw['mime_type']?.toString() ?? 'application/octet-stream',
+            size: int.tryParse(raw['size']?.toString() ?? '') ?? file.size,
+          ),
+        );
+      }
       if (!mounted) return;
-      final fileData = response.data?['file'];
-      if (fileData == null || fileData['url'] == null) {
-        throw Exception('Invalid response from server.');
-      }
-
-      final fileUrl = fileData['url'] as String;
-      final isImage =
-          isPhotoOnly ||
-          (file.extension != null &&
-              [
-                'jpg',
-                'jpeg',
-                'png',
-                'gif',
-                'webp',
-              ].contains(file.extension!.toLowerCase()));
-
-      String markdown;
-      if (isImage) {
-        markdown = '![${file.name}]($fileUrl)';
-      } else {
-        markdown = '📎 [${file.name}]($fileUrl)';
-      }
-
-      final currentText = _controller.text;
-      if (currentText.trim().isEmpty) {
-        _controller.text = markdown;
-      } else {
-        _controller.text = '$currentText\n$markdown';
-      }
-
+      setState(() => _attachments.addAll(uploaded));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload complete! Press send to post.')),
+        SnackBar(
+          content: Text(
+            uploaded.length == 1
+                ? 'Attachment ready to send.'
+                : '${uploaded.length} attachments ready to send.',
+          ),
+        ),
       );
     } catch (e) {
       if (mounted) {
@@ -302,13 +361,17 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
 
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) {
+    if (text.isEmpty && _attachments.isEmpty) {
       return;
     }
     setState(() => _sending = true);
     try {
-      await widget.onSend(text);
+      await widget.onSend(
+        text,
+        List<ComposerAttachment>.unmodifiable(_attachments),
+      );
       _controller.clear();
+      if (mounted) setState(_attachments.clear);
     } finally {
       if (mounted) {
         setState(() => _sending = false);

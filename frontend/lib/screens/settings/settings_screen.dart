@@ -122,14 +122,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       body: SafeArea(
         bottom: false,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
             SydneySpacing.md,
             SydneySpacing.page,
             SydneySpacing.xl,
           ),
-          children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             const WorkspaceSectionLabel('Profile'),
             const SizedBox(height: SydneySpacing.sm),
             WorkspaceCard(
@@ -286,6 +288,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: SydneySpacing.md),
+            WorkspaceCard(
+              key: const ValueKey('settings-memory-card'),
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.memory),
+              child: const Row(
+                children: [
+                  _SettingsIcon(icon: Icons.psychology_alt_outlined),
+                  SizedBox(width: SydneySpacing.md),
+                  Expanded(
+                    child: _SettingsCopy(
+                      title: 'Memory',
+                      description:
+                          'Review confirmed details remembered by Assistant.',
+                    ),
+                  ),
+                  SizedBox(width: SydneySpacing.md),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: CuppetWorkspaceColors.primaryInk,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: SydneySpacing.xl),
             const WorkspaceSectionLabel('Security'),
             const SizedBox(height: SydneySpacing.sm),
@@ -333,7 +359,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: Column(

@@ -2,14 +2,13 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
 import { isUuid } from "../api/ids.js";
 import { pool } from "../db/index.js";
+import { config } from "../config.js";
 import { requireAuth } from "../auth/middleware.js";
-import { enqueueAgentRun, agentExecutorQueue, agentExecutorJobName } from "../queue/index.js";
+import { agentExecutorQueue, agentExecutorJobName } from "../queue/index.js";
 import { ensureAssistantContact } from "./assistant.js";
 import { parseIntentHybrid } from "./llm-intent.js";
 import type { ParsedIntent } from "./parser.js";
 import {
-  removeScheduleForAgent,
-  syncAgentSchedule,
   syncAgentScheduleForUser
 } from "./scheduler.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
@@ -24,6 +23,14 @@ import {
   shortLabelSchema,
   validatedTextSchema
 } from "../security/input-validation.js";
+import {
+  AgentServiceError,
+  deleteManagedAgent,
+  renameManagedAgent,
+  runManagedAgent,
+  setManagedAgentStatus,
+  updateManagedAgentDescription
+} from "./agent-service.js";
 
 const createAgentSchema = z
   .object({
@@ -102,6 +109,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           SELECT id, role, content, created_at
           FROM agent_messages
           WHERE agent_id = a.id AND user_id = a.user_id
+            AND (
+              a.is_assistant = FALSE OR
+              created_at >= NOW() - ($2::int * INTERVAL '1 day')
+            )
             AND (content->'data'->>'action_taken' IS NULL OR content->'data'->>'action_taken' != 'skip')
           ORDER BY
             created_at DESC,
@@ -118,6 +129,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           FROM agent_messages
           WHERE agent_id = a.id
             AND user_id = a.user_id
+            AND (
+              a.is_assistant = FALSE OR
+              created_at >= NOW() - ($2::int * INTERVAL '1 day')
+            )
             AND role IN ('agent', 'system')
             AND read_at IS NULL
         ) unread_messages ON TRUE
@@ -129,7 +144,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           latest_message_at DESC NULLS LAST,
           a.created_at DESC
       `,
-      [userId]
+      [userId, config.ASSISTANT_CHAT_RETENTION_DAYS]
     );
 
     return { agents: rows };
@@ -243,77 +258,20 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
-    const agent = await getAgent(userId, agentId);
-
-    if (!agent) {
-      return agentNotFound(reply);
-    }
-
-    if (agent.is_assistant) {
-      return reply.code(400).send({
-        error: {
-          code: "ASSISTANT_RUN_NOT_SUPPORTED",
-          message: "The Assistant contact does not run as a scheduled agent."
-        }
+    try {
+      const { job } = await runManagedAgent(userId, agentId);
+      return reply.code(202).send({
+        job: { id: job.id, name: job.name },
+        message: "Agent run queued."
       });
-    }
-
-    if (agent.status !== "active") {
-      return reply.code(409).send({
-        error: {
-          code: "AGENT_NOT_ACTIVE",
-          message: "Only active agents can be run."
-        }
-      });
-    }
-
-    const parsedIntent = agent.parsed_intent;
-    if (parsedIntent && parsedIntent.active_until) {
-      const activeUntilDate = new Date(parsedIntent.active_until);
-      if (activeUntilDate <= new Date()) {
-        await pool.query(
-          "UPDATE agents SET status = 'paused' WHERE id = $1",
-          [agent.id]
-        );
-        await syncAgentSchedule({
-          id: agent.id,
-          schedule_cron: agent.schedule_cron,
-          status: "paused",
-          is_assistant: false
-        });
-        await publishRealtimeEvent({
-          type: "agent.updated",
-          user_id: userId,
-          agent_id: agent.id,
-          data: {
-            status: "paused",
-            schedule_cron: agent.schedule_cron
-          }
-        });
-        return reply.code(409).send({
-          error: {
-            code: "AGENT_NOT_ACTIVE",
-            message: "Only active agents can be run. This agent's active time has expired."
-          }
+    } catch (error) {
+      if (error instanceof AgentServiceError) {
+        return reply.code(error.statusCode).send({
+          error: { code: error.code, message: error.message }
         });
       }
+      throw error;
     }
-
-    const job = await enqueueAgentRun(agent.id, "manual");
-    await publishRealtimeEvent({
-      type: "run.queued",
-      user_id: userId,
-      agent_id: agent.id,
-      data: { job_id: job.id, trigger: "manual" }
-    });
-
-    return reply.code(202).send({
-      job: {
-        id: job.id,
-        name: job.name
-      },
-      message: "Agent run queued."
-    });
   });
 
   app.patch("/agents/:agentId", { preHandler: requireAuth }, async (request, reply) => {
@@ -337,6 +295,36 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     const existing = await getAgent(userId, agentId);
     if (!existing) {
       return agentNotFound(reply);
+    }
+
+    const sharedFields = Object.keys(body.data).every((key) =>
+      ["name", "description", "status"].includes(key)
+    );
+    if (sharedFields && body.data.status !== "error") {
+      try {
+        let updated = existing;
+        if (body.data.description !== undefined) {
+          updated = await updateManagedAgentDescription(
+            userId,
+            agentId,
+            body.data.description
+          );
+        }
+        if (body.data.name !== undefined) {
+          updated = await renameManagedAgent(userId, agentId, body.data.name);
+        }
+        if (body.data.status === "active" || body.data.status === "paused") {
+          updated = await setManagedAgentStatus(userId, agentId, body.data.status);
+        }
+        return { agent: updated };
+      } catch (error) {
+        if (error instanceof AgentServiceError) {
+          return reply.code(error.statusCode).send({
+            error: { code: error.code, message: error.message }
+          });
+        }
+        throw error;
+      }
     }
 
     const existingParsedIntent = {
@@ -467,34 +455,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
-    const existing = await getAgent(userId, agentId);
-
-    if (!existing) {
-      return agentNotFound(reply);
+    try {
+      await deleteManagedAgent(userId, agentId);
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof AgentServiceError) {
+        return reply.code(error.statusCode).send({
+          error: { code: error.code, message: error.message }
+        });
+      }
+      throw error;
     }
-
-    if (existing.is_assistant) {
-      return reply.code(400).send({
-        error: {
-          code: "ASSISTANT_CANNOT_BE_DELETED",
-          message: "The Assistant contact is always available."
-        }
-      });
-    }
-
-    await removeScheduleForAgent(agentId);
-    await pool.query("DELETE FROM agents WHERE id = $1 AND user_id = $2", [
-      agentId,
-      userId
-    ]);
-    await publishRealtimeEvent({
-      type: "agent.updated",
-      user_id: userId,
-      agent_id: agentId,
-      data: { deleted: true }
-    });
-
-    return reply.code(204).send();
   });
 
   app.post("/agents/parse", { preHandler: requireAuth }, async (request, reply) => {

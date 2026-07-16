@@ -1156,6 +1156,46 @@ async function fetchRepositories(
   return githubJson<GitHubRepository[]>(url, accessToken, userId);
 }
 
+export async function readGitHubForAssistant(
+  userId: string,
+  input: { query?: string; limit?: number }
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const accessToken = await githubAccessToken(userId);
+  if (!accessToken) throw githubAuthRequired("github_not_connected");
+  const query = input.query?.trim().toLowerCase();
+  const repos = (await fetchRepositories(accessToken, userId))
+    .filter((repo) =>
+      !query ||
+      repo.full_name.toLowerCase().includes(query) ||
+      repo.description?.toLowerCase().includes(query)
+    )
+    .slice(0, Math.min(input.limit ?? 8, 10));
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const until = new Date().toISOString();
+  const commits = await Promise.all(
+    repos.slice(0, 3).map((repo) =>
+      fetchCommits(accessToken, userId, repo.full_name, since, until)
+    )
+  );
+  return {
+    summary: repos.length === 0
+      ? "No matching GitHub repositories were found."
+      : repos.map((repo, index) => {
+          const recent = (commits[index] ?? []).slice(0, 3)
+            .map((commit) => commit.commit.message.split("\n")[0])
+            .join("; ");
+          return `- ${repo.full_name}${repo.description ? ` — ${repo.description}` : ""}${recent ? `\n  Recent commits: ${recent}` : ""}`;
+        }).join("\n"),
+    sourceRefs: repos.map((repo) => ({
+      type: "github_repository",
+      source: "GitHub",
+      id: String(repo.id),
+      name: repo.full_name,
+      url: repo.html_url
+    }))
+  };
+}
+
 async function searchAssignedActivity(
   accessToken: string,
   userId: string,

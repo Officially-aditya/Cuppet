@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
 import '../../models/message.dart';
+import '../../models/attachment.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/connectors_provider.dart';
 import '../../providers/messages_provider.dart';
@@ -139,7 +140,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final initialMessage = widget.initialMessage?.trim();
     if (initialMessage != null && initialMessage.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _sendReply(initialMessage);
+        if (mounted) _sendReply(initialMessage, const []);
       });
     }
   }
@@ -536,7 +537,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
   }
 
-  Future<void> _sendReply(String text) async {
+  Future<void> _sendReply(
+    String text,
+    List<ComposerAttachment> attachments,
+  ) async {
     final toQuote = _replyToMessage;
     setState(() => _replyToMessage = null);
 
@@ -546,11 +550,27 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             : text;
 
     // Optimistic: show the user's message immediately.
-    final optimistic = Message.plainText(
+    final optimistic = Message(
       id: 'pending_${DateTime.now().microsecondsSinceEpoch}',
       threadId: _activeAgent.threadId,
       sender: MessageSender.user,
-      text: finalReplyText,
+      createdAt: DateTime.now(),
+      content: {
+        'template': 'plain_text',
+        'data': {
+          'body': finalReplyText,
+          if (attachments.isNotEmpty)
+            'attachments': [
+              for (final attachment in attachments)
+                {
+                  'id': attachment.id,
+                  'name': attachment.name,
+                  'mime_type': attachment.mimeType,
+                  'size': attachment.size,
+                },
+            ],
+        },
+      },
     );
     setState(() {
       _pendingUserMessage = optimistic;
@@ -559,14 +579,26 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     _scrollToBottomSoon();
 
     // Fire the API call in the background — don't block the ReplyBar.
-    unawaited(_sendReplyAsync(finalReplyText));
+    unawaited(
+      _sendReplyAsync(
+        finalReplyText,
+        attachments.map((attachment) => attachment.id).toList(),
+      ),
+    );
   }
 
-  Future<void> _sendReplyAsync(String text) async {
+  Future<void> _sendReplyAsync(
+    String text,
+    List<String> attachmentIds,
+  ) async {
     try {
       await ref
           .read(messageActionsProvider)
-          .sendReply(threadId: _activeAgent.threadId, text: text);
+          .sendReply(
+            threadId: _activeAgent.threadId,
+            text: text,
+            attachmentIds: attachmentIds,
+          );
       // A text reply can request an asynchronous run (for example, "run now").
       // Keep polling as a fallback when a realtime event is delayed or missed.
       _scheduleRunRefreshes();
@@ -673,7 +705,30 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
     if (actionType == 'generate_draft') {
       final title = action['title']?.toString() ?? '';
-      await _sendReply('Generate draft for idea: "$title"');
+      await _sendReply('Generate draft for idea: "$title"', const []);
+      return;
+    }
+
+    if (actionType == 'assistant_pending_action') {
+      final decision = action['decision']?.toString();
+      final pendingActionId = action['pending_action_id']?.toString();
+      if (decision == null || pendingActionId == null) return;
+      try {
+        await ref
+            .read(messageActionsProvider)
+            .sendAssistantAction(
+              threadId: _activeAgent.threadId,
+              decision: decision,
+              pendingActionId: pendingActionId,
+            );
+        ref.invalidate(messagesProvider(_activeAgent.threadId));
+        ref.invalidate(agentsProvider);
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
       return;
     }
 
