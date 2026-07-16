@@ -19,33 +19,24 @@ import { createMessageArchiveWorker } from "./workers/message-archive-worker.js"
 initializeFirebase();
 
 const app = await buildApp();
-const embeddedWorker = config.RUN_AGENT_WORKER_IN_API
-  ? createAgentExecutorWorker()
-  : null;
-const embeddedArchiveWorker = config.RUN_AGENT_WORKER_IN_API && config.MESSAGE_ARCHIVE_ENABLED
-  ? createMessageArchiveWorker()
-  : null;
+const embeddedWorker = createAgentExecutorWorker();
+const embeddedArchiveWorker = createMessageArchiveWorker();
 
-if (embeddedWorker) {
-  setAgentWorkerRuntimeStatus("starting");
-  embeddedWorker.on("ready", () => {
-    setAgentWorkerRuntimeStatus("ready");
-    app.log.info("Embedded agent worker is ready");
-  });
-  embeddedWorker.on("completed", (job, result) => {
-    app.log.info({ jobId: job.id, result }, "Agent job completed");
-  });
-  embeddedWorker.on("failed", (job, error) => {
-    app.log.error({ jobId: job?.id, error }, "Agent job failed");
-  });
-  embeddedWorker.on("error", (error) => {
-    setAgentWorkerRuntimeStatus("error");
-    app.log.error({ error }, "Embedded agent worker error");
-  });
-} else {
-  setAgentWorkerRuntimeStatus("disabled");
-  app.log.info("Embedded agent worker disabled; expecting a dedicated worker service");
-}
+setAgentWorkerRuntimeStatus("starting");
+embeddedWorker.on("ready", () => {
+  setAgentWorkerRuntimeStatus("ready");
+  app.log.info("Embedded agent worker is ready");
+});
+embeddedWorker.on("completed", (job, result) => {
+  app.log.info({ jobId: job.id, result }, "Agent job completed");
+});
+embeddedWorker.on("failed", (job, error) => {
+  app.log.error({ jobId: job?.id, error }, "Agent job failed");
+});
+embeddedWorker.on("error", (error) => {
+  setAgentWorkerRuntimeStatus("error");
+  app.log.error({ error }, "Embedded agent worker error");
+});
 
 async function cleanExpiredUploads(): Promise<void> {
   try {
@@ -75,14 +66,10 @@ async function runAssistantRetentionCleanup(): Promise<void> {
 }
 
 try {
-  if (embeddedWorker) {
-    await waitForWorkerReady(embeddedWorker.waitUntilReady(), 15_000);
-    setAgentWorkerRuntimeStatus("ready");
-  }
-  if (embeddedArchiveWorker) {
-    await waitForWorkerReady(embeddedArchiveWorker.waitUntilReady(), 15_000);
-    app.log.info("Embedded message archive worker is ready");
-  }
+  await waitForWorkerReady(embeddedWorker.waitUntilReady(), 15_000);
+  setAgentWorkerRuntimeStatus("ready");
+  await waitForWorkerReady(embeddedArchiveWorker.waitUntilReady(), 15_000);
+  app.log.info("Embedded message archive worker is ready");
   await syncActiveAgentSchedules(app.log);
   
   // Prune temporary binaries and Assistant records immediately and hourly.
@@ -95,15 +82,13 @@ try {
   // Keep track of the timer so we can clear it on shutdown if needed, or let it run
   cleanupTimer.unref();
 
-  if (config.MESSAGE_ARCHIVE_ENABLED) {
-    await coordinateMessageArchives();
-    const archiveTimer = setInterval(() => {
-      coordinateMessageArchives().catch((error) =>
-        app.log.error({ error }, "Failed to coordinate message archives")
-      );
-    }, 60 * 60 * 1000);
-    archiveTimer.unref();
-  }
+  await coordinateMessageArchives();
+  const archiveTimer = setInterval(() => {
+    coordinateMessageArchives().catch((error) =>
+      app.log.error({ error }, "Failed to coordinate message archives")
+    );
+  }, 60 * 60 * 1000);
+  archiveTimer.unref();
 
   const renewGmailWatches = async () => {
     const [gmail, google] = await Promise.all([
@@ -143,11 +128,9 @@ try {
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   app.log.info({ signal }, "Shutting down API server");
   await app.close();
-  if (embeddedWorker) {
-    await embeddedWorker.close();
-    setAgentWorkerRuntimeStatus("closed");
-  }
-  if (embeddedArchiveWorker) await embeddedArchiveWorker.close();
+  await embeddedWorker.close();
+  setAgentWorkerRuntimeStatus("closed");
+  await embeddedArchiveWorker.close();
   await closeQueue();
   await closeDatabase();
   process.exit(0);

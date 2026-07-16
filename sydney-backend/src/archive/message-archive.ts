@@ -114,10 +114,6 @@ export async function updateMessageArchiveSetting(input: {
     );
     return getMessageArchiveState(input.userId);
   }
-  if (!config.MESSAGE_ARCHIVE_ENABLED) {
-    throw new MessageArchiveError("MESSAGE_ARCHIVE_DISABLED", "Conversation archiving is not available yet.", 409);
-  }
-
   const scope = await pool.query<{ allowed: boolean }>(
     `SELECT EXISTS (
        SELECT 1 FROM connector_tokens
@@ -164,7 +160,6 @@ export async function markMessageArchiveDisconnected(userId: string): Promise<vo
 }
 
 export async function coordinateMessageArchives(): Promise<number> {
-  if (!config.MESSAGE_ARCHIVE_ENABLED) return 0;
   const { rows } = await pool.query<{ user_id: string }>(
     `SELECT user_id FROM message_archive_settings
      WHERE enabled = TRUE AND status IN ('active', 'action_required')`
@@ -174,7 +169,6 @@ export async function coordinateMessageArchives(): Promise<number> {
 }
 
 export async function exportAvailableMessages(userId: string): Promise<{ batches: number; messages: number; bytes: number }> {
-  if (!config.MESSAGE_ARCHIVE_ENABLED) return { batches: 0, messages: 0, bytes: 0 };
   const setting = await getMessageArchiveState(userId);
   if (!setting.enabled) return { batches: 0, messages: 0, bytes: 0 };
   const token = await archiveDriveToken(userId);
@@ -184,10 +178,9 @@ export async function exportAvailableMessages(userId: string): Promise<{ batches
      LEFT JOIN message_archive_entries AS entry ON entry.message_id = message.id
      WHERE message.user_id = $1 AND entry.message_id IS NULL
        AND message.created_at <= NOW() - INTERVAL '24 hours'
-       AND ($2::boolean = FALSE OR
-            message.created_at > NOW() - ($3::int * INTERVAL '1 day'))
+       AND message.created_at > NOW() - ($2::int * INTERVAL '1 day')
      ORDER BY message.agent_id`,
-    [userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+    [userId, config.MESSAGE_RETENTION_DAYS]
   );
   let batches = 0;
   let messages = 0;
@@ -224,12 +217,11 @@ async function exportAgentMessages(userId: string, agentId: string, token: strin
        WHERE message.user_id = $1 AND message.agent_id = $2
          AND entry.message_id IS NULL
          AND message.created_at <= NOW() - INTERVAL '24 hours'
-         AND ($3::boolean = FALSE OR
-              message.created_at > NOW() - ($4::int * INTERVAL '1 day'))
+         AND message.created_at > NOW() - ($3::int * INTERVAL '1 day')
        GROUP BY message.id, agent.name
        ORDER BY message.created_at ASC, message.id ASC
        LIMIT 3000`,
-      [userId, agentId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+      [userId, agentId, config.MESSAGE_RETENTION_DAYS]
     );
     const byDate = new Map<string, ArchiveSourceRow[]>();
     for (const row of source.rows) {

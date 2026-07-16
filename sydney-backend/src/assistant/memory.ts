@@ -791,8 +791,7 @@ export async function assembleAssistantKernel(
          ON ma.message_id = m.id
         AND ma.context_expires_at > NOW()
        WHERE m.user_id = $1 AND m.agent_id = $2
-         AND ($5::boolean = FALSE OR
-              m.created_at > NOW() - ($4::int * INTERVAL '1 day'))
+         AND m.created_at > NOW() - ($4::int * INTERVAL '1 day')
        GROUP BY m.id, m.source_refs
        ORDER BY m.created_at DESC
        LIMIT $3`,
@@ -800,8 +799,7 @@ export async function assembleAssistantKernel(
         userId,
         assistantId,
         maxMessages,
-        config.MESSAGE_RETENTION_DAYS,
-        config.MESSAGE_RETENTION_ENABLED
+        config.MESSAGE_RETENTION_DAYS
       ]
     ),
     listConfirmedMemories(userId),

@@ -142,10 +142,9 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           AND agent_id = $2
           AND role IN ('agent', 'system')
           AND read_at IS NULL
-          AND ($3::boolean = FALSE OR
-               created_at > NOW() - ($4::int * INTERVAL '1 day'))
+          AND created_at > NOW() - ($3::int * INTERVAL '1 day')
       `,
-      [userId, agentId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+      [userId, agentId, config.MESSAGE_RETENTION_DAYS]
     );
 
     const { rows } = await pool.query(
@@ -153,8 +152,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         SELECT id, agent_id, user_id, role, content, source_refs, read_at, created_at
         FROM agent_messages
         WHERE user_id = $1 AND agent_id = $2
-          AND ($4::boolean = FALSE OR
-               created_at > NOW() - ($5::int * INTERVAL '1 day'))
+          AND created_at > NOW() - ($4::int * INTERVAL '1 day')
           AND (content->'data'->>'action_taken' IS NULL OR content->'data'->>'action_taken' != 'skip')
         ORDER BY
           created_at DESC,
@@ -170,7 +168,6 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         userId,
         agentId,
         limit,
-        config.MESSAGE_RETENTION_ENABLED,
         config.MESSAGE_RETENTION_DAYS
       ]
     );
@@ -187,8 +184,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
             id, agent_id, user_id, role, content, source_refs, read_at, created_at
           FROM agent_messages
           WHERE user_id = $1
-            AND ($2::boolean = FALSE OR
-                 created_at > NOW() - ($3::int * INTERVAL '1 day'))
+            AND created_at > NOW() - ($2::int * INTERVAL '1 day')
             AND role = 'agent'
             AND content->>'template' = 'briefing_card'
             AND content #>> '{data,home_dismissed_at}' IS NULL
@@ -197,7 +193,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         ORDER BY created_at DESC
         LIMIT 6
       `,
-      [userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+      [userId, config.MESSAGE_RETENTION_DAYS]
     );
     return { briefings: rows };
   });
@@ -223,12 +219,11 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           WHERE id = $1
             AND agent_id = $2
             AND user_id = $3
-            AND ($4::boolean = FALSE OR
-                 created_at > NOW() - ($5::int * INTERVAL '1 day'))
+            AND created_at > NOW() - ($4::int * INTERVAL '1 day')
             AND role = 'agent'
             AND content->>'template' = 'briefing_card'
         `,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
       );
       const source = rows[0];
       if (!source) {
@@ -487,11 +482,10 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           UPDATE agent_messages
           SET read_at = COALESCE(read_at, NOW())
           WHERE id = $1 AND agent_id = $2 AND user_id = $3
-            AND ($4::boolean = FALSE OR
-                 created_at > NOW() - ($5::int * INTERVAL '1 day'))
+            AND created_at > NOW() - ($4::int * INTERVAL '1 day')
           RETURNING id, agent_id, user_id, role, content, source_refs, read_at, created_at
         `,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
       );
 
       if (!rows[0]) {
@@ -972,12 +966,11 @@ async function latestAgentReplyText(
       WHERE user_id = $1
         AND agent_id = $2
         AND role = 'agent'
-        AND ($3::boolean = FALSE OR
-             created_at > NOW() - ($4::int * INTERVAL '1 day'))
+        AND created_at > NOW() - ($3::int * INTERVAL '1 day')
       ORDER BY created_at DESC
       LIMIT 1
     `,
-    [userId, agentId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+    [userId, agentId, config.MESSAGE_RETENTION_DAYS]
   );
 
   return rows[0] ? extractBodyFromContent(rows[0].content) : null;
@@ -1002,8 +995,7 @@ async function latestAssistantBriefingContext(
       FROM agent_messages
       WHERE user_id = $1
         AND agent_id = $2
-        AND ($3::boolean = FALSE OR
-             created_at > NOW() - ($4::int * INTERVAL '1 day'))
+        AND created_at > NOW() - ($3::int * INTERVAL '1 day')
         AND (
           content->'data'->'briefing_context' IS NOT NULL
           OR (
@@ -1014,7 +1006,7 @@ async function latestAssistantBriefingContext(
       ORDER BY created_at DESC
       LIMIT 1
     `,
-    [userId, assistantId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+    [userId, assistantId, config.MESSAGE_RETENTION_DAYS]
   );
   const context = rows[0];
   if (!context?.briefing_context) return null;
@@ -1036,12 +1028,11 @@ async function latestAgentReply(
       WHERE user_id = $1
         AND agent_id = $2
         AND role = 'agent'
-        AND ($3::boolean = FALSE OR
-             created_at > NOW() - ($4::int * INTERVAL '1 day'))
+        AND created_at > NOW() - ($3::int * INTERVAL '1 day')
       ORDER BY created_at DESC
       LIMIT 1
     `,
-    [userId, agentId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+    [userId, agentId, config.MESSAGE_RETENTION_DAYS]
   );
 
   if (!rows[0]) {
@@ -1069,12 +1060,11 @@ async function recentUserMessageTexts(
       WHERE user_id = $1
         AND agent_id = $2
         AND role = 'user'
-        AND ($4::boolean = FALSE OR
-             created_at > NOW() - ($5::int * INTERVAL '1 day'))
+        AND created_at > NOW() - ($4::int * INTERVAL '1 day')
       ORDER BY created_at DESC
       LIMIT $3
     `,
-    [userId, agentId, limit, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+    [userId, agentId, limit, config.MESSAGE_RETENTION_DAYS]
   );
 
   return rows
@@ -1409,8 +1399,7 @@ async function ensureGitHubSetupMessage(
           FROM agent_messages
           WHERE user_id = $1
             AND agent_id = $2
-            AND ($4::boolean = FALSE OR
-                 created_at > NOW() - ($5::int * INTERVAL '1 day'))
+            AND created_at > NOW() - ($4::int * INTERVAL '1 day')
             AND content->'data'->'actions' @> $3::jsonb
         ) AS exists
       `,
@@ -1418,7 +1407,6 @@ async function ensureGitHubSetupMessage(
         userId,
         agent.id,
         JSON.stringify([{ connector_id: "github" }]),
-        config.MESSAGE_RETENTION_ENABLED,
         config.MESSAGE_RETENTION_DAYS
       ]
     );

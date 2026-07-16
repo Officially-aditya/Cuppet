@@ -135,19 +135,10 @@ export async function handleAssistantMessage(input: {
       );
     }
   }
-  const kernel = config.ASSISTANT_MEMORY_ENABLED
-    ? await assembleAssistantKernel(input.userId, input.assistantId)
-    : {
-        stm: [],
-        ltm: [],
-        pendingAction: null,
-        evidenceTree: {
-          assistantId: input.assistantId,
-          messageIds: [],
-          attachmentIds: [],
-          sourceReferences: []
-        }
-      };
+  const kernel = await assembleAssistantKernel(
+    input.userId,
+    input.assistantId
+  );
 
   const attachments = await loadAndAnalyzeAttachments(
     input.userId,
@@ -279,14 +270,6 @@ async function executeRoute(input: {
   if (input.confirmAgentTarget) {
     const intent = selectionIntentForRoute(route);
     if (intent) {
-      if (
-        intent.kind !== "agent_status" &&
-        !config.ASSISTANT_AGENT_MANAGEMENT_ENABLED
-      ) {
-        return {
-          content: plainText("Assistant agent management is not enabled yet.")
-        };
-      }
       return createAgentSelection(input, route, intent);
     }
   }
@@ -399,18 +382,12 @@ async function executeRoute(input: {
     route.kind === "agent_rename" ||
     route.kind === "agent_update"
   ) {
-    if (!config.ASSISTANT_AGENT_MANAGEMENT_ENABLED) {
-      return { content: plainText("Assistant agent management is not enabled yet.") };
-    }
     return manageAgentRoute(input, route);
   }
   if (route.kind === "create_agent") {
     return createAgentFromAssistant(input);
   }
   if (route.kind === "connector_query") {
-    if (!config.ASSISTANT_CONNECTOR_TOOLS_ENABLED) {
-      return { content: plainText("Assistant connector questions are not enabled yet.") };
-    }
     const result = await executeAssistantConnectorReads(
       input.userId,
       input.text,
@@ -635,9 +612,6 @@ async function handleAgentSelection(
     resumedRoute.kind !== "agent_update"
   ) {
     return { content: plainText("That agent request could not be resumed safely.") };
-  }
-  if (!config.ASSISTANT_AGENT_MANAGEMENT_ENABLED) {
-    return { content: plainText("Assistant agent management is not enabled yet.") };
   }
   return applyManagedAgentRoute(input, resumedRoute, selected);
 }
@@ -1031,7 +1005,7 @@ async function writeUserTurn(input: {
       attachments: input.attachments
     });
     let memoryResult: MemoryRecordResult | null = null;
-    if (config.ASSISTANT_MEMORY_ENABLED && input.text) {
+    if (input.text) {
       const observation = extractMemoryObservation(input.text);
       if (observation) {
         memoryResult = await recordMemoryObservation(client, {
@@ -1257,12 +1231,12 @@ async function latestBriefing(
      COALESCE(source_refs, '[]'::jsonb) AS source_refs
      FROM agent_messages
      WHERE user_id = $1 AND agent_id = $2
-       AND ($4::boolean = FALSE OR created_at > NOW() - ($3::int * INTERVAL '1 day'))
+       AND created_at > NOW() - ($3::int * INTERVAL '1 day')
        AND (content->'data'->'briefing_context' IS NOT NULL OR
          (content->>'template' = 'briefing_card' AND
           content #>> '{data,assistant_context}' = 'true'))
      ORDER BY created_at DESC LIMIT 1`,
-    [userId, assistantId, config.MESSAGE_RETENTION_DAYS, config.MESSAGE_RETENTION_ENABLED]
+    [userId, assistantId, config.MESSAGE_RETENTION_DAYS]
   );
   return rows[0]
     ? { briefing: JSON.stringify(rows[0].briefing_context), sourceRefs: rows[0].source_refs }

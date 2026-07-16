@@ -28,8 +28,7 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
 
   app.get("/health", async (_request, reply) => {
     const workerStatus = agentWorkerRuntimeStatus();
-    const healthy =
-      !config.RUN_AGENT_WORKER_IN_API || workerStatus === "ready";
+    const healthy = workerStatus === "ready";
     return reply.code(healthy ? 200 : 503).send({
       status: healthy ? "ok" : "unavailable",
       service: "sydney-backend",
@@ -45,9 +44,9 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
       const msgs = await pool.query(
         `SELECT id, role, content, created_at FROM agent_messages
          WHERE agent_id = $1
-           AND ($2::boolean = FALSE OR created_at > NOW() - ($3::int * INTERVAL '1 day'))
+           AND created_at > NOW() - ($2::int * INTERVAL '1 day')
          ORDER BY created_at DESC LIMIT 3`,
-        [agent.id, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        [agent.id, config.MESSAGE_RETENTION_DAYS]
       );
       messages.push({ agentName: agent.name, agentId: agent.id, messages: msgs.rows });
     }

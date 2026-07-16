@@ -84,8 +84,7 @@ export async function cleanAssistantRetention(): Promise<AssistantRetentionCount
     );
 
     // One warning per opt-in user when an unarchived message reaches day 27.
-    if (config.MESSAGE_ARCHIVE_ENABLED) {
-      const warnings = await client.query<{ user_id: string }>(
+    const warnings = await client.query<{ user_id: string }>(
         `UPDATE message_archive_settings AS setting
          SET status = 'action_required',
              error_code = COALESCE(setting.error_code, 'archive_incomplete_day_27'),
@@ -103,14 +102,12 @@ export async function cleanAssistantRetention(): Promise<AssistantRetentionCount
            )
          RETURNING setting.user_id`,
         [config.MESSAGE_RETENTION_DAYS]
-      );
-      warnings.rows.forEach((row) => warningUsers.add(row.user_id));
-    }
+    );
+    warnings.rows.forEach((row) => warningUsers.add(row.user_id));
 
     let chatMessages = 0;
     let archiveFailureReceipts = 0;
-    if (config.MESSAGE_RETENTION_DELETION_ENABLED) {
-      const expired = await client.query<ExpiredMessage>(
+    const expired = await client.query<ExpiredMessage>(
         `SELECT message.id, message.user_id, message.agent_id, message.created_at,
                 (entry.message_id IS NOT NULL) AS archived,
                 COALESCE(setting.enabled, FALSE) AS archive_enabled
@@ -122,9 +119,9 @@ export async function cleanAssistantRetention(): Promise<AssistantRetentionCount
          LIMIT $2
          FOR UPDATE OF message SKIP LOCKED`,
         [config.MESSAGE_RETENTION_DAYS, deleteBatchSize]
-      );
+    );
 
-      if (expired.rows.length > 0) {
+    if (expired.rows.length > 0) {
         const messageIds = expired.rows.map((row) => row.id);
         const pairs = [...new Map(
           expired.rows.map((row) => [`${row.user_id}:${row.agent_id}`, row])
@@ -146,8 +143,7 @@ export async function cleanAssistantRetention(): Promise<AssistantRetentionCount
         );
         const archivedIds = new Set(archivedNow.rows.map((row) => row.message_id));
         const failureRows = expired.rows.filter(
-          (row) => config.MESSAGE_ARCHIVE_ENABLED &&
-            row.archive_enabled &&
+          (row) => row.archive_enabled &&
             !archivedIds.has(row.id)
         );
         if (failureRows.length > 0) {
@@ -202,7 +198,6 @@ export async function cleanAssistantRetention(): Promise<AssistantRetentionCount
            WHERE agent.id = affected.agent_id`,
           [...pairs.map((pair) => pair.agent_id), config.MESSAGE_RETENTION_DAYS]
         );
-      }
     }
 
     await client.query("COMMIT");

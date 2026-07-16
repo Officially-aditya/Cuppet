@@ -169,13 +169,6 @@ export async function analyzeAttachments(
 
 async function analyzeAttachment(file: OwnedAttachment): Promise<AnalyzedAttachment> {
   try {
-    if (!config.ASSISTANT_ATTACHMENT_ANALYSIS_ENABLED) {
-      return {
-        ...file,
-        extractedContext: "Attachment analysis is not enabled yet.",
-        analysisStatus: "unsupported"
-      };
-    }
     if (imageMimes.has(file.mime_type)) {
       if (!llmConfigured()) {
         return {

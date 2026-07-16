@@ -105,7 +105,6 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           ) AS last_message_preview,
           COALESCE(
             latest_message.created_at,
-            CASE WHEN $3::boolean = FALSE THEN a.last_message_at ELSE NULL END,
             a.updated_at,
             a.created_at
           ) AS latest_message_at,
@@ -115,8 +114,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           SELECT id, role, content, created_at
           FROM agent_messages
           WHERE agent_id = a.id AND user_id = a.user_id
-            AND ($3::boolean = FALSE OR
-                 created_at > NOW() - ($2::int * INTERVAL '1 day'))
+            AND created_at > NOW() - ($2::int * INTERVAL '1 day')
             AND (content->'data'->>'action_taken' IS NULL OR content->'data'->>'action_taken' != 'skip')
           ORDER BY
             created_at DESC,
@@ -133,8 +131,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           FROM agent_messages
           WHERE agent_id = a.id
             AND user_id = a.user_id
-            AND ($3::boolean = FALSE OR
-                 created_at > NOW() - ($2::int * INTERVAL '1 day'))
+            AND created_at > NOW() - ($2::int * INTERVAL '1 day')
             AND role IN ('agent', 'system')
             AND read_at IS NULL
         ) unread_messages ON TRUE
@@ -146,7 +143,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           latest_message_at DESC NULLS LAST,
           a.created_at DESC
       `,
-      [userId, config.MESSAGE_RETENTION_DAYS, config.MESSAGE_RETENTION_ENABLED]
+      [userId, config.MESSAGE_RETENTION_DAYS]
     );
 
     return { agents: rows };
@@ -535,10 +532,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         SELECT 1
         FROM agent_messages
         WHERE id = $1 AND agent_id = $2 AND user_id = $3
-          AND ($4::boolean = FALSE OR created_at > NOW() - ($5::int * INTERVAL '1 day'))
+          AND created_at > NOW() - ($4::int * INTERVAL '1 day')
         LIMIT 1
       `,
-      [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+      [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
     );
     if (!ownedMessage.rows[0]) {
       return reply.code(404).send({
@@ -554,8 +551,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     if (action === "done") {
       // 1. Mark current card as completed and set action_taken to "done"
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'true'::jsonb), '{data,action_taken}', '"done"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND ($4::boolean = FALSE OR created_at > NOW() - ($5::int * INTERVAL '1 day'))`,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'true'::jsonb), '{data,action_taken}', '"done"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')`,
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
       );
       // 2. Append completed day to history heatmap
       await pool.query(
@@ -565,8 +562,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     } else if (action === "skip") {
       // Get the message content to check template and retrieve the topic or title
       const msgRes = await pool.query(
-        "SELECT content FROM agent_messages WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND ($4::boolean = FALSE OR created_at > NOW() - ($5::int * INTERVAL '1 day'))",
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        "SELECT content FROM agent_messages WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')",
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
       );
       const msg = msgRes.rows[0];
       if (msg) {
@@ -616,8 +613,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
 
       // Mark card as not completed and set action_taken to "skip"
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'false'::jsonb), '{data,action_taken}', '"skip"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND ($4::boolean = FALSE OR created_at > NOW() - ($5::int * INTERVAL '1 day'))`,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'false'::jsonb), '{data,action_taken}', '"skip"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')`,
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
       );
       await pool.query(
         `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history}', coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, false)) WHERE id = $2 AND user_id = $3`,
@@ -626,8 +623,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     } else if (action === "snooze") {
       // Set action_taken to "snooze"
       await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(content, '{data,action_taken}', '"snooze"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND ($4::boolean = FALSE OR created_at > NOW() - ($5::int * INTERVAL '1 day'))`,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
+        `UPDATE agent_messages SET content = jsonb_set(content, '{data,action_taken}', '"snooze"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')`,
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
       );
       // bullmq enqueue with delay of 30 minutes
       await agentExecutorQueue.add(
