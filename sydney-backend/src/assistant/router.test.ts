@@ -41,6 +41,23 @@ test("routes explicit agent management without treating ordinary chat as an upda
   });
 });
 
+test("routes agent count questions to internal agent data", () => {
+  for (const message of [
+    "How many agents have I created?",
+    "How many specialist agents do I have?",
+    "What is my agent count?",
+    "Count my agents"
+  ]) {
+    assert.deepEqual(routeAssistantMessage(message), {
+      kind: "agent_list",
+      countOnly: true
+    });
+  }
+  assert.deepEqual(routeAssistantMessage("How many agents should I create?"), {
+    kind: "chat"
+  });
+});
+
 test("explicit creation wins over connector query language", () => {
   assert.deepEqual(
     routeAssistantMessage("Create an agent that sends tomorrow's meetings daily"),

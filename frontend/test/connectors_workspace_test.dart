@@ -5,9 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/design/workspace_palette.dart';
 import 'package:sydney/models/connector.dart';
-import 'package:sydney/models/message_archive.dart';
 import 'package:sydney/providers/connectors_provider.dart';
-import 'package:sydney/providers/message_archive_provider.dart';
 import 'package:sydney/screens/connectors/connectors_screen.dart';
 import 'package:sydney/widgets/connectors/connector_list_item.dart';
 import 'package:sydney/widgets/sydney_primitives.dart';
@@ -47,17 +45,6 @@ class _LoadingConnectorsController extends ConnectorsController {
 class _DriveConnectorsController extends ConnectorsController {
   @override
   Future<List<Connector>> build() async => const [_driveConnector];
-}
-
-class _ActiveArchiveController extends MessageArchiveController {
-  @override
-  Future<MessageArchiveState> build() async => MessageArchiveState(
-    enabled: true,
-    status: 'active',
-    actionRequired: false,
-    folderLink: Uri.parse('https://drive.google.com/drive/folders/folder-1'),
-    lastSuccessAt: DateTime.utc(2026, 7, 16, 12),
-  );
 }
 
 class _FailingConnectorsController extends ConnectorsController {
@@ -180,41 +167,20 @@ void main() {
     expect(find.textContaining('offline'), findsOneWidget);
   });
 
-  testWidgets('Drive card keeps archive consent separate and destructive', (
+  testWidgets('Drive card keeps archive settings out of Connectors', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          connectorsProvider.overrideWith(_DriveConnectorsController.new),
-          messageArchiveProvider.overrideWith(_ActiveArchiveController.new),
-        ],
-        child: const MaterialApp(home: ConnectorsScreen()),
-      ),
-    );
+    await tester.pumpWidget(_screenWith(_DriveConnectorsController.new));
     await tester.pumpAndSettle();
 
-    expect(find.text('Archive conversations to Google Drive'), findsOneWidget);
+    expect(find.text('Google Drive'), findsOneWidget);
+    expect(find.textContaining('Archive conversations'), findsNothing);
     expect(
-      find.textContaining('Drive search access does not enable this'),
-      findsOneWidget,
+      find.byKey(const ValueKey('drive-message-archive-toggle')),
+      findsNothing,
     );
-    expect(
-      tester
-          .widget<Switch>(
-            find.byKey(const ValueKey('drive-message-archive-toggle')),
-          )
-          .value,
-      isTrue,
-    );
-    await tester.tap(find.byKey(const ValueKey('delete-drive-archives')));
-    await tester.pumpAndSettle();
-    expect(find.text('Delete Drive archives?'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('confirm-delete-drive-archives')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('delete-drive-archives')), findsNothing);
   });
 }

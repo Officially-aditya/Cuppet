@@ -132,233 +132,259 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            const WorkspaceSectionLabel('Profile'),
-            const SizedBox(height: SydneySpacing.sm),
-            WorkspaceCard(
-              key: const ValueKey('settings-profile-card'),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: const BoxDecoration(
-                      color: CuppetWorkspaceColors.softSage,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initials,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: CuppetWorkspaceColors.primaryInk,
-                        fontWeight: FontWeight.w800,
+              const WorkspaceSectionLabel('Profile'),
+              const SizedBox(height: SydneySpacing.sm),
+              WorkspaceCard(
+                key: const ValueKey('settings-profile-card'),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: const BoxDecoration(
+                        color: CuppetWorkspaceColors.softSage,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        initials,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: CuppetWorkspaceColors.primaryInk,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: SydneySpacing.lg),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          displayName,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleSmall?.copyWith(
-                            color: CuppetWorkspaceColors.ink,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        if (email.isNotEmpty) ...[
-                          const SizedBox(height: SydneySpacing.xs),
+                    const SizedBox(width: SydneySpacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            email,
-                            overflow: TextOverflow.ellipsis,
+                            displayName,
                             style: Theme.of(
                               context,
-                            ).textTheme.bodySmall?.copyWith(
-                              color: CuppetWorkspaceColors.muted,
-                              fontWeight: FontWeight.w500,
+                            ).textTheme.titleSmall?.copyWith(
+                              color: CuppetWorkspaceColors.ink,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.xl),
-            const WorkspaceSectionLabel('Preferences'),
-            const SizedBox(height: SydneySpacing.sm),
-            WorkspaceCard(
-              key: const ValueKey('settings-push-card'),
-              child: Row(
-                children: [
-                  const _SettingsIcon(icon: Icons.notifications_outlined),
-                  const SizedBox(width: SydneySpacing.md),
-                  Expanded(
-                    child: _SettingsCopy(
-                      title: 'Push notifications',
-                      description:
-                          _pushEnabled
-                              ? 'Message and agent status alerts are active.'
-                              : 'Enable message and agent status alerts.',
-                    ),
-                  ),
-                  const SizedBox(width: SydneySpacing.sm),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                    child: Center(
-                      child:
-                          _pushLoading
-                              ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: CuppetWorkspaceColors.primary,
-                                ),
-                              )
-                              : Switch.adaptive(
-                                value: _pushEnabled,
-                                activeTrackColor: CuppetWorkspaceColors.primary,
-                                activeThumbColor: Colors.white,
-                                onChanged: _togglePush,
+                          if (email.isNotEmpty) ...[
+                            const SizedBox(height: SydneySpacing.xs),
+                            Text(
+                              email,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color: CuppetWorkspaceColors.muted,
+                                fontWeight: FontWeight.w500,
                               ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            WorkspaceCard(
-              key: const ValueKey('settings-timezone-card'),
-              child: Row(
-                children: [
-                  const _SettingsIcon(icon: Icons.public_rounded),
-                  const SizedBox(width: SydneySpacing.md),
-                  Expanded(
-                    child: _SettingsCopy(
-                      title:
-                          followsDevice == false
-                              ? 'Fixed time zone'
-                              : 'Automatic time zone',
-                      description: _timeZoneDescription(
-                        displayedTimeZone: displayedTimeZone,
-                        followsDevice: followsDevice,
-                        syncPending: timeZoneState?.syncPending == true,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: SydneySpacing.sm),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
+                  ],
+                ),
+              ),
+              const SizedBox(height: SydneySpacing.xl),
+              const WorkspaceSectionLabel('Preferences'),
+              const SizedBox(height: SydneySpacing.sm),
+              WorkspaceCard(
+                key: const ValueKey('settings-push-card'),
+                child: Row(
+                  children: [
+                    const _SettingsIcon(icon: Icons.notifications_outlined),
+                    const SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: _SettingsCopy(
+                        title: 'Push notifications',
+                        description:
+                            _pushEnabled
+                                ? 'Message and agent status alerts are active.'
+                                : 'Enable message and agent status alerts.',
+                      ),
                     ),
-                    child: Center(
-                      child:
-                          timeZoneBusy
-                              ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: CuppetWorkspaceColors.primary,
+                    const SizedBox(width: SydneySpacing.sm),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      child: Center(
+                        child:
+                            _pushLoading
+                                ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: CuppetWorkspaceColors.primary,
+                                  ),
+                                )
+                                : Switch.adaptive(
+                                  value: _pushEnabled,
+                                  activeTrackColor:
+                                      CuppetWorkspaceColors.primary,
+                                  activeThumbColor: Colors.white,
+                                  onChanged: _togglePush,
                                 ),
-                              )
-                              : Switch.adaptive(
-                                key: const ValueKey(
-                                  'automatic-timezone-switch',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: SydneySpacing.md),
+              WorkspaceCard(
+                key: const ValueKey('settings-timezone-card'),
+                child: Row(
+                  children: [
+                    const _SettingsIcon(icon: Icons.public_rounded),
+                    const SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: _SettingsCopy(
+                        title:
+                            followsDevice == false
+                                ? 'Fixed time zone'
+                                : 'Automatic time zone',
+                        description: _timeZoneDescription(
+                          displayedTimeZone: displayedTimeZone,
+                          followsDevice: followsDevice,
+                          syncPending: timeZoneState?.syncPending == true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: SydneySpacing.sm),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      child: Center(
+                        child:
+                            timeZoneBusy
+                                ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: CuppetWorkspaceColors.primary,
+                                  ),
+                                )
+                                : Switch.adaptive(
+                                  key: const ValueKey(
+                                    'automatic-timezone-switch',
+                                  ),
+                                  value: followsDevice ?? true,
+                                  activeTrackColor:
+                                      CuppetWorkspaceColors.primary,
+                                  activeThumbColor: Colors.white,
+                                  onChanged:
+                                      timeZoneState?.preferencesLoaded == true
+                                          ? _toggleAutomaticTimeZone
+                                          : null,
                                 ),
-                                value: followsDevice ?? true,
-                                activeTrackColor: CuppetWorkspaceColors.primary,
-                                activeThumbColor: Colors.white,
-                                onChanged:
-                                    timeZoneState?.preferencesLoaded == true
-                                        ? _toggleAutomaticTimeZone
-                                        : null,
-                              ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            WorkspaceCard(
-              key: const ValueKey('settings-memory-card'),
-              onTap: () => Navigator.of(context).pushNamed(AppRoutes.memory),
-              child: const Row(
-                children: [
-                  _SettingsIcon(icon: Icons.psychology_alt_outlined),
-                  SizedBox(width: SydneySpacing.md),
-                  Expanded(
-                    child: _SettingsCopy(
-                      title: 'Memory',
-                      description:
-                          'Review confirmed details remembered by Assistant.',
+              const SizedBox(height: SydneySpacing.md),
+              WorkspaceCard(
+                key: const ValueKey('settings-memory-card'),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.memory),
+                child: const Row(
+                  children: [
+                    _SettingsIcon(icon: Icons.psychology_alt_outlined),
+                    SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: _SettingsCopy(
+                        title: 'Memory',
+                        description:
+                            'Review confirmed details remembered by Assistant.',
+                      ),
                     ),
-                  ),
-                  SizedBox(width: SydneySpacing.md),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: CuppetWorkspaceColors.primaryInk,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: SydneySpacing.xl),
-            const WorkspaceSectionLabel('Security'),
-            const SizedBox(height: SydneySpacing.sm),
-            WorkspaceCard(
-              key: const ValueKey('settings-connectors-card'),
-              onTap:
-                  () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-              child: const Row(
-                children: [
-                  _SettingsIcon(icon: Icons.hub_outlined),
-                  SizedBox(width: SydneySpacing.md),
-                  Expanded(
-                    child: _SettingsCopy(
-                      title: 'Connectors',
-                      description:
-                          'Review accounts approved for backend access.',
+                    SizedBox(width: SydneySpacing.md),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: CuppetWorkspaceColors.primaryInk,
+                      size: 20,
                     ),
-                  ),
-                  SizedBox(width: SydneySpacing.md),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: CuppetWorkspaceColors.primaryInk,
-                    size: 20,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: SydneySpacing.xl),
-            const WorkspaceSectionLabel('Privacy'),
-            const SizedBox(height: SydneySpacing.sm),
-            const WorkspaceCard(
-              key: ValueKey('settings-privacy-card'),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SettingsIcon(icon: Icons.shield_outlined),
-                  SizedBox(width: SydneySpacing.md),
-                  Expanded(
-                    child: _SettingsCopy(
-                      title: 'Session storage',
-                      description:
-                          'Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected.',
+              const SizedBox(height: SydneySpacing.md),
+              WorkspaceCard(
+                key: const ValueKey('settings-storage-card'),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.storage),
+                child: const Row(
+                  children: [
+                    _SettingsIcon(icon: Icons.storage_outlined),
+                    SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: _SettingsCopy(
+                        title: 'Storage',
+                        description:
+                            'Manage 30-day history and Google Drive archives.',
+                      ),
                     ),
-                  ),
-                ],
+                    SizedBox(width: SydneySpacing.md),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: CuppetWorkspaceColors.primaryInk,
+                      size: 20,
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: SydneySpacing.xl),
+              const WorkspaceSectionLabel('Security'),
+              const SizedBox(height: SydneySpacing.sm),
+              WorkspaceCard(
+                key: const ValueKey('settings-connectors-card'),
+                onTap:
+                    () => Navigator.of(context).pushNamed(AppRoutes.connectors),
+                child: const Row(
+                  children: [
+                    _SettingsIcon(icon: Icons.hub_outlined),
+                    SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: _SettingsCopy(
+                        title: 'Connectors',
+                        description:
+                            'Review accounts approved for backend access.',
+                      ),
+                    ),
+                    SizedBox(width: SydneySpacing.md),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: CuppetWorkspaceColors.primaryInk,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: SydneySpacing.xl),
+              const WorkspaceSectionLabel('Privacy'),
+              const SizedBox(height: SydneySpacing.sm),
+              const WorkspaceCard(
+                key: ValueKey('settings-privacy-card'),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SettingsIcon(icon: Icons.shield_outlined),
+                    SizedBox(width: SydneySpacing.md),
+                    Expanded(
+                      child: _SettingsCopy(
+                        title: 'Session storage',
+                        description:
+                            'Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

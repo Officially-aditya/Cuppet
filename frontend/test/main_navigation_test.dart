@@ -58,6 +58,8 @@ Widget navigationHost(Widget screen) {
       routes: {
         AppRoutes.connectors:
             (_) => const Scaffold(body: Text('Connectors destination')),
+        AppRoutes.storage:
+            (_) => const Scaffold(body: Text('Storage destination')),
       },
     ),
   );
@@ -112,6 +114,7 @@ void main() {
       find.byKey(const ValueKey('settings-connectors-card')),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('settings-storage-card')), findsOneWidget);
     expect(find.byType(WorkspaceSectionLabel), findsNWidgets(4));
     expect(find.text('Push notifications'), findsOneWidget);
     expect(find.text('Automatic time zone'), findsOneWidget);
@@ -126,6 +129,20 @@ void main() {
     );
     expect(find.byKey(const ValueKey('settings-privacy-card')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings opens Storage from its dedicated card', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(568, 768));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(navigationHost(const SettingsScreen()));
+    await tester.pumpAndSettle();
+
+    final storageCard = find.byKey(const ValueKey('settings-storage-card'));
+    await tester.scrollUntilVisible(storageCard, 180);
+    await tester.tap(storageCard);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Storage destination'), findsOneWidget);
   });
 
   testWidgets('settings keeps automatic timezone and connector actions wired', (

@@ -2,7 +2,7 @@ export type AssistantRoute =
   | { kind: "confirm"; decision: "confirm" | "cancel" }
   | { kind: "memory_list" }
   | { kind: "memory_forget"; target: string; all: boolean }
-  | { kind: "agent_list"; target?: string }
+  | { kind: "agent_list"; target?: string; countOnly?: boolean }
   | {
       kind: "agent_manage";
       operation: "pause" | "resume" | "run" | "delete";
@@ -53,6 +53,13 @@ export function routeAssistantMessage(
   }
   if (/^(?:(?:list|show)\s+(?:my\s+)?agents|(?:agent\s+)?status)$/i.test(trimmed)) {
     return { kind: "agent_list" };
+  }
+  if (
+    /^(?:how many\s+(?:specialist\s+)?agents?\s+(?:do i have|have i (?:created|made)|did i (?:create|make))|(?:what(?:'s| is)\s+)?my\s+(?:agent count|number of agents)|count\s+my\s+agents?)[?.!]*$/i.test(
+      trimmed
+    )
+  ) {
+    return { kind: "agent_list", countOnly: true };
   }
   const management = trimmed.match(
     /^(pause|resume|run|delete)\s+(?:agent\s+)?(.+?)[.!]?$/i

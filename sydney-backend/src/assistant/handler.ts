@@ -286,6 +286,13 @@ async function executeRoute(input: {
         )
       };
     }
+    if (route.countOnly) {
+      return {
+        content: plainText(
+          `You have created ${agents.length} specialist ${agents.length === 1 ? "agent" : "agents"}.`
+        )
+      };
+    }
     return {
       content: plainText(
         agents.length === 0
