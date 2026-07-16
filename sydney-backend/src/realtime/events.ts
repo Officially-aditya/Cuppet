@@ -9,6 +9,7 @@ const realtimeChannel = "sydney_realtime_events";
 export type RealtimeEventType =
   | "agent.created"
   | "agent.updated"
+  | "agent.deleted"
   | "message.created"
   | "messages.cleared"
   | "run.queued"

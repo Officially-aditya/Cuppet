@@ -267,10 +267,10 @@ export async function deleteManagedAgent(
     client.release();
   }
   await publishRealtimeEvent({
-    type: "agent.updated",
+    type: "agent.deleted",
     user_id: userId,
     agent_id: agentId,
-    data: { deleted: true }
+    data: {}
   });
   await recordManagedAgentAudit(userId, agentId, "delete", "applied");
   return existing;

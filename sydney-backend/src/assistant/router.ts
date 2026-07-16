@@ -15,6 +15,7 @@ export type AssistantRoute =
       kind: "connector_query";
       connectors: Array<"gmail" | "calendar" | "drive" | "github" | "slack" | "notion">;
     }
+  | { kind: "clarify"; subject: "agent" | "memory" | "connector" }
   | { kind: "chat" };
 
 export function routeAssistantMessage(

@@ -40,6 +40,14 @@ class _PendingAgentsController extends AgentsController {
   }
 }
 
+class _LoadedAgentsController extends AgentsController {
+  @override
+  Future<List<Agent>> build() async => [
+    _agentFor('account-a'),
+    _agentFor('account-b'),
+  ];
+}
+
 class _SwitchableAuthController extends AuthController {
   @override
   Future<AuthState> build() async => _account('account-a');
@@ -173,4 +181,18 @@ void main() {
       expect(service.requestCount, 2);
     },
   );
+
+  test('a deleted agent is removed from the local cache immediately', () async {
+    final container = ProviderContainer(
+      overrides: [agentsProvider.overrideWith(_LoadedAgentsController.new)],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(agentsProvider.future);
+    container.read(agentsProvider.notifier).removeAgent('account-a-agent');
+
+    expect(container.read(agentsProvider).value?.map((agent) => agent.id), [
+      'account-b-agent',
+    ]);
+  });
 }

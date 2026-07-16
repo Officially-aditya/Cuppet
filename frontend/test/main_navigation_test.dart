@@ -119,6 +119,17 @@ void main() {
     expect(find.text('Push notifications'), findsOneWidget);
     expect(find.text('Automatic time zone'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
+    final signOutButton = tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('settings-sign-out')),
+    );
+    expect(
+      signOutButton.style?.foregroundColor?.resolve(const {}),
+      SydneyColors.danger,
+    );
+    expect(
+      signOutButton.style?.side?.resolve(const {})?.color,
+      SydneyColors.danger,
+    );
     expect(find.text('Inbox'), findsOneWidget);
     expect(find.text('Connectors'), findsWidgets);
     expect(find.text('Settings'), findsWidgets);

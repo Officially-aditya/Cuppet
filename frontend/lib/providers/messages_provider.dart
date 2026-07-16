@@ -69,7 +69,9 @@ class MessageActions {
           attachmentIds: attachmentIds,
         );
     final updatedAgent = result.updatedAgent;
-    if (updatedAgent != null) {
+    if (result.deletedAgentId case final deletedAgentId?) {
+      _ref.read(agentsProvider.notifier).removeAgent(deletedAgentId);
+    } else if (updatedAgent != null) {
       _ref.read(agentsProvider.notifier).upsertAgent(updatedAgent);
     }
     _ref.invalidate(messagesProvider(threadId));
@@ -89,7 +91,9 @@ class MessageActions {
           pendingActionId: pendingActionId,
         );
     final updatedAgent = result.updatedAgent;
-    if (updatedAgent != null) {
+    if (result.deletedAgentId case final deletedAgentId?) {
+      _ref.read(agentsProvider.notifier).removeAgent(deletedAgentId);
+    } else if (updatedAgent != null) {
       _ref.read(agentsProvider.notifier).upsertAgent(updatedAgent);
     }
     _ref.invalidate(messagesProvider(threadId));
@@ -112,6 +116,12 @@ class MessageActions {
 
 void handleRealtimeEvent(WidgetRef ref, RealtimeEvent event) {
   final agentId = event.agentId;
+  final agentDeleted =
+      event.type == 'agent.deleted' || event.data['deleted'] == true;
+  if (agentDeleted && agentId != null && agentId.isNotEmpty) {
+    ref.read(agentsProvider.notifier).removeAgent(agentId);
+    return;
+  }
   if (agentId != null && agentId.isNotEmpty) {
     ref.invalidate(messagesProvider(agentId));
   }

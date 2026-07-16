@@ -45,4 +45,15 @@ class AgentsController extends AsyncNotifier<List<Agent>> {
     final withoutUpdated = current.where((agent) => agent.id != updated.id);
     state = AsyncValue.data(Agent.sortForInbox([...withoutUpdated, updated]));
   }
+
+  void removeAgent(String agentId) {
+    final current = state.asData?.value;
+    if (current == null) {
+      ref.invalidateSelf();
+      return;
+    }
+    state = AsyncValue.data(
+      current.where((agent) => agent.id != agentId).toList(growable: false),
+    );
+  }
 }

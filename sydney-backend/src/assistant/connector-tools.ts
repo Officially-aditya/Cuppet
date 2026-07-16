@@ -10,12 +10,6 @@ import {
   isConnectorAuthRequiredError,
   type ConnectorAuthRequiredError
 } from "../connectors/errors.js";
-import { z } from "zod";
-import {
-  createLlmMessage,
-  extractLlmText,
-  llmConfigured
-} from "../agents/llm.js";
 
 export type AssistantConnectorId =
   | "gmail"
@@ -41,44 +35,6 @@ export type AssistantConnectorReadResult = {
   }>;
   sourceRefs: unknown[];
 };
-
-const connectorClassificationSchema = z.object({
-  connectors: z
-    .array(z.enum(["gmail", "calendar", "drive", "github", "slack", "notion"]))
-    .max(3),
-  confidence: z.number().min(0).max(1)
-});
-
-export async function classifyAmbiguousConnectorQuery(
-  text: string
-): Promise<AssistantConnectorId[]> {
-  if (!llmConfigured() || !looksAmbiguousAndPrivate(text)) return [];
-  try {
-    const response = await createLlmMessage({
-      maxTokens: 120,
-      system:
-        "Classify which read-only private connector is required. Return JSON only: {\"connectors\":[],\"confidence\":0}. Allowed connectors: gmail, calendar, drive, github, slack, notion. Use an empty list for public web/general chat. Never answer the question.",
-      messages: [{ role: "user", content: text.slice(0, 1000) }]
-    });
-    const raw = extractLlmText(response.content);
-    const json = raw.match(/\{[\s\S]*\}/)?.[0];
-    if (!json) return [];
-    const parsed = connectorClassificationSchema.safeParse(JSON.parse(json));
-    return parsed.success && parsed.data.confidence >= 0.75
-      ? parsed.data.connectors
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function looksAmbiguousAndPrivate(text: string): boolean {
-  const lower = text.toLowerCase();
-  return (
-    /\b(?:i|me|my)\b/.test(lower) &&
-    /\b(?:today|tomorrow|this week|recent|latest|find|search|messages?|files?|activity|agenda|schedule)\b/.test(lower)
-  );
-}
 
 export async function executeAssistantConnectorReads(
   userId: string,

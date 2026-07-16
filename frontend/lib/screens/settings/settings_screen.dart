@@ -413,11 +413,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: const Icon(Icons.logout_rounded, size: 18),
               label: const Text('Sign out'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: CuppetWorkspaceColors.primaryInk,
+                foregroundColor: SydneyColors.danger,
                 backgroundColor: CuppetWorkspaceColors.card,
-                side: const BorderSide(
-                  color: CuppetWorkspaceColors.panelBorder,
-                ),
+                side: const BorderSide(color: SydneyColors.danger),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(SydneyRadius.md),
                 ),

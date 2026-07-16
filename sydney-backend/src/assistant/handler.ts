@@ -44,10 +44,10 @@ import {
   type MemoryRecordResult
 } from "./memory.js";
 import {
-  classifyAmbiguousConnectorQuery,
   connectorActionContent,
   executeAssistantConnectorReads
 } from "./connector-tools.js";
+import { classifyAssistantIntent } from "./intent-classifier.js";
 import { routeAssistantMessage, type AssistantRoute } from "./router.js";
 
 export type AssistantMessageRow = {
@@ -69,6 +69,7 @@ export type AssistantHandleResult = {
   agent?: ManagedAgent;
   source_references?: unknown[];
   pending_action?: Record<string, unknown>;
+  deleted_agent_id?: string;
   attachments?: ReturnType<typeof attachmentMetadata>;
   job?: { id: string | undefined; name: string };
 };
@@ -95,11 +96,17 @@ export async function handleAssistantMessage(input: {
   const text = input.text?.trim() ?? "";
   const currentInstruction = text || "Please analyze the attached files.";
   const activePending = await activePendingAction(input.userId, input.assistantId);
-  const route = input.action
+  let route = input.action
     ? actionRoute(input.action, Boolean(activePending))
     : routeAssistantMessage(currentInstruction, {
         hasPendingAction: Boolean(activePending)
       });
+  if (!input.action && text && route.kind === "chat") {
+    route =
+      (await classifyAssistantIntent(text, {
+        hasPendingAction: Boolean(activePending)
+      })) ?? route;
+  }
   const kernel = config.ASSISTANT_MEMORY_ENABLED
     ? await assembleAssistantKernel(input.userId, input.assistantId)
     : {
@@ -194,6 +201,9 @@ export async function handleAssistantMessage(input: {
     ...(outcome.pendingAction
       ? { pending_action: outcome.pendingAction }
       : {}),
+    ...(outcome.deletedAgentId
+      ? { deleted_agent_id: outcome.deletedAgentId }
+      : {}),
     ...(attachments.length
       ? { attachments: attachmentMetadata(attachments) }
       : {}),
@@ -205,6 +215,7 @@ type AssistantOutcome = {
   content: Record<string, unknown>;
   sourceRefs?: unknown[];
   pendingAction?: Record<string, unknown>;
+  deletedAgentId?: string;
   agent?: ManagedAgent;
   job?: { id: string | undefined; name: string };
 };
@@ -219,6 +230,17 @@ async function executeRoute(input: {
   kernel: Awaited<ReturnType<typeof assembleAssistantKernel>>;
 }): Promise<AssistantOutcome> {
   const { route } = input;
+  if (route.kind === "clarify") {
+    const prompts = {
+      agent:
+        "Tell me which agent you mean and whether you want to list, inspect, run, pause, resume, rename, update, or delete it.",
+      memory:
+        "Tell me whether you want to review memories, forget a specific detail, or forget everything.",
+      connector:
+        "Tell me which connected service and what private information you want me to read."
+    } as const;
+    return { content: plainText(prompts[route.subject]) };
+  }
   if (route.kind === "memory_list") {
     const [memories, compacted] = await Promise.all([
       listConfirmedMemories(input.userId),
@@ -346,16 +368,6 @@ async function executeRoute(input: {
       content: plainText(`${answer}${failureNote}${links ? `\n\n### Sources\n${links}` : ""}`),
       sourceRefs: result.sourceRefs
     };
-  }
-
-  if (route.kind === "chat" && config.ASSISTANT_CONNECTOR_TOOLS_ENABLED) {
-    const classifiedConnectors = await classifyAmbiguousConnectorQuery(input.text);
-    if (classifiedConnectors.length > 0) {
-      return executeRoute({
-        ...input,
-        route: { kind: "connector_query", connectors: classifiedConnectors }
-      });
-    }
   }
 
   if (
@@ -618,7 +630,10 @@ async function handlePendingDecision(
         "delete",
         "applied"
       );
-      return { content: plainText(`Deleted ${deleted.name}.`) };
+      return {
+        content: plainText(`Deleted ${deleted.name}.`),
+        deletedAgentId: deleted.id
+      };
     } catch (error) {
       return {
         content: plainText(

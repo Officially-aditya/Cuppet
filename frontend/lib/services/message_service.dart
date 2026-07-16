@@ -6,10 +6,15 @@ import '../models/message.dart';
 import 'api.dart';
 
 class SendReplyResult {
-  const SendReplyResult({required this.message, this.updatedAgent});
+  const SendReplyResult({
+    required this.message,
+    this.updatedAgent,
+    this.deletedAgentId,
+  });
 
   final Message message;
   final Agent? updatedAgent;
+  final String? deletedAgentId;
 }
 
 class MessageService {
@@ -70,7 +75,9 @@ class MessageService {
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty && attachmentIds.isEmpty) {
-      throw const ApiException('Write a reply or attach a file before sending.');
+      throw const ApiException(
+        'Write a reply or attach a file before sending.',
+      );
     }
 
     if (Env.useMockData) {
@@ -125,6 +132,7 @@ class MessageService {
             rawAgent is Map
                 ? Agent.fromJson(Map<String, dynamic>.from(rawAgent))
                 : null,
+        deletedAgentId: response.data?['deleted_agent_id']?.toString(),
       );
     } catch (error) {
       throw apiExceptionFrom(
@@ -158,6 +166,7 @@ class MessageService {
             rawAgent is Map
                 ? Agent.fromJson(Map<String, dynamic>.from(rawAgent))
                 : null,
+        deletedAgentId: response.data?['deleted_agent_id']?.toString(),
       );
     } catch (error) {
       throw apiExceptionFrom(error, 'That action could not be completed.');
