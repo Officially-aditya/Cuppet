@@ -579,21 +579,6 @@ async function handleAgentSelection(
   ) {
     return { content: plainText("That agent selection is invalid.") };
   }
-  const { rows } = await pool.query<PendingAction>(
-    `UPDATE assistant_pending_actions
-     SET consumed_at = NOW()
-     WHERE id = $1 AND user_id = $2 AND assistant_id = $3
-       AND action_type = 'select_agent'
-       AND consumed_at IS NULL AND expires_at > NOW()
-     RETURNING *`,
-    [input.route.pendingActionId, input.userId, input.assistantId]
-  );
-  const pending = rows[0];
-  if (!pending) {
-    return {
-      content: plainText("That agent selection expired or was already used.")
-    };
-  }
   const agents = await listManagedAgents(input.userId);
   const selected = agents.find(
     (agent) => agent.id === input.route.selectedAgentId
@@ -601,17 +586,35 @@ async function handleAgentSelection(
   if (!selected) {
     return { content: plainText("That agent is no longer available.") };
   }
-  await pool.query(
+  const { rows } = await pool.query<PendingAction>(
     `UPDATE assistant_pending_actions
-     SET target_agent_id = $2,
-         payload = payload || jsonb_build_object('selected_agent_id', $2::text)
-     WHERE id = $1`,
-    [pending.id, selected.id]
+     SET consumed_at = NOW(),
+         target_agent_id = $4,
+         payload = payload || jsonb_build_object('selected_agent_id', $5::text)
+     WHERE id = $1 AND user_id = $2 AND assistant_id = $3
+       AND action_type = 'select_agent'
+       AND consumed_at IS NULL AND expires_at > NOW()
+     RETURNING *`,
+    [
+      input.route.pendingActionId,
+      input.userId,
+      input.assistantId,
+      selected.id,
+      selected.id
+    ]
   );
+  const pending = rows[0];
+  if (!pending) {
+    return {
+      content: plainText("That agent selection expired or was already used.")
+    };
+  }
   await resolveAgentSelectionCard(pending, {
     resolution: "selected",
     selectedAgentId: selected.id,
     selectedAgentName: selected.name
+  }).catch((error) => {
+    console.error("Failed to persist resolved agent selection card:", error);
   });
   const resumedRoute = selectedAgentRoute(
     pending.payload.selection_intent,
