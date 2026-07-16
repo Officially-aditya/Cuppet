@@ -11,11 +11,13 @@ import { config } from "../config.js";
 import { eventRoutes } from "../events/routes.js";
 import { userRoutes } from "../users/routes.js";
 import { assistantMemoryRoutes } from "../assistant/memory-routes.js";
+import { messageArchiveRoutes } from "../archive/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(assistantMemoryRoutes);
+  await app.register(messageArchiveRoutes);
   await app.register(agentRoutes);
   await app.register(connectorRoutes);
   await app.register(messageRoutes);
@@ -41,8 +43,11 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
     const messages = [];
     for (const agent of agents.rows) {
       const msgs = await pool.query(
-        "SELECT id, role, content, created_at FROM agent_messages WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 3",
-        [agent.id]
+        `SELECT id, role, content, created_at FROM agent_messages
+         WHERE agent_id = $1
+           AND ($2::boolean = FALSE OR created_at > NOW() - ($3::int * INTERVAL '1 day'))
+         ORDER BY created_at DESC LIMIT 3`,
+        [agent.id, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
       );
       messages.push({ agentName: agent.name, agentId: agent.id, messages: msgs.rows });
     }

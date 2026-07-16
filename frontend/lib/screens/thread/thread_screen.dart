@@ -8,9 +8,11 @@ import '../../design/tokens.dart';
 import '../../models/agent.dart';
 import '../../models/message.dart';
 import '../../models/attachment.dart';
+import '../../models/message_archive.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/connectors_provider.dart';
 import '../../providers/messages_provider.dart';
+import '../../providers/message_archive_provider.dart';
 import '../../config/routes.dart';
 import '../../widgets/thread/message_card.dart';
 import '../../widgets/thread/sydney_heatmap.dart';
@@ -73,6 +75,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
   Message? _selectedMessage;
   Message? _replyToMessage;
+  final List<Message> _archivedMessages = [];
+  bool _archiveLoading = false;
+  String? _archiveError;
+  String? _archiveCursor;
+  bool _archiveLoaded = false;
 
   Agent get _activeAgent {
     return ref
@@ -165,6 +172,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       orElse: () => widget.agent,
     );
     final messages = ref.watch(messagesProvider(agent.threadId));
+    final archiveState = ref.watch(messageArchiveProvider).asData?.value;
 
     return Scaffold(
       key: const ValueKey('thread-scaffold'),
@@ -448,8 +456,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   final showTyping =
                       _awaitingResponse ||
                       agent.availability == AgentAvailability.thinking;
+                  final showArchiveBoundary =
+                      archiveState?.enabled == true ||
+                      archiveState?.actionRequired == true;
+                  final prefixCount =
+                      _archivedMessages.length +
+                      (showArchiveBoundary ? 1 : 0) +
+                      1;
                   final itemCount =
-                      displayItems.length + 1 + (showTyping ? 1 : 0);
+                      prefixCount + displayItems.length + (showTyping ? 1 : 0);
 
                   return ListView.builder(
                     controller: _scrollController,
@@ -458,10 +473,31 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     ),
                     itemCount: itemCount,
                     itemBuilder: (context, index) {
-                      if (index == 0) {
+                      if (index < _archivedMessages.length) {
+                        return _ArchivedMessageTile(
+                          message: _archivedMessages[index],
+                        );
+                      }
+                      var relativeIndex = index - _archivedMessages.length;
+                      if (showArchiveBoundary && relativeIndex == 0) {
+                        return _ArchiveBoundary(
+                          state: archiveState!,
+                          loading: _archiveLoading,
+                          loaded: _archiveLoaded,
+                          hasMore: _archiveCursor != null,
+                          error: _archiveError,
+                          onLoad: () => _loadArchivedMessages(agent.id),
+                          onReconnect:
+                              () => Navigator.of(
+                                context,
+                              ).pushNamed(AppRoutes.connectors),
+                        );
+                      }
+                      if (showArchiveBoundary) relativeIndex -= 1;
+                      if (relativeIndex == 0) {
                         return const _ThreadDayPill();
                       }
-                      final messageIndex = index - 1;
+                      final messageIndex = relativeIndex - 1;
                       if (messageIndex < displayItems.length) {
                         final message = displayItems[messageIndex];
                         final isSelected = _selectedMessage?.id == message.id;
@@ -537,6 +573,33 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
   }
 
+  Future<void> _loadArchivedMessages(String agentId) async {
+    if (_archiveLoading || (_archiveLoaded && _archiveCursor == null)) return;
+    setState(() {
+      _archiveLoading = true;
+      _archiveError = null;
+    });
+    try {
+      final page = await ref
+          .read(messageArchiveServiceProvider)
+          .loadArchivedMessages(
+            agentId: agentId,
+            cursor: _archiveLoaded ? _archiveCursor : null,
+          );
+      if (!mounted) return;
+      setState(() {
+        _archivedMessages.insertAll(0, page.messages);
+        _archiveCursor = page.nextCursor;
+        _archiveLoaded = true;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _archiveError = error.toString());
+    } finally {
+      if (mounted) setState(() => _archiveLoading = false);
+    }
+  }
+
   Future<void> _sendReply(
     String text,
     List<ComposerAttachment> attachments,
@@ -587,10 +650,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
   }
 
-  Future<void> _sendReplyAsync(
-    String text,
-    List<String> attachmentIds,
-  ) async {
+  Future<void> _sendReplyAsync(String text, List<String> attachmentIds) async {
     try {
       await ref
           .read(messageActionsProvider)
@@ -989,6 +1049,127 @@ String _connectorName(Map<String, dynamic> action, String connectorId) {
     'calendar' => 'Google Calendar',
     _ => 'Connector',
   };
+}
+
+class _ArchiveBoundary extends StatelessWidget {
+  const _ArchiveBoundary({
+    required this.state,
+    required this.loading,
+    required this.loaded,
+    required this.hasMore,
+    required this.onLoad,
+    required this.onReconnect,
+    this.error,
+  });
+
+  final MessageArchiveState state;
+  final bool loading;
+  final bool loaded;
+  final bool hasMore;
+  final String? error;
+  final VoidCallback onLoad;
+  final VoidCallback onReconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const ValueKey('thread-archive-boundary'),
+      padding: const EdgeInsets.fromLTRB(
+        SydneySpacing.page,
+        0,
+        SydneySpacing.page,
+        SydneySpacing.lg,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(SydneySpacing.md),
+        decoration: BoxDecoration(
+          color: CuppetWorkspaceColors.card,
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
+          border: Border.all(color: CuppetWorkspaceColors.border),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.add_to_drive_outlined,
+              color: CuppetWorkspaceColors.primaryInk,
+            ),
+            const SizedBox(height: SydneySpacing.xs),
+            const Text(
+              'Messages older than 30 days are archived in Google Drive.',
+              textAlign: TextAlign.center,
+            ),
+            if (error != null) ...[
+              const SizedBox(height: SydneySpacing.sm),
+              Text(
+                error!,
+                key: const ValueKey('archive-load-error'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: SydneyColors.warning),
+              ),
+            ],
+            const SizedBox(height: SydneySpacing.sm),
+            if (state.actionRequired)
+              TextButton.icon(
+                onPressed: onReconnect,
+                icon: const Icon(Icons.link_rounded),
+                label: const Text('Reconnect Google Drive'),
+              )
+            else if (!loaded || hasMore || error != null)
+              TextButton.icon(
+                key: const ValueKey('load-archived-messages'),
+                onPressed: loading ? null : onLoad,
+                icon:
+                    loading
+                        ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.history_rounded),
+                label: Text(
+                  loaded
+                      ? 'Load older archived messages'
+                      : 'View older history',
+                ),
+              )
+            else
+              const Text('No more archived messages.'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArchivedMessageTile extends StatelessWidget {
+  const _ArchivedMessageTile({required this.message});
+
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: ValueKey('archived-message-${message.id}'),
+      padding: const EdgeInsets.symmetric(horizontal: SydneySpacing.page),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: SydneySpacing.xs),
+            child: Text(
+              'GOOGLE DRIVE · READ ONLY',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: CuppetWorkspaceColors.muted,
+                letterSpacing: .8,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          MessageCard(message: message, useWorkspacePalette: true),
+        ],
+      ),
+    );
+  }
 }
 
 class _ThreadDayPill extends StatelessWidget {

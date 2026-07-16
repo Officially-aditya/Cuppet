@@ -96,6 +96,12 @@ void main() {
               ),
             ],
           ),
+          compactedMemoryProvider.overrideWith(
+            (ref) async => const CompactedMemory(
+              summary: '- preference:theme [confirmed]: Prefers dark mode',
+              itemCount: 1,
+            ),
+          ),
         ],
         child: const MaterialApp(home: MemoryScreen()),
       ),
@@ -104,6 +110,13 @@ void main() {
 
     expect(find.text('I prefer concise answers'), findsOneWidget);
     expect(find.byTooltip('Delete memory'), findsOneWidget);
+    expect(find.text('Compacted memory'), findsOneWidget);
+    expect(find.textContaining('Prefers dark mode'), findsOneWidget);
+    await tester.tap(find.byTooltip('Delete compacted memory'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete compacted memory?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('delete-all-memories')));
     await tester.pumpAndSettle();
     expect(find.text('Delete all memories?'), findsOneWidget);

@@ -10,12 +10,14 @@ class ConnectorListItem extends StatelessWidget {
     required this.connector,
     required this.onConnectedChanged,
     this.compact = false,
+    this.details,
     super.key,
   });
 
   final Connector connector;
   final ValueChanged<bool> onConnectedChanged;
   final bool compact;
+  final Widget? details;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +26,7 @@ class ConnectorListItem extends StatelessWidget {
         child: _AdvancedConnector(
           connector: connector,
           onConnectedChanged: onConnectedChanged,
+          details: details,
         ),
       );
     }
@@ -70,10 +73,12 @@ class _AdvancedConnector extends StatelessWidget {
   const _AdvancedConnector({
     required this.connector,
     required this.onConnectedChanged,
+    this.details,
   });
 
   final Connector connector;
   final ValueChanged<bool> onConnectedChanged;
+  final Widget? details;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +121,12 @@ class _AdvancedConnector extends StatelessWidget {
           onConnectedChanged: onConnectedChanged,
           workspace: true,
         ),
+        if (details != null) ...[
+          const SizedBox(height: SydneySpacing.md),
+          const Divider(height: 1, color: CuppetWorkspaceColors.border),
+          const SizedBox(height: SydneySpacing.md),
+          details!,
+        ],
       ],
     );
   }

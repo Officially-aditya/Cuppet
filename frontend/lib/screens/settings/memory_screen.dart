@@ -12,6 +12,7 @@ class MemoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final memories = ref.watch(assistantMemoriesProvider);
+    final compacted = ref.watch(compactedMemoryProvider).asData?.value;
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
       appBar: const WorkspaceAppBar(
@@ -58,7 +59,7 @@ class MemoryScreen extends ConsumerWidget {
                     'Cuppet stores explicit preferences immediately and asks before saving repeated inferred facts. Connector results and attachments are never remembered automatically.',
                   ),
                   const SizedBox(height: SydneySpacing.lg),
-                  if (items.isEmpty)
+                  if (items.isEmpty && compacted == null)
                     const WorkspaceCard(
                       key: ValueKey('memory-empty-state'),
                       child: Text(
@@ -70,6 +71,13 @@ class MemoryScreen extends ConsumerWidget {
                       _MemoryCard(
                         memory: memory,
                         onDelete: () => _deleteOne(context, ref, memory),
+                      ),
+                      const SizedBox(height: SydneySpacing.md),
+                    ],
+                    if (compacted != null) ...[
+                      _CompactedMemoryCard(
+                        memory: compacted,
+                        onDelete: () => _deleteCompacted(context, ref),
                       ),
                       const SizedBox(height: SydneySpacing.md),
                     ],
@@ -117,7 +125,7 @@ class MemoryScreen extends ConsumerWidget {
           (dialogContext) => AlertDialog(
             title: const Text('Delete all memories?'),
             content: const Text(
-              'This permanently removes every confirmed Assistant memory. Your agents and conversations are not affected.',
+              'This permanently removes every active and compacted Assistant memory. Your agents and conversations are not affected.',
             ),
             actions: [
               TextButton(
@@ -136,6 +144,7 @@ class MemoryScreen extends ConsumerWidget {
     try {
       await ref.read(memoryServiceProvider).deleteAllMemories();
       ref.invalidate(assistantMemoriesProvider);
+      ref.invalidate(compactedMemoryProvider);
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -143,6 +152,91 @@ class MemoryScreen extends ConsumerWidget {
         ).showSnackBar(SnackBar(content: Text(error.toString())));
       }
     }
+  }
+
+  Future<void> _deleteCompacted(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Delete compacted memory?'),
+            content: const Text(
+              'This permanently removes the compacted memory summary. Active confirmed memories are not affected.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: const ValueKey('confirm-delete-compacted-memory'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Delete summary'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(memoryServiceProvider).deleteCompactedMemory();
+      ref.invalidate(compactedMemoryProvider);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+  }
+}
+
+class _CompactedMemoryCard extends StatelessWidget {
+  const _CompactedMemoryCard({required this.memory, required this.onDelete});
+
+  final CompactedMemory memory;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return WorkspaceCard(
+      key: const ValueKey('compacted-memory-card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.inventory_2_outlined,
+                color: CuppetWorkspaceColors.primaryInk,
+              ),
+              const SizedBox(width: SydneySpacing.sm),
+              Expanded(
+                child: Text(
+                  'Compacted memory',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Delete compacted memory',
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: SydneySpacing.sm),
+          Text(memory.summary),
+          const SizedBox(height: SydneySpacing.xs),
+          Text(
+            '${memory.itemCount} compacted ${memory.itemCount == 1 ? 'item' : 'items'} · Read-only summary',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: CuppetWorkspaceColors.muted,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

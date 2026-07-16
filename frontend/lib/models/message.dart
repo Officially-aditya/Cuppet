@@ -10,6 +10,8 @@ class Message {
     required this.createdAt,
     required this.content,
     this.deliveryState = MessageDeliveryState.sent,
+    this.driveBacked = false,
+    this.readOnly = false,
   });
 
   final String id;
@@ -18,6 +20,8 @@ class Message {
   final DateTime createdAt;
   final Map<String, dynamic> content;
   final MessageDeliveryState deliveryState;
+  final bool driveBacked;
+  final bool readOnly;
 
   String get template => content['template']?.toString() ?? 'plain_text';
 
@@ -98,22 +102,55 @@ class Message {
 
   factory Message.fromJson(Map<String, dynamic> json) {
     final rawContent = json['content'];
+    final parsedContent =
+        rawContent is Map
+            ? Map<String, dynamic>.from(rawContent)
+            : <String, dynamic>{'template': 'plain_text', 'data': {}};
+    final archivedAttachments = json['attachments'];
+    if (json['drive_backed'] == true && archivedAttachments is List) {
+      final data =
+          parsedContent['data'] is Map
+              ? Map<String, dynamic>.from(parsedContent['data'] as Map)
+              : <String, dynamic>{};
+      data['attachments'] = [
+        for (var index = 0; index < archivedAttachments.length; index++)
+          if (archivedAttachments[index] is Map)
+            {
+              'id': '${json['id'] ?? json['message_id']}-archive-$index',
+              'name':
+                  (archivedAttachments[index] as Map)['filename']?.toString() ??
+                  'attachment',
+              'mime_type':
+                  (archivedAttachments[index] as Map)['mime_type']
+                      ?.toString() ??
+                  'application/octet-stream',
+              'size':
+                  int.tryParse(
+                    (archivedAttachments[index] as Map)['size']?.toString() ??
+                        '',
+                  ) ??
+                  0,
+            },
+      ];
+      parsedContent['data'] = data;
+    }
     return Message(
-      id: json['id']?.toString() ?? '',
+      id: (json['id'] ?? json['message_id'])?.toString() ?? '',
       threadId:
           json['threadId']?.toString() ??
           json['thread_id']?.toString() ??
           json['agent_id']?.toString() ??
           '',
       sender: _senderFromString((json['sender'] ?? json['role'])?.toString()),
-      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
-      content:
-          rawContent is Map
-              ? Map<String, dynamic>.from(rawContent)
-              : const {'template': 'plain_text', 'data': {}},
+      createdAt: _parseDate(
+        json['createdAt'] ?? json['created_at'] ?? json['timestamp'],
+      ),
+      content: parsedContent,
       deliveryState: _deliveryStateFromString(
         (json['deliveryState'] ?? json['delivery_state'])?.toString(),
       ),
+      driveBacked: json['drive_backed'] == true,
+      readOnly: json['read_only'] == true,
     );
   }
 
@@ -125,6 +162,8 @@ class Message {
       'createdAt': createdAt.toIso8601String(),
       'content': content,
       'deliveryState': deliveryState.name,
+      'drive_backed': driveBacked,
+      'read_only': readOnly,
     };
   }
 }

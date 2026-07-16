@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
+import 'package:sydney/models/message_archive.dart';
 import 'package:sydney/design/tokens.dart';
 import 'package:sydney/providers/agents_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
+import 'package:sydney/providers/message_archive_provider.dart';
 import 'package:sydney/screens/thread/thread_screen.dart';
 import 'package:sydney/screens/thread/agent_preferences_screen.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
@@ -31,6 +33,15 @@ class _TestAgentsController extends AgentsController {
 
   @override
   Future<List<Agent>> build() async => [agent];
+}
+
+class _ThreadArchiveController extends MessageArchiveController {
+  @override
+  Future<MessageArchiveState> build() async => const MessageArchiveState(
+    enabled: true,
+    status: 'active',
+    actionRequired: false,
+  );
 }
 
 Widget threadHost({
@@ -145,6 +156,35 @@ void main() {
     expect(find.text('Agent response'), findsOneWidget);
     expect(find.text('User reply'), findsOneWidget);
     expect(find.text(testAgent.name), findsOneWidget);
+  });
+
+  testWidgets('thread exposes Drive history only behind an explicit boundary', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          agentsProvider.overrideWith(() => _TestAgentsController(testAgent)),
+          messagesProvider(
+            testAgent.threadId,
+          ).overrideWith((ref) async => const []),
+          messageArchiveProvider.overrideWith(_ThreadArchiveController.new),
+        ],
+        child: MaterialApp(home: ThreadScreen(agent: testAgent)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Messages older than 30 days are archived in Google Drive.'),
+      findsOneWidget,
+    );
+    expect(find.text('View older history'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('thread-archive-boundary')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('message selection and reply remain available after refresh', (

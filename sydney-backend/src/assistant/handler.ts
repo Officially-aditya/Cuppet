@@ -36,6 +36,7 @@ import {
   deleteAllMemories,
   extractMemoryObservation,
   forgetMemoriesMatching,
+  getCompactedMemoryDigest,
   isUnsafeMemoryText,
   listConfirmedMemories,
   recordMemoryObservation,
@@ -219,12 +220,19 @@ async function executeRoute(input: {
 }): Promise<AssistantOutcome> {
   const { route } = input;
   if (route.kind === "memory_list") {
-    const memories = await listConfirmedMemories(input.userId);
+    const [memories, compacted] = await Promise.all([
+      listConfirmedMemories(input.userId),
+      getCompactedMemoryDigest(input.userId)
+    ]);
+    const lines = [
+      ...memories.map((memory) => `- ${memory.value.text}`),
+      ...(compacted ? ["Compacted memory:", compacted.summary] : [])
+    ];
     return {
       content: plainText(
-        memories.length === 0
-          ? "I don’t have any confirmed memories about you."
-          : ["Here’s what I remember:", ...memories.map((memory) => `- ${memory.value.text}`)].join("\n")
+        lines.length === 0
+          ? "I don’t have any confirmed or compacted memories about you."
+          : ["Here’s what I remember:", ...lines].join("\n")
       )
     };
   }
@@ -240,7 +248,7 @@ async function executeRoute(input: {
       return {
         content: confirmationContent({
           title: "Forget everything?",
-          detail: "This permanently deletes every confirmed Assistant memory. Your agent contacts are not affected.",
+          detail: "This permanently deletes every active and compacted Assistant memory. Your agent contacts are not affected.",
           pending,
           confirmLabel: "Delete all memories",
           cancelLabel: "Cancel"
@@ -253,7 +261,7 @@ async function executeRoute(input: {
       content: plainText(
         count > 0
           ? `Forgot ${count === 1 ? "that memory" : `${count} matching memories`}.`
-          : "I couldn’t find a confirmed memory matching that."
+          : "I couldn’t find an active or compacted memory matching that."
       )
     };
   }
@@ -876,12 +884,12 @@ async function latestBriefing(
      COALESCE(source_refs, '[]'::jsonb) AS source_refs
      FROM agent_messages
      WHERE user_id = $1 AND agent_id = $2
-       AND created_at >= NOW() - ($3::int * INTERVAL '1 day')
+       AND ($4::boolean = FALSE OR created_at > NOW() - ($3::int * INTERVAL '1 day'))
        AND (content->'data'->'briefing_context' IS NOT NULL OR
          (content->>'template' = 'briefing_card' AND
           content #>> '{data,assistant_context}' = 'true'))
      ORDER BY created_at DESC LIMIT 1`,
-    [userId, assistantId, config.ASSISTANT_CHAT_RETENTION_DAYS]
+    [userId, assistantId, config.MESSAGE_RETENTION_DAYS, config.MESSAGE_RETENTION_ENABLED]
   );
   return rows[0]
     ? { briefing: JSON.stringify(rows[0].briefing_context), sourceRefs: rows[0].source_refs }

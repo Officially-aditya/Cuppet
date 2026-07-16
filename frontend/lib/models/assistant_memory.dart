@@ -28,3 +28,23 @@ class AssistantMemory {
     );
   }
 }
+
+class CompactedMemory {
+  const CompactedMemory({
+    required this.summary,
+    required this.itemCount,
+    this.updatedAt,
+  });
+
+  final String summary;
+  final int itemCount;
+  final DateTime? updatedAt;
+
+  factory CompactedMemory.fromJson(Map<String, dynamic> json) {
+    return CompactedMemory(
+      summary: json['summary']?.toString() ?? '',
+      itemCount: int.tryParse(json['item_count']?.toString() ?? '') ?? 0,
+      updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? ''),
+    );
+  }
+}

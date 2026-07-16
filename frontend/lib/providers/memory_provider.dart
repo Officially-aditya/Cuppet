@@ -11,3 +11,7 @@ final memoryServiceProvider = Provider<MemoryService>((ref) {
 final assistantMemoriesProvider = FutureProvider<List<AssistantMemory>>((ref) {
   return ref.watch(memoryServiceProvider).listMemories();
 });
+
+final compactedMemoryProvider = FutureProvider<CompactedMemory?>((ref) {
+  return ref.watch(memoryServiceProvider).loadCompactedMemory();
+});

@@ -150,6 +150,7 @@ const calendarApiBase = "https://www.googleapis.com/calendar/v3";
 
 const gmailScopes = ["https://www.googleapis.com/auth/gmail.readonly"];
 const driveScopes = ["https://www.googleapis.com/auth/drive.readonly"];
+export const messageArchiveDriveScope = "https://www.googleapis.com/auth/drive.file";
 const calendarScopes = [
   "https://www.googleapis.com/auth/calendar.events.readonly",
   "https://www.googleapis.com/auth/calendar.calendarlist.readonly"
@@ -265,6 +266,48 @@ export async function createGoogleWorkspaceAuthUrl(input: {
   return { authUrl: authUrl.toString(), callbackScheme: input.callbackScheme };
 }
 
+export async function createMessageArchiveAuthUrl(input: {
+  userId: string;
+  callbackScheme: string;
+}): Promise<{ authUrl: string; callbackScheme: string }> {
+  ensureGoogleWorkspaceAuthConfigured();
+  const scopes = [
+    ...new Set([
+      ...(await connectedGoogleScopes(input.userId)),
+      ...driveScopes,
+      messageArchiveDriveScope
+    ])
+  ];
+  const callbackScheme = sanitizeCallbackScheme(input.callbackScheme);
+  const state = signOAuthState({
+    v: 1,
+    userId: input.userId,
+    connectorId: "drive",
+    purpose: "message_archive",
+    callbackScheme,
+    nonce: randomBytes(16).toString("base64url"),
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 10 * 60
+  });
+  const authUrl = new URL(googleAuthorizationEndpoint);
+  authUrl.searchParams.set("client_id", config.GOOGLE_CLIENT_ID!);
+  authUrl.searchParams.set("redirect_uri", config.GOOGLE_REDIRECT_URI!);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("scope", scopes.join(" "));
+  authUrl.searchParams.set("access_type", "offline");
+  authUrl.searchParams.set("include_granted_scopes", "true");
+  authUrl.searchParams.set("prompt", "consent");
+  authUrl.searchParams.set("state", state);
+  await pool.query(
+    `INSERT INTO message_archive_settings (user_id, enabled, status)
+     VALUES ($1, FALSE, 'authorizing')
+     ON CONFLICT (user_id) DO UPDATE
+     SET enabled = FALSE, status = 'authorizing', error_code = NULL`,
+    [input.userId]
+  );
+  return { authUrl: authUrl.toString(), callbackScheme };
+}
+
 export async function handleGoogleWorkspaceOAuthCallback(input: {
   code?: string;
   state?: string;
@@ -278,6 +321,14 @@ export async function handleGoogleWorkspaceOAuthCallback(input: {
 
   const state = verifyOAuthState(input.state);
   if (input.error) {
+    if (state.purpose === "message_archive") {
+      await pool.query(
+        `UPDATE message_archive_settings
+         SET enabled = FALSE, status = 'action_required', error_code = $2
+         WHERE user_id = $1`,
+        [state.userId, input.error]
+      );
+    }
     return mobileConnectorRedirect(state.callbackScheme, state.connectorId, {
       error: input.error
     });
@@ -294,8 +345,26 @@ export async function handleGoogleWorkspaceOAuthCallback(input: {
     await storeGoogleWorkspaceToken({
       userId: state.userId,
       requestedConnectorId: state.connectorId,
-      token
+      token,
+      purpose: state.purpose
     });
+    if (state.purpose === "message_archive") {
+      const granted = parseScopes(token.scope);
+      if (!granted.includes(messageArchiveDriveScope)) {
+        throw new Error("message_archive_drive_file_scope_missing");
+      }
+      await pool.query(
+        `INSERT INTO message_archive_settings
+           (user_id, enabled, status, enabled_at, error_code, warning_sent_at)
+         VALUES ($1, TRUE, 'active', NOW(), NULL, NULL)
+         ON CONFLICT (user_id) DO UPDATE
+         SET enabled = TRUE, status = 'active', enabled_at = COALESCE(message_archive_settings.enabled_at, NOW()),
+             error_code = NULL, warning_sent_at = NULL`,
+        [state.userId]
+      );
+      const { enqueueMessageArchive } = await import("../queue/index.js");
+      await enqueueMessageArchive(state.userId).catch(() => undefined);
+    }
     if (
       token.access_token &&
       googleScopesCoverConnector(parseScopes(token.scope), "gmail")
@@ -320,9 +389,18 @@ export async function handleGoogleWorkspaceOAuthCallback(input: {
     }
 
     return mobileConnectorRedirect(state.callbackScheme, state.connectorId, {
-      status: "connected"
+      status: "connected",
+      ...(state.purpose ? { purpose: state.purpose } : {})
     });
   } catch (error) {
+    if (state.purpose === "message_archive") {
+      await pool.query(
+        `UPDATE message_archive_settings
+         SET enabled = FALSE, status = 'action_required', error_code = $2
+         WHERE user_id = $1`,
+        [state.userId, errorCode(error)]
+      ).catch(() => undefined);
+    }
     return mobileConnectorRedirect(state.callbackScheme, state.connectorId, {
       error: errorCode(error)
     });
@@ -1084,13 +1162,15 @@ async function storeGoogleWorkspaceToken(input: {
   userId: string;
   requestedConnectorId: GoogleWorkspaceConnectorId;
   token: GoogleTokenResponse;
+  purpose?: "message_archive";
 }): Promise<void> {
   if (!input.token.access_token) {
     throw new Error("missing_access_token");
   }
 
   const grantedScopes = parseScopes(input.token.scope);
-  if (!googleScopesCoverConnector(grantedScopes, input.requestedConnectorId)) {
+  if (!googleScopesCoverConnector(grantedScopes, input.requestedConnectorId) ||
+      (input.purpose === "message_archive" && !grantedScopes.includes(messageArchiveDriveScope))) {
     throw new Error("google_workspace_required_scopes_not_granted");
   }
   const connectorIds = coveredConnectors(grantedScopes, input.requestedConnectorId);
@@ -1608,7 +1688,15 @@ async function markConnectorActionRequired(
     )
   ]);
 
-  void reason;
+  if (connectorId === "drive") {
+    await pool.query(
+      `UPDATE message_archive_settings
+       SET status = 'action_required', error_code = $2
+       WHERE user_id = $1 AND enabled = TRUE`,
+      [userId, reason.slice(0, 120)]
+    );
+  }
+
 }
 
 function connectorAuthRequired(
@@ -2206,6 +2294,9 @@ function verifyOAuthState(state: string): OAuthState {
   if (!isGoogleWorkspaceConnector(payload.connectorId)) {
     throw new Error("invalid_state_connector");
   }
+  if (payload.purpose !== undefined && payload.purpose !== "message_archive") {
+    throw new Error("invalid_state_purpose");
+  }
 
   return {
     ...payload,
@@ -2258,6 +2349,7 @@ type OAuthState = {
   v: 1;
   userId: string;
   connectorId: GoogleWorkspaceConnectorId;
+  purpose?: "message_archive";
   callbackScheme: string;
   nonce: string;
   iat: number;

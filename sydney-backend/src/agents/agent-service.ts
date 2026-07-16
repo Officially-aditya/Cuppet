@@ -248,10 +248,24 @@ export async function deleteManagedAgent(
     );
   }
   await removeScheduleForAgent(agentId);
-  await pool.query("DELETE FROM agents WHERE id = $1 AND user_id = $2", [
-    agentId,
-    userId
-  ]);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+      [userId, agentId]
+    );
+    await client.query("DELETE FROM agents WHERE id = $1 AND user_id = $2", [
+      agentId,
+      userId
+    ]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
   await publishRealtimeEvent({
     type: "agent.updated",
     user_id: userId,

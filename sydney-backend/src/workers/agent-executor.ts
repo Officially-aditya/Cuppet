@@ -1,5 +1,6 @@
 import { Worker, type Job } from "bullmq";
 import { z } from "zod";
+import { config } from "../config.js";
 import {
   wantsDsaQuestion,
   questionForDate,
@@ -356,10 +357,12 @@ async function executeAgentJob(
           SELECT id, content
           FROM agent_messages
           WHERE agent_id = $1 AND role = 'agent'
+            AND ($2::boolean = FALSE OR
+                 created_at > NOW() - ($3::int * INTERVAL '1 day'))
           ORDER BY created_at DESC
           LIMIT 1
         `,
-        [agent.id]
+        [agent.id, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
       );
       const lastMsg = rows[0];
       if (lastMsg) {
@@ -802,8 +805,11 @@ async function renderAgentMessage(
 ): Promise<RenderedAgentMessage> {
   if (trigger === "snooze" && snoozedMessageId) {
     const { rows } = await pool.query(
-      "SELECT content, source_refs FROM agent_messages WHERE id = $1 AND agent_id = $2",
-      [snoozedMessageId, agent.id]
+      `SELECT content, source_refs FROM agent_messages
+       WHERE id = $1 AND agent_id = $2
+         AND ($3::boolean = FALSE OR
+              created_at > NOW() - ($4::int * INTERVAL '1 day'))`,
+      [snoozedMessageId, agent.id, config.MESSAGE_RETENTION_ENABLED, config.MESSAGE_RETENTION_DAYS]
     );
     const snoozedMsg = rows[0];
     if (snoozedMsg) {

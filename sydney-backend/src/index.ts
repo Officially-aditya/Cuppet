@@ -11,6 +11,9 @@ import {
   renewGooglePushWatches
 } from "./connectors/google-workspace.js";
 import { cleanAssistantRetention } from "./assistant/retention.js";
+import { compactOverCapacityMemories } from "./assistant/memory.js";
+import { coordinateMessageArchives } from "./archive/message-archive.js";
+import { createMessageArchiveWorker } from "./workers/message-archive-worker.js";
 
 // Initialize Firebase on startup
 initializeFirebase();
@@ -18,6 +21,9 @@ initializeFirebase();
 const app = await buildApp();
 const embeddedWorker = config.RUN_AGENT_WORKER_IN_API
   ? createAgentExecutorWorker()
+  : null;
+const embeddedArchiveWorker = config.RUN_AGENT_WORKER_IN_API && config.MESSAGE_ARCHIVE_ENABLED
+  ? createMessageArchiveWorker()
   : null;
 
 if (embeddedWorker) {
@@ -56,9 +62,12 @@ async function cleanExpiredUploads(): Promise<void> {
 
 async function runAssistantRetentionCleanup(): Promise<void> {
   try {
-    const counts = await cleanAssistantRetention();
-    if (Object.values(counts).some((count) => count > 0)) {
-      app.log.info({ counts }, "Applied Assistant storage retention");
+    const [counts, compactedUsers] = await Promise.all([
+      cleanAssistantRetention(),
+      compactOverCapacityMemories()
+    ]);
+    if (Object.values(counts).some((count) => count > 0) || compactedUsers > 0) {
+      app.log.info({ counts, compacted_users: compactedUsers }, "Applied storage retention and memory compaction");
     }
   } catch (error) {
     app.log.error(error, "Failed to apply Assistant storage retention");
@@ -69,6 +78,10 @@ try {
   if (embeddedWorker) {
     await waitForWorkerReady(embeddedWorker.waitUntilReady(), 15_000);
     setAgentWorkerRuntimeStatus("ready");
+  }
+  if (embeddedArchiveWorker) {
+    await waitForWorkerReady(embeddedArchiveWorker.waitUntilReady(), 15_000);
+    app.log.info("Embedded message archive worker is ready");
   }
   await syncActiveAgentSchedules(app.log);
   
@@ -81,6 +94,16 @@ try {
   }, 60 * 60 * 1000);
   // Keep track of the timer so we can clear it on shutdown if needed, or let it run
   cleanupTimer.unref();
+
+  if (config.MESSAGE_ARCHIVE_ENABLED) {
+    await coordinateMessageArchives();
+    const archiveTimer = setInterval(() => {
+      coordinateMessageArchives().catch((error) =>
+        app.log.error({ error }, "Failed to coordinate message archives")
+      );
+    }, 60 * 60 * 1000);
+    archiveTimer.unref();
+  }
 
   const renewGmailWatches = async () => {
     const [gmail, google] = await Promise.all([
@@ -124,6 +147,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
     await embeddedWorker.close();
     setAgentWorkerRuntimeStatus("closed");
   }
+  if (embeddedArchiveWorker) await embeddedArchiveWorker.close();
   await closeQueue();
   await closeDatabase();
   process.exit(0);

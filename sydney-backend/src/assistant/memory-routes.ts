@@ -3,7 +3,9 @@ import { isUuid } from "../api/ids.js";
 import { requireAuth } from "../auth/middleware.js";
 import {
   deleteAllMemories,
+  deleteCompactedMemoryDigest,
   forgetMemoryById,
+  getCompactedMemoryDigest,
   listConfirmedMemories
 } from "./memory.js";
 
@@ -11,9 +13,26 @@ export async function assistantMemoryRoutes(app: FastifyInstance): Promise<void>
   app.get(
     "/users/me/assistant-memories",
     { preHandler: requireAuth },
-    async (request) => ({
-      memories: await listConfirmedMemories(request.auth!.userId)
-    })
+    async (request) => {
+      const [memories, compacted] = await Promise.all([
+        listConfirmedMemories(request.auth!.userId),
+        getCompactedMemoryDigest(request.auth!.userId)
+      ]);
+      return { memories, compacted_memory: compacted };
+    }
+  );
+
+  app.delete(
+    "/users/me/assistant-memories/compacted",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      const removed = await deleteCompactedMemoryDigest(request.auth!.userId);
+      return removed
+        ? reply.code(204).send()
+        : reply.code(404).send({
+            error: { code: "COMPACTED_MEMORY_NOT_FOUND", message: "Compacted memory not found." }
+          });
+    }
   );
 
   app.delete(

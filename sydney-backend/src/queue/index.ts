@@ -3,12 +3,17 @@ import {
   type ConnectionOptions,
   type JobSchedulerJson
 } from "bullmq";
+import { createHash } from "node:crypto";
 import { config } from "../config.js";
 
 const redisUrl = new URL(config.REDIS_URL);
 
 export const agentExecutorQueueName = "agent-executor";
 export const agentExecutorJobName = "agent.execute";
+export const messageArchiveQueueName = "message-archive";
+export const messageArchiveJobName = "message-archive.export-user";
+
+export type MessageArchiveJobData = { userId: string };
 
 export type AgentRunTrigger = "manual" | "schedule" | "snooze" | "event";
 
@@ -41,6 +46,27 @@ export const agentExecutorQueue = new Queue<AgentExecutorJobData>(
     connection: producerRedisConnection
   }
 );
+
+export const messageArchiveQueue = new Queue<MessageArchiveJobData>(
+  messageArchiveQueueName,
+  { connection: producerRedisConnection }
+);
+
+export async function enqueueMessageArchive(userId: string) {
+  const hour = new Date().toISOString().slice(0, 13).replace(/[-T]/g, "");
+  const userKey = createHash("sha256").update(userId).digest("hex").slice(0, 20);
+  return messageArchiveQueue.add(
+    messageArchiveJobName,
+    { userId },
+    {
+      jobId: `message-archive-${userKey}-${hour}`,
+      attempts: 6,
+      backoff: { type: "exponential", delay: 60_000 },
+      removeOnComplete: true,
+      removeOnFail: { count: 1000 }
+    }
+  );
+}
 
 export async function enqueueAgentRun(
   agentId: string,
@@ -119,5 +145,5 @@ function agentSchedulerId(agentId: string): string {
 }
 
 export async function closeQueue(): Promise<void> {
-  await agentExecutorQueue.close();
+  await Promise.all([agentExecutorQueue.close(), messageArchiveQueue.close()]);
 }

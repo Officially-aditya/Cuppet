@@ -5,7 +5,10 @@ import {
   canonicalMemoryKey,
   decideMemoryTransition,
   extractMemoryObservation,
-  isUnsafeMemoryText
+  isUnsafeMemoryText,
+  mergeCompactedMemoryItems,
+  renderCompactedMemorySummary,
+  type CompactedMemoryItem
 } from "./memory.js";
 
 test("keeps only the latest configured source message IDs", () => {
@@ -17,6 +20,46 @@ test("keeps only the latest configured source message IDs", () => {
     boundedSourceMessageIds(["one", "two", "three"], "two", 3),
     ["one", "three", "two"]
   );
+});
+
+test("cold compaction stays structured and within 300 words", () => {
+  const items: CompactedMemoryItem[] = Array.from({ length: 60 }, (_, index) => ({
+    canonical_key: `preference:item_${index}`,
+    memory_type: "preference",
+    previous_status: index % 2 === 0 ? "confirmed" : "dismissed",
+    summary: `A terse remembered preference number ${index} with a few stable descriptive words`,
+    reinforcement_count: index + 1,
+    confirmation_state: index % 2 === 0 ? "confirmed" : "dismissed"
+  }));
+  const merged = mergeCompactedMemoryItems([], items);
+  const summary = renderCompactedMemorySummary(merged);
+  assert.ok(summary.split(/\s+/).length <= 300);
+  assert.ok(merged.length > 0);
+  assert.ok(merged.every((item) => items.some((input) =>
+    input.canonical_key === item.canonical_key &&
+    input.previous_status === item.previous_status
+  )));
+});
+
+test("a compacted canonical key is replaced by its newest structured item", () => {
+  const original: CompactedMemoryItem = {
+    canonical_key: "preference:response_style",
+    memory_type: "preference",
+    previous_status: "candidate",
+    summary: "I like detailed answers",
+    reinforcement_count: 2,
+    confirmation_state: "pending"
+  };
+  const replacement = {
+    ...original,
+    previous_status: "confirmed" as const,
+    summary: "I prefer concise answers",
+    reinforcement_count: 4,
+    confirmation_state: "confirmed" as const
+  };
+  const merged = mergeCompactedMemoryItems([original], [replacement]);
+  assert.equal(merged.length, 1, "the newest state wins for a canonical key");
+  assert.equal(merged.at(-1)?.summary, replacement.summary);
 });
 
 test("extracts explicit preferences for immediate confirmation", () => {

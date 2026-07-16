@@ -36,6 +36,7 @@ import {
   parseNotionCallbackUrl
 } from "./notion.js";
 import { callbackSchemeSchema } from "../security/input-validation.js";
+import { markMessageArchiveDisconnected } from "../archive/message-archive.js";
 
 type ConnectorDefinition = {
   id: string;
@@ -348,6 +349,9 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       }
 
       await setConnectorStatus(request.auth!.userId, connector.id, status);
+      if (connector.id === "drive" && status === "disconnected") {
+        await markMessageArchiveDisconnected(request.auth!.userId);
+      }
       return connectorPayload(connector, status);
     }
   );
