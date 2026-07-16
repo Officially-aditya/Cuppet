@@ -156,7 +156,7 @@ class MessageService {
           'payload': {'pending_action_id': pendingActionId, ...payload},
         },
       );
-      final data = response.data?['message'];
+      final data = response.data?['agent_message'] ?? response.data?['message'];
       if (data is! Map) {
         throw const ApiException('The action response was not returned.');
       }

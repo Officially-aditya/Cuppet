@@ -774,6 +774,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       final pendingActionId = action['pending_action_id']?.toString();
       if (decision == null || pendingActionId == null) return;
       final selectedAgentId = action['selected_agent_id']?.toString();
+      if (mounted) {
+        setState(() => _awaitingResponse = true);
+        _scrollToBottomSoon();
+      }
       try {
         await ref
             .read(messageActionsProvider)
@@ -786,13 +790,21 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   'selected_agent_id': selectedAgentId,
               },
             );
-        ref.invalidate(messagesProvider(_activeAgent.threadId));
+        final refreshedMessages = await ref.refresh(
+          messagesProvider(_activeAgent.threadId).future,
+        );
+        _syncReadStateWithInbox(refreshedMessages);
         ref.invalidate(agentsProvider);
       } catch (error) {
         if (!mounted) return;
+        ref.invalidate(messagesProvider(_activeAgent.threadId));
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error.toString())));
+      } finally {
+        if (mounted) {
+          setState(() => _awaitingResponse = false);
+        }
       }
       return;
     }

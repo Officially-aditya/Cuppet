@@ -608,6 +608,11 @@ async function handleAgentSelection(
      WHERE id = $1`,
     [pending.id, selected.id]
   );
+  await resolveAgentSelectionCard(pending, {
+    resolution: "selected",
+    selectedAgentId: selected.id,
+    selectedAgentName: selected.name
+  });
   const resumedRoute = selectedAgentRoute(
     pending.payload.selection_intent,
     selected.name
@@ -1057,6 +1062,9 @@ async function handlePendingDecision(input: {
     return { content: plainText("That confirmation expired or was already used.") };
   }
   if (input.decision === "cancel") {
+    if (pending.action_type === "select_agent") {
+      await resolveAgentSelectionCard(pending, { resolution: "cancelled" });
+    }
     return { content: plainText("Cancelled. Nothing was changed.") };
   }
   if (pending.action_type === "confirm_memory") {
@@ -1149,6 +1157,47 @@ async function pendingSourceText(
   );
   const body = rows[0]?.body?.trim();
   return body || fallback;
+}
+
+async function resolveAgentSelectionCard(
+  pending: PendingAction,
+  result:
+    | {
+        resolution: "selected";
+        selectedAgentId: string;
+        selectedAgentName: string;
+      }
+    | { resolution: "cancelled" }
+): Promise<void> {
+  const resolvedData = {
+    resolved: true,
+    resolution: result.resolution,
+    ...(result.resolution === "selected"
+      ? {
+          selected_agent_id: result.selectedAgentId,
+          selected_agent_name: result.selectedAgentName
+        }
+      : {})
+  };
+  await pool.query(
+    `UPDATE agent_messages
+     SET content = jsonb_set(
+       content,
+       '{data}',
+       COALESCE(content->'data', '{}'::jsonb) || $4::jsonb
+     )
+     WHERE user_id = $1
+       AND agent_id = $2
+       AND role = 'agent'
+       AND content->>'template' = 'agent_selection'
+       AND content #>> '{data,pending_action_id}' = $3`,
+    [
+      pending.user_id,
+      pending.assistant_id,
+      pending.id,
+      JSON.stringify(resolvedData)
+    ]
+  );
 }
 
 async function loadAndAnalyzeAttachments(

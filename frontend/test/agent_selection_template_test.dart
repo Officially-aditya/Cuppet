@@ -56,6 +56,7 @@ void main() {
       expect(find.text('Use News Agent'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('confirm-agent-selection')));
+      await tester.pump();
       expect(submitted, {
         'id': 'assistant_select_agent',
         'type': 'assistant_pending_action',
@@ -63,6 +64,15 @@ void main() {
         'pending_action_id': 'pending-1',
         'selected_agent_id': 'agent-1',
       });
+      expect(
+        find.byKey(const ValueKey('confirm-agent-selection')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('cancel-agent-selection')),
+        findsNothing,
+      );
+      expect(find.text('Selected News Agent'), findsOneWidget);
     },
   );
 
@@ -92,7 +102,36 @@ void main() {
     );
 
     await tester.tap(find.byKey(const ValueKey('cancel-agent-selection')));
+    await tester.pump();
     expect(submitted?['decision'], 'cancel');
     expect(submitted?['pending_action_id'], 'pending-2');
+    expect(find.byKey(const ValueKey('confirm-agent-selection')), findsNothing);
+    expect(find.byKey(const ValueKey('cancel-agent-selection')), findsNothing);
+    expect(find.text('Selection cancelled'), findsOneWidget);
+  });
+
+  testWidgets('resolved agent selections stay collapsed after refresh', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AgentSelectionTemplate(
+            data: {
+              'question': 'Which agent output should I use?',
+              'pending_action_id': 'pending-3',
+              'resolved': true,
+              'resolution': 'selected',
+              'selected_agent_name': 'DSA Practice Agent',
+              'options': [],
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Selected DSA Practice Agent'), findsOneWidget);
+    expect(find.byKey(const ValueKey('confirm-agent-selection')), findsNothing);
+    expect(find.byKey(const ValueKey('cancel-agent-selection')), findsNothing);
   });
 }
