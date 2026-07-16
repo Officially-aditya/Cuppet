@@ -85,6 +85,7 @@ const runTargetFillerWords = new Set([
 const knownOutputNouns = new Set([
   "brief",
   "checklist",
+  "commit",
   "digest",
   "email",
   "inbox",
@@ -464,7 +465,7 @@ function isExplicitRunNowRequest(lower: string): boolean {
 }
 
 function hasRunCommand(lower: string): boolean {
-  return /\b(send|show|give|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do)\b/.test(
+  return /\b(send|show|give|provide|tell|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do)\b/.test(
     lower
   );
 }
@@ -476,8 +477,8 @@ function asksForFreshAgentData(
   if (!looksLikeQuestion(lower)) return false;
 
   const asksFreshness =
-    /\b(?:anything|what(?:'s| is)?|any|latest|current|recent|new)\b/.test(lower) &&
-    /\b(?:new|latest|current|recent|today|today's|now|unread|updates?|changed?)\b/.test(lower);
+    /\b(?:anything|what(?:'s| is)?|any|latest|last|most recent|current|recent|new)\b/.test(lower) &&
+    /\b(?:new|latest|last|most recent|current|recent|today|today's|now|unread|updates?|changed?)\b/.test(lower);
   if (!asksFreshness) return false;
 
   const hasDataBackedAgent =
@@ -500,7 +501,7 @@ function mentionsAgentConnector(lower: string): boolean {
 }
 
 function hasCommandVerb(lower: string): boolean {
-  return /\b(send|show|give|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do|add|include|update|change|set|pause|resume|delete|remove|stop|connect)\b/.test(
+  return /\b(send|show|give|provide|tell|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do|add|include|update|change|set|pause|resume|delete|remove|stop|connect)\b/.test(
     lower
   );
 }
@@ -601,7 +602,7 @@ function timeRangeFromText(
   if (/\btoday|today's|this morning|this afternoon|this evening|for today\b/.test(lower)) {
     return "today";
   }
-  if (/\blatest\b/.test(lower)) return "latest";
+  if (/\b(?:latest|last|most recent)\b/.test(lower)) return "latest";
   if (/\bcurrent|for now|right now|now\b/.test(lower)) return "current";
   return undefined;
 }

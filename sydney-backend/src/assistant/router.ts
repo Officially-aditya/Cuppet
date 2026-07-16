@@ -10,6 +10,7 @@ export type AssistantRoute =
     }
   | { kind: "agent_rename"; target: string; name: string }
   | { kind: "agent_update"; target: string; description: string }
+  | { kind: "agent_query"; target?: string }
   | { kind: "create_agent" }
   | {
       kind: "connector_query";
@@ -92,6 +93,17 @@ export function routeAssistantMessage(
       target: update[1]!.trim(),
       description: update[2]!.trim()
     };
+  }
+
+  if (
+    /\b(?:this|that|the selected|the chosen|the same|previous)\s+agent\b/.test(
+      lower
+    ) &&
+    /\b(?:explain|summari[sz]e|show|tell|what|which|problem|question|output|result|message)\b/.test(
+      lower
+    )
+  ) {
+    return { kind: "agent_query" };
   }
 
   if (

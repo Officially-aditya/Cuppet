@@ -78,3 +78,30 @@ test("LLM route overrides cannot bypass explicit update phrasing", () => {
   assert.equal(decision.patch.action, undefined);
   assert.equal(decision.needsLlmReply, true);
 });
+
+test("routes a last-commit question to a fresh GitHub agent run", () => {
+  const githubIntent: ParsedIntent = {
+    ...parsedIntent,
+    name: "Sydney Repository Monitor",
+    intent: "github_activity_digest",
+    connector: "github",
+    connector_ids: ["github"],
+    action: "Monitors commits in the Sydney repository.",
+    output_template: "data_summary",
+    github_repository: "Sydney"
+  };
+  const route = routeAgentMessage(
+    {
+      name: githubIntent.name,
+      prompt: "Monitor commits in repository Sydney.",
+      parsed_intent: githubIntent,
+      schedule_cron: githubIntent.schedule_cron,
+      status: "active"
+    },
+    "Can you provide me details of the last commit in Sydney project?"
+  );
+
+  assert.equal(route.intent, "run_now");
+  assert.equal(route.reason, "fresh_agent_data_request");
+  assert.equal(route.slots.timeRange, "latest");
+});

@@ -3,9 +3,11 @@ import { isUuid } from "../api/ids.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { createAssistantChatReply } from "../agents/assistant-chat.js";
+import { createAgentChatReply } from "../agents/agent-chat.js";
 import {
   AgentServiceError,
   deleteManagedAgent,
+  getManagedAgent,
   listManagedAgents,
   renameManagedAgent,
   resolveAgentTarget,
@@ -14,6 +16,7 @@ import {
   updateManagedAgentDescription,
   type ManagedAgent
 } from "../agents/agent-service.js";
+import { isContextualAgentTarget } from "../agents/agent-target.js";
 import { parseIntentHybrid } from "../agents/llm-intent.js";
 import type { ParsedIntent } from "../agents/parser.js";
 import { describeSchedule } from "../agents/message-router.js";
@@ -339,23 +342,22 @@ async function executeRoute(input: {
   if (route.kind === "agent_list") {
     const agents = await listManagedAgents(input.userId);
     if (route.target) {
-      const resolution = await resolveAgentTarget(input.userId, route.target);
+      const resolution = await resolveAssistantAgentTarget(input, route.target);
       if (resolution.kind === "not_found") {
+        if (isContextualAgentTarget(route.target)) {
+          return createAgentSelection(input, route, { kind: "agent_status" });
+        }
         return { content: plainText(`I couldn’t find an agent named “${route.target}”.`) };
       }
       if (resolution.kind === "ambiguous") {
-        return {
-          content: plainText(
-            `That name matches multiple agents: ${resolution.matches.map((agent) => agent.name).join(", ")}. Use the exact name.`
-          )
-        };
+        return createAgentSelection(input, route, { kind: "agent_status" });
       }
       const agent = resolution.agent;
-      return {
+      return withAgentContext({
         content: plainText(
           `${agent.name} is ${agent.status}${agent.schedule_cron ? ` and runs ${describeSchedule(agent.schedule_cron)}` : " with manual runs"}.`
         )
-      };
+      }, agent);
     }
     if (route.countOnly) {
       return {
@@ -376,6 +378,9 @@ async function executeRoute(input: {
             ].join("\n")
       )
     };
+  }
+  if (route.kind === "agent_query") {
+    return queryManagedAgentRoute(input, route);
   }
   if (
     route.kind === "agent_manage" ||
@@ -511,7 +516,7 @@ async function createAgentSelection(
   }
   const proposedTarget = targetForAgentRoute(route);
   const resolution = proposedTarget
-    ? await resolveAgentTarget(input.userId, proposedTarget)
+    ? await resolveAssistantAgentTarget(input, proposedTarget)
     : null;
   const suggested = resolution?.kind === "resolved" ? resolution.agent : null;
   const ordered = suggested
@@ -596,6 +601,13 @@ async function handleAgentSelection(
   if (!selected) {
     return { content: plainText("That agent is no longer available.") };
   }
+  await pool.query(
+    `UPDATE assistant_pending_actions
+     SET target_agent_id = $2,
+         payload = payload || jsonb_build_object('selected_agent_id', $2::text)
+     WHERE id = $1`,
+    [pending.id, selected.id]
+  );
   const resumedRoute = selectedAgentRoute(
     pending.payload.selection_intent,
     selected.name
@@ -604,7 +616,18 @@ async function handleAgentSelection(
     return { content: plainText("That agent request could not be resumed safely.") };
   }
   if (resumedRoute.kind === "agent_list") {
-    return { content: plainText(agentStatusText(selected)) };
+    return withAgentContext(
+      { content: plainText(agentStatusText(selected)) },
+      selected
+    );
+  }
+  if (resumedRoute.kind === "agent_query") {
+    const originalText = await pendingSourceText(pending, input.text);
+    return queryManagedAgentRoute(
+      { ...input, text: originalText },
+      resumedRoute,
+      selected
+    );
   }
   if (
     resumedRoute.kind !== "agent_manage" &&
@@ -613,7 +636,8 @@ async function handleAgentSelection(
   ) {
     return { content: plainText("That agent request could not be resumed safely.") };
   }
-  return applyManagedAgentRoute(input, resumedRoute, selected);
+  const outcome = await applyManagedAgentRoute(input, resumedRoute, selected);
+  return withAgentContext(outcome, selected);
 }
 
 function targetForAgentRoute(route: AssistantRoute): string | null {
@@ -621,7 +645,8 @@ function targetForAgentRoute(route: AssistantRoute): string | null {
     route.kind === "agent_list" ||
     route.kind === "agent_manage" ||
     route.kind === "agent_rename" ||
-    route.kind === "agent_update"
+    route.kind === "agent_update" ||
+    route.kind === "agent_query"
   ) {
     return route.target ?? null;
   }
@@ -632,23 +657,194 @@ function agentStatusText(agent: ManagedAgent): string {
   return `${agent.name} is ${agent.status}${agent.schedule_cron ? ` and runs ${describeSchedule(agent.schedule_cron)}` : " with manual runs"}.`;
 }
 
+async function resolveAssistantAgentTarget(
+  input: Pick<Parameters<typeof executeRoute>[0], "userId" | "assistantId">,
+  target: string
+): Promise<Awaited<ReturnType<typeof resolveAgentTarget>>> {
+  if (!isContextualAgentTarget(target)) {
+    return resolveAgentTarget(input.userId, target);
+  }
+  const recent = await recentReferencedAgent(input.userId, input.assistantId);
+  return recent
+    ? { kind: "resolved", agent: recent }
+    : { kind: "not_found", matches: [] };
+}
+
+async function recentReferencedAgent(
+  userId: string,
+  assistantId: string
+): Promise<ManagedAgent | null> {
+  const { rows } = await pool.query<{ agent_id: string }>(
+    `SELECT reference.value->>'agent_id' AS agent_id
+     FROM agent_messages message
+     CROSS JOIN LATERAL jsonb_array_elements(
+       COALESCE(message.source_refs, '[]'::jsonb)
+     ) AS reference(value)
+     WHERE message.user_id = $1
+       AND message.agent_id = $2
+       AND message.role = 'agent'
+       AND message.created_at > NOW() - ($3::int * INTERVAL '1 day')
+       AND reference.value->>'type' = 'cuppet_agent_context'
+       AND reference.value->>'agent_id' IS NOT NULL
+     ORDER BY message.created_at DESC
+     LIMIT 1`,
+    [userId, assistantId, config.MESSAGE_RETENTION_DAYS]
+  );
+  const agentId = rows[0]?.agent_id;
+  return agentId ? getManagedAgent(userId, agentId) : null;
+}
+
+async function queryManagedAgentRoute(
+  input: Parameters<typeof executeRoute>[0],
+  route: Extract<AssistantRoute, { kind: "agent_query" }>,
+  selectedAgent?: ManagedAgent
+): Promise<AssistantOutcome> {
+  let target = selectedAgent ?? null;
+  if (!target && route.target) {
+    const resolution = await resolveAssistantAgentTarget(input, route.target);
+    if (resolution.kind === "resolved") {
+      target = resolution.agent;
+    } else {
+      return createAgentSelection(input, route, { kind: "agent_query" });
+    }
+  }
+  if (!target) {
+    target = await recentReferencedAgent(input.userId, input.assistantId);
+  }
+  if (!target) {
+    return createAgentSelection(input, route, { kind: "agent_query" });
+  }
+
+  const latest = await latestManagedAgentOutput(
+    input.userId,
+    target.id
+  );
+  if (!latest) {
+    return withAgentContext(
+      {
+        content: plainText(
+          `${target.name} has no available output yet. Run it once, then ask me about the result.`
+        )
+      },
+      target
+    );
+  }
+  const parsedIntent = typeof target.parsed_intent === "string"
+    ? JSON.parse(target.parsed_intent)
+    : target.parsed_intent;
+  const reply = await createAgentChatReply({
+    userId: input.userId,
+    agent: {
+      name: target.name,
+      prompt: target.prompt,
+      parsed_intent: parsedIntent
+    },
+    latestAgentOutput: agentOutputText(latest.content),
+    sourceRefs: latest.source_refs,
+    recentUserMessages: [],
+    userText: input.text
+  });
+  return withAgentContext(
+    {
+      content: plainText(reply),
+      sourceRefs: latest.source_refs
+    },
+    target
+  );
+}
+
+async function latestManagedAgentOutput(
+  userId: string,
+  agentId: string
+): Promise<{ content: unknown; source_refs: unknown[] } | null> {
+  const { rows } = await pool.query<{
+    content: unknown;
+    source_refs: unknown[];
+  }>(
+    `SELECT content, COALESCE(source_refs, '[]'::jsonb) AS source_refs
+     FROM agent_messages
+     WHERE user_id = $1
+       AND agent_id = $2
+       AND role = 'agent'
+       AND created_at > NOW() - ($3::int * INTERVAL '1 day')
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, agentId, config.MESSAGE_RETENTION_DAYS]
+  );
+  return rows[0] ?? null;
+}
+
+function agentOutputText(content: unknown): string {
+  if (typeof content === "string") {
+    try {
+      return agentOutputText(JSON.parse(content));
+    } catch {
+      return content.slice(0, 12_000);
+    }
+  }
+  if (!content || typeof content !== "object") return "";
+  const record = content as Record<string, unknown>;
+  const data = record.data;
+  if (!data || typeof data !== "object") {
+    return JSON.stringify(record).slice(0, 12_000);
+  }
+  const fields = data as Record<string, unknown>;
+  const body = [fields.body, fields.text, fields.summary]
+    .find((value) => typeof value === "string");
+  return typeof body === "string"
+    ? body.slice(0, 12_000)
+    : JSON.stringify(fields).slice(0, 12_000);
+}
+
+function withAgentContext(
+  outcome: AssistantOutcome,
+  agent: Pick<ManagedAgent, "id" | "name">
+): AssistantOutcome {
+  const contextReference = {
+    type: "cuppet_agent_context",
+    source: "Cuppet",
+    id: agent.id,
+    agent_id: agent.id,
+    name: agent.name
+  };
+  return {
+    ...outcome,
+    sourceRefs: [
+      contextReference,
+      ...(outcome.sourceRefs ?? []).filter((reference) => {
+        if (!reference || typeof reference !== "object") return true;
+        const value = reference as Record<string, unknown>;
+        return !(
+          value.type === "cuppet_agent_context" &&
+          value.agent_id === agent.id
+        );
+      })
+    ]
+  };
+}
+
 async function manageAgentRoute(
   input: Parameters<typeof executeRoute>[0],
   route: Extract<AssistantRoute, { kind: "agent_manage" | "agent_rename" | "agent_update" }>
 ): Promise<AssistantOutcome> {
-  const resolution = await resolveAgentTarget(input.userId, route.target);
+  const resolution = await resolveAssistantAgentTarget(input, route.target);
   if (resolution.kind === "not_found") {
+    if (isContextualAgentTarget(route.target)) {
+      const intent = selectionIntentForRoute(route);
+      if (intent) return createAgentSelection(input, route, intent);
+    }
     return { content: plainText(`I couldn’t find an agent named “${route.target}”.`) };
   }
   if (resolution.kind === "ambiguous") {
-    return {
-      content: plainText(
-        `That name matches multiple agents: ${resolution.matches.map((agent) => agent.name).join(", ")}. Use the exact name.`
-      )
-    };
+    const intent = selectionIntentForRoute(route);
+    if (intent) return createAgentSelection(input, route, intent);
+  }
+  if (resolution.kind !== "resolved") {
+    return { content: plainText("I couldn’t identify that agent safely.") };
   }
   const target = resolution.agent;
-  return applyManagedAgentRoute(input, route, target);
+  const outcome = await applyManagedAgentRoute(input, route, target);
+  return withAgentContext(outcome, target);
 }
 
 async function applyManagedAgentRoute(

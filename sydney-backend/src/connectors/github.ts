@@ -414,6 +414,7 @@ export async function renderGitHubAgent(
 
   const promptAction = String(agent.parsed_intent.action ?? agent.prompt).trim();
   const wantsCommits = checkWantsCommits(agent.prompt, promptAction);
+  const includeLatestCommitHistory = options.trigger === "manual";
 
   const commitRecords: string[] = [];
   const commitSourceRefs: any[] = [];
@@ -421,13 +422,15 @@ export async function renderGitHubAgent(
   if (wantsCommits) {
     const commitsLists = await Promise.all(
       repositories.slice(0, 5).map((repo) =>
-        fetchCommits(
-          accessToken,
-          agent.user_id,
-          repo.full_name,
-          window.since.toISOString(),
-          window.until.toISOString()
-        )
+        includeLatestCommitHistory
+          ? fetchLatestCommits(accessToken, agent.user_id, repo.full_name, 5)
+          : fetchCommits(
+              accessToken,
+              agent.user_id,
+              repo.full_name,
+              window.since.toISOString(),
+              window.until.toISOString()
+            )
       )
     );
     const deliveredShas = new Set<string>();
@@ -438,7 +441,8 @@ export async function renderGitHubAgent(
         const timestamp = githubCommitTimestamp(c);
         if (
           deliveredShas.has(c.sha) ||
-          !githubTimestampInWindow(timestamp, window)
+          (!includeLatestCommitHistory &&
+            !githubTimestampInWindow(timestamp, window))
         ) {
           continue;
         }
@@ -1158,7 +1162,7 @@ async function fetchRepositories(
 
 export async function readGitHubForAssistant(
   userId: string,
-  input: { query?: string; limit?: number }
+  input: { query?: string; limit?: number; latestCommit?: boolean }
 ): Promise<{ summary: string; sourceRefs: unknown[] }> {
   const accessToken = await githubAccessToken(userId);
   if (!accessToken) throw githubAuthRequired("github_not_connected");
@@ -1170,6 +1174,67 @@ export async function readGitHubForAssistant(
       repo.description?.toLowerCase().includes(query)
     )
     .slice(0, Math.min(input.limit ?? 8, 10));
+  if (input.latestCommit) {
+    if (repos.length === 0) {
+      return {
+        summary: "No matching GitHub repositories were found.",
+        sourceRefs: []
+      };
+    }
+    const commitsByRepository = await Promise.all(
+      repos.slice(0, 3).map(async (repo) => ({
+        repo,
+        commits: await fetchLatestCommits(
+          accessToken,
+          userId,
+          repo.full_name,
+          1
+        )
+      }))
+    );
+    const latest = commitsByRepository
+      .flatMap(({ repo, commits }) =>
+        commits.map((commit) => ({ repo, commit }))
+      )
+      .sort((left, right) =>
+        githubCommitTimestamp(right.commit).localeCompare(
+          githubCommitTimestamp(left.commit)
+        )
+      )[0];
+    if (!latest) {
+      return {
+        summary: `No commits were found in ${repos.map((repo) => repo.full_name).join(", ")}.`,
+        sourceRefs: repos.map((repo) => ({
+          type: "github_repository",
+          source: "GitHub",
+          id: String(repo.id),
+          name: repo.full_name,
+          url: repo.html_url
+        }))
+      };
+    }
+    const firstLine =
+      latest.commit.commit.message.split("\n")[0]?.trim() || "Untitled commit";
+    const timestamp = githubCommitTimestamp(latest.commit);
+    return {
+      summary: [
+        `Repository: ${latest.repo.full_name}`,
+        `Commit: ${firstLine}`,
+        `SHA: ${latest.commit.sha}`,
+        `Author: ${latest.commit.commit.author.name}`,
+        `Date: ${timestamp}`,
+        `URL: ${latest.commit.html_url}`
+      ].join("\n"),
+      sourceRefs: [{
+        type: "github_commit",
+        source: "GitHub",
+        id: latest.commit.sha,
+        name: firstLine,
+        url: latest.commit.html_url,
+        repository: latest.repo.full_name
+      }]
+    };
+  }
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const until = new Date().toISOString();
   const commits = await Promise.all(
@@ -1194,6 +1259,22 @@ export async function readGitHubForAssistant(
       url: repo.html_url
     }))
   };
+}
+
+async function fetchLatestCommits(
+  accessToken: string,
+  userId: string,
+  repoFullName: string,
+  limit: number
+): Promise<GitHubCommit[]> {
+  try {
+    const url = new URL(`${githubApiBase}/repos/${repoFullName}/commits`);
+    url.searchParams.set("per_page", String(Math.min(Math.max(limit, 1), 5)));
+    return await githubJson<GitHubCommit[]>(url, accessToken, userId);
+  } catch (error) {
+    console.error(`Failed to fetch latest commits for ${repoFullName}:`, error);
+    return [];
+  }
 }
 
 async function searchAssignedActivity(

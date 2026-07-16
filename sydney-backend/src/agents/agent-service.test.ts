@@ -43,3 +43,28 @@ test("agent targets never fuzzy-match a typo", () => {
     "not_found"
   );
 });
+
+test("agent targets ignore conversational filler and resolve unique name tokens", () => {
+  const result = resolveAgentTargetFromList(
+    [
+      agent("1", "Sydney Repository Monitor"),
+      agent("2", "Portfolio Watch")
+    ],
+    "the sydney monitor agent"
+  );
+
+  assert.equal(result.kind, "resolved");
+  if (result.kind === "resolved") assert.equal(result.agent.id, "1");
+});
+
+test("partial token matches remain ambiguous when multiple real agents match", () => {
+  const result = resolveAgentTargetFromList(
+    [
+      agent("1", "Sydney Repository Monitor"),
+      agent("2", "Sydney Deployment Monitor")
+    ],
+    "sydney monitor"
+  );
+
+  assert.equal(result.kind, "ambiguous");
+});

@@ -76,6 +76,23 @@ test("maps memory and connector delegation through the same classifier", () => {
   );
 });
 
+test("maps agent-output questions without inventing a target", () => {
+  assert.deepEqual(
+    parseClassifiedAssistantRoute(
+      '{"intent":"agent_query","target":null,"confidence":0.93}',
+      { hasPendingAction: false }
+    ),
+    { kind: "agent_query" }
+  );
+  assert.deepEqual(
+    parseClassifiedAssistantRoute(
+      '{"intent":"agent_query","target":"DSA Practice Agent","confidence":0.91}',
+      { hasPendingAction: false }
+    ),
+    { kind: "agent_query", target: "DSA Practice Agent" }
+  );
+});
+
 test("pending decisions require both high confidence and active server state", () => {
   const confirmation =
     '{"intent":"pending_decision","decision":"confirm","confidence":0.96}';

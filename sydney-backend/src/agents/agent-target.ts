@@ -14,12 +14,43 @@ export function resolveAgentTargetFromList<T extends { name: string }>(
   if (exact.length === 1) return { kind: "resolved", agent: exact[0]! };
   if (exact.length > 1) return { kind: "ambiguous", matches: exact };
 
+  const conciseTarget = normalizeAgentTarget(target);
+  const conciseExact = agents.filter(
+    (agent) => normalizeAgentTarget(agent.name) === conciseTarget
+  );
+  if (conciseExact.length === 1) {
+    return { kind: "resolved", agent: conciseExact[0]! };
+  }
+  if (conciseExact.length > 1) {
+    return { kind: "ambiguous", matches: conciseExact };
+  }
+
   const prefix = agents.filter((agent) =>
-    normalizeAgentName(agent.name).startsWith(normalized)
+    normalizeAgentTarget(agent.name).startsWith(conciseTarget)
   );
   if (prefix.length === 1) return { kind: "resolved", agent: prefix[0]! };
   if (prefix.length > 1) return { kind: "ambiguous", matches: prefix };
+
+  const targetTokens = conciseTarget.split(" ").filter(Boolean);
+  if (targetTokens.length >= 2) {
+    const tokenMatches = agents.filter((agent) => {
+      const nameTokens = new Set(normalizeAgentTarget(agent.name).split(" "));
+      return targetTokens.every((token) => nameTokens.has(token));
+    });
+    if (tokenMatches.length === 1) {
+      return { kind: "resolved", agent: tokenMatches[0]! };
+    }
+    if (tokenMatches.length > 1) {
+      return { kind: "ambiguous", matches: tokenMatches };
+    }
+  }
   return { kind: "not_found", matches: [] };
+}
+
+export function isContextualAgentTarget(value: string): boolean {
+  return /^(?:(?:the|this|that|selected|chosen|same|previous|last)\s+)*(?:one|agent)$/i.test(
+    normalizeAgentName(value)
+  );
 }
 
 export function normalizeAgentName(value: string): string {
@@ -29,4 +60,11 @@ export function normalizeAgentName(value: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function normalizeAgentTarget(value: string): string {
+  return normalizeAgentName(value)
+    .replace(/^(?:(?:the|my|our)\s+)+/, "")
+    .replace(/\s+(?:(?:agent|automation|bot)\s*)+$/, "")
+    .trim();
 }

@@ -94,8 +94,10 @@ async function executeOne(
         limit: 8
       });
     case "github":
+      const githubRequest = githubAssistantQuery(text);
       return readGitHubForAssistant(userId, {
-        query: searchSubject(text, ["github", "repo", "repository", "activity", "recent"]),
+        query: githubRequest.repository,
+        latestCommit: githubRequest.latestCommit,
         limit: 8
       });
     case "slack":
@@ -110,6 +112,72 @@ async function executeOne(
         limit: 8
       });
   }
+}
+
+export function githubAssistantQuery(text: string): {
+  repository?: string;
+  latestCommit: boolean;
+} {
+  const normalized = text.trim();
+  const latestCommit =
+    /\b(?:last|latest|most recent)\s+(?:github\s+)?commit\b/i.test(normalized) ||
+    /\bcommit\b[^.!?]{0,60}\b(?:last|latest|most recent)\b/i.test(normalized);
+  const githubUrl = normalized.match(
+    /https?:\/\/(?:www\.)?github\.com\/([a-z0-9_.-]+\/[a-z0-9_.-]+)/i
+  )?.[1];
+  if (githubUrl) {
+    return { repository: trimRepositoryPunctuation(githubUrl), latestCommit };
+  }
+
+  const ownerAndRepository = normalized.match(
+    /\b([a-z0-9_.-]+\/[a-z0-9_.-]+)\b/i
+  )?.[1];
+  if (ownerAndRepository) {
+    return {
+      repository: trimRepositoryPunctuation(ownerAndRepository),
+      latestCommit
+    };
+  }
+
+  const quoted = normalized.match(/["“]([^"”]+)["”]/)?.[1]?.trim();
+  if (quoted) {
+    return { repository: quoted.slice(0, 120), latestCommit };
+  }
+
+  const repository = [
+    /\b([a-z0-9_.-]+)\s+(?:github\s+)?(?:repo|repository|project)\b/i,
+    /\b(?:repo|repository|project)\s+(?:named\s+|called\s+)?([a-z0-9_.-]+)\b/i,
+    /\bcommits?\s+(?:in|on|for|from)\s+(?:the\s+)?([a-z0-9_.-]+)\b/i
+  ]
+    .map((pattern) => normalized.match(pattern)?.[1])
+    .find((candidate) => candidate && !githubRepositoryQueryStopWords.has(candidate.toLowerCase()));
+
+  return {
+    ...(repository
+      ? { repository: trimRepositoryPunctuation(repository) }
+      : {}),
+    latestCommit
+  };
+}
+
+const githubRepositoryQueryStopWords = new Set([
+  "a",
+  "an",
+  "github",
+  "last",
+  "latest",
+  "my",
+  "recent",
+  "that",
+  "the",
+  "this"
+]);
+
+function trimRepositoryPunctuation(value: string): string {
+  return value
+    .replace(/[.,!?;:]+$/g, "")
+    .replace(/\.git$/i, "")
+    .slice(0, 120);
 }
 
 function gmailQuery(text: string): string {

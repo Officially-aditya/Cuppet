@@ -20,7 +20,8 @@ const selectionIntentSchema = z.discriminatedUnion("kind", [
       kind: z.literal("agent_update"),
       description: z.string().trim().min(1).max(1000)
     })
-    .strict()
+    .strict(),
+  z.object({ kind: z.literal("agent_query") }).strict()
 ]);
 
 export type AgentSelectionIntent = z.infer<typeof selectionIntentSchema>;
@@ -39,6 +40,9 @@ export function selectionIntentForRoute(
   }
   if (route.kind === "agent_update") {
     return { kind: "agent_update", description: route.description };
+  }
+  if (route.kind === "agent_query") {
+    return { kind: "agent_query" };
   }
   return null;
 }
@@ -71,6 +75,8 @@ export function selectedAgentRoute(
         target: selectedAgentName,
         description: intent.description
       };
+    case "agent_query":
+      return { kind: "agent_query", target: selectedAgentName };
   }
 }
 
@@ -84,5 +90,7 @@ export function agentSelectionQuestion(intent: AgentSelectionIntent): string {
       return `Which agent should I rename to ${intent.name}?`;
     case "agent_update":
       return "Which agent should I update?";
+    case "agent_query":
+      return "Which agent’s latest output should I use?";
   }
 }

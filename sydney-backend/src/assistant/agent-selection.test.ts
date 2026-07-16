@@ -58,3 +58,13 @@ test("selection questions describe the pending operation", () => {
     "Which agent should I rename to Daily Brief?"
   );
 });
+
+test("resumes an agent-output question with the selected real agent", () => {
+  assert.deepEqual(
+    selectedAgentRoute(
+      { kind: "agent_query" },
+      "DSA Practice Agent"
+    ),
+    { kind: "agent_query", target: "DSA Practice Agent" }
+  );
+});

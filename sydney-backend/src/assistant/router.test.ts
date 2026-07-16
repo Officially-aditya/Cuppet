@@ -79,3 +79,10 @@ test("routes memory inspection and forgetting", () => {
     all: true
   });
 });
+
+test("routes a follow-up about the selected agent without losing its referent", () => {
+  assert.deepEqual(
+    routeAssistantMessage("Explain the last problem in that agent"),
+    { kind: "agent_query" }
+  );
+});
