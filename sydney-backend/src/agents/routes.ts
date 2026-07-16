@@ -7,6 +7,7 @@ import { requireAuth } from "../auth/middleware.js";
 import { agentExecutorQueue, agentExecutorJobName } from "../queue/index.js";
 import { ensureAssistantContact } from "./assistant.js";
 import { parseIntentHybrid } from "./llm-intent.js";
+import { describeSchedule } from "./message-router.js";
 import type { ParsedIntent } from "./parser.js";
 import {
   syncAgentScheduleForUser
@@ -222,7 +223,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     );
 
     const agent = rows[0]!;
-    await writeAgentCreatedMessage(userId, agent.id, parsedIntent);
+    const createdMessage = await writeAgentCreatedMessage(
+      userId,
+      agent.id,
+      parsedIntent
+    );
     await syncAgentScheduleForUser(agent, userId);
     await publishRealtimeEvent({
       type: "agent.created",
@@ -231,7 +236,15 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       data: { name: agent.name }
     });
 
-    return reply.code(201).send({ agent });
+    return reply.code(201).send({
+      agent: {
+        ...agent,
+        description: parsedIntent.action,
+        last_message_preview: createdMessage.preview,
+        latest_message_at: createdMessage.createdAt,
+        unread_count: 1
+      }
+    });
   });
 
   app.get("/agents/:agentId", { preHandler: requireAuth }, async (request, reply) => {
@@ -689,21 +702,31 @@ async function writeAgentCreatedMessage(
   userId: string,
   agentId: string,
   parsedIntent: ParsedIntent
-): Promise<void> {
+): Promise<{ id: string; createdAt: Date | string; preview: string }> {
   const githubConnected = !parsedIntent.connector_ids.includes("github") ||
     await hasUsableGitHubToken(userId);
   const message = agentCreationThreadMessage({
     parsedIntent,
     githubConnected,
-    readyDetail: agentCreationReadyDetail(parsedIntent)
+    readyDetail: agentCreationReadyDetail(parsedIntent, describeSchedule)
   });
 
-  await pool.query(
+  const { rows } = await pool.query<{ id: string; created_at: Date | string }>(
     `
       INSERT INTO agent_messages
         (agent_id, user_id, role, content, source_refs)
       VALUES ($1, $2, $3, $4, '[]'::jsonb)
+      RETURNING id, created_at
     `,
     [agentId, userId, message.role, JSON.stringify(message.content)]
   );
+  const data = message.content.data;
+  const preview = [data.text, data.task, data.title]
+    .find((value) => typeof value === "string" && value.trim())
+    ?.toString() ?? `${parsedIntent.name} is ready.`;
+  return {
+    id: rows[0]!.id,
+    createdAt: rows[0]!.created_at,
+    preview
+  };
 }

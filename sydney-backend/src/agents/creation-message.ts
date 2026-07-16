@@ -1,9 +1,9 @@
 import type { ParsedIntent } from "./parser.js";
 
 type AgentCreationThreadMessage = {
-  role: "agent" | "system";
+  role: "agent";
   content: {
-    template: "daily_task" | "system";
+    template: "daily_task" | "data_summary";
     version: "1.0";
     data: Record<string, unknown>;
   };
@@ -22,10 +22,13 @@ export function agentCreationThreadMessage(input: {
         template: "daily_task",
         version: "1.0",
         data: {
-          title: "Connect GitHub to run this agent",
-          task: "To run this agent, you need to connect GitHub.",
+          title: `Finish setting up ${input.parsedIntent.name}`,
+          task: [
+            input.parsedIntent.action,
+            agentVoiceReadyDetail(input.readyDetail)
+          ].join("\n\n"),
           context:
-            `${input.parsedIntent.name} was created, but it cannot read repository activity until you authorize GitHub.`,
+            "I’ve been created, but I can’t read repository activity until you authorize GitHub.",
           estimated_minutes: 1,
           actions: [
             {
@@ -44,19 +47,62 @@ export function agentCreationThreadMessage(input: {
   }
 
   return {
-    role: "system",
+    role: "agent",
     content: {
-      template: "system",
+      template: "data_summary",
       version: "1.0",
       data: {
-        type: "agent_created",
-        icon: "check",
-        message: `${input.parsedIntent.name} is ready.`,
-        detail: input.readyDetail,
-        action: null
+        kind: "agent_introduction",
+        title: input.parsedIntent.name,
+        text: `Hi, I’m ${input.parsedIntent.name}. I’m set up and ready to help.`,
+        summary: agentIntroductionSummary(
+          input.parsedIntent,
+          input.readyDetail
+        )
       }
     }
   };
+}
+
+function agentIntroductionSummary(
+  parsedIntent: ParsedIntent,
+  readyDetail: string
+): string {
+  const permissions = [...new Set(parsedIntent.permissions_needed)]
+    .map((permission) => `- ${permission}`)
+    .join("\n");
+  return [
+    "What I do:",
+    parsedIntent.action,
+    "",
+    "When I run:",
+    agentVoiceReadyDetail(readyDetail),
+    "",
+    "Access and safety:",
+    permissions || "- No connected-account access is required.",
+    `- ${safetyDescription(parsedIntent.safety_level)}`,
+    "",
+    "Controls:",
+    "You can ask me to run now, or ask the Assistant to pause, update, rename, or delete me."
+  ].join("\n");
+}
+
+function agentVoiceReadyDetail(detail: string): string {
+  return detail
+    .replace(/^It will react\b/, "I’ll react")
+    .replace(/^It will run\b/, "I’ll run")
+    .replace(/^It is ready\b/, "I’m ready");
+}
+
+function safetyDescription(level: ParsedIntent["safety_level"]): string {
+  switch (level) {
+    case "read":
+      return "I only read data and prepare updates.";
+    case "suggest":
+      return "I can prepare suggestions, but I won’t apply changes automatically.";
+    case "act":
+      return "I can take approved actions within the permissions you grant.";
+  }
 }
 
 export function agentCreationReadyDetail(

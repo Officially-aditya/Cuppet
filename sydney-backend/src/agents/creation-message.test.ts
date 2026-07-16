@@ -4,6 +4,7 @@ import {
   agentCreationReadyDetail,
   agentCreationThreadMessage
 } from "./creation-message.js";
+import { describeSchedule } from "./message-router.js";
 import { parseIntent } from "./parser.js";
 
 test("asks the user to connect GitHub in a new GitHub agent thread", () => {
@@ -18,9 +19,17 @@ test("asks the user to connect GitHub in a new GitHub agent thread", () => {
 
   assert.equal(message.role, "agent");
   assert.equal(message.content.template, "daily_task");
-  assert.equal(
-    message.content.data.task,
-    "To run this agent, you need to connect GitHub."
+  assert.match(
+    message.content.data.task?.toString() ?? "",
+    /Summarizes recently updated repositories/i
+  );
+  assert.match(
+    message.content.data.task?.toString() ?? "",
+    /I’ll run daily/i
+  );
+  assert.match(
+    message.content.data.context?.toString() ?? "",
+    /can’t read repository activity until you authorize GitHub/i
   );
   assert.deepEqual(message.content.data.actions, [
     {
@@ -35,7 +44,7 @@ test("asks the user to connect GitHub in a new GitHub agent thread", () => {
   ]);
 });
 
-test("keeps the ready system message when GitHub is connected", () => {
+test("introduces a ready agent with capability, timing, access, and controls", () => {
   const parsedIntent = parseIntent("Create a daily GitHub repository digest.");
   const message = agentCreationThreadMessage({
     parsedIntent,
@@ -43,9 +52,22 @@ test("keeps the ready system message when GitHub is connected", () => {
     readyDetail: "It will run daily."
   });
 
-  assert.equal(message.role, "system");
-  assert.equal(message.content.template, "system");
-  assert.equal(message.content.data.message, "GitHub Activity is ready.");
+  assert.equal(message.role, "agent");
+  assert.equal(message.content.template, "data_summary");
+  assert.equal(message.content.data.kind, "agent_introduction");
+  assert.equal(
+    message.content.data.text,
+    "Hi, I’m GitHub Activity. I’m set up and ready to help."
+  );
+  const summary = message.content.data.summary?.toString() ?? "";
+  assert.match(summary, /What I do:/);
+  assert.match(summary, /Summarizes recently updated repositories/i);
+  assert.match(summary, /When I run:\nI’ll run daily\./);
+  assert.match(summary, /Access and safety:/);
+  assert.match(summary, /GitHub profile and repository read access/);
+  assert.match(summary, /I only read data and prepare updates/);
+  assert.match(summary, /Controls:/);
+  assert.match(summary, /ask me to run now/i);
 });
 
 test("describes realtime agents without inventing a daily schedule", () => {
@@ -58,4 +80,13 @@ test("describes realtime agents without inventing a daily schedule", () => {
     "It will react to matching activity and notify you immediately."
   );
   assert.doesNotMatch(agentCreationReadyDetail(parsedIntent), /daily|9:00/i);
+});
+
+test("renders scheduled introductions in human-readable time", () => {
+  const parsedIntent = parseIntent("Create a daily calendar agenda.");
+
+  assert.equal(
+    agentCreationReadyDetail(parsedIntent, describeSchedule),
+    "It will run every day at 9:00 AM."
+  );
 });
