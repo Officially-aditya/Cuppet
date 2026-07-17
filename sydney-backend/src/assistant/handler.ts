@@ -67,6 +67,7 @@ import {
   type AgentSelectionIntent
 } from "./agent-selection.js";
 import { routeAssistantMessage, type AssistantRoute } from "./router.js";
+import { insertConfiguredAgent } from "../agents/runtime/configuration-service.js";
 
 export type AssistantMessageRow = {
   id: string;
@@ -952,30 +953,23 @@ async function createAgentFromAssistant(
   let agent: ManagedAgent;
   try {
     await client.query("BEGIN");
-    const { rows } = await client.query<ManagedAgent>(
-      `INSERT INTO agents
-        (user_id, name, avatar, prompt, parsed_intent, connector_ids,
-         schedule_cron, is_assistant, status, safety_level, last_message_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, 'active', $8, NOW())
-       RETURNING *`,
-      [
-        input.userId,
-        parsedIntent.name,
-        parsedIntent.avatar,
-        input.text,
-        JSON.stringify(parsedIntent),
-        parsedIntent.connector_ids,
-        parsedIntent.schedule_cron,
-        parsedIntent.safety_level
-      ]
-    );
-    agent = rows[0]!;
+    agent = await insertConfiguredAgent<ManagedAgent>(client, {
+      userId: input.userId,
+      name: parsedIntent.name,
+      avatar: parsedIntent.avatar,
+      prompt: input.text,
+      parsedIntent,
+      createdBy: "assistant"
+    });
     const githubConnected = !parsedIntent.connector_ids.includes("github") ||
       await hasUsableGitHubToken(input.userId);
     const created = agentCreationThreadMessage({
-      parsedIntent,
+      parsedIntent: agent.parsed_intent,
       githubConnected,
-      readyDetail: agentCreationReadyDetail(parsedIntent, describeSchedule)
+      readyDetail: agentCreationReadyDetail(
+        agent.parsed_intent,
+        describeSchedule
+      )
     });
     await insertMessage(client, {
       agentId: agent.id,

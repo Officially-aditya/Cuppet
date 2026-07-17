@@ -16,6 +16,13 @@ import {
   resolveAgentTargetFromList,
   type NamedAgentTargetResolution
 } from "./agent-target.js";
+import { compileAgentDefinition } from "./runtime/compiler.js";
+import {
+  loadCurrentAgentDefinition,
+  loadRuntimeState,
+  reviseAgentDefinition
+} from "./runtime/configuration-service.js";
+import { definitionToParsedIntent } from "./runtime/compiler.js";
 
 export type ManagedAgent = {
   id: string;
@@ -52,7 +59,7 @@ export async function listManagedAgents(userId: string): Promise<ManagedAgent[]>
      ORDER BY name ASC`,
     [userId]
   );
-  return rows;
+  return Promise.all(rows.map(hydrateManagedAgent));
 }
 
 export async function getManagedAgent(
@@ -63,7 +70,7 @@ export async function getManagedAgent(
     `${managedAgentSelect} WHERE id = $1 AND user_id = $2`,
     [agentId, userId]
   );
-  return rows[0] ?? null;
+  return rows[0] ? hydrateManagedAgent(rows[0]) : null;
 }
 
 export type AgentTargetResolution = NamedAgentTargetResolution<ManagedAgent>;
@@ -185,23 +192,32 @@ export async function updateManagedAgentDescription(
       : {}),
     ...preservedAgentState(previous)
   };
-  const { rows } = await pool.query<ManagedAgent>(
-    `UPDATE agents
-     SET prompt = $3, parsed_intent = $4, connector_ids = $5,
-         schedule_cron = $6, safety_level = $7
-     WHERE id = $1 AND user_id = $2
-     RETURNING *`,
-    [
+  const client = await pool.connect();
+  let agent: ManagedAgent;
+  try {
+    await client.query("BEGIN");
+    await reviseAgentDefinition(client, {
       agentId,
       userId,
-      clean,
-      JSON.stringify(parsedIntent),
-      reparsed.connector_ids,
-      reparsed.schedule_cron,
-      reparsed.safety_level
-    ]
-  );
-  const agent = rows[0]!;
+      definition: compileAgentDefinition(parsedIntent, clean),
+      name: existing.name,
+      avatar: existing.avatar,
+      prompt: clean,
+      createdBy: "agent_service"
+    });
+    const { rows } = await client.query<ManagedAgent>(
+      `${managedAgentSelect} WHERE id = $1 AND user_id = $2`,
+      [agentId, userId]
+    );
+    agent = rows[0]!;
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+  agent = await hydrateManagedAgent(agent);
   await syncAgentScheduleForUser(agent, userId);
   await publishRealtimeEvent({
     type: "agent.updated",
@@ -340,3 +356,22 @@ const managedAgentSelect = `
          schedule_cron, is_assistant, status, safety_level, last_message_at,
          created_at, updated_at
   FROM agents`;
+
+async function hydrateManagedAgent(
+  agent: ManagedAgent
+): Promise<ManagedAgent> {
+  if (agent.is_assistant) return agent;
+  const [configuration, runtimeState] = await Promise.all([
+    loadCurrentAgentDefinition(agent.id),
+    loadRuntimeState(agent.id)
+  ]);
+  if (!configuration) return agent;
+  return {
+    ...agent,
+    parsed_intent: definitionToParsedIntent(configuration.definition, {
+      name: agent.name,
+      avatar: agent.avatar,
+      runtimeState
+    })
+  };
+}

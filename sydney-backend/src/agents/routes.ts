@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
+import type { PoolClient } from "pg";
 import { z } from "zod";
 import { isUuid } from "../api/ids.js";
 import { pool } from "../db/index.js";
@@ -36,6 +37,23 @@ import {
   setManagedAgentStatus,
   updateManagedAgentDescription
 } from "./agent-service.js";
+import {
+  agentConfigurationView,
+  compileAgentDefinition,
+  definitionToParsedIntent,
+  validateCompiledDefinition
+} from "./runtime/compiler.js";
+import {
+  insertConfiguredAgent,
+  loadCurrentAgentDefinition,
+  loadRuntimeState,
+  reviseAgentDefinition
+} from "./runtime/configuration-service.js";
+import { outputStateEffects } from "./runtime/output-registry.js";
+import {
+  applyAgentStateEvents,
+  type AgentStateEvent
+} from "./runtime/state-store.js";
 
 const createAgentSchema = z
   .object({
@@ -91,9 +109,14 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           a.last_message_at,
           a.created_at,
           a.updated_at,
+          revision.definition AS agent_definition,
+          runtime.state AS agent_runtime_state,
           CASE
             WHEN a.is_assistant THEN a.prompt
-            ELSE COALESCE(NULLIF(a.parsed_intent->>'action', ''), a.name)
+            ELSE COALESCE(
+              NULLIF(revision.definition #>> '{instructions,0}', ''),
+              a.name
+            )
           END AS description,
           COALESCE(
             NULLIF(latest_message.content #>> '{data,body}', ''),
@@ -104,7 +127,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
             CASE
               WHEN latest_message.id IS NOT NULL THEN 'New message'
               WHEN a.is_assistant THEN a.prompt
-              ELSE COALESCE(NULLIF(a.parsed_intent->>'action', ''), a.prompt)
+              ELSE COALESCE(
+                NULLIF(revision.definition #>> '{instructions,0}', ''),
+                a.prompt
+              )
             END
           ) AS last_message_preview,
           COALESCE(
@@ -114,6 +140,12 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           ) AS latest_message_at,
           COALESCE(unread_messages.unread_count, 0)::int AS unread_count
         FROM agents a
+        LEFT JOIN agent_config_heads config_head
+          ON config_head.agent_id = a.id
+        LEFT JOIN agent_config_revisions revision
+          ON revision.id = config_head.revision_id
+        LEFT JOIN agent_runtime_states runtime
+          ON runtime.agent_id = a.id
         LEFT JOIN LATERAL (
           SELECT id, role, content, created_at
           FROM agent_messages
@@ -150,7 +182,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       [userId, config.MESSAGE_RETENTION_DAYS]
     );
 
-    return { agents: rows };
+    return {
+      agents: rows.map((agent) => withConfigurationViews(agent))
+    };
   });
 
   app.post("/agents", { preHandler: requireAuth }, async (request, reply) => {
@@ -189,46 +223,33 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const { rows } = await pool.query(
-      `
-        INSERT INTO agents
-          (user_id, name, avatar, prompt, parsed_intent, connector_ids,
-           schedule_cron, is_assistant, status, safety_level, last_message_at)
-        VALUES
-          ($1, $2, $3, $4, $5, $6, $7, FALSE, 'active', $8, NOW())
-        RETURNING
-          id,
-          name,
-          avatar,
-          prompt,
-          parsed_intent,
-          connector_ids,
-          schedule_cron,
-          is_assistant,
-          status,
-          safety_level,
-          last_message_at,
-          created_at,
-          updated_at
-      `,
-      [
+    const client = await pool.connect();
+    let agent: any;
+    let createdMessage: Awaited<ReturnType<typeof writeAgentCreatedMessage>>;
+    try {
+      await client.query("BEGIN");
+      agent = await insertConfiguredAgent(client, {
         userId,
-        parsedIntent.name,
-        parsedIntent.avatar,
-        body.data.prompt,
-        JSON.stringify(parsedIntent),
-        parsedIntent.connector_ids,
-        parsedIntent.schedule_cron,
-        parsedIntent.safety_level
-      ]
-    );
-
-    const agent = rows[0]!;
-    const createdMessage = await writeAgentCreatedMessage(
-      userId,
-      agent.id,
-      parsedIntent
-    );
+        name: parsedIntent.name,
+        avatar: parsedIntent.avatar,
+        prompt: body.data.prompt,
+        parsedIntent,
+        createdBy: "api"
+      });
+      createdMessage = await writeAgentCreatedMessage(
+        userId,
+        agent.id,
+        agent.parsed_intent,
+        client
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+    const definition = compileAgentDefinition(parsedIntent, body.data.prompt);
     await syncAgentScheduleForUser(agent, userId);
     await publishRealtimeEvent({
       type: "agent.created",
@@ -243,7 +264,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         description: parsedIntent.action,
         last_message_preview: createdMessage.preview,
         latest_message_at: createdMessage.createdAt,
-        unread_count: 1
+        unread_count: 1,
+        configuration: agentConfigurationView(definition, agent),
+        agent_preview: agentConfigurationView(definition, agent)
       }
     });
   });
@@ -350,8 +373,6 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     const description = body.data.description?.trim();
     let nextParsedIntent = existingParsedIntent;
     let nextPrompt = existing.prompt;
-    let nextConnectorIds = existing.connector_ids;
-    let nextSafetyLevel = existing.safety_level;
 
     if (description !== undefined) {
       let reparsed = await parseIntentHybrid(description);
@@ -386,8 +407,6 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         ...preservedAgentState(existingParsedIntent)
       };
       nextPrompt = description;
-      nextConnectorIds = reparsed.connector_ids;
-      nextSafetyLevel = reparsed.safety_level;
     }
 
     const nextName = body.data.name ?? existing.name;
@@ -426,46 +445,40 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       nextParsedIntent.realtime_enabled = false;
     }
 
-    const { rows } = await pool.query(
-      `
-        UPDATE agents
-        SET name = $1,
-            schedule_cron = $2,
-            status = $3,
-            parsed_intent = $4::jsonb,
-            prompt = $5,
-            connector_ids = $6,
-            safety_level = $7
-        WHERE id = $8 AND user_id = $9
-        RETURNING
-          id,
-          name,
-          avatar,
-          prompt,
-          parsed_intent,
-          connector_ids,
-          schedule_cron,
-          is_assistant,
-          status,
-          safety_level,
-          last_message_at,
-          created_at,
-          updated_at
-      `,
-      [
-        nextName,
-        nextSchedule,
-        nextStatus,
-        JSON.stringify(nextParsedIntent),
-        nextPrompt,
-        nextConnectorIds,
-        nextSafetyLevel,
+    const client = await pool.connect();
+    let updatedAgent: any;
+    try {
+      await client.query("BEGIN");
+      await reviseAgentDefinition(client, {
         agentId,
-        userId
-      ]
-    );
-
-    const updatedAgent = rows[0]!;
+        userId,
+        definition: compileAgentDefinition(
+          nextParsedIntent as ParsedIntent,
+          nextPrompt
+        ),
+        name: nextName,
+        avatar: existing.avatar,
+        prompt: nextPrompt,
+        status: nextStatus,
+        createdBy: "settings"
+      });
+      const { rows } = await client.query(
+        `SELECT
+           id, name, avatar, prompt, parsed_intent, connector_ids,
+           schedule_cron, is_assistant, status, safety_level,
+           last_message_at, created_at, updated_at
+         FROM agents
+         WHERE id = $1 AND user_id = $2`,
+        [agentId, userId]
+      );
+      updatedAgent = rows[0]!;
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
     await syncAgentScheduleForUser(updatedAgent, userId);
     await publishRealtimeEvent({
       type: "agent.updated",
@@ -522,7 +535,24 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const parsedIntent = await parseIntentHybrid(body.data.prompt);
-    return reply.send({ parsed_intent: parsedIntent });
+    const definition = parsedIntent.unsupported_connector
+      ? null
+      : compileAgentDefinition(parsedIntent, body.data.prompt);
+    return reply.send({
+      parsed_intent: parsedIntent,
+      ...(definition
+        ? {
+            configuration: agentConfigurationView(definition, {
+              name: parsedIntent.name,
+              avatar: parsedIntent.avatar
+            }),
+            agent_preview: agentConfigurationView(definition, {
+              name: parsedIntent.name,
+              avatar: parsedIntent.avatar
+            })
+          }
+        : {})
+    });
   });
 
   app.post("/agents/:agentId/messages/:messageId/action", { preHandler: requireAuth }, async (request, reply) => {
@@ -549,106 +579,67 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       return agentNotFound(reply);
     }
 
-    const ownedMessage = await pool.query(
-      `
-        SELECT 1
-        FROM agent_messages
-        WHERE id = $1 AND agent_id = $2 AND user_id = $3
-          AND created_at > NOW() - ($4::int * INTERVAL '1 day')
-        LIMIT 1
-      `,
-      [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
-    );
-    if (!ownedMessage.rows[0]) {
-      return reply.code(404).send({
-        error: {
-          code: "MESSAGE_NOT_FOUND",
-          message: "Message not found."
-        }
-      });
+    const dateString = date ?? new Date().toISOString().split("T")[0]!;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const messageResult = await client.query<{ content: any }>(
+        `SELECT content
+         FROM agent_messages
+         WHERE id = $1 AND agent_id = $2 AND user_id = $3
+           AND created_at > NOW() - ($4::int * INTERVAL '1 day')
+         FOR UPDATE`,
+        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
+      );
+      const message = messageResult.rows[0];
+      if (!message) {
+        await client.query("ROLLBACK");
+        return reply.code(404).send({
+          error: {
+            code: "MESSAGE_NOT_FOUND",
+            message: "Message not found."
+          }
+        });
+      }
+      const content =
+        typeof message.content === "string"
+          ? JSON.parse(message.content)
+          : message.content;
+      const effects = outputStateEffects({
+        content,
+        action,
+        date: dateString
+      }) as AgentStateEvent[];
+      await client.query(
+        action === "snooze"
+          ? `UPDATE agent_messages
+             SET content = jsonb_set(content, '{data,action_taken}', '"snooze"'::jsonb)
+             WHERE id = $1`
+          : `UPDATE agent_messages
+             SET content = jsonb_set(
+               jsonb_set(content, '{data,completed}', $2::jsonb),
+               '{data,action_taken}',
+               $3::jsonb
+             )
+             WHERE id = $1`,
+        action === "snooze"
+          ? [messageId]
+          : [
+              messageId,
+              JSON.stringify(action === "done"),
+              JSON.stringify(action)
+            ]
+      );
+      await applyAgentStateEvents(client, agentId, effects);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
-    const dateString = date ?? new Date().toISOString().split("T")[0];
-
-    if (action === "done") {
-      // 1. Mark current card as completed and set action_taken to "done"
-      await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'true'::jsonb), '{data,action_taken}', '"done"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')`,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
-      );
-      // 2. Append completed day to history heatmap
-      await pool.query(
-        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history}', coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, true)) WHERE id = $2 AND user_id = $3`,
-        [dateString, agentId, userId]
-      );
-    } else if (action === "skip") {
-      // Get the message content to check template and retrieve the topic or title
-      const msgRes = await pool.query(
-        "SELECT content FROM agent_messages WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')",
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
-      );
-      const msg = msgRes.rows[0];
-      if (msg) {
-        const content = typeof msg.content === "string" ? JSON.parse(msg.content) : msg.content;
-        if (content && content.template === "study_guide" && content.data && content.data.topic) {
-          await pool.query(
-            `
-              UPDATE agents
-              SET parsed_intent = jsonb_set(
-                parsed_intent,
-                '{topics_covered}',
-                coalesce(
-                  (
-                    SELECT jsonb_agg(elem)
-                    FROM jsonb_array_elements(coalesce(parsed_intent->'topics_covered', '[]'::jsonb)) elem
-                    WHERE elem != $1::jsonb
-                  ),
-                  '[]'::jsonb
-                )
-              )
-              WHERE id = $2 AND user_id = $3
-            `,
-            [JSON.stringify(content.data.topic), agentId, userId]
-          );
-        } else if (content && content.template === "dsa_question" && content.data && content.data.title) {
-          await pool.query(
-            `
-              UPDATE agents
-              SET parsed_intent = jsonb_set(
-                parsed_intent,
-                '{topics_covered}',
-                coalesce(
-                  (
-                    SELECT jsonb_agg(elem)
-                    FROM jsonb_array_elements(coalesce(parsed_intent->'topics_covered', '[]'::jsonb)) elem
-                    WHERE elem != $1::jsonb
-                  ),
-                  '[]'::jsonb
-                )
-              )
-              WHERE id = $2 AND user_id = $3
-            `,
-            [JSON.stringify(content.data.title), agentId, userId]
-          );
-        }
-      }
-
-      // Mark card as not completed and set action_taken to "skip"
-      await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(jsonb_set(content, '{data,completed}', 'false'::jsonb), '{data,action_taken}', '"skip"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')`,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
-      );
-      await pool.query(
-        `UPDATE agents SET parsed_intent = jsonb_set(parsed_intent, '{history}', coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, false)) WHERE id = $2 AND user_id = $3`,
-        [dateString, agentId, userId]
-      );
-    } else if (action === "snooze") {
-      // Set action_taken to "snooze"
-      await pool.query(
-        `UPDATE agent_messages SET content = jsonb_set(content, '{data,action_taken}', '"snooze"'::jsonb) WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND created_at > NOW() - ($4::int * INTERVAL '1 day')`,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
-      );
-      // bullmq enqueue with delay of 30 minutes
+    if (action === "snooze") {
       await agentExecutorQueue.add(
         agentExecutorJobName,
         { agentId, trigger: "snooze", snoozedMessageId: messageId },
@@ -698,7 +689,7 @@ async function getAgent(userId: string, agentId: string) {
     [agentId, userId]
   );
 
-  return rows[0] ?? null;
+  return rows[0] ? hydrateAgentConfiguration(rows[0]) : null;
 }
 
 function preservedAgentState(
@@ -720,7 +711,8 @@ function preservedAgentState(
 async function writeAgentCreatedMessage(
   userId: string,
   agentId: string,
-  parsedIntent: ParsedIntent
+  parsedIntent: ParsedIntent,
+  client: Pick<PoolClient, "query"> = pool
 ): Promise<{ id: string; createdAt: Date | string; preview: string }> {
   const githubConnected = !parsedIntent.connector_ids.includes("github") ||
     await hasUsableGitHubToken(userId);
@@ -730,7 +722,7 @@ async function writeAgentCreatedMessage(
     readyDetail: agentCreationReadyDetail(parsedIntent, describeSchedule)
   });
 
-  const { rows } = await pool.query<{ id: string; created_at: Date | string }>(
+  const { rows } = await client.query<{ id: string; created_at: Date | string }>(
     `
       INSERT INTO agent_messages
         (agent_id, user_id, role, content, source_refs)
@@ -747,5 +739,54 @@ async function writeAgentCreatedMessage(
     id: rows[0]!.id,
     createdAt: rows[0]!.created_at,
     preview
+  };
+}
+
+async function hydrateAgentConfiguration(agent: any): Promise<any> {
+  if (agent.is_assistant) return agent;
+  const [configuration, runtimeState] = await Promise.all([
+    loadCurrentAgentDefinition(agent.id),
+    loadRuntimeState(agent.id)
+  ]);
+  if (!configuration) return agent;
+  const parsedIntent = definitionToParsedIntent(configuration.definition, {
+    name: agent.name,
+    avatar: agent.avatar,
+    runtimeState
+  });
+  const view = agentConfigurationView(configuration.definition, agent);
+  return {
+    ...agent,
+    parsed_intent: parsedIntent,
+    configuration: view,
+    agent_preview: view,
+    config_revision: configuration.revisionId
+  };
+}
+
+function withConfigurationViews(agent: any): any {
+  if (!agent.agent_definition) return agent;
+  const definition = validateCompiledDefinition(agent.agent_definition);
+  const runtimeState =
+    agent.agent_runtime_state &&
+    typeof agent.agent_runtime_state === "object"
+      ? agent.agent_runtime_state
+      : {};
+  const view = agentConfigurationView(definition, agent);
+  const parsedIntent = definitionToParsedIntent(definition, {
+    name: agent.name,
+    avatar: agent.avatar,
+    runtimeState
+  });
+  const {
+    agent_definition: _definition,
+    agent_runtime_state: _runtime,
+    ...publicAgent
+  } = agent;
+  return {
+    ...publicAgent,
+    parsed_intent: parsedIntent,
+    configuration: view,
+    agent_preview: view
   };
 }

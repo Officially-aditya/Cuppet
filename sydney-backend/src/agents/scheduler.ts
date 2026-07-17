@@ -6,7 +6,6 @@ import {
   removeAgentSchedule,
   scheduleAgentRun
 } from "../queue/index.js";
-import { parseIntent, type ParsedIntent } from "./parser.js";
 import { effectiveTimeZone } from "../users/time-zone.js";
 
 type SchedulableAgent = {
@@ -21,13 +20,6 @@ export type ScheduleSyncSummary = {
   attempted: number;
   scheduled: number;
   failed: number;
-};
-
-type ReclassifiableAgent = {
-  id: string;
-  prompt: string;
-  parsed_intent: ParsedIntent;
-  schedule_cron: string | null;
 };
 
 export async function syncAgentSchedule(agent: SchedulableAgent): Promise<void> {
@@ -140,8 +132,6 @@ export async function removeScheduleForAgent(agentId: string): Promise<void> {
 export async function syncActiveAgentSchedules(
   logger?: FastifyBaseLogger
 ): Promise<void> {
-  await reconcileCustomAgentIntents(logger);
-
   const { rows } = await pool.query<SchedulableAgent>(
     `
       SELECT
@@ -190,57 +180,4 @@ async function removeOrphanedAgentSchedules(activeAgentIds: Set<string>): Promis
   }
 
   return removed;
-}
-
-async function reconcileCustomAgentIntents(
-  logger?: FastifyBaseLogger
-): Promise<void> {
-  const { rows } = await pool.query<ReclassifiableAgent>(
-    `
-      SELECT id, prompt, parsed_intent, schedule_cron
-      FROM agents
-      WHERE is_assistant = FALSE
-        AND parsed_intent->>'intent' = 'custom_read_agent'
-    `
-  );
-
-  let updated = 0;
-  for (const agent of rows) {
-    const parsedIntent = parseIntent(agent.prompt);
-    if (
-      parsedIntent.unsupported_connector ||
-      parsedIntent.intent === "custom_read_agent"
-    ) {
-      continue;
-    }
-
-    await pool.query(
-      `
-        UPDATE agents
-        SET name = $2,
-            avatar = $3,
-            parsed_intent = $4,
-            connector_ids = $5,
-            schedule_cron = COALESCE(schedule_cron, $6),
-            safety_level = $7,
-            updated_at = NOW()
-        WHERE id = $1
-          AND parsed_intent->>'intent' = 'custom_read_agent'
-      `,
-      [
-        agent.id,
-        parsedIntent.name,
-        parsedIntent.avatar,
-        JSON.stringify(parsedIntent),
-        parsedIntent.connector_ids,
-        parsedIntent.schedule_cron,
-        parsedIntent.safety_level
-      ]
-    );
-    updated += 1;
-  }
-
-  if (updated > 0) {
-    logger?.info({ count: updated }, "Reclassified custom agents from prompts");
-  }
 }

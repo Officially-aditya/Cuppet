@@ -4,6 +4,7 @@ import {
   isPromptInjectionAttempt,
   normalizeSecurityText
 } from "../security/prompt-guard.js";
+import { isScheduledOutputContract } from "./runtime/output-registry.js";
 
 export type AgentPlanProposal = {
   name?: string;
@@ -42,20 +43,6 @@ const supportedConnectors = new Set([
   "slack",
   "notion",
   "web_search"
-]);
-const supportedTemplates = new Set([
-  "plain_text",
-  "data_summary",
-  "checklist",
-  "urgency_list",
-  "daily_task",
-  "progress_tracker",
-  "streak_counter",
-  "comparison",
-  "system",
-  "study_guide",
-  "dsa_question",
-  "briefing_card"
 ]);
 const supportedSafetyLevels = new Set(["read", "suggest", "act"]);
 
@@ -258,7 +245,7 @@ function normalizeOutputTemplate(
 ): string {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) return fallback;
-  if (supportedTemplates.has(normalized)) return normalized;
+  if (isScheduledOutputContract(normalized)) return normalized;
   warnings.push(`Rejected unsupported output template: ${normalized}`);
   return fallback;
 }

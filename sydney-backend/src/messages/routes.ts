@@ -31,6 +31,18 @@ import { handleAssistantMessage } from "../assistant/handler.js";
 import { clearUnconfirmedAssistantState } from "../assistant/memory.js";
 import { AttachmentValidationError } from "../uploads/attachment-analysis.js";
 import { config } from "../config.js";
+import { insertConfiguredAgent } from "../agents/runtime/configuration-service.js";
+import { reviseAgentDefinition } from "../agents/runtime/configuration-service.js";
+import { compileAgentDefinition } from "../agents/runtime/compiler.js";
+import {
+  loadCurrentAgentDefinition,
+  loadRuntimeState
+} from "../agents/runtime/configuration-service.js";
+import { definitionToParsedIntent } from "../agents/runtime/compiler.js";
+import {
+  isScheduledOutputContract,
+  textualizeOutput
+} from "../agents/runtime/output-registry.js";
 
 const sendMessageSchema = z
   .object({
@@ -55,6 +67,7 @@ type AgentRow = {
   id: string;
   is_assistant: boolean;
   name: string;
+  avatar: string;
   prompt: string;
   parsed_intent: ParsedIntent;
   connector_ids: string[];
@@ -550,6 +563,7 @@ async function getOwnedAgent(userId: string, agentId: string): Promise<AgentRow 
         id,
         is_assistant,
         name,
+        avatar,
         prompt,
         parsed_intent,
         connector_ids,
@@ -562,7 +576,21 @@ async function getOwnedAgent(userId: string, agentId: string): Promise<AgentRow 
     [agentId, userId]
   );
 
-  return rows[0] ?? null;
+  const agent = rows[0];
+  if (!agent || agent.is_assistant) return agent ?? null;
+  const [configuration, runtimeState] = await Promise.all([
+    loadCurrentAgentDefinition(agent.id),
+    loadRuntimeState(agent.id)
+  ]);
+  if (!configuration) return agent;
+  return {
+    ...agent,
+    parsed_intent: definitionToParsedIntent(configuration.definition, {
+      name: agent.name,
+      avatar: agent.avatar,
+      runtimeState
+    })
+  };
 }
 
 function clampLimit(rawLimit: string | undefined): number {
@@ -678,7 +706,12 @@ async function handleAssistantTextMessage(
     }
 
     createdAgent = await createAgent(client, userId, text, parsedIntent);
-    await writeAgentCreatedMessage(client, userId, createdAgent.id, parsedIntent);
+    await writeAgentCreatedMessage(
+      client,
+      userId,
+      createdAgent.id,
+      createdAgent.parsed_intent
+    );
 
     const assistantMessage = await insertMessage(client, {
       agentId: assistantId,
@@ -891,6 +924,14 @@ function extractBodyFromContent(content: any): string | null {
   const template = content.template;
   const data = content.data;
   if (!data) return null;
+
+  if (typeof template === "string" && isScheduledOutputContract(template)) {
+    try {
+      return textualizeOutput(content);
+    } catch {
+      // Old retained payloads still use the compatibility textualizers below.
+    }
+  }
 
   if (template === "plain_text") {
     return data.body || data.text || data.headline || "";
@@ -1204,41 +1245,14 @@ async function createAgent(
   prompt: string,
   parsedIntent: ParsedIntent
 ): Promise<CreatedAgentRow> {
-  const { rows } = await client.query<CreatedAgentRow>(
-    `
-      INSERT INTO agents
-        (user_id, name, avatar, prompt, parsed_intent, connector_ids,
-         schedule_cron, is_assistant, status, safety_level, last_message_at)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, FALSE, 'active', $8, NOW())
-      RETURNING
-        id,
-        name,
-        avatar,
-        prompt,
-        parsed_intent,
-        connector_ids,
-        schedule_cron,
-        is_assistant,
-        status,
-        safety_level,
-        last_message_at,
-        created_at,
-        updated_at
-    `,
-    [
-      userId,
-      parsedIntent.name,
-      parsedIntent.avatar,
-      prompt,
-      JSON.stringify(parsedIntent),
-      parsedIntent.connector_ids,
-      parsedIntent.schedule_cron,
-      parsedIntent.safety_level
-    ]
-  );
-
-  return rows[0]!;
+  return insertConfiguredAgent<CreatedAgentRow>(client, {
+    userId,
+    name: parsedIntent.name,
+    avatar: parsedIntent.avatar,
+    prompt,
+    parsedIntent,
+    createdBy: "assistant_message"
+  });
 }
 
 async function updateAgentInstructions(
@@ -1252,25 +1266,23 @@ async function updateAgentInstructions(
     status: "active" | "paused" | "error";
   }
 ): Promise<UpdatedAgentRow> {
-  const parsedIntent = typeof agent.parsed_intent === "string"
-    ? JSON.parse(agent.parsed_intent)
-    : (agent.parsed_intent || {});
-  const mergedIntent = {
-    ...update.parsedIntent,
-    topics_covered: parsedIntent.topics_covered ?? [],
-    history: parsedIntent.history ?? {}
-  };
-
+  await reviseAgentDefinition(client, {
+    agentId: agent.id,
+    userId,
+    definition: compileAgentDefinition(update.parsedIntent, update.prompt),
+    name: agent.name,
+    avatar: agent.avatar,
+    prompt: update.prompt,
+    status: update.status,
+    createdBy: "agent_chat"
+  });
+  await client.query(
+    `UPDATE agents SET last_message_at = NOW()
+     WHERE id = $1 AND user_id = $2`,
+    [agent.id, userId]
+  );
   const { rows } = await client.query<UpdatedAgentRow>(
-    `
-      UPDATE agents
-      SET prompt = $1,
-          parsed_intent = $2,
-          schedule_cron = $3,
-          status = $4,
-          last_message_at = NOW()
-      WHERE id = $5 AND user_id = $6
-      RETURNING
+    `SELECT
         id,
         name,
         avatar,
@@ -1284,15 +1296,9 @@ async function updateAgentInstructions(
         last_message_at,
         created_at,
         updated_at
-    `,
-    [
-      update.prompt,
-      JSON.stringify(mergedIntent),
-      update.scheduleCron,
-      update.status,
-      agent.id,
-      userId
-    ]
+     FROM agents
+     WHERE id = $1 AND user_id = $2`,
+    [agent.id, userId]
   );
 
   return rows[0]!;

@@ -86,6 +86,17 @@ test("isDraftingAgent detects reddit agents", () => {
     }),
     false
   );
+  assert.equal(
+    isDraftingAgent({
+      name: "Social Writer",
+      prompt: "Turn saved ideas into posts",
+      parsed_intent: {
+        intent: "custom_agent",
+        draft_platform: "linkedin"
+      }
+    }),
+    true
+  );
 });
 
 test("keeps grounded mode for follow-ups and weak wording", () => {

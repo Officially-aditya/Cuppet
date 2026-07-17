@@ -151,11 +151,19 @@ class AgentService {
         '/agents/parse',
         data: {'prompt': prompt},
       );
-      final data = response.data?['parsed_intent'];
-      if (data is! Map) {
+      final responseData = response.data;
+      final parsed = responseData?['parsed_intent'];
+      final data = agentConfigurationCompatibilityView({
+        if (parsed != null) 'parsed_intent': parsed,
+        if (responseData?['configuration'] != null)
+          'configuration': responseData?['configuration'],
+        if (responseData?['agent_preview'] != null)
+          'agent_preview': responseData?['agent_preview'],
+      });
+      if (data == null) {
         throw const ApiException('The server did not return the parsed intent.');
       }
-      return Map<String, dynamic>.from(data);
+      return data;
     } catch (error) {
       throw apiExceptionFrom(
         error,

@@ -1,3 +1,5 @@
+import { normalizeAndValidateOutput } from "./runtime/output-registry.js";
+
 export type PlainTextMessageContent = {
   template: "plain_text";
   version: "1.0";
@@ -179,7 +181,7 @@ export type StudyGuideMessageContent = {
       label: string;
       style?: "primary" | "secondary" | "ghost";
     }>;
-    initiallyCollapsed?: boolean;
+    initially_collapsed?: boolean;
   };
 };
 
@@ -287,6 +289,11 @@ export type RenderedAgentMessage = {
   sourceRefs: unknown[];
   tokensUsed: number;
   additionalTopicsCovered?: string[];
+  stateEvents?: Array<{
+    type: "history.set" | "topics.add" | "topics.remove" | "current_chunk.set";
+    key?: string;
+    value?: unknown;
+  }>;
 };
 
 export function renderedPlainText(
@@ -371,7 +378,7 @@ export function renderedNewsBrief(
 }
 
 export function renderedStudyGuide(
-  data: StudyGuideMessageContent["data"],
+  data: StudyGuideMessageContent["data"] & { initiallyCollapsed?: boolean },
   meta: { sourceRefs?: unknown[]; tokensUsed?: number } = {}
 ): RenderedAgentMessage {
   return rendered("study_guide", data, meta);
@@ -575,12 +582,13 @@ function rendered<TTemplate extends AgentMessageContent["template"]>(
   data: Extract<AgentMessageContent, { template: TTemplate }>["data"],
   meta: { sourceRefs?: unknown[]; tokensUsed?: number }
 ): RenderedAgentMessage {
-  return {
-    content: {
+  const content = normalizeAndValidateOutput({
       template,
       version: "1.0",
       data
-    } as AgentMessageContent,
+    }) as AgentMessageContent;
+  return {
+    content,
     sourceRefs: meta.sourceRefs ?? [],
     tokensUsed: meta.tokensUsed ?? 0
   };

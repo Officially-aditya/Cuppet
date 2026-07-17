@@ -69,20 +69,7 @@ class Agent {
   }
 
   factory Agent.fromJson(Map<String, dynamic> json) {
-    Map<String, dynamic>? parsedMap;
-    final rawParsed = json['parsed_intent'];
-    if (rawParsed != null) {
-      if (rawParsed is Map) {
-        parsedMap = Map<String, dynamic>.from(rawParsed);
-      } else if (rawParsed is String) {
-        try {
-          final decoded = jsonDecode(rawParsed);
-          if (decoded is Map) {
-            parsedMap = Map<String, dynamic>.from(decoded);
-          }
-        } catch (_) {}
-      }
-    }
+    final parsedMap = agentConfigurationCompatibilityView(json);
 
     return Agent(
       id: json['id']?.toString() ?? '',
@@ -100,7 +87,7 @@ class Agent {
           'A',
       description:
           json['description']?.toString() ??
-          _parsedIntentText(json['parsed_intent'], 'action') ??
+          parsedMap?['action']?.toString() ??
           json['last_message_preview']?.toString() ??
           json['lastMessagePreview']?.toString() ??
           json['prompt']?.toString() ??
@@ -109,7 +96,7 @@ class Agent {
           json['lastMessagePreview']?.toString() ??
           json['last_message_preview']?.toString() ??
           json['latest_message_preview']?.toString() ??
-          _parsedIntentText(json['parsed_intent'], 'action') ??
+          parsedMap?['action']?.toString() ??
           json['prompt']?.toString() ??
           '',
       latestMessageAt: _parseDate(
@@ -179,6 +166,61 @@ class Agent {
   }
 }
 
+Map<String, dynamic>? agentConfigurationCompatibilityView(
+  Map<String, dynamic> json,
+) {
+  Map<String, dynamic>? legacy;
+  final rawParsed = json['parsed_intent'];
+  if (rawParsed is Map) {
+    legacy = Map<String, dynamic>.from(rawParsed);
+  } else if (rawParsed is String) {
+    try {
+      final decoded = jsonDecode(rawParsed);
+      if (decoded is Map) legacy = Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+  }
+
+  final rawConfiguration = json['configuration'] ?? json['agent_preview'];
+  if (rawConfiguration is! Map) return legacy;
+  final configuration = Map<String, dynamic>.from(rawConfiguration);
+  final trigger =
+      configuration['trigger'] is Map
+          ? Map<String, dynamic>.from(configuration['trigger'] as Map)
+          : const <String, dynamic>{};
+  final output =
+      configuration['output'] is Map
+          ? Map<String, dynamic>.from(configuration['output'] as Map)
+          : const <String, dynamic>{};
+  final policy =
+      configuration['policy'] is Map
+          ? Map<String, dynamic>.from(configuration['policy'] as Map)
+          : const <String, dynamic>{};
+  final instructions =
+      configuration['instructions'] is List
+          ? List<dynamic>.from(configuration['instructions'] as List)
+          : const <dynamic>[];
+  return {
+    ...?legacy,
+    if (configuration['recipe_id'] != null)
+      'intent': configuration['recipe_id'],
+    'action':
+        instructions.isNotEmpty
+            ? instructions.first.toString()
+            : configuration['goal']?.toString() ?? legacy?['action'],
+    'schedule_cron': trigger['type'] == 'schedule' ? trigger['cron'] : null,
+    'realtime_enabled': trigger['type'] == 'event',
+    if (output['contract'] != null) 'output_template': output['contract'],
+    if (policy['response_limit'] != null)
+      'response_limit': policy['response_limit'],
+    if (policy['notifications_muted'] != null)
+      'notifications_muted': policy['notifications_muted'],
+    if (policy.containsKey('active_until'))
+      'active_until': policy['active_until'],
+    if (configuration['permissions_needed'] is List)
+      'permissions_needed': configuration['permissions_needed'],
+  };
+}
+
 DateTime _parseDate(Object? value) {
   if (value is DateTime) {
     return value;
@@ -229,14 +271,4 @@ String? _initialsFromName(String? value) {
     return null;
   }
   return words.take(2).map((word) => word[0].toUpperCase()).join();
-}
-
-String? _parsedIntentText(Object? value, String key) {
-  if (value is Map<String, dynamic>) {
-    return value[key]?.toString();
-  }
-  if (value is Map) {
-    return value[key]?.toString();
-  }
-  return null;
 }

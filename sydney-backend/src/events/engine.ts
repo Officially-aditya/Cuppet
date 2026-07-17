@@ -3,6 +3,9 @@ import {
   githubRepositoryMatches,
   githubRepositoryScope
 } from "../agents/github-scope.js";
+import { validateCompiledDefinition } from "../agents/runtime/compiler.js";
+import type { AgentDefinitionV1 } from "../agents/runtime/definition.js";
+import { getCapabilityDefinition } from "../agents/runtime/capability-registry.js";
 
 export type EventSource =
   | "slack"
@@ -33,8 +36,7 @@ export type EventIngestionResult = {
 
 type EventAgent = {
   id: string;
-  prompt: string;
-  parsed_intent: Record<string, unknown> | string;
+  definition: unknown;
 };
 
 export async function ingestAgentEvent(
@@ -126,23 +128,31 @@ export async function ingestAgentEvent(
 
     const agents = await client.query<EventAgent>(
       `
-        SELECT id, prompt, parsed_intent
-        FROM agents
-        WHERE user_id = ANY($1::text[])
-          AND status = 'active'
-          AND is_assistant = FALSE
-          AND schedule_cron IS NULL
-          AND parsed_intent->>'realtime_enabled' = 'true'
-          AND connector_ids @> ARRAY[$2]::text[]
+        SELECT agent.id, revision.definition
+        FROM agents AS agent
+        JOIN agent_config_heads AS head ON head.agent_id = agent.id
+        JOIN agent_config_revisions AS revision ON revision.id = head.revision_id
+        WHERE agent.user_id = ANY($1::text[])
+          AND agent.status = 'active'
+          AND agent.is_assistant = FALSE
+          AND agent.schedule_cron IS NULL
+          AND revision.definition->'trigger'->>'type' = 'event'
+          AND (
+            $2 = 'stock'
+            OR agent.connector_ids @> ARRAY[$2]::text[]
+          )
       `,
       [userIds, connectorId]
     );
 
     for (const agent of agents.rows) {
-      const parsedIntent = parseIntent(agent.parsed_intent);
-      if (!shouldTriggerAgentEvent(parsedIntent, event, agent.prompt)) continue;
+      const definition = validateCompiledDefinition(agent.definition);
+      if (!shouldTriggerAgentDefinition(definition, event)) continue;
 
-      const cooldownSeconds = eventCooldownSeconds(parsedIntent, event.source);
+      const cooldownSeconds =
+        definition.trigger.type === "event"
+          ? definition.trigger.cooldown_seconds
+          : 300;
       const recent = await client.query<{ exists: boolean }>(
         `
           SELECT EXISTS (
@@ -205,6 +215,28 @@ export async function ingestAgentEvent(
     queuedAgentIds,
     suppressedAgentIds
   };
+}
+
+export function shouldTriggerAgentDefinition(
+  definition: AgentDefinitionV1,
+  event: Pick<NormalizedAgentEvent, "source" | "eventType" | "payload">
+): boolean {
+  if (
+    definition.trigger.type !== "event" ||
+    definition.trigger.source !== event.source
+  ) {
+    return false;
+  }
+  return definition.steps.some((step) => {
+    const capability = getCapabilityDefinition(step.capability);
+    return (
+      capability.eventMatcher?.(step.config, {
+        source: event.source,
+        eventType: event.eventType,
+        payload: event.payload
+      }) ?? false
+    );
+  });
 }
 
 export function shouldTriggerAgentEvent(

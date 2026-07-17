@@ -83,7 +83,28 @@ import {
 } from "./stub-renderers.js";
 import { agentDebug } from "./debug-log.js";
 import { shouldRetryAgentRun } from "./run-lifecycle.js";
-import { isBriefingIntent, renderBriefingAgent } from "./briefing-agents.js";
+import { renderBriefingAgent } from "./briefing-agents.js";
+import {
+  definitionToParsedIntent
+} from "../agents/runtime/compiler.js";
+import {
+  ensureConfiguredAgent,
+  loadAgentDefinitionRevision,
+  loadRuntimeState
+} from "../agents/runtime/configuration-service.js";
+import {
+  executeAgentDefinition
+} from "../agents/runtime/universal-executor.js";
+import type {
+  CapabilityId,
+  CapabilityResult
+} from "../agents/runtime/capability-registry.js";
+import type { AgentDefinitionStep } from "../agents/runtime/definition.js";
+import {
+  applyAgentStateEvents,
+  type AgentStateEvent
+} from "../agents/runtime/state-store.js";
+import { outputNotificationSummary } from "../agents/runtime/output-registry.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -286,7 +307,7 @@ export function createAgentExecutorWorker(): Worker<AgentExecutorJobData> {
 async function executeAgentJob(
   job: Job<AgentExecutorJobData>
 ): Promise<{ messageId?: string; runId?: string; skipped?: string }> {
-  const agent = await loadAgent(job.data.agentId);
+  let agent = await loadAgent(job.data.agentId);
   if (!agent) {
     return { skipped: "agent_not_found" };
   }
@@ -299,12 +320,31 @@ async function executeAgentJob(
     return { skipped: "agent_not_active" };
   }
 
-  const parsedIntent = typeof agent.parsed_intent === "string"
+  const legacyParsedIntent = typeof agent.parsed_intent === "string"
     ? JSON.parse(agent.parsed_intent)
     : (agent.parsed_intent || {});
+  const currentConfiguration = await ensureConfiguredAgent({
+    agentId: agent.id,
+    name: agent.name,
+    avatar: agent.avatar ?? "bot",
+    prompt: agent.prompt,
+    parsedIntent: legacyParsedIntent
+  });
+  const runtimeState = await loadRuntimeState(agent.id);
+  agent = {
+    ...agent,
+    definition: currentConfiguration.definition,
+    config_revision: currentConfiguration.revisionId,
+    parsed_intent: definitionToParsedIntent(currentConfiguration.definition, {
+      name: agent.name,
+      avatar: agent.avatar ?? "bot",
+      runtimeState
+    })
+  };
+  const parsedIntent = agent.parsed_intent;
   
   if (parsedIntent.active_until) {
-    const activeUntilDate = new Date(parsedIntent.active_until);
+    const activeUntilDate = new Date(String(parsedIntent.active_until));
     if (activeUntilDate <= new Date()) {
       await pool.query(
         "UPDATE agents SET status = 'paused' WHERE id = $1",
@@ -338,9 +378,32 @@ async function executeAgentJob(
     timestamp: job.timestamp,
     delay: typeof job.opts.delay === "number" ? job.opts.delay : undefined
   });
-  const run = await createRun(agent.id, executionKey);
+  const run = await createRun(
+    agent.id,
+    executionKey,
+    currentConfiguration.revisionId
+  );
   if (!run) {
     return { skipped: "duplicate_execution" };
+  }
+  if (run.config_revision !== agent.config_revision) {
+    const pinnedConfiguration = await loadAgentDefinitionRevision(
+      run.config_revision,
+      agent.id
+    );
+    if (!pinnedConfiguration) {
+      throw new Error("The pinned agent configuration revision is missing.");
+    }
+    agent = {
+      ...agent,
+      definition: pinnedConfiguration.definition,
+      config_revision: pinnedConfiguration.revisionId,
+      parsed_intent: definitionToParsedIntent(pinnedConfiguration.definition, {
+        name: agent.name,
+        avatar: agent.avatar ?? "bot",
+        runtimeState
+      })
+    };
   }
 
   await publishRealtimeEventsSafely({
@@ -391,7 +454,8 @@ async function executeAgentJob(
       sourceRefs: rendered.sourceRefs,
       tokensUsed: rendered.tokensUsed,
       status: "success",
-      additionalTopicsCovered: rendered.additionalTopicsCovered
+      additionalTopicsCovered: rendered.additionalTopicsCovered,
+      stateEvents: rendered.stateEvents as AgentStateEvent[] | undefined
     });
     if (job.data.trigger === "event" && job.data.eventId) {
       await markEventDelivery(job.data.eventId, agent.id, "delivered", {
@@ -429,7 +493,7 @@ async function executeAgentJob(
     if (!notificationsMuted(agent)) {
       await sendPushNotification(pool, agent.user_id, {
         title: agent.name,
-        body: extractNotificationBody(rendered.content),
+        body: outputNotificationSummary(rendered.content),
         data: {
           agent_id: agent.id,
           message_id: message.id,
@@ -609,6 +673,7 @@ async function loadAgent(agentId: string): Promise<AgentRow | null> {
         id,
         user_id,
         name,
+        avatar,
         prompt,
         parsed_intent,
         connector_ids,
@@ -627,12 +692,14 @@ async function loadAgent(agentId: string): Promise<AgentRow | null> {
 
 async function createRun(
   agentId: string,
-  executionKey: string | null
-): Promise<{ id: string } | null> {
-  const { rows } = await pool.query<{ id: string }>(
+  executionKey: string | null,
+  configRevision: string
+): Promise<{ id: string; config_revision: string } | null> {
+  const { rows } = await pool.query<{ id: string; config_revision: string }>(
     `
-      INSERT INTO agent_runs (agent_id, queue_job_id, status)
-      VALUES ($1, $2, 'running')
+      INSERT INTO agent_runs
+        (agent_id, queue_job_id, config_revision, status)
+      VALUES ($1, $2, $3, 'running')
       ON CONFLICT (queue_job_id)
       DO UPDATE SET
         status = 'running',
@@ -642,9 +709,9 @@ async function createRun(
         error_message = NULL,
         tokens_used = 0
       WHERE agent_runs.status = 'failed'
-      RETURNING id
+      RETURNING id, config_revision
     `,
-    [agentId, executionKey]
+    [agentId, executionKey, configRevision]
   );
 
   return rows[0] ?? null;
@@ -660,6 +727,7 @@ async function persistRunMessage(
     status: "success" | "partial" | "failed";
     errorMessage?: string;
     additionalTopicsCovered?: string[];
+    stateEvents?: AgentStateEvent[];
   }
 ): Promise<{ id: string }> {
   const client = await pool.connect();
@@ -681,72 +749,36 @@ async function persistRunMessage(
     );
     const message = rows[0]!;
 
-    if (input.content.template === "study_guide") {
-      await client.query(
-        `
-          UPDATE agents
-          SET last_message_at = NOW(),
-              parsed_intent = jsonb_set(
-                parsed_intent,
-                '{topics_covered}',
-                coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb
-              )
-          WHERE id = $2
-        `,
-        [JSON.stringify(input.content.data.topic), input.agent.id]
-      );
-    } else if (input.content.template === "dsa_question") {
-      await client.query(
-        `
-          UPDATE agents
-          SET last_message_at = NOW(),
-              parsed_intent = jsonb_set(
-                parsed_intent,
-                '{topics_covered}',
-                coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb
-              )
-          WHERE id = $2
-        `,
-        [JSON.stringify(input.content.data.title), input.agent.id]
-      );
-    } else {
-      await client.query(
-        "UPDATE agents SET last_message_at = NOW() WHERE id = $1",
-        [input.agent.id]
-      );
-    }
-
-    if (input.additionalTopicsCovered && input.additionalTopicsCovered.length > 0) {
-      await client.query(
-        `
-          UPDATE agents
-          SET parsed_intent = jsonb_set(
-                parsed_intent,
-                '{topics_covered}',
-                coalesce(parsed_intent->'topics_covered', '[]'::jsonb) || $1::jsonb
-              )
-          WHERE id = $2
-        `,
-        [JSON.stringify(input.additionalTopicsCovered), input.agent.id]
-      );
-    }
+    await client.query(
+      "UPDATE agents SET last_message_at = NOW() WHERE id = $1",
+      [input.agent.id]
+    );
 
     const isInteractive = ["study_guide", "dsa_question", "daily_task"].includes(input.content.template);
-    if (!isInteractive) {
-      const dateString = new Date().toISOString().split("T")[0];
-      await client.query(
-        `
-          UPDATE agents
-          SET parsed_intent = jsonb_set(
-                parsed_intent,
-                '{history}',
-                coalesce(parsed_intent->'history', '{}'::jsonb) || jsonb_build_object($1::text, true)
-              )
-          WHERE id = $2
-        `,
-        [dateString, input.agent.id]
-      );
+    const stateEvents: AgentStateEvent[] = [...(input.stateEvents ?? [])];
+    const primaryTopic =
+      input.content.template === "study_guide"
+        ? input.content.data.topic
+        : input.content.template === "dsa_question"
+          ? input.content.data.title
+          : null;
+    if (primaryTopic) {
+      stateEvents.push({ type: "topics.add", value: primaryTopic });
     }
+    const additionalTopics = (input.additionalTopicsCovered ?? []).filter(
+      (topic) => topic !== primaryTopic
+    );
+    if (additionalTopics.length > 0) {
+      stateEvents.push({ type: "topics.add", value: additionalTopics });
+    }
+    if (!isInteractive) {
+      stateEvents.push({
+        type: "history.set",
+        key: new Date().toISOString().split("T")[0]!,
+        value: true
+      });
+    }
+    await applyAgentStateEvents(client, input.agent.id, stateEvents);
 
     const runUpdate = await client.query(
       `
@@ -831,51 +863,132 @@ async function renderAgentMessage(
     }
   }
 
-  if (isBriefingIntent(intentName(agent))) {
-    return renderBriefingAgent(agent, trigger);
+  if (!agent.definition) {
+    throw new Error("Agent definition is required for execution.");
   }
+  return (await executeAgentDefinition({
+    definition: agent.definition,
+    invokeAdapter: (capability, step) =>
+      invokeCapabilityAdapter({
+        capability,
+        step,
+        agent,
+        trigger,
+        eventId
+      })
+  })) as RenderedAgentMessage;
+}
 
-  const connectorPending = connectorPendingConfigs[intentName(agent)];
-  if (connectorPending) {
-    const googleWorkspaceMessage = await renderGoogleWorkspaceAgent(agent, {
-      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
-      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
-    });
-    if (googleWorkspaceMessage) {
-      return googleWorkspaceMessage;
+async function invokeCapabilityAdapter(input: {
+  capability: CapabilityId;
+  step: AgentDefinitionStep;
+  agent: AgentRow;
+  trigger: AgentExecutorJobData["trigger"];
+  eventId?: string;
+}): Promise<CapabilityResult> {
+  const recipe = String(input.step.config.recipe_id ?? "");
+  let rendered: RenderedAgentMessage;
+  switch (input.capability) {
+    case "briefing.compose":
+      rendered = await renderBriefingAgent(input.agent, input.trigger);
+      break;
+    case "connector.digest":
+      rendered = await renderConnectorCapability(
+        input.agent,
+        input.trigger,
+        input.eventId,
+        recipe
+      );
+      break;
+    case "content.ideas":
+      rendered = await renderContentExtractorAgent({
+        agent: input.agent,
+        trigger: input.trigger
+      });
+      break;
+    case "dsa.generate":
+      rendered = await renderDsaQuestionAgent({
+        agent: input.agent,
+        trigger: input.trigger
+      });
+      break;
+    case "study.guide":
+      rendered = await renderStudyGuideAgent({
+        agent: input.agent,
+        trigger: input.trigger
+      });
+      break;
+    case "portfolio.watch":
+      rendered = await renderPortfolioWatch(input.agent);
+      break;
+    case "reminder.deliver":
+      rendered = await renderScheduledReminder(input.agent, input.trigger);
+      break;
+    case "news.research":
+    case "deterministic.report": {
+      const renderer = renderers[recipe];
+      if (!renderer) {
+        throw new Error(
+          `No adapter is registered for ${input.capability}:${recipe}`
+        );
+      }
+      rendered = await renderer({
+        agent: input.agent,
+        trigger: input.trigger
+      });
+      break;
     }
-
-    const githubMessage = await renderGitHubAgent(agent, {
-      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
-      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger),
-      trigger,
-      eventId
-    });
-    if (githubMessage) {
-      return githubMessage;
-    }
-
-    const slackMessage = await renderSlackAgent(agent, {
-      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
-      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
-    });
-    if (slackMessage) {
-      return slackMessage;
-    }
-
-    const notionMessage = await renderNotionAgent(agent, {
-      scheduledIntro: (a, lbl) => scheduledIntro(a, lbl, trigger),
-      scheduledTitle: (a, lbl) => scheduledTitle(a, lbl, trigger)
-    });
-    if (notionMessage) {
-      return notionMessage;
-    }
-
-    return renderConnectorPending(agent, connectorPending);
+    case "custom.report":
+      rendered = await renderCustomAgent({
+        agent: input.agent,
+        trigger: input.trigger
+      });
+      break;
   }
+  return {
+    content: rendered.content,
+    sourceRefs: rendered.sourceRefs,
+    tokensUsed: rendered.tokensUsed,
+    additionalTopicsCovered: rendered.additionalTopicsCovered,
+    stateEvents: rendered.stateEvents
+  };
+}
 
-  const renderer = renderers[intentName(agent)] ?? renderCustomAgent;
-  return renderer({ agent, trigger });
+async function renderConnectorCapability(
+  agent: AgentRow,
+  trigger: AgentExecutorJobData["trigger"],
+  eventId: string | undefined,
+  recipe: string
+): Promise<RenderedAgentMessage> {
+  const connectorPending = connectorPendingConfigs[recipe];
+  if (!connectorPending) {
+    throw new Error(`No connector adapter is registered for ${recipe}`);
+  }
+  const googleWorkspaceMessage = await renderGoogleWorkspaceAgent(agent, {
+    scheduledIntro: (a, label) => scheduledIntro(a, label, trigger),
+    scheduledTitle: (a, label) => scheduledTitle(a, label, trigger)
+  });
+  if (googleWorkspaceMessage) return googleWorkspaceMessage;
+
+  const githubMessage = await renderGitHubAgent(agent, {
+    scheduledIntro: (a, label) => scheduledIntro(a, label, trigger),
+    scheduledTitle: (a, label) => scheduledTitle(a, label, trigger),
+    trigger,
+    eventId
+  });
+  if (githubMessage) return githubMessage;
+
+  const slackMessage = await renderSlackAgent(agent, {
+    scheduledIntro: (a, label) => scheduledIntro(a, label, trigger),
+    scheduledTitle: (a, label) => scheduledTitle(a, label, trigger)
+  });
+  if (slackMessage) return slackMessage;
+
+  const notionMessage = await renderNotionAgent(agent, {
+    scheduledIntro: (a, label) => scheduledIntro(a, label, trigger),
+    scheduledTitle: (a, label) => scheduledTitle(a, label, trigger)
+  });
+  return notionMessage ?? renderConnectorPending(agent, connectorPending);
 }
 
 async function renderScheduledReminder(
@@ -1192,20 +1305,7 @@ async function renderStudyGuideAgent(context: {
         const data = studyGuideResponseSchema.parse(JSON.parse(match[0]));
         agentDebug("[StudyGuideAgent] generated topic from PDF:", data.topic);
 
-        // Update current_chunk index in the database
         const nextChunk = chunkIdx + 1;
-        await pool.query(
-          `
-            UPDATE agents
-            SET parsed_intent = jsonb_set(
-                  parsed_intent,
-                  '{current_chunk}',
-                  $1::jsonb
-                )
-            WHERE id = $2
-          `,
-          [nextChunk, agent.id]
-        );
 
         const completed = false;
         const actions = [
@@ -1214,7 +1314,7 @@ async function renderStudyGuideAgent(context: {
           { id: "skip", label: "Skip today", style: "ghost" }
         ] as const;
 
-        return renderedStudyGuide(
+        const rendered = renderedStudyGuide(
           {
             topic: data.topic,
             definition: data.definition,
@@ -1227,6 +1327,10 @@ async function renderStudyGuideAgent(context: {
             tokensUsed: totalLlmTokens(response)
           }
         );
+        return {
+          ...rendered,
+          stateEvents: [{ type: "current_chunk.set", value: nextChunk }]
+        };
       }
     } catch (err) {
       console.error("[StudyGuideAgent] PDF study guide generation failed, falling back to standard generation:", err);
@@ -1719,176 +1823,6 @@ function errorMessage(error: unknown): string {
   }
 
   return String(error).slice(0, 2000);
-}
-
-
-function extractNotificationBody(content: AgentMessageContent): string {
-  let rawBody = "New message available";
-
-  try {
-    if (content.template === "content_extractor") {
-      const ideas = content.data.ideas;
-      if (ideas && ideas.length > 0) {
-        rawBody = `Trending ideas: ${ideas.map((i) => i.title).join(", ")}`;
-      } else {
-        rawBody = "Content creation ideas";
-      }
-    } else if (content.template === "news_brief") {
-      const items = content.data.items;
-      if (items && items.length > 0) {
-        const firstWithHeadline = items.find((item) => item.headline && item.headline.trim().length > 0);
-        if (firstWithHeadline) {
-          rawBody = `${firstWithHeadline.headline}: ${firstWithHeadline.summary}`;
-        } else {
-          const firstItem = items[0];
-          if (firstItem) {
-            rawBody = firstItem.summary;
-          }
-        }
-      } else {
-        rawBody = content.data.title || "News Update";
-      }
-    } else if (content.template === "data_summary") {
-      const summary = content.data.summary || content.data.description;
-      if (summary && summary.trim().length > 0) {
-        rawBody = summary.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
-      } else {
-        const items = content.data.items as any[];
-        if (items && items.length > 0 && items[0]) {
-          const firstItem = items[0];
-          const label = firstItem.label || firstItem.title || firstItem.subject;
-          if (label) rawBody = String(label);
-        } else if (content.data.text) {
-          rawBody = content.data.text.replace(/^Here's your.*?(digest|summary|update)\.?\s*/i, "").trim();
-        } else {
-          rawBody = content.data.title || "Data Digest";
-        }
-      }
-    } else if (content.template === "plain_text" && content.data.body) {
-      const body = String(content.data.body);
-      const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
-      const firstLine = lines[0] || "";
-      if (lines.length > 1 && /^Here's your/i.test(firstLine)) {
-        const secondLine = lines[1];
-        if (secondLine !== undefined) {
-          rawBody = secondLine;
-        } else {
-          rawBody = firstLine;
-        }
-      } else {
-        rawBody = firstLine;
-      }
-    } else if (content.template === "daily_task" && content.data.task) {
-      const title = content.data.title ? `${content.data.title}: ` : "";
-      const mins = content.data.estimated_minutes ? ` (${content.data.estimated_minutes} min)` : "";
-      rawBody = `${title}${content.data.task}${mins}`;
-    } else if (content.template === "urgency_list" && content.data.items) {
-      const items = content.data.items;
-      if (items.length > 0) {
-        rawBody = `${content.data.title}: ${items.map((i) => `${i.label}${i.urgency ? ` (${i.urgency})` : ""}`).join(", ")}`;
-      } else {
-        rawBody = content.data.title || "Urgency List";
-      }
-    } else if (content.template === "checklist" && content.data.items) {
-      if (content.data.message) {
-        rawBody = `${content.data.title}: ${content.data.message}`;
-      } else {
-        const unchecked = content.data.items.filter((i) => !i.checked);
-        if (unchecked.length > 0) {
-          rawBody = `${content.data.title}: ${unchecked.map((i) => i.label).join(", ")}`;
-        } else {
-          rawBody = content.data.title || "Checklist Update";
-        }
-      }
-    } else if (content.template === "study_guide") {
-      const topic = content.data.topic;
-      const def = content.data.definition;
-      if (topic && def) {
-        rawBody = `Lesson: ${topic} - ${def}`;
-      } else {
-        rawBody = topic || "Study Guide Update";
-      }
-    } else if (content.template === "dsa_question") {
-      const title = content.data.title;
-      const prob = content.data.problem;
-      const diff = content.data.difficulty ? ` (${content.data.difficulty})` : "";
-      if (title && prob) {
-        rawBody = `Problem${diff}: ${title} - ${prob}`;
-      } else {
-        rawBody = title || "DSA Question";
-      }
-    } else if (content.template === "portfolio_watch") {
-      const title = content.data.title;
-      const stocks = content.data.stocks;
-      if (stocks && stocks.length > 0) {
-        rawBody = `${title}: ${stocks.map((s) => `${s.ticker} (${s.change})`).join(", ")}`;
-      } else if (content.data.text) {
-        rawBody = `${title}: ${content.data.text}`;
-      } else {
-        rawBody = title || "Portfolio Update";
-      }
-    } else if (content.template === "progress_tracker") {
-      const title = content.data.title;
-      const current = content.data.current;
-      const total = content.data.total;
-      const text = content.data.text;
-      rawBody = `${title} (${current}/${total}): ${text}`;
-    } else if (content.template === "streak_counter") {
-      const label = content.data.label;
-      const count = content.data.count;
-      const unit = content.data.unit;
-      const caption = content.data.caption ? ` (${content.data.caption})` : "";
-      if (content.data.word && content.data.definition) {
-        rawBody = `${label}: ${content.data.word} - ${content.data.definition}`;
-      } else {
-        rawBody = `${label}: ${count} ${unit}${caption}`;
-      }
-    } else if (content.template === "comparison") {
-      const title = content.data.title;
-      const period = content.data.period ? ` (${content.data.period})` : "";
-      const rows = content.data.rows;
-      if (rows && rows.length > 0) {
-        rawBody = `${title}${period}: ${rows.map((r) => `${r.label} [${r.changes.join(", ")}]`).join(" | ")}`;
-      } else {
-        rawBody = title || "Comparison Update";
-      }
-    } else if (content.template === "briefing_card") {
-      const firstSection = content.data.sections[0];
-      const firstItem = firstSection?.items[0];
-      rawBody = firstItem
-        ? `${content.data.title}: ${firstItem.title}`
-        : `${content.data.title}: ${content.data.summary}`;
-    }
-  } catch (err) {
-    console.error("Error in extractNotificationBody:", err);
-  }
-
-  if (rawBody === "New message available" || !rawBody.trim()) {
-    const data = content.data as any;
-    if (data) {
-      const fallbackText =
-        data.title ||
-        data.label ||
-        data.topic ||
-        data.task ||
-        data.message ||
-        data.body ||
-        data.text ||
-        data.description ||
-        data.headline;
-      if (fallbackText) {
-        rawBody = String(fallbackText);
-      }
-    }
-  }
-
-  // Clean formatting: strip markdown elements and excessive spaces
-  const cleanBody = rawBody
-    .replace(/\s+/g, " ")
-    .replace(/[*_`#]/g, "")
-    .trim();
-
-  return cleanBody.length > 180 ? cleanBody.substring(0, 177) + "..." : cleanBody;
 }
 
 async function renderContentExtractorAgent(context: {

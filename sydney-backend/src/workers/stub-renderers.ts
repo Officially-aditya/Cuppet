@@ -86,8 +86,8 @@ export function renderDailyTaskAgent(agent: AgentRow): RenderedAgentMessage {
     estimated_minutes: task.estimatedMinutes,
     actions: [
       { id: "done", label: "Done", style: "primary" },
-      { id: "more_time", label: "Need more time", style: "secondary" },
-      { id: "too_hard", label: "Too hard", style: "ghost" }
+      { id: "snooze", label: "Need more time", style: "secondary" },
+      { id: "skip", label: "Too hard", style: "ghost" }
     ]
   });
 }

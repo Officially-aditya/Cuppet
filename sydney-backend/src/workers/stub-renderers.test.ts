@@ -58,7 +58,7 @@ test("daily task renderer selects specialized task data and actions", () => {
   assert.equal(data.estimated_minutes, 45);
   assert.deepEqual(
     (data.actions as Array<Record<string, unknown>>).map((action) => action.id),
-    ["done", "more_time", "too_hard"]
+    ["done", "snooze", "skip"]
   );
 });
 
@@ -101,4 +101,3 @@ test("news-like deterministic renderers always produce non-empty briefs", () => 
     assert.ok(items.length > 0);
   }
 });
-

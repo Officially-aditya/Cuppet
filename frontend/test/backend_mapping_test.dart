@@ -37,6 +37,38 @@ void main() {
     expect(defaultAgent.notificationsMuted, isFalse);
   });
 
+  test('agent prefers the versioned configuration over legacy intent', () {
+    final agent = Agent.fromJson({
+      'id': 'agent_1',
+      'name': 'News',
+      'parsed_intent': {
+        'intent': 'stale_intent',
+        'action': 'Stale action',
+        'notifications_muted': false,
+      },
+      'configuration': {
+        'schema_version': 1,
+        'recipe_id': 'news_brief',
+        'goal': 'Current goal',
+        'instructions': ['Current action'],
+        'trigger': {'type': 'schedule', 'cron': '0 7 * * *'},
+        'output': {'contract': 'news_brief'},
+        'policy': {
+          'response_limit': 'concise',
+          'notifications_muted': true,
+          'active_until': null,
+        },
+        'permissions_needed': ['Web search (no login needed)'],
+      },
+    });
+
+    expect(agent.description, 'Current action');
+    expect(agent.notificationsMuted, isTrue);
+    expect(agent.parsedIntent?['intent'], 'news_brief');
+    expect(agent.parsedIntent?['schedule_cron'], '0 7 * * *');
+    expect(agent.parsedIntent?['output_template'], 'news_brief');
+  });
+
   test('agent chat update response refreshes its functional description', () {
     final updated = Agent.fromJson({
       'id': 'agent_1',

@@ -26,7 +26,13 @@ export type AgentChatMode = "grounded" | "research";
 
 export type AgentChatContext = {
   userId?: string;
-  agent: { name: string; prompt: string; parsed_intent: ParsedIntent };
+  agent: {
+    name: string;
+    prompt: string;
+    parsed_intent: ParsedIntent & {
+      draft_platform?: "twitter" | "linkedin" | "reddit" | "generic";
+    };
+  };
   latestAgentOutput: string;
   sourceRefs: unknown[];
   recentUserMessages: string[];
@@ -85,6 +91,7 @@ export async function createAgentChatReply(
       context.agent.parsed_intent.intent === "portfolio_watch" ||
       context.agent.name.toLowerCase().includes("portfolio") ||
       context.agent.name.toLowerCase().includes("market watch");
+    const draftPlatform = context.agent.parsed_intent.draft_platform;
 
     let liveStockContext = "";
     if (mode === "grounded" && isPortfolioWatch) {
@@ -104,6 +111,7 @@ export async function createAgentChatReply(
       isContentExtractor,
       isDsaAgent,
       context.agent.prompt,
+      draftPlatform,
       responseLimit,
       liveStockContext
     );
@@ -231,9 +239,16 @@ export function isDraftAboutTopicRequest(lower: string): boolean {
 export function isDraftingAgent(agent: {
   name: string;
   prompt: string;
-  parsed_intent: { intent?: string };
+  parsed_intent: { intent?: string; draft_platform?: unknown };
 }): boolean {
   if (agent.parsed_intent.intent === "content_extractor") return true;
+  if (
+    ["twitter", "linkedin", "reddit", "generic"].includes(
+      String(agent.parsed_intent.draft_platform ?? "")
+    )
+  ) {
+    return true;
+  }
   const blob = `${agent.name} ${agent.prompt}`.toLowerCase();
   if (blob.includes("content extractor")) return true;
   if (/\b(?:twitter|linkedin|reddit|subreddit|tweet|draft)\b/.test(blob)) {
@@ -469,6 +484,7 @@ function agentChatSystemPrompt(
   isContentExtractor: boolean,
   isDsaAgent: boolean,
   agentPrompt: string,
+  draftPlatform?: unknown,
   responseLimit?: string,
   liveStockContext?: string
 ): string {
@@ -497,7 +513,7 @@ function agentChatSystemPrompt(
       "Default output: one complete post draft for the platform in the agent configuration (Twitter/X, LinkedIn, or Reddit).",
       "If the user asked for multiple drafts, produce that many — still grounded in the search results.",
       "If search returns nothing useful, say you could not find reliable results and do not fabricate a draft.",
-      contentExtractorFormatting(agentPrompt),
+      contentExtractorFormatting(agentPrompt, draftPlatform),
       "Keep the response practical: short context from search (optional bullets), then the draft.",
       responseLimitInstruction(responseLimit)
     ]
@@ -541,7 +557,9 @@ function agentChatSystemPrompt(
     "",
     liveStockContext || "",
     "",
-    isContentExtractor ? contentExtractorFormatting(agentPrompt) : "",
+    isContentExtractor
+      ? contentExtractorFormatting(agentPrompt, draftPlatform)
+      : "",
     isDsaAgent ? dsaFormatting() : "",
     "Keep replies concise, practical, and scannable. Use short bullets when listing items.",
     responseLimitInstruction(responseLimit)
@@ -550,8 +568,16 @@ function agentChatSystemPrompt(
     .join("\n");
 }
 
-function contentExtractorFormatting(agentPrompt: string): string {
-  const platform = detectPlatform(agentPrompt);
+function contentExtractorFormatting(
+  agentPrompt: string,
+  configuredPlatform?: unknown
+): string {
+  const platform =
+    configuredPlatform === "linkedin" ||
+    configuredPlatform === "reddit" ||
+    configuredPlatform === "twitter"
+      ? configuredPlatform
+      : detectPlatform(agentPrompt);
   const common = [
     "CRITICAL FORMATTING RULES FOR CONTENT DRAFTS:",
     "- Do NOT include any emojis in the post drafts or text content under any circumstances.",

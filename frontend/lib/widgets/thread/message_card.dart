@@ -205,7 +205,14 @@ class _TemplateRouter extends StatelessWidget {
       'urgency_list' => UrgencyListTemplate(data: data),
       'data_summary' => DataSummaryTemplate(data: data),
       'checklist' => ChecklistTemplate(data: data),
-      'daily_task' => DailyTaskTemplate(data: data, onAction: onAction),
+      'daily_task' => DailyTaskTemplate(
+        data: data,
+        onAction: (actionData) {
+          if (onAction != null) {
+            onAction!({...actionData, 'messageId': message.id});
+          }
+        },
+      ),
       'agent_selection' => AgentSelectionTemplate(
         data: data,
         onAction: onAction,

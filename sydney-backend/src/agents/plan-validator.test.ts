@@ -49,3 +49,18 @@ test("accepts event triggers for realtime-capable connector agents", () => {
   assert.equal(result.intent.schedule_cron, null);
   assert.deepEqual(result.unsupported_requirements, []);
 });
+
+test("all shipped scheduled output contracts share the authoritative allowlist", () => {
+  for (const output_template of [
+    "news_brief",
+    "content_extractor",
+    "portfolio_watch"
+  ]) {
+    const result = validateAgentPlan(calendarIntent, { output_template });
+    assert.equal(result.intent.output_template, output_template);
+    assert.equal(
+      result.warnings.some((warning) => warning.includes("unsupported output")),
+      false
+    );
+  }
+});

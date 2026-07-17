@@ -130,6 +130,38 @@ CREATE UNIQUE INDEX idx_agents_one_assistant_per_user
   ON agents(user_id)
   WHERE is_assistant = TRUE;
 
+CREATE TABLE agent_config_revisions (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id    UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  revision    INTEGER NOT NULL CHECK (revision > 0),
+  definition  JSONB NOT NULL,
+  created_by  TEXT NOT NULL DEFAULT 'system',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(agent_id, revision),
+  CHECK ((definition->>'schema_version')::integer = 1)
+);
+
+CREATE INDEX idx_agent_config_revisions_agent
+  ON agent_config_revisions(agent_id, revision DESC);
+
+CREATE TABLE agent_config_heads (
+  agent_id     UUID PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
+  revision_id  UUID NOT NULL UNIQUE
+                 REFERENCES agent_config_revisions(id) ON DELETE CASCADE,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE agent_runtime_states (
+  agent_id    UUID PRIMARY KEY REFERENCES agents(id) ON DELETE CASCADE,
+  state       JSONB NOT NULL DEFAULT
+                '{"history":{},"topics_covered":[],"current_chunk":0}'::jsonb,
+  version     INTEGER NOT NULL DEFAULT 0 CHECK (version >= 0),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (jsonb_typeof(state->'history') = 'object'),
+  CHECK (jsonb_typeof(state->'topics_covered') = 'array'),
+  CHECK (jsonb_typeof(state->'current_chunk') = 'number')
+);
+
 CREATE TABLE agent_messages (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id     UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -258,6 +290,7 @@ CREATE TABLE agent_runs (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id       UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
   queue_job_id   TEXT UNIQUE,
+  config_revision UUID REFERENCES agent_config_revisions(id) ON DELETE CASCADE,
   started_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at   TIMESTAMPTZ,
   status         TEXT NOT NULL

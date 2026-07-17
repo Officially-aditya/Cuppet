@@ -1,7 +1,10 @@
+import type { AgentDefinitionV1 } from "../agents/runtime/definition.js";
+
 export type AgentRow = {
   id: string;
   user_id: string;
   name: string;
+  avatar?: string;
   prompt: string;
   parsed_intent: Record<string, unknown>;
   connector_ids: string[];
@@ -9,6 +12,8 @@ export type AgentRow = {
   is_assistant: boolean;
   status: "active" | "paused" | "error";
   safety_level: "read" | "suggest" | "act";
+  definition?: AgentDefinitionV1;
+  config_revision?: string;
 };
 
 export function parseAgentIntent(
