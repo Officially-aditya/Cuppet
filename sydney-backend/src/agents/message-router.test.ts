@@ -110,6 +110,29 @@ test("updating agent description mentioning Twitter is not a connector error", (
   assert.notEqual(route.intent, "unsupported");
 });
 
+test("reddit drafting agents can search and draft without connector rejection", () => {
+  const redditAgent = {
+    name: "Reddit Drafts",
+    prompt: "Search the web and write Reddit posts for r/technology.",
+    parsed_intent: {
+      ...parsedIntent,
+      name: "Reddit Drafts",
+      intent: "content_extractor",
+      connector: null,
+      connector_ids: [],
+      output_template: "content_extractor"
+    },
+    schedule_cron: "0 9 * * *",
+    status: "active" as const
+  };
+  const route = routeAgentMessage(
+    redditAgent,
+    "Search for Steam Deck news and write a Reddit post about it"
+  );
+  assert.notEqual(route.intent, "unsupported");
+  assert.notEqual(route.reason, "requested_unsupported_connector");
+});
+
 test("agent updates require and accept an explicit update-agent command", () => {
   const route = routeAgentMessage(
     agent,

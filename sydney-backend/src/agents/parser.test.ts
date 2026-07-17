@@ -154,6 +154,15 @@ test("twitter draft descriptions are not rejected as unsupported connectors", ()
   assert.equal(parsed.unsupported_connector, null);
 });
 
+test("reddit draft descriptions parse as content drafting agents", () => {
+  const parsed = parseIntent(
+    "Search the web for gaming topics and write Reddit drafts for r/gaming every morning."
+  );
+  assert.notEqual(parsed.intent, "unsupported_connector");
+  assert.equal(parsed.unsupported_connector, null);
+  assert.equal(parsed.intent, "content_extractor");
+});
+
 test("responseLimitInstruction returns appropriate prompts", () => {
   assert.match(responseLimitInstruction("concise"), /extremely brief/);
   assert.match(responseLimitInstruction("detailed"), /highly detailed/);

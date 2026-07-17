@@ -433,7 +433,7 @@ export function findBlockedUnsupportedConnectorMention(
     ) {
       return undefined;
     }
-    // Casual mention of twitter/linkedin without "connect" still allowed for chat.
+    // Casual mention of twitter/linkedin/reddit without "connect" still allowed for chat.
     return undefined;
   }
 

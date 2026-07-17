@@ -35,13 +35,7 @@ export async function createAgentChatReply(
   }
 
   try {
-    const isContentExtractor =
-      context.agent.parsed_intent.intent === "content_extractor" ||
-      context.agent.name.toLowerCase().includes("content extractor") ||
-      context.agent.name.toLowerCase().includes("twitter") ||
-      context.agent.prompt.toLowerCase().includes("twitter") ||
-      context.agent.prompt.toLowerCase().includes("linkedin") ||
-      context.agent.prompt.toLowerCase().includes("draft");
+    const isContentExtractor = isDraftingAgent(context.agent);
     const mode = classifyAgentChatMode(context.userText, {
       contentExtractor: isContentExtractor
     });
@@ -184,10 +178,35 @@ export function isDraftAboutTopicRequest(lower: string): boolean {
   ) {
     return true;
   }
-  if (/\b(?:write|create|generate|make)\s+(?:a\s+)?(?:draft|post|tweet|thread)\b/.test(lower)) {
+  if (
+    /\b(?:write|create|generate|make)\s+(?:a\s+)?(?:draft|post|tweet|thread|reddit\s+post)\b/.test(
+      lower
+    )
+  ) {
     return true;
   }
-  if (/\b(?:draft|post|tweet)\s+(?:about|on)\b/.test(lower)) {
+  if (/\b(?:draft|post|tweet|reddit\s+post)\s+(?:about|on)\b/.test(lower)) {
+    return true;
+  }
+  if (/\b(?:for|to)\s+(?:reddit|r\/[a-z0-9_]+)\b/.test(lower)) {
+    return true;
+  }
+  return false;
+}
+
+/** Content / social drafting agents (Twitter, LinkedIn, Reddit, generic drafts). */
+export function isDraftingAgent(agent: {
+  name: string;
+  prompt: string;
+  parsed_intent: { intent?: string };
+}): boolean {
+  if (agent.parsed_intent.intent === "content_extractor") return true;
+  const blob = `${agent.name} ${agent.prompt}`.toLowerCase();
+  if (blob.includes("content extractor")) return true;
+  if (/\b(?:twitter|linkedin|reddit|subreddit|tweet|draft)\b/.test(blob)) {
+    return true;
+  }
+  if (/\br\/[a-z0-9_]+\b/i.test(`${agent.name} ${agent.prompt}`)) {
     return true;
   }
   return false;
@@ -483,47 +502,57 @@ function agentChatSystemPrompt(
 
 function contentExtractorFormatting(agentPrompt: string): string {
   const platform = detectPlatform(agentPrompt);
-  return [
+  const common = [
     "CRITICAL FORMATTING RULES FOR CONTENT DRAFTS:",
     "- Do NOT include any emojis in the post drafts or text content under any circumstances.",
     "- Always wrap post drafts or content outputs in a markdown code block (using ```) so the user can easily copy it from a code window.",
-    `- Adapt the writing style specifically for the ${platform.toUpperCase()} platform:`,
-    `  * For TWITTER/X:`,
-    `    - You are writing a draft for X (Twitter) that should sound like a real person tweeting—not an AI, copywriter, marketer, or growth account.`,
-    `    - Keep the entire tweet under 280 characters.`,
-    `    - Prioritize authenticity over polish. Write naturally and conversationally.`,
-    `    - Every tweet should feel like a genuine thought someone had, not content designed for engagement.`,
-    `    - Don't explain more than necessary. Trust the reader.`,
-    `    - Avoid sounding inspirational, motivational, or "thought leader" style.`,
-    `    - Avoid AI clichés like "Here's why...", "Let that sink in.", "The future is...", "One thing I've learned...", "Game changer.", "This changes everything.", "Hot take:", "Thread 🧵".`,
-    `    - Don't artificially create suspense/curiosity or wrap up the tweet with a neat conclusion.`,
-    `    - Use contractions naturally. Vary punctuation (it's okay if a tweet ends abruptly).`,
-    `    - Lowercase, fragments, or imperfect grammar are acceptable when they feel natural.`,
-    `    - Avoid hashtags unless explicitly requested. Avoid emojis unless common for the audience.`,
-    `    - Never include marketing language, CTAs, self-promotion, or requests for engagement.`,
-    `    - Don't overuse em dashes (—), semicolons, or quotation marks.`,
-    `    - If expressing an opinion, commit to it naturally instead of trying to balance every perspective.`,
-    `    - If observational, make it specific rather than generic.`,
-    `    - If humor fits the prompt, keep it understated rather than trying to be obviously witty.`,
-    `  * For LINKEDIN: Open the post with a concrete claim or number (do NOT open with a story). Keep paragraphs to exactly one line each. Do NOT include any links in the post body.`,
-    `  * For REDDIT:`,
-    `    - You are writing a Reddit draft that should read as if it were written by a real person in one sitting—not by an AI, marketer, or copywriter. Imitate authentic Reddit posts.`,
-    `    - Match the writing style, tone, vocabulary, formatting, and average length of the target subreddit.`,
-    `    - Prioritize authenticity over polish. Imperfect writing is better than polished writing.`,
-    `    - Use contractions naturally. Vary sentence lengths. Mix short sentences with longer ones.`,
-    `    - It is okay if the writing feels slightly messy or conversational. Do NOT write like an article, blog post, essay, or LinkedIn post.`,
-    `    - Never summarize your point at the end unless people in that subreddit naturally do.`,
-    `    - Avoid transitions like "Additionally", "Furthermore", "Overall", "In conclusion", "That said", etc.`,
-    `    - Avoid rhetorical questions and filler phrases like "Has anyone else...", "Any advice would be appreciated.", "I'm curious what everyone thinks.", "Looking forward to hearing your thoughts."`,
-    `    - Don't explain obvious context just to help the reader. Include only details a normal Reddit user would casually mention.`,
-    `    - If the topic involves an opinion, don't artificially present both sides. Commit to one viewpoint naturally.`,
-    `    - Include small, concrete details that make the story believable instead of generic adjectives.`,
-    `    - Never sound promotional. Never mention products/links unless explicitly required.`,
-    `    - Do not use emojis or AI clichés/motivational language/polished life lessons.`,
-    `    - If the post is a question, make it sound like the user genuinely wants help rather than farming engagement.`,
-    `    - Title must sound like existing posts in the subreddit (specific, understated, observational, or slightly contrarian; never clickbait).`,
-    `    - Body must be between 100 and 300 words.`,
+    `- Target platform for this agent: ${platform.toUpperCase()}. Use only this platform's rules.`,
     "- Keep drafts clean, professional, and well-structured."
+  ];
+
+  if (platform === "linkedin") {
+    return [
+      ...common,
+      "LINKEDIN rules:",
+      "- Open the post with a concrete claim or number (do NOT open with a story).",
+      "- Keep paragraphs to exactly one line each.",
+      "- Do NOT include any links in the post body."
+    ].join("\n");
+  }
+
+  if (platform === "reddit") {
+    return [
+      ...common,
+      "REDDIT rules:",
+      "- Write as if a real person typed this in one sitting—not an AI, marketer, or copywriter.",
+      "- Match the writing style, tone, vocabulary, formatting, and average length of the target subreddit when one is named in the agent prompt.",
+      "- Prioritize authenticity over polish. Imperfect writing is better than polished writing.",
+      "- Use contractions naturally. Vary sentence lengths.",
+      "- Do NOT write like an article, blog post, essay, or LinkedIn post.",
+      "- Never summarize your point at the end unless that subreddit naturally does.",
+      "- Avoid transitions like \"Additionally\", \"Furthermore\", \"Overall\", \"In conclusion\", \"That said\".",
+      "- Avoid engagement-farming phrases like \"Has anyone else...\", \"Any advice would be appreciated.\"",
+      "- Include only details a normal Reddit user would casually mention.",
+      "- If opinionated, commit to one viewpoint; do not artificially present both sides.",
+      "- Never sound promotional. No product/links unless explicitly required.",
+      "- Title must sound like existing posts (specific, understated, observational; never clickbait).",
+      "- Body must be between 100 and 300 words.",
+      "- Prefer title + body when drafting a full Reddit post."
+    ].join("\n");
+  }
+
+  return [
+    ...common,
+    "TWITTER/X rules:",
+    "- Sound like a real person tweeting—not an AI, copywriter, marketer, or growth account.",
+    "- Keep the entire tweet under 280 characters.",
+    "- Prioritize authenticity over polish. Write naturally and conversationally.",
+    "- Avoid inspirational, motivational, or \"thought leader\" style.",
+    "- Avoid AI clichés like \"Here's why...\", \"Let that sink in.\", \"Hot take:\", \"Thread\".",
+    "- Use contractions naturally. Lowercase/fragments are fine when natural.",
+    "- Avoid hashtags unless explicitly requested.",
+    "- Never include marketing language, CTAs, self-promotion, or engagement bait.",
+    "- Don't overuse em dashes, semicolons, or quotation marks."
   ].join("\n");
 }
 

@@ -9,6 +9,7 @@ import { ensureAssistantContact } from "./assistant.js";
 import { parseIntentHybrid } from "./llm-intent.js";
 import { describeSchedule } from "./message-router.js";
 import {
+  isDraftOutputPlatformName,
   looksLikeContentDraftPrompt,
   type ParsedIntent
 } from "./parser.js";
@@ -356,15 +357,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       let reparsed = await parseIntentHybrid(description);
       if (reparsed.unsupported_connector) {
         const platform = reparsed.unsupported_connector.toLowerCase();
-        const isDraftPlatform =
-          platform === "twitter" ||
-          platform === "linkedin" ||
-          platform === "x";
         const existingIsDraftAgent =
           existingParsedIntent.intent === "content_extractor" ||
           looksLikeContentDraftPrompt(existing.prompt ?? "") ||
           looksLikeContentDraftPrompt(description);
-        if (isDraftPlatform && existingIsDraftAgent) {
+        if (isDraftOutputPlatformName(platform) && existingIsDraftAgent) {
           reparsed = await parseIntentHybrid(
             `Content extractor agent: ${description}`
           );

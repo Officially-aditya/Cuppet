@@ -4,6 +4,7 @@ import {
   classifyAgentChatMode,
   extractPostSearchText,
   hasWebSearchEvidence,
+  isDraftingAgent,
   isStrongResearchIntent,
   refersToPriorContext
 } from "./agent-chat.js";
@@ -37,6 +38,37 @@ test("content extractor draft-about-topic uses research mode", () => {
       contentExtractor: true
     }),
     "research"
+  );
+  assert.equal(
+    classifyAgentChatMode("search for inkling and write a reddit post on it", {
+      contentExtractor: true
+    }),
+    "research"
+  );
+  assert.equal(
+    classifyAgentChatMode("write a reddit post about the Steam Deck OLED", {
+      contentExtractor: true
+    }),
+    "research"
+  );
+});
+
+test("isDraftingAgent detects reddit agents", () => {
+  assert.equal(
+    isDraftingAgent({
+      name: "Reddit Drafts",
+      prompt: "Write posts for r/startups",
+      parsed_intent: { intent: "custom_agent" }
+    }),
+    true
+  );
+  assert.equal(
+    isDraftingAgent({
+      name: "Email Digest",
+      prompt: "Summarize Gmail",
+      parsed_intent: { intent: "email_digest" }
+    }),
+    false
   );
 });
 

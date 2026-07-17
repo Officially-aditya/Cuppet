@@ -29,6 +29,7 @@ export const UNSUPPORTED_CHAT_CONNECTORS = [
 export const DRAFT_OUTPUT_PLATFORMS = new Set([
   "twitter",
   "linkedin",
+  "reddit",
   "x"
 ]);
 
@@ -43,19 +44,32 @@ export function findUnsupportedConnectorMention(
   return list.find((connector) => lower.includes(connector));
 }
 
+/** True when text names a social draft platform (output format, not OAuth). */
+export function mentionsDraftOutputPlatform(text: string): boolean {
+  const lower = text.toLowerCase();
+  return (
+    /\b(?:twitter|linkedin|reddit|subreddit|tweet|tweets)\b/.test(lower) ||
+    /\bx\s*\(twitter\)/.test(lower) ||
+    /\br\/[a-z0-9_]+\b/i.test(text)
+  );
+}
+
 /** True when text describes drafting social posts rather than connecting an account. */
 export function looksLikeContentDraftPrompt(text: string): boolean {
   const lower = text.toLowerCase();
   if (lower.includes("content extractor")) return true;
   if (lower.includes("content") && lower.includes("extractor")) return true;
-  const platform =
-    /\b(?:twitter|linkedin|reddit|tweet|tweets)\b/.test(lower) ||
-    /\bx\s*\(twitter\)/.test(lower);
+  const platform = mentionsDraftOutputPlatform(text);
   const drafty =
-    /\b(?:draft|drafts|post|posts|write|writing|caption|thread|threads|content creation|social media|content ideas?)\b/.test(
+    /\b(?:draft|drafts|post|posts|write|writing|caption|thread|threads|content creation|social media|content ideas?|subreddit)\b/.test(
       lower
     );
   return platform && drafty;
+}
+
+/** True when a connector name is only a draft format (Twitter / LinkedIn / Reddit / X). */
+export function isDraftOutputPlatformName(name: string): boolean {
+  return DRAFT_OUTPUT_PLATFORMS.has(name.toLowerCase().trim());
 }
 
 /** Explicit request to connect / authorize an unsupported service. */

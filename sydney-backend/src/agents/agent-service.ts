@@ -2,7 +2,11 @@ import { pool } from "../db/index.js";
 import { enqueueAgentRun } from "../queue/index.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { parseIntentHybrid } from "./llm-intent.js";
-import { looksLikeContentDraftPrompt, type ParsedIntent } from "./parser.js";
+import {
+  isDraftOutputPlatformName,
+  looksLikeContentDraftPrompt,
+  type ParsedIntent
+} from "./parser.js";
 import {
   removeScheduleForAgent,
   syncAgentSchedule,
@@ -152,16 +156,14 @@ export async function updateManagedAgentDescription(
   const previous = typeof existing.parsed_intent === "string"
     ? JSON.parse(existing.parsed_intent)
     : existing.parsed_intent || {};
-  // Drafting agents often keep "Twitter/LinkedIn" in their description as output style.
+  // Drafting agents often keep Twitter/LinkedIn/Reddit in their description as output style.
   if (reparsed.unsupported_connector) {
     const platform = reparsed.unsupported_connector.toLowerCase();
-    const isDraftPlatform =
-      platform === "twitter" || platform === "linkedin" || platform === "x";
     const existingIsDraftAgent =
       previous.intent === "content_extractor" ||
       looksLikeContentDraftPrompt(existing.prompt ?? "") ||
       looksLikeContentDraftPrompt(clean);
-    if (isDraftPlatform && existingIsDraftAgent) {
+    if (isDraftOutputPlatformName(platform) && existingIsDraftAgent) {
       reparsed = await parseIntentHybrid(`Content extractor agent: ${clean}`);
     }
   }

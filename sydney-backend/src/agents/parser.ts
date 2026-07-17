@@ -1,10 +1,14 @@
 import {
+  isDraftOutputPlatformName,
   looksLikeContentDraftPrompt,
   UNSUPPORTED_CONNECTORS
 } from "./unsupported-connectors.js";
 import { extractGitHubRepository } from "./github-scope.js";
 
-export { looksLikeContentDraftPrompt } from "./unsupported-connectors.js";
+export {
+  isDraftOutputPlatformName,
+  looksLikeContentDraftPrompt
+} from "./unsupported-connectors.js";
 
 export interface ParsedIntent {
   name: string;
