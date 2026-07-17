@@ -19,6 +19,25 @@ test("classifies strong external lookups as research", () => {
     classifyAgentChatMode("Was Anthropic Claude 5 announced?"),
     "research"
   );
+  assert.equal(
+    classifyAgentChatMode("search for inkling and write draft on it"),
+    "research"
+  );
+});
+
+test("content extractor draft-about-topic uses research mode", () => {
+  assert.equal(
+    classifyAgentChatMode("write a draft about Inkling", {
+      contentExtractor: true
+    }),
+    "research"
+  );
+  assert.equal(
+    classifyAgentChatMode("draft a twitter post on remote work trends", {
+      contentExtractor: true
+    }),
+    "research"
+  );
 });
 
 test("keeps grounded mode for follow-ups and weak wording", () => {

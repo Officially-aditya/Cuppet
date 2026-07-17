@@ -8,7 +8,10 @@ import { agentExecutorQueue, agentExecutorJobName } from "../queue/index.js";
 import { ensureAssistantContact } from "./assistant.js";
 import { parseIntentHybrid } from "./llm-intent.js";
 import { describeSchedule } from "./message-router.js";
-import type { ParsedIntent } from "./parser.js";
+import {
+  looksLikeContentDraftPrompt,
+  type ParsedIntent
+} from "./parser.js";
 import {
   syncAgentScheduleForUser
 } from "./scheduler.js";
@@ -350,7 +353,23 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     let nextSafetyLevel = existing.safety_level;
 
     if (description !== undefined) {
-      const reparsed = await parseIntentHybrid(description);
+      let reparsed = await parseIntentHybrid(description);
+      if (reparsed.unsupported_connector) {
+        const platform = reparsed.unsupported_connector.toLowerCase();
+        const isDraftPlatform =
+          platform === "twitter" ||
+          platform === "linkedin" ||
+          platform === "x";
+        const existingIsDraftAgent =
+          existingParsedIntent.intent === "content_extractor" ||
+          looksLikeContentDraftPrompt(existing.prompt ?? "") ||
+          looksLikeContentDraftPrompt(description);
+        if (isDraftPlatform && existingIsDraftAgent) {
+          reparsed = await parseIntentHybrid(
+            `Content extractor agent: ${description}`
+          );
+        }
+      }
       if (reparsed.unsupported_connector) {
         return reply.code(422).send({
           error: {
@@ -361,6 +380,12 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       }
       nextParsedIntent = {
         ...reparsed,
+        ...(existingParsedIntent.intent === "content_extractor"
+          ? {
+              intent: "content_extractor",
+              output_template: "content_extractor"
+            }
+          : {}),
         ...preservedAgentState(existingParsedIntent)
       };
       nextPrompt = description;

@@ -88,6 +88,28 @@ test("draft-style Twitter wording is allowed even outside content extractor agen
   assert.notEqual(route.intent, "unsupported");
 });
 
+test("updating agent description mentioning Twitter is not a connector error", () => {
+  const draftingAgent = {
+    name: "Twitter Drafts",
+    prompt: "Write Twitter drafts about tech news.",
+    parsed_intent: {
+      ...parsedIntent,
+      name: "Twitter Drafts",
+      intent: "content_extractor",
+      connector: null,
+      connector_ids: [],
+      output_template: "content_extractor"
+    },
+    schedule_cron: "0 9 * * *",
+    status: "active" as const
+  };
+  const route = routeAgentMessage(
+    draftingAgent,
+    "Update agent to focus Twitter drafts on startup launches"
+  );
+  assert.notEqual(route.intent, "unsupported");
+});
+
 test("agent updates require and accept an explicit update-agent command", () => {
   const route = routeAgentMessage(
     agent,

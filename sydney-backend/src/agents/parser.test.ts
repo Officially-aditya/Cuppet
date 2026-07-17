@@ -146,6 +146,14 @@ test("content extractor is not classified as unsupported even when mentioning tw
   assert.equal(parsed.output_template, "content_extractor");
 });
 
+test("twitter draft descriptions are not rejected as unsupported connectors", () => {
+  const parsed = parseIntent(
+    "Search the web for tech topics and write Twitter drafts every morning."
+  );
+  assert.notEqual(parsed.intent, "unsupported_connector");
+  assert.equal(parsed.unsupported_connector, null);
+});
+
 test("responseLimitInstruction returns appropriate prompts", () => {
   assert.match(responseLimitInstruction("concise"), /extremely brief/);
   assert.match(responseLimitInstruction("detailed"), /highly detailed/);

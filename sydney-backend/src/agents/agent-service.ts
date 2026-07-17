@@ -2,7 +2,7 @@ import { pool } from "../db/index.js";
 import { enqueueAgentRun } from "../queue/index.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
 import { parseIntentHybrid } from "./llm-intent.js";
-import type { ParsedIntent } from "./parser.js";
+import { looksLikeContentDraftPrompt, type ParsedIntent } from "./parser.js";
 import {
   removeScheduleForAgent,
   syncAgentSchedule,
@@ -148,7 +148,23 @@ export async function updateManagedAgentDescription(
       "Agent functionality must be between 3 and 4000 characters."
     );
   }
-  const reparsed = await parseIntentHybrid(clean);
+  let reparsed = await parseIntentHybrid(clean);
+  const previous = typeof existing.parsed_intent === "string"
+    ? JSON.parse(existing.parsed_intent)
+    : existing.parsed_intent || {};
+  // Drafting agents often keep "Twitter/LinkedIn" in their description as output style.
+  if (reparsed.unsupported_connector) {
+    const platform = reparsed.unsupported_connector.toLowerCase();
+    const isDraftPlatform =
+      platform === "twitter" || platform === "linkedin" || platform === "x";
+    const existingIsDraftAgent =
+      previous.intent === "content_extractor" ||
+      looksLikeContentDraftPrompt(existing.prompt ?? "") ||
+      looksLikeContentDraftPrompt(clean);
+    if (isDraftPlatform && existingIsDraftAgent) {
+      reparsed = await parseIntentHybrid(`Content extractor agent: ${clean}`);
+    }
+  }
   if (reparsed.unsupported_connector) {
     throw new AgentServiceError(
       "UNSUPPORTED_CONNECTOR",
@@ -156,11 +172,15 @@ export async function updateManagedAgentDescription(
       422
     );
   }
-  const previous = typeof existing.parsed_intent === "string"
-    ? JSON.parse(existing.parsed_intent)
-    : existing.parsed_intent || {};
   const parsedIntent = {
     ...reparsed,
+    // Keep drafting identity when the user only rewrote the description.
+    ...(previous.intent === "content_extractor"
+      ? {
+          intent: "content_extractor",
+          output_template: "content_extractor"
+        }
+      : {}),
     ...preservedAgentState(previous)
   };
   const { rows } = await pool.query<ManagedAgent>(

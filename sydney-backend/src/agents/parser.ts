@@ -1,5 +1,10 @@
-import { UNSUPPORTED_CONNECTORS } from "./unsupported-connectors.js";
+import {
+  looksLikeContentDraftPrompt,
+  UNSUPPORTED_CONNECTORS
+} from "./unsupported-connectors.js";
 import { extractGitHubRepository } from "./github-scope.js";
+
+export { looksLikeContentDraftPrompt } from "./unsupported-connectors.js";
 
 export interface ParsedIntent {
   name: string;
@@ -600,11 +605,14 @@ const CAPABILITIES: CapabilityDefinition[] = [
 
 export function parseIntent(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
-  const isContentExtractor = lower.includes("content extractor") || (lower.includes("content") && lower.includes("extractor"));
-  const unsupported = isContentExtractor
+  // Drafting agents name Twitter/LinkedIn as output formats, not OAuth connectors.
+  const skipUnsupportedCheck = looksLikeContentDraftPrompt(prompt);
+  const unsupported = skipUnsupportedCheck
     ? undefined
     : (UNSUPPORTED_CONNECTORS.find((connector) => lower.includes(connector)) ??
-       (/\bx\b/.test(lower) ? "x" : undefined));
+       (/\bx\b/.test(lower) && !/\bx\s*\(twitter\)/.test(lower)
+         ? "x"
+         : undefined));
 
   if (unsupported) {
     return baseIntent(prompt, {

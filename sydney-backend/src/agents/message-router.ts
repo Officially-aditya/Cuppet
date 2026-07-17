@@ -1,5 +1,10 @@
 import type { ParsedIntent } from "./parser.js";
-import { UNSUPPORTED_CHAT_CONNECTORS } from "./unsupported-connectors.js";
+import {
+  DRAFT_OUTPUT_PLATFORMS,
+  isUnsupportedConnectorAccessRequest,
+  looksLikeContentDraftPrompt,
+  UNSUPPORTED_CHAT_CONNECTORS
+} from "./unsupported-connectors.js";
 
 export type AgentMessageRouteIntent =
   | "chat"
@@ -404,12 +409,6 @@ function normalizeInstruction(
 }
 
 /**
- * Platforms that content/drafting agents write *for*, not OAuth connectors.
- * Mentioning them in chat must not short-circuit to "I can't add X access yet."
- */
-const draftOutputPlatforms = new Set(["twitter", "linkedin"]);
-
-/**
  * Returns an unsupported connector name only when the user is asking to connect
  * or access a service we don't support — not when naming a post style/platform.
  */
@@ -422,8 +421,19 @@ export function findBlockedUnsupportedConnectorMention(
   );
   if (!mentioned) return undefined;
 
-  // Content extractor (and draft-style wording) use Twitter/LinkedIn as formats.
-  if (draftOutputPlatforms.has(mentioned) && isDraftPlatformContext(agent, lower)) {
+  // Draft platforms are formats for content agents, not connectable services.
+  if (DRAFT_OUTPUT_PLATFORMS.has(mentioned)) {
+    if (isUnsupportedConnectorAccessRequest(lower, mentioned)) {
+      return mentioned;
+    }
+    if (
+      agent.parsed_intent.intent === "content_extractor" ||
+      looksLikeContentDraftPrompt(lower) ||
+      isDraftPlatformContext(agent, lower)
+    ) {
+      return undefined;
+    }
+    // Casual mention of twitter/linkedin without "connect" still allowed for chat.
     return undefined;
   }
 
@@ -439,8 +449,10 @@ function isDraftPlatformContext(
   }
   // "draft a twitter post", "write a linkedin update", "tweet about …"
   if (
-    /\b(?:draft|write|compose|generate|create)\b/.test(lower) &&
-    /\b(?:post|tweet|thread|caption|update|content)\b/.test(lower)
+    /\b(?:draft|write|compose|generate|create|update)\b/.test(lower) &&
+    /\b(?:post|tweet|thread|caption|update|content|description|functionality|agent)\b/.test(
+      lower
+    )
   ) {
     return true;
   }
