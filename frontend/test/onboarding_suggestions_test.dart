@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/config/routes.dart';
 import 'package:sydney/design/workspace_palette.dart';
@@ -9,6 +12,9 @@ import 'package:sydney/models/thread_launch_request.dart';
 import 'package:sydney/providers/agents_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/screens/inbox/inbox_screen.dart';
+import 'package:sydney/services/agent_service.dart';
+import 'package:sydney/services/api.dart';
+import 'package:sydney/services/message_service.dart';
 import 'package:sydney/widgets/workspace_primitives.dart';
 
 final _assistant = Agent(
@@ -41,11 +47,50 @@ class _OnboardingAgentsController extends AgentsController {
   Future<List<Agent>> build() async => items;
 }
 
-Widget _host({required List<Agent> agents, ValueChanged<Object?>? onRoute}) {
+class _PendingMessageService extends MessageService {
+  _PendingMessageService(this.result)
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  final Completer<String> result;
+  String? handedOffAgentId;
+  String? handedOffMessageId;
+
+  @override
+  Future<String> handoffToAssistant({
+    required String agentId,
+    required String messageId,
+  }) {
+    handedOffAgentId = agentId;
+    handedOffMessageId = messageId;
+    return result.future;
+  }
+}
+
+class _FixedAgentService extends AgentService {
+  _FixedAgentService(this.agents)
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  final List<Agent> agents;
+
+  @override
+  Future<List<Agent>> listAgents() async => agents;
+}
+
+Widget _host({
+  required List<Agent> agents,
+  List<Message> briefings = const [],
+  MessageService? messageService,
+  AgentService? agentService,
+  ValueChanged<Object?>? onRoute,
+}) {
   return ProviderScope(
     overrides: [
       agentsProvider.overrideWith(() => _OnboardingAgentsController(agents)),
-      briefingsProvider.overrideWith((ref) async => const <Message>[]),
+      briefingsProvider.overrideWith((ref) async => briefings),
+      if (messageService != null)
+        messageServiceProvider.overrideWithValue(messageService),
+      if (agentService != null)
+        agentServiceProvider.overrideWithValue(agentService),
     ],
     child: MaterialApp(
       home: const InboxScreen(),
@@ -145,6 +190,54 @@ void main() {
     expect(find.text('TRY CUPPET'), findsNothing);
     expect(find.byKey(const ValueKey('onboarding_daily_news')), findsNothing);
     expect(find.byKey(const ValueKey('onboarding_daily_coding')), findsNothing);
+  });
+
+  testWidgets('daily briefing disappears as soon as it is tapped', (
+    tester,
+  ) async {
+    final handoff = Completer<String>();
+    final messageService = _PendingMessageService(handoff);
+    final briefing = Message(
+      id: 'briefing-id',
+      threadId: 'briefing-agent-id',
+      sender: MessageSender.agent,
+      createdAt: DateTime(2026, 7, 17),
+      content: const {
+        'template': 'briefing_card',
+        'data': {
+          'eyebrow': 'DAILY BRIEFING',
+          'title': 'Your morning plan',
+          'summary': 'Three things need your attention.',
+        },
+      },
+    );
+
+    await tester.pumpWidget(
+      _host(
+        agents: [_assistant],
+        briefings: [briefing],
+        messageService: messageService,
+        agentService: _FixedAgentService([_assistant]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your morning plan'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('open_briefing_in_assistant')),
+    );
+    await tester.pump();
+
+    expect(find.text('Your morning plan'), findsNothing);
+    expect(find.text('Briefings'), findsNothing);
+    expect(messageService.handedOffAgentId, briefing.threadId);
+    expect(messageService.handedOffMessageId, briefing.id);
+
+    handoff.complete(_assistant.id);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Assistant opened'), findsOneWidget);
   });
 
   testWidgets('workspace layout preserves agent thread navigation', (

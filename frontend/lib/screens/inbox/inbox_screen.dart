@@ -25,6 +25,7 @@ class InboxScreen extends ConsumerStatefulWidget {
 
 class _InboxScreenState extends ConsumerState<InboxScreen> {
   bool _isExpanded = true;
+  final Set<String> _dismissedBriefingIds = {};
   Timer? _timer;
 
   @override
@@ -47,6 +48,12 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   Widget build(BuildContext context) {
     final agents = ref.watch(agentsProvider);
     final briefings = ref.watch(briefingsProvider);
+    final visibleBriefings =
+        (briefings.value ?? const <Message>[])
+            .where(
+              (briefing) => !_dismissedBriefingIds.contains(briefing.id),
+            )
+            .toList(growable: false);
 
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
@@ -70,7 +77,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             data:
                 (items) => _InboxList(
                   agents: items,
-                  briefings: briefings.value ?? const [],
+                  briefings: visibleBriefings,
                   onOpenBriefing: _openBriefing,
                 ),
             loading: () => const SizedBox.expand(),
@@ -156,6 +163,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   }
 
   Future<void> _openBriefing(Message briefing) async {
+    if (_dismissedBriefingIds.contains(briefing.id)) return;
+    setState(() => _dismissedBriefingIds.add(briefing.id));
+
     try {
       final assistantId = await ref
           .read(messageServiceProvider)
@@ -174,6 +184,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       ).pushNamed(AppRoutes.thread, arguments: assistant);
     } catch (error) {
       if (!mounted) return;
+      setState(() => _dismissedBriefingIds.remove(briefing.id));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
