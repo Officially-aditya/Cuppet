@@ -5,6 +5,7 @@ import {
   extractPostSearchText,
   hasWebSearchEvidence,
   isDraftingAgent,
+  isExistingIdeaDraftRequest,
   isStrongResearchIntent,
   refersToPriorContext
 } from "./agent-chat.js";
@@ -51,6 +52,21 @@ test("content extractor draft-about-topic uses research mode", () => {
     }),
     "research"
   );
+});
+
+test("selected content ideas stay grounded on the existing output", () => {
+  for (const text of [
+    'Generate draft for idea: "Smaller models get faster"',
+    'Generate a draft from this selected idea in your previous output: "Smaller models get faster"',
+    "Draft this idea as a Twitter post"
+  ]) {
+    assert.equal(isExistingIdeaDraftRequest(text.toLowerCase()), true, text);
+    assert.equal(
+      classifyAgentChatMode(text, { contentExtractor: true }),
+      "grounded",
+      text
+    );
+  }
 });
 
 test("isDraftingAgent detects reddit agents", () => {

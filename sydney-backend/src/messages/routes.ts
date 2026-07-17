@@ -43,6 +43,7 @@ const sendMessageSchema = z
       .regex(/^[a-z0-9_.:-]+$/i, "Invalid action identifier.")
       .optional(),
     payload: z.record(z.unknown()).optional(),
+    source_message_id: z.string().uuid().optional(),
     attachment_ids: z.array(z.string().uuid()).max(4).optional()
   })
   .strict()
@@ -460,7 +461,12 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (!agent.is_assistant && body.data.text) {
-      const result = await handleAgentTextMessage(userId, agent, body.data.text);
+      const result = await handleAgentTextMessage(
+        userId,
+        agent,
+        body.data.text,
+        body.data.source_message_id
+      );
       return reply.code(201).send(result);
     }
 
@@ -711,7 +717,8 @@ async function handleAssistantTextMessage(
 async function handleAgentTextMessage(
   userId: string,
   agent: AgentRow,
-  text: string
+  text: string,
+  sourceMessageId?: string
 ): Promise<{
   message: MessageRow;
   agent_message: MessageRow;
@@ -738,7 +745,11 @@ async function handleAgentTextMessage(
   let chatReplyText = decision.reply;
   if (decision.needsLlmReply) {
     try {
-      const agentOutput = await latestAgentReply(userId, agent.id);
+      const agentOutput = await latestAgentReply(
+        userId,
+        agent.id,
+        sourceMessageId
+      );
       const recentUserMsgs = await recentUserMessageTexts(userId, agent.id, 2);
       chatReplyText = await createAgentChatReply({
         userId,
@@ -1044,7 +1055,8 @@ async function latestAssistantBriefingContext(
 
 async function latestAgentReply(
   userId: string,
-  agentId: string
+  agentId: string,
+  sourceMessageId?: string
 ): Promise<{ body: string | null; sourceRefs: unknown[] }> {
   const { rows } = await pool.query<{ content: any; source_refs: unknown[] }>(
     `
@@ -1055,10 +1067,11 @@ async function latestAgentReply(
         AND agent_id = $2
         AND role = 'agent'
         AND created_at > NOW() - ($3::int * INTERVAL '1 day')
+        AND ($4::uuid IS NULL OR id = $4)
       ORDER BY created_at DESC
       LIMIT 1
     `,
-    [userId, agentId, config.MESSAGE_RETENTION_DAYS]
+    [userId, agentId, config.MESSAGE_RETENTION_DAYS, sourceMessageId ?? null]
   );
 
   if (!rows[0]) {

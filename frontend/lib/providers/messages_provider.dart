@@ -87,6 +87,7 @@ class MessageActions {
     required String threadId,
     required String text,
     List<String> attachmentIds = const [],
+    String? sourceMessageId,
   }) async {
     final result = await _ref
         .read(messageServiceProvider)
@@ -94,6 +95,7 @@ class MessageActions {
           threadId: threadId,
           text: text,
           attachmentIds: attachmentIds,
+          sourceMessageId: sourceMessageId,
         );
     final updatedAgent = result.updatedAgent;
     if (result.deletedAgentId case final deletedAgentId?) {

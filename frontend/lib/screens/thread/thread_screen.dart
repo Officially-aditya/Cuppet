@@ -612,8 +612,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
   Future<void> _sendReply(
     String text,
-    List<ComposerAttachment> attachments,
-  ) async {
+    List<ComposerAttachment> attachments, {
+    String? sourceMessageId,
+  }) async {
     final toQuote = _replyToMessage;
     setState(() => _replyToMessage = null);
 
@@ -656,11 +657,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       _sendReplyAsync(
         finalReplyText,
         attachments.map((attachment) => attachment.id).toList(),
+        sourceMessageId: sourceMessageId,
       ),
     );
   }
 
-  Future<void> _sendReplyAsync(String text, List<String> attachmentIds) async {
+  Future<void> _sendReplyAsync(
+    String text,
+    List<String> attachmentIds, {
+    String? sourceMessageId,
+  }) async {
     try {
       await ref
           .read(messageActionsProvider)
@@ -668,6 +674,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             threadId: _activeAgent.threadId,
             text: text,
             attachmentIds: attachmentIds,
+            sourceMessageId: sourceMessageId,
           );
       // A text reply can request an asynchronous run (for example, "run now").
       // Keep polling as a fallback when a realtime event is delayed or missed.
@@ -789,7 +796,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
     if (actionType == 'generate_draft') {
       final title = action['title']?.toString() ?? '';
-      await _sendReply('Generate draft for idea: "$title"', const []);
+      final sourceMessageId = action['messageId']?.toString().trim();
+      await _sendReply(
+        'Generate a draft from this selected idea in your previous output: "$title"',
+        const [],
+        sourceMessageId:
+            sourceMessageId?.isNotEmpty == true ? sourceMessageId : null,
+      );
       return;
     }
 

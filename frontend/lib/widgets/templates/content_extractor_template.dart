@@ -61,11 +61,13 @@ class ContentExtractorTemplate extends StatelessWidget {
               size: 20,
             ),
             const SizedBox(width: SydneySpacing.sm),
-            Text(
-              'Trending Content Ideas',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+            Expanded(
+              child: Text(
+                'Trending Content Ideas',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
             ),
           ],
         ),
@@ -202,16 +204,17 @@ class _IdeaCard extends StatelessWidget {
                         color: SydneyColors.primary,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        'Generate Post Draft',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.labelMedium?.copyWith(
-                          color: SydneyColors.primary,
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Text(
+                          'Generate Post Draft',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelMedium?.copyWith(
+                            color: SydneyColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       const Icon(
                         Icons.chevron_right_rounded,
                         size: 16,

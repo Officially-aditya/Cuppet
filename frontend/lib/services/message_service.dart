@@ -72,6 +72,7 @@ class MessageService {
     required String threadId,
     required String text,
     List<String> attachmentIds = const [],
+    String? sourceMessageId,
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty && attachmentIds.isEmpty) {
@@ -119,6 +120,8 @@ class MessageService {
         data: {
           if (trimmed.isNotEmpty) 'text': trimmed,
           if (attachmentIds.isNotEmpty) 'attachment_ids': attachmentIds,
+          if (sourceMessageId?.isNotEmpty == true)
+            'source_message_id': sourceMessageId,
         },
       );
       final data = response.data?['message'];

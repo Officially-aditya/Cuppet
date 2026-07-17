@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
@@ -12,6 +13,8 @@ import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/providers/message_archive_provider.dart';
 import 'package:sydney/screens/thread/thread_screen.dart';
 import 'package:sydney/screens/thread/agent_preferences_screen.dart';
+import 'package:sydney/services/api.dart';
+import 'package:sydney/services/message_service.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
 
 final testAgent = Agent(
@@ -44,9 +47,38 @@ class _ThreadArchiveController extends MessageArchiveController {
   );
 }
 
+class _RecordingMessageService extends MessageService {
+  _RecordingMessageService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  String? sentText;
+  String? sentSourceMessageId;
+
+  @override
+  Future<SendReplyResult> sendReply({
+    required String threadId,
+    required String text,
+    List<String> attachmentIds = const [],
+    String? sourceMessageId,
+  }) async {
+    sentText = text;
+    sentSourceMessageId = sourceMessageId;
+    return SendReplyResult(
+      message: Message.plainText(
+        id: 'sent-message',
+        threadId: threadId,
+        sender: MessageSender.user,
+        text: text,
+        createdAt: _testDate,
+      ),
+    );
+  }
+}
+
 Widget threadHost({
   required Future<List<Message>> Function() loadMessages,
   Agent? agent,
+  MessageService? messageService,
 }) {
   final activeAgent = agent ?? testAgent;
   return ProviderScope(
@@ -56,6 +88,8 @@ Widget threadHost({
       messagesProvider(
         activeAgent.threadId,
       ).overrideWith((ref) => loadMessages()),
+      if (messageService != null)
+        messageServiceProvider.overrideWithValue(messageService),
     ],
     child: MaterialApp(home: ThreadScreen(agent: activeAgent)),
   );
@@ -156,6 +190,56 @@ void main() {
     expect(find.text('Agent response'), findsOneWidget);
     expect(find.text('User reply'), findsOneWidget);
     expect(find.text(testAgent.name), findsOneWidget);
+  });
+
+  testWidgets('content idea draft keeps the selected output as its source', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    const sourceMessageId = '72698af9-213d-4be8-b34a-b5ee990a5fc6';
+    final messageService = _RecordingMessageService();
+    final messages = [
+      Message(
+        id: sourceMessageId,
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        createdAt: _testDate,
+        content: const {
+          'template': 'content_extractor',
+          'data': {
+            'title': 'Content ideas',
+            'ideas': [
+              {
+                'title': 'Smaller models get faster',
+                'hook': 'Explain why latency wins matter.',
+              },
+            ],
+          },
+        },
+      ),
+    ];
+
+    await tester.pumpWidget(
+      threadHost(
+        loadMessages: () async => messages,
+        messageService: messageService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Smaller models get faster'));
+    await tester.pump();
+
+    expect(
+      messageService.sentText,
+      'Generate a draft from this selected idea in your previous output: '
+      '"Smaller models get faster"',
+    );
+    expect(messageService.sentSourceMessageId, sourceMessageId);
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
   });
 
   testWidgets('thread exposes Drive history only behind an explicit boundary', (

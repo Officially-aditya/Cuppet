@@ -179,6 +179,9 @@ export function classifyAgentChatMode(
     // "search for more on that story" stays grounded (or hybrid later).
     return "grounded";
   }
+  if (options.contentExtractor && isExistingIdeaDraftRequest(lower)) {
+    return "grounded";
+  }
   if (isStrongResearchIntent(lower)) {
     return "research";
   }
@@ -187,6 +190,16 @@ export function classifyAgentChatMode(
     return "research";
   }
   return "grounded";
+}
+
+/** A card selection drafts from an idea already present in the agent output. */
+export function isExistingIdeaDraftRequest(lower: string): boolean {
+  return (
+    /\b(?:generate|write|create|compose)\s+(?:a\s+)?(?:post\s+)?draft\s+(?:for|from)\s+(?:(?:this(?:\s+selected)?|the\s+selected|an?)\s+)?idea\b/.test(
+      lower
+    ) ||
+    /\bdraft\s+(?:this|the\s+selected)\s+idea\b/.test(lower)
+  );
 }
 
 /** Draft/post about a named topic (not a rewrite of the last ideas list). */
