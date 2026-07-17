@@ -25,7 +25,6 @@ class InboxScreen extends ConsumerStatefulWidget {
 
 class _InboxScreenState extends ConsumerState<InboxScreen> {
   bool _isExpanded = true;
-  final Set<String> _dismissedBriefingIds = {};
   Timer? _timer;
 
   @override
@@ -48,10 +47,12 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   Widget build(BuildContext context) {
     final agents = ref.watch(agentsProvider);
     final briefings = ref.watch(briefingsProvider);
+    final dismissedIds = ref.watch(dismissedBriefingIdsProvider);
     final visibleBriefings =
         (briefings.value ?? const <Message>[])
             .where(
-              (briefing) => !_dismissedBriefingIds.contains(briefing.id),
+              (briefing) =>
+                  !dismissedIds.contains(_briefingDismissKey(briefing)),
             )
             .toList(growable: false);
 
@@ -163,8 +164,12 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   }
 
   Future<void> _openBriefing(Message briefing) async {
-    if (_dismissedBriefingIds.contains(briefing.id)) return;
-    setState(() => _dismissedBriefingIds.add(briefing.id));
+    final dismissKey = _briefingDismissKey(briefing);
+    final dismissed = ref.read(dismissedBriefingIdsProvider);
+    if (dismissed.contains(dismissKey)) return;
+
+    // Optimistic hide — provider state survives tab switches / list rebuilds.
+    ref.read(dismissedBriefingIdsProvider.notifier).dismiss(dismissKey);
 
     try {
       final assistantId = await ref
@@ -184,7 +189,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       ).pushNamed(AppRoutes.thread, arguments: assistant);
     } catch (error) {
       if (!mounted) return;
-      setState(() => _dismissedBriefingIds.remove(briefing.id));
+      // Restore if the handoff never completed so the user can retry.
+      ref.read(dismissedBriefingIdsProvider.notifier).restore(dismissKey);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -197,6 +203,11 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       );
     }
   }
+}
+
+String _briefingDismissKey(Message briefing) {
+  if (briefing.id.isNotEmpty) return briefing.id;
+  return '${briefing.threadId}:${briefing.createdAt.toIso8601String()}';
 }
 
 class _InboxList extends StatelessWidget {
@@ -245,7 +256,9 @@ class _InboxList extends StatelessWidget {
           const SizedBox(height: SydneySpacing.sm),
           for (final briefing in briefings) ...[
             WorkspaceCard(
+              key: ValueKey('home_briefing_${briefing.id}'),
               padding: const EdgeInsets.all(SydneySpacing.md),
+              onTap: () => onOpenBriefing(briefing),
               child: BriefingCardTemplate(
                 data: briefing.data,
                 compact: true,

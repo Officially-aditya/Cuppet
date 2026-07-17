@@ -43,6 +43,33 @@ final briefingsProvider = FutureProvider<List<Message>>((ref) {
   return ref.watch(messageServiceProvider).fetchBriefings();
 });
 
+/// Home briefing cards dismissed this session (survives Inbox rebuilds / tab switches).
+final dismissedBriefingIdsProvider =
+    NotifierProvider<DismissedBriefingIdsController, Set<String>>(
+      DismissedBriefingIdsController.new,
+    );
+
+class DismissedBriefingIdsController extends Notifier<Set<String>> {
+  @override
+  Set<String> build() {
+    ref.watch(authControllerProvider);
+    return <String>{};
+  }
+
+  void dismiss(String id) {
+    if (state.contains(id)) return;
+    state = {...state, id};
+  }
+
+  void restore(String id) {
+    if (!state.contains(id)) return;
+    state = {
+      for (final existing in state)
+        if (existing != id) existing,
+    };
+  }
+}
+
 final liveEventsProvider = StreamProvider<RealtimeEvent>((ref) {
   return ref.watch(websocketServiceProvider).events;
 });
@@ -133,4 +160,5 @@ void handleRealtimeEvent(WidgetRef ref, RealtimeEvent event) {
     ref.invalidate(connectorsProvider);
   }
   ref.invalidate(agentsProvider);
+  ref.invalidate(briefingsProvider);
 }

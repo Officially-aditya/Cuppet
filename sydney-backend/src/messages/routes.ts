@@ -234,6 +234,25 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       const assistantId = await ensureAssistantContact(userId);
       const title = briefingTitle(source.content);
+
+      // Dismiss from home immediately so slow LLM work cannot leave the card stuck.
+      await pool.query(
+        `
+          UPDATE agent_messages
+          SET content = jsonb_set(
+            CASE
+              WHEN jsonb_typeof(content->'data') = 'object' THEN content
+              ELSE jsonb_set(content, '{data}', '{}'::jsonb, true)
+            END,
+            '{data,home_dismissed_at}',
+            to_jsonb(NOW()::text),
+            true
+          )
+          WHERE id = $1 AND agent_id = $2 AND user_id = $3
+        `,
+        [messageId, agentId, userId]
+      );
+
       const question = `Open “${title}” as context. Give me a short orientation, then help me explore any part of the report in detail.`;
       const sourceData = source.content.data;
       const assistantBriefingContent = {
@@ -247,10 +266,15 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           assistant_context: true
         }
       };
-      const answer = await createAssistantChatReply(question, {
-        briefing: JSON.stringify(source.content),
-        sourceRefs: source.source_refs
-      });
+      let answer: string;
+      try {
+        answer = await createAssistantChatReply(question, {
+          briefing: JSON.stringify(source.content),
+          sourceRefs: source.source_refs
+        });
+      } catch {
+        answer = `Here’s “${title}”. Ask about any section and I’ll dig in.`;
+      }
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -271,19 +295,6 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           sourceRefs: source.source_refs,
           createdAt: offsetDate(now, 1)
         });
-        await client.query(
-          `
-            UPDATE agent_messages
-            SET content = jsonb_set(
-              content,
-              '{data,home_dismissed_at}',
-              to_jsonb(NOW()::text),
-              true
-            )
-            WHERE id = $1 AND agent_id = $2 AND user_id = $3
-          `,
-          [messageId, agentId, userId]
-        );
         await touchAgentWithClient(client, userId, assistantId);
         await client.query("COMMIT");
         await publishMessageEvents(userId, [briefingMessage, assistantMessage]);
