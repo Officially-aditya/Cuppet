@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/config/routes.dart';
 import 'package:sydney/design/tokens.dart';
+import 'package:sydney/models/agent_recipe.dart';
 import 'package:sydney/providers/agents_provider.dart';
 import 'package:sydney/screens/create/confirm_screen.dart';
 import 'package:sydney/screens/create/create_screen.dart';
@@ -26,6 +27,26 @@ class _ParsedIntentAgentService extends AgentService {
   }
 }
 
+class _CreationRecipeAgentService extends AgentService {
+  _CreationRecipeAgentService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  @override
+  Future<List<AgentRecipe>> listRecipes() async => const [
+    AgentRecipe(
+      id: 'news_brief',
+      version: 1,
+      promptProfileVersion: 1,
+      name: 'News agent',
+      description: 'A balanced daily newsletter.',
+      icon: 'newspaper',
+      examplePrompt: 'Create a balanced daily newsletter at 6 AM.',
+      requiredConnectors: [],
+      fields: [],
+    ),
+  ];
+}
+
 void main() {
   testWidgets(
     'new agent page uses workspace hierarchy and preserves draft flow',
@@ -35,18 +56,27 @@ void main() {
 
       RouteSettings? pushedSettings;
       await tester.pumpWidget(
-        MaterialApp(
-          theme: SydneyTheme.light,
-          home: const CreateScreen(),
-          onGenerateRoute: (settings) {
-            pushedSettings = settings;
-            return MaterialPageRoute<void>(
-              settings: settings,
-              builder: (_) => const Scaffold(body: Text('Confirmation route')),
-            );
-          },
+        ProviderScope(
+          overrides: [
+            agentServiceProvider.overrideWithValue(
+              _CreationRecipeAgentService(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: SydneyTheme.light,
+            home: const CreateScreen(),
+            onGenerateRoute: (settings) {
+              pushedSettings = settings;
+              return MaterialPageRoute<void>(
+                settings: settings,
+                builder:
+                    (_) => const Scaffold(body: Text('Confirmation route')),
+              );
+            },
+          ),
         ),
       );
+      await tester.pumpAndSettle();
 
       final scaffold = tester.widget<Scaffold>(
         find.byKey(const ValueKey('create-agent-screen')),

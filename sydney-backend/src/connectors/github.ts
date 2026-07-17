@@ -4,7 +4,10 @@ import {
   renderedDataSummary,
   type RenderedAgentMessage
 } from "../agents/output.js";
-import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
+import {
+  connectorRecipeContext,
+  synthesizeConnectorDigest
+} from "../agents/connector-summarizer.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
@@ -507,7 +510,8 @@ export async function renderGitHubAgent(
           connectorName: "GitHub",
           agentName: agent.name,
           userPrompt: agent.prompt,
-          records
+          records,
+          ...connectorRecipeContext(agent.parsed_intent)
         })
       : null;
   const fallbackSummary = [

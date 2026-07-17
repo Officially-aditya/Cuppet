@@ -177,6 +177,72 @@ test("all fourteen scheduled output contracts validate through one registry", ()
   assert.equal("initiallyCollapsed" in (study.data as any), false);
 });
 
+test("optional 1.0 output extensions validate without changing old payloads", () => {
+  const extended = {
+    news_brief: {
+      title: "News",
+      tldr: ["One", "Two", "Three"],
+      items: [{ headline: "Lead", summary: "Grounded summary." }],
+      perspectives: [{ label: "View", summary: "Supported position." }],
+      why_it_matters: "Material context.",
+      timeline: [{ date: "Today", event: "Lead event" }]
+    },
+    data_summary: {
+      title: "Inbox",
+      action_items: [
+        "Reply to Ada",
+        { label: "Review invoice", priority: "high" }
+      ]
+    },
+    content_extractor: {
+      ideas: [
+        {
+          title: "Idea",
+          hook: "Hook",
+          angle: "Angle",
+          audience_value: "Useful",
+          evidence_summary: "Supported by a current source."
+        }
+      ]
+    },
+    briefing_card: {
+      eyebrow: "Today",
+      title: "Briefing",
+      summary: "Summary",
+      sections: [],
+      priorities: [{ title: "Reply", source: "Gmail" }],
+      cross_source_insights: ["The meeting and email concern the same launch."],
+      conflicts: [{ topic: "Deadline", detail: "Two dates are present." }]
+    },
+    portfolio_watch: {
+      title: "Portfolio",
+      text: "Prices checked.",
+      stocks: [],
+      footer: "Source",
+      material_events: [
+        {
+          ticker: "TCS",
+          category: "earnings",
+          headline: "Results published"
+        }
+      ],
+      drivers: ["Earnings evidence"],
+      as_of: "2026-07-17T12:00:00.000Z",
+      data_quality: { status: "partial", detail: "One symbol unavailable." }
+    }
+  } as const;
+  for (const [template, data] of Object.entries(extended)) {
+    assert.equal(
+      normalizeAndValidateOutput({
+        template,
+        version: "1.0",
+        data
+      }).template,
+      template
+    );
+  }
+});
+
 test("trusted output actions produce bounded runtime state events", () => {
   const content = {
     template: "study_guide",

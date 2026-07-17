@@ -76,7 +76,10 @@ export const agentDefinitionV1Schema = z
       .strict(),
     metadata: z
       .object({
-        recipe_id: z.string().trim().regex(/^[a-z][a-z0-9_]{1,79}$/).optional()
+        recipe_id: z.string().trim().regex(/^[a-z][a-z0-9_]{1,79}$/).optional(),
+        recipe_version: z.number().int().positive().optional(),
+        prompt_profile_version: z.number().int().positive().optional(),
+        recipe_inputs: z.record(z.unknown()).optional()
       })
       .strict()
   })

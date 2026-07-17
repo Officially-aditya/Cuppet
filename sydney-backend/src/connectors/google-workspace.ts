@@ -9,7 +9,10 @@ import {
   renderedUrgencyList,
   type RenderedAgentMessage
 } from "../agents/output.js";
-import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
+import {
+  connectorRecipeContext,
+  synthesizeConnectorDigest
+} from "../agents/connector-summarizer.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
 import { upsertConnectorInstallation } from "../events/engine.js";
 import {
@@ -849,7 +852,8 @@ async function renderGmailAgent(
     connectorName: "Gmail",
     agentName: agent.name,
     userPrompt: gmailOnlyDigestPrompt(agent.prompt),
-    records: messages.map(gmailDigestRecord)
+    records: messages.map(gmailDigestRecord),
+    ...connectorRecipeContext(agent.parsed_intent)
   });
   const digestMessages = buildGmailDigestMessages(messages);
   const categoryCounts = digestMessages.reduce(
@@ -873,7 +877,26 @@ async function renderGmailAgent(
       ],
       footer: "Read-only digest summarized from Gmail metadata and snippets.",
       kind: "gmail_digest",
-      messages: digestMessages
+      messages: digestMessages,
+      action_items: digestMessages
+        .filter((message) =>
+          ["reply", "attention", "finance", "system"].includes(
+            message.category
+          )
+        )
+        .slice(0, 6)
+        .map((message) => ({
+          label: message.subject,
+          priority:
+            message.category === "system"
+              ? ("urgent" as const)
+              : message.category === "reply" ||
+                  message.category === "finance"
+                ? ("high" as const)
+                : ("medium" as const),
+          ...(message.timestamp ? { due: message.timestamp } : {}),
+          source: "Gmail"
+        }))
     },
     { sourceRefs, tokensUsed: synthesized?.tokensUsed ?? 0 }
   );
@@ -947,7 +970,8 @@ async function renderDriveAgent(
       connectorName: "Google Drive PDF",
       agentName: agent.name,
       userPrompt: agent.prompt,
-      records: pdfRecords.length > 0 ? pdfRecords : files.map(driveDigestRecord)
+      records: pdfRecords.length > 0 ? pdfRecords : files.map(driveDigestRecord),
+      ...connectorRecipeContext(agent.parsed_intent)
     });
 
     return renderedDataSummary(
@@ -971,7 +995,8 @@ async function renderDriveAgent(
     connectorName: "Google Drive",
     agentName: agent.name,
     userPrompt: agent.prompt,
-    records: files.map(driveDigestRecord)
+    records: files.map(driveDigestRecord),
+    ...connectorRecipeContext(agent.parsed_intent)
   });
 
   return renderedDataSummary(

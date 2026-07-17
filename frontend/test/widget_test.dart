@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:sydney/models/agent_recipe.dart';
+import 'package:sydney/providers/agents_provider.dart';
+import 'package:sydney/services/agent_service.dart';
+import 'package:sydney/services/api.dart';
 import 'package:sydney/widgets/templates/plain_text_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/daily_task_template.dart';
@@ -10,6 +16,48 @@ import 'package:sydney/widgets/sydney_primitives.dart';
 import 'package:sydney/screens/create/create_screen.dart';
 import 'package:sydney/models/connector.dart';
 import 'package:sydney/widgets/connectors/connector_list_item.dart';
+
+class _CreationRecipeAgentService extends AgentService {
+  _CreationRecipeAgentService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  @override
+  Future<List<AgentRecipe>> listRecipes() async => const [
+    AgentRecipe(
+      id: 'email_digest',
+      version: 1,
+      promptProfileVersion: 1,
+      name: 'Email agent',
+      description: 'Summarizes Gmail.',
+      icon: 'mail',
+      examplePrompt:
+          'Create a Gmail digest. Use only Gmail data and prioritize replies.',
+      requiredConnectors: ['gmail'],
+      fields: [],
+    ),
+    AgentRecipe(
+      id: 'github_activity_digest',
+      version: 1,
+      promptProfileVersion: 1,
+      name: 'GitHub agent',
+      description: 'Summarizes GitHub activity.',
+      icon: 'github',
+      examplePrompt:
+          'Create a GitHub digest. Use only GitHub data. Do not create, edit, merge, or close anything.',
+      requiredConnectors: ['github'],
+      fields: [],
+    ),
+  ];
+}
+
+Widget _createScreenUnderTest() {
+  return ProviderScope(
+    overrides: [
+      agentServiceProvider.overrideWithValue(_CreationRecipeAgentService()),
+    ],
+    child: const MaterialApp(home: CreateScreen()),
+  );
+}
 
 void main() {
   testWidgets('plain text template renders message text', (tester) async {
@@ -85,7 +133,8 @@ void main() {
   });
 
   testWidgets('email template remains Gmail-only', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: CreateScreen()));
+    await tester.pumpWidget(_createScreenUnderTest());
+    await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
       find.text('Email agent'),
@@ -108,7 +157,8 @@ void main() {
   testWidgets('GitHub template is read-only and GitHub-specific', (
     tester,
   ) async {
-    await tester.pumpWidget(const MaterialApp(home: CreateScreen()));
+    await tester.pumpWidget(_createScreenUnderTest());
+    await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
       find.text('GitHub agent'),

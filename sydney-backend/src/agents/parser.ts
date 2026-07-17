@@ -4,6 +4,11 @@ import {
   UNSUPPORTED_CONNECTORS
 } from "./unsupported-connectors.js";
 import { extractGitHubRepository } from "./github-scope.js";
+import {
+  getAgentRecipeProfile,
+  hasAgentRecipeProfile,
+  validateRecipeInputs
+} from "./runtime/recipe-registry.js";
 
 export {
   isDraftOutputPlatformName,
@@ -28,6 +33,10 @@ export interface ParsedIntent {
   github_repository?: string;
   response_limit?: "concise" | "balanced" | "detailed";
   active_until?: string;
+  recipe_version?: number;
+  prompt_profile_version?: number;
+  recipe_inputs?: Record<string, unknown>;
+  draft_platform?: "twitter" | "linkedin" | "reddit" | "generic";
 }
 
 type CapabilityDefinition = {
@@ -608,6 +617,68 @@ const CAPABILITIES: CapabilityDefinition[] = [
 ];
 
 export function parseIntent(prompt: string): ParsedIntent {
+  const parsed = parseIntentLegacy(prompt);
+  if (
+    parsed.intent === "unsupported_connector" ||
+    !hasAgentRecipeProfile(parsed.intent)
+  ) {
+    return parsed;
+  }
+  const profile = getAgentRecipeProfile(parsed.intent);
+  const defaults = validateRecipeInputs(profile, {});
+  const recipeInputs: Record<string, unknown> = {
+    ...defaults,
+    ...(parsed.schedule_cron && profile.fields.some((field) => field.id === "schedule")
+      ? { schedule: parsed.schedule_cron }
+      : {})
+  };
+  if (profile.id === "portfolio_watch") {
+    const symbols = stockSymbols(prompt);
+    if (symbols.length > 0) recipeInputs.symbols = symbols;
+  }
+  if (profile.id === "github_activity_digest" && parsed.github_repository) {
+    recipeInputs.repository_filters = [parsed.github_repository];
+  }
+  if (profile.id === "scheduled_reminder") {
+    const task = parsed.action
+      .replace(/^Reminder:\s*/i, "")
+      .replace(/\.$/, "")
+      .trim();
+    if (task && !/^Sends the requested reminder$/i.test(task)) {
+      recipeInputs.task = task;
+    }
+  }
+  if (profile.id === "content_extractor") {
+    recipeInputs.platform = /\b(?:twitter|tweet|x post)\b/i.test(prompt)
+      ? "twitter"
+      : /\blinkedin\b/i.test(prompt)
+        ? "linkedin"
+        : /\b(?:reddit|subreddit|r\/[a-z0-9_]+)\b/i.test(prompt)
+          ? "reddit"
+          : recipeInputs.platform;
+  }
+  return {
+    ...parsed,
+    // Preserve prompt-only agent naming for old APK compatibility. Selected
+    // recipes use the registry display name directly.
+    name: parsed.name,
+    avatar: profile.display.icon,
+    connector: profile.required_connectors[0] ?? null,
+    connector_ids: [...profile.required_connectors],
+    action: profile.action,
+    output_template: profile.output_contract,
+    template_config: templateConfig(profile.output_contract),
+    safety_level: profile.safety_level,
+    risk_level: "low",
+    permissions_needed: recipePermissions(profile.required_connectors),
+    response_limit: profile.response_limit,
+    recipe_version: profile.version,
+    prompt_profile_version: profile.prompt_profile_version,
+    recipe_inputs: recipeInputs
+  };
+}
+
+function parseIntentLegacy(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
   // Drafting agents name Twitter/LinkedIn as output formats, not OAuth connectors.
   const skipUnsupportedCheck = looksLikeContentDraftPrompt(prompt);
@@ -1206,6 +1277,21 @@ function templateConfig(template: string): Record<string, boolean> {
     ].includes(template),
     has_checklist: template === "checklist"
   };
+}
+
+function recipePermissions(connectors: readonly string[]): string[] {
+  const labels: Record<string, string> = {
+    gmail: "Gmail read access",
+    drive: "Google Drive read access",
+    calendar: "Google Calendar event read access",
+    github: "GitHub profile and repository read access",
+    slack: "Slack message history access",
+    notion: "Read selected Notion pages",
+    web_search: "Web search (no login needed)"
+  };
+  return connectors
+    .map((connector) => labels[connector])
+    .filter((label): label is string => Boolean(label));
 }
 
 function classifyCapability(prompt: string, lower: string): ParsedIntent | null {

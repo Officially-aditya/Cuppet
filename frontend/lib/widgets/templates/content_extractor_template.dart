@@ -86,6 +86,9 @@ class ContentExtractorTemplate extends StatelessWidget {
                 index: i + 1,
                 title: ideas[i]['title']?.toString() ?? 'Content Idea',
                 hook: ideas[i]['hook']?.toString() ?? 'No description hook.',
+                angle: ideas[i]['angle']?.toString(),
+                audienceValue: ideas[i]['audience_value']?.toString(),
+                evidenceSummary: ideas[i]['evidence_summary']?.toString(),
                 onTap: () {
                   if (onAction != null) {
                     onAction!({
@@ -110,12 +113,18 @@ class _IdeaCard extends StatelessWidget {
     required this.index,
     required this.title,
     required this.hook,
+    this.angle,
+    this.audienceValue,
+    this.evidenceSummary,
     required this.onTap,
   });
 
   final int index;
   final String title;
   final String hook;
+  final String? angle;
+  final String? audienceValue;
+  final String? evidenceSummary;
   final VoidCallback onTap;
 
   @override
@@ -193,6 +202,13 @@ class _IdeaCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (angle != null && angle!.trim().isNotEmpty)
+                  _IdeaDetail(label: 'Angle', value: angle!),
+                if (audienceValue != null && audienceValue!.trim().isNotEmpty)
+                  _IdeaDetail(label: 'Audience value', value: audienceValue!),
+                if (evidenceSummary != null &&
+                    evidenceSummary!.trim().isNotEmpty)
+                  _IdeaDetail(label: 'Evidence', value: evidenceSummary!),
                 const SizedBox(height: SydneySpacing.md),
                 Padding(
                   padding: const EdgeInsets.only(left: 30),
@@ -226,6 +242,35 @@ class _IdeaCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IdeaDetail extends StatelessWidget {
+  const _IdeaDetail({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 30, top: SydneySpacing.xs),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: SydneyColors.mutedInk,
+          height: 1.3,
         ),
       ),
     );

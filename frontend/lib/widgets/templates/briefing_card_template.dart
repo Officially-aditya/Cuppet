@@ -22,6 +22,9 @@ class BriefingCardTemplate extends StatelessWidget {
     final eyebrow = data['eyebrow']?.toString() ?? 'BRIEFING';
     final title = data['title']?.toString() ?? 'Your briefing';
     final summary = data['summary']?.toString();
+    final priorities = _briefingLines(data['priorities'], objectTitle: 'title');
+    final insights = templateStrings(data['cross_source_insights']);
+    final conflicts = _briefingLines(data['conflicts'], objectTitle: 'topic');
 
     final content =
         compact
@@ -81,6 +84,14 @@ class BriefingCardTemplate extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (priorities.isNotEmpty) ...[
+                  const SizedBox(height: SydneySpacing.md),
+                  _SynthesisBlock(
+                    title: 'Priorities',
+                    icon: Icons.flag_outlined,
+                    lines: priorities,
+                  ),
+                ],
                 const SizedBox(height: SydneySpacing.lg),
                 if (sections.isEmpty)
                   const _EmptyBriefing()
@@ -119,6 +130,22 @@ class BriefingCardTemplate extends StatelessWidget {
                           ),
                         ),
                     ],
+                  ),
+                ],
+                if (insights.isNotEmpty) ...[
+                  const SizedBox(height: SydneySpacing.md),
+                  _SynthesisBlock(
+                    title: 'Cross-source insights',
+                    icon: Icons.hub_outlined,
+                    lines: insights,
+                  ),
+                ],
+                if (conflicts.isNotEmpty) ...[
+                  const SizedBox(height: SydneySpacing.md),
+                  _SynthesisBlock(
+                    title: 'Conflicts to review',
+                    icon: Icons.compare_arrows_rounded,
+                    lines: conflicts,
                   ),
                 ],
                 if (onOpen != null) ...[
@@ -163,6 +190,76 @@ class BriefingCardTemplate extends StatelessWidget {
         onTap: onOpen,
         borderRadius: BorderRadius.circular(12),
         child: content,
+      ),
+    );
+  }
+}
+
+List<String> _briefingLines(Object? value, {required String objectTitle}) {
+  if (value is! List) return const [];
+  return value
+      .map((item) {
+        if (item is Map) {
+          final map = Map<String, dynamic>.from(item);
+          final title = map[objectTitle]?.toString().trim() ?? '';
+          final detail = map['detail']?.toString().trim() ?? '';
+          return [title, detail].where((part) => part.isNotEmpty).join(' — ');
+        }
+        return item.toString().trim();
+      })
+      .where((line) => line.isNotEmpty)
+      .toList(growable: false);
+}
+
+class _SynthesisBlock extends StatelessWidget {
+  const _SynthesisBlock({
+    required this.title,
+    required this.icon,
+    required this.lines,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(SydneySpacing.sm),
+      decoration: BoxDecoration(
+        color: SydneyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+        border: Border.all(color: SydneyColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: SydneyColors.primary),
+              const SizedBox(width: SydneySpacing.xs),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SydneyColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          for (final line in lines)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                '• $line',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SydneyColors.onSurface,
+                  height: 1.3,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

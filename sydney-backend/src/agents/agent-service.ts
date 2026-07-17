@@ -190,7 +190,10 @@ export async function updateManagedAgentDescription(
           output_template: "content_extractor"
         }
       : {}),
-    ...preservedAgentState(previous)
+    ...preservedAgentState(previous),
+    ...(reparsed.intent === previous.intent
+      ? preservedRecipeConfiguration(previous)
+      : {})
   };
   const client = await pool.connect();
   let agent: ManagedAgent;
@@ -349,6 +352,21 @@ function preservedAgentState(intent: Record<string, unknown>) {
     if (intent[key] !== undefined) preserved[key] = intent[key];
   }
   return preserved;
+}
+
+function preservedRecipeConfiguration(intent: Record<string, unknown>) {
+  const inputs = intent.recipe_inputs;
+  return {
+    ...(typeof intent.recipe_version === "number"
+      ? { recipe_version: intent.recipe_version }
+      : {}),
+    ...(typeof intent.prompt_profile_version === "number"
+      ? { prompt_profile_version: intent.prompt_profile_version }
+      : {}),
+    ...(inputs && typeof inputs === "object" && !Array.isArray(inputs)
+      ? { recipe_inputs: { ...(inputs as Record<string, unknown>) } }
+      : {})
+  };
 }
 
 const managedAgentSelect = `

@@ -4,7 +4,10 @@ import {
   renderedDataSummary,
   type RenderedAgentMessage
 } from "../agents/output.js";
-import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
+import {
+  connectorRecipeContext,
+  synthesizeConnectorDigest
+} from "../agents/connector-summarizer.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { upsertConnectorInstallation } from "../events/engine.js";
@@ -251,7 +254,8 @@ export async function renderNotionAgent(
     connectorName: "Notion",
     agentName: agent.name,
     userPrompt: agent.prompt,
-    records
+    records,
+    ...connectorRecipeContext(agent.parsed_intent)
   });
   const recentlyEdited = pages.filter((page) => {
     const edited = new Date(page.last_edited_time ?? "").getTime();

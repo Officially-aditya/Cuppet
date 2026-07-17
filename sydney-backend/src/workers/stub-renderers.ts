@@ -15,16 +15,17 @@ import type { AgentRow } from "./agent-types.js";
 import { scheduledIntro, scheduledTitle } from "./schedule-labels.js";
 
 export function renderHabitTracker(agent: AgentRow): RenderedAgentMessage {
+  const prompts = habitPrompts(agent.prompt);
   return renderedStreakCounter({
     label: habitLabel(agent.prompt),
     count: 0,
     unit: "logged days",
-    caption: `${scheduledIntro(agent, "habit check-in")} ${habitPrompt(agent.prompt)}`
+    caption: `${scheduledIntro(agent, "habit check-in")} ${pick(agent, prompts)}`
   });
 }
 
 export function renderLanguageWord(agent: AgentRow): RenderedAgentMessage {
-  const word = languageWord(agent.prompt);
+  const word = languageWord(agent.prompt, historyIndex(agent));
   return renderedStreakCounter({
     label: scheduledTitle(agent, `${word.language} word`),
     count: 0,
@@ -40,40 +41,46 @@ export function renderLanguageWord(agent: AgentRow): RenderedAgentMessage {
 
 export function renderCodingTip(agent: AgentRow): RenderedAgentMessage {
   const heading = scheduledIntro(agent, "coding tip");
-  const body = codingTip(agent.prompt);
+  const body = codingTip(agent.prompt, historyIndex(agent));
   return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 export function renderBookCompanion(agent: AgentRow): RenderedAgentMessage {
   const heading = scheduledIntro(agent, "book insight");
-  const body = bookInsight(agent.prompt);
+  const body = bookInsight(agent.prompt, historyIndex(agent));
   return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 export function renderParentingMilestone(agent: AgentRow): RenderedAgentMessage {
   const heading = scheduledIntro(agent, "development update");
-  const body = [
-    "This week's focus: watch for one new communication cue, one new movement skill, and one new social response.",
-    "If anything concerns you, treat this as a prompt to ask a pediatrician, not medical advice."
-  ].join("\n\n");
+  const body = pick(agent, [
+    "This week's focus: watch for one new communication cue, one new movement skill, and one new social response.\n\nIf anything concerns you, ask a pediatrician; this is not medical advice.",
+    "Try ten minutes of child-led play and notice what holds their attention.\n\nThis is a reflection prompt, not a developmental assessment.",
+    "Read one familiar story and pause for a point, sound, gesture, or repeated phrase.\n\nAdapt the activity to the child's age and comfort.",
+    "Notice one routine the child can join with a little less help this week.\n\nAsk a pediatrician about any concern."
+  ]);
   return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 export function renderRelationshipNudge(agent: AgentRow): RenderedAgentMessage {
   const heading = scheduledIntro(agent, "relationship nudge");
-  const body = [
-    "Reach out to one person today with a message that is easy to send and easy to answer.",
-    'Prompt: "Thought of you today. How have you been?"'
-  ].join("\n\n");
+  const body = pick(agent, [
+    'Reach out to one person today with a message that is easy to answer.\n\nPrompt: "Thought of you today. How have you been?"',
+    'Send a specific memory instead of a generic hello.\n\nPrompt: "I remembered our conversation about ___. How is that going?"',
+    'Offer one low-pressure plan.\n\nPrompt: "Want to catch up for 15 minutes sometime this week?"',
+    'Thank someone for a small thing.\n\nPrompt: "I appreciated ___. It made a difference."'
+  ]);
   return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
 export function renderGratitudePrompt(agent: AgentRow): RenderedAgentMessage {
   const heading = scheduledIntro(agent, "gratitude prompt");
-  const body = [
-    "Write three things you are grateful for tonight.",
-    "Keep them specific: one person, one moment, and one thing you are looking forward to."
-  ].join("\n\n");
+  const body = pick(agent, [
+    "Write three specific things you are grateful for: one person, one moment, and one thing you anticipate.",
+    "Name one ordinary convenience you noticed today and why it helped.",
+    "Recall one moment when someone made your day easier. Write the exact detail.",
+    "Write about one challenge that taught you something useful without pretending the challenge was good."
+  ]);
   return renderedNewsBrief(parseNewsBriefText(heading, body));
 }
 
@@ -146,94 +153,200 @@ function habitLabel(prompt: string): string {
   return "Daily habit";
 }
 
-function habitPrompt(prompt: string): string {
+function habitPrompts(prompt: string): string[] {
   const lower = prompt.toLowerCase();
-  if (lower.includes("meditat")) return "Do one short meditation session now.";
-  if (lower.includes("language")) return "Complete one language practice rep now.";
-  if (lower.includes("word")) return "Learn and use one new word today.";
+  if (lower.includes("meditat")) {
+    return [
+      "Do one short meditation session now.",
+      "Count ten slow breaths.",
+      "Notice sound, breath, and body sensation for three minutes.",
+      "Attach a short meditation to the next routine transition."
+    ];
+  }
+  if (lower.includes("language") || lower.includes("word")) {
+    return [
+      "Complete one language practice rep now.",
+      "Use yesterday's word in a new sentence.",
+      "Listen to one short phrase and repeat it.",
+      "Review five cards, then stop."
+    ];
+  }
   if (lower.includes("code") || lower.includes("coding")) {
-    return "Complete one focused coding rep now.";
+    return [
+      "Complete one focused coding rep now.",
+      "Open the project and fix one small warning.",
+      "Write one failing test for the next behavior.",
+      "Read one function and improve one name."
+    ];
   }
 
-  return "Complete one small rep now.";
+  return [
+    "Complete one small rep now.",
+    "Prepare the first tool for the habit.",
+    "Do the two-minute version today.",
+    "Attach one small rep to a routine you already do."
+  ];
 }
 
-function languageWord(prompt: string): {
+function languageWord(prompt: string, index: number): {
   language: string;
   word: string;
   definition: string;
   example: string;
   translation: string;
 } {
-  if (/\bspanish\b/i.test(prompt)) {
-    return {
-      language: "Spanish",
-      word: "Madrugada",
-      definition: "The hours between midnight and dawn.",
-      example: "Me desperte en la madrugada.",
-      translation: "I woke up in the early hours."
-    };
-  }
-
-  if (/\bfrench\b/i.test(prompt)) {
-    return {
-      language: "French",
-      word: "Depaysement",
-      definition: "The feeling of being outside your usual environment.",
-      example: "Ce voyage m'a donne un vrai depaysement.",
-      translation: "This trip gave me a real change of scene."
-    };
-  }
-
-  return {
-    language: "Vocabulary",
-    word: "Deliberate",
-    definition: "Done consciously and intentionally.",
-    example: "Make one deliberate improvement before moving on.",
-    translation: "Use it today in one sentence of your own."
+  type Word = {
+    language: string;
+    word: string;
+    definition: string;
+    example: string;
+    translation: string;
   };
+  let words: Word[];
+  if (/\bspanish\b/i.test(prompt)) {
+    words = [
+      {
+        language: "Spanish",
+        word: "Madrugada",
+        definition: "The hours between midnight and dawn.",
+        example: "Me desperte en la madrugada.",
+        translation: "I woke up in the early hours."
+      },
+      {
+        language: "Spanish",
+        word: "Aprovechar",
+        definition: "To make good use of an opportunity or resource.",
+        example: "Voy a aprovechar la manana para estudiar.",
+        translation: "I will make use of the morning to study."
+      },
+      {
+        language: "Spanish",
+        word: "Sobremesa",
+        definition: "Time spent talking at the table after a meal.",
+        example: "La sobremesa duro una hora.",
+        translation: "The after-meal conversation lasted an hour."
+      }
+    ];
+  } else if (/\bfrench\b/i.test(prompt)) {
+    words = [
+      {
+        language: "French",
+        word: "Depaysement",
+        definition: "The feeling of being outside your usual environment.",
+        example: "Ce voyage m'a donne un vrai depaysement.",
+        translation: "This trip gave me a real change of scene."
+      },
+      {
+        language: "French",
+        word: "Retrouvailles",
+        definition: "The happiness of meeting again after time apart.",
+        example: "Leurs retrouvailles etaient chaleureuses.",
+        translation: "Their reunion was warm."
+      },
+      {
+        language: "French",
+        word: "Flaner",
+        definition: "To stroll without hurry or a fixed destination.",
+        example: "Nous aimons flaner dans le quartier.",
+        translation: "We like to stroll around the neighborhood."
+      }
+    ];
+  } else {
+    words = [
+      {
+        language: "Vocabulary",
+        word: "Deliberate",
+        definition: "Done consciously and intentionally.",
+        example: "Make one deliberate improvement before moving on.",
+        translation: "Use it today in one sentence of your own."
+      },
+      {
+        language: "Vocabulary",
+        word: "Nuance",
+        definition: "A subtle difference in meaning or expression.",
+        example: "The summary preserved the nuance of both viewpoints.",
+        translation: "Use it to describe a subtle distinction."
+      },
+      {
+        language: "Vocabulary",
+        word: "Pragmatic",
+        definition: "Focused on practical results and real conditions.",
+        example: "They chose a pragmatic first step.",
+        translation: "Use it when discussing a workable choice."
+      }
+    ];
+  }
+  return words[index % words.length]!;
 }
 
-function codingTip(prompt: string): string {
+function codingTip(prompt: string, index: number): string {
+  let tips: string[];
   if (/\bpython\b/i.test(prompt)) {
-    return [
-      "Today: use `collections.defaultdict` when missing keys should start with a default value.",
-      "It keeps counting/grouping code smaller and avoids repeated `if key not in dict` checks."
-    ].join("\n");
+    tips = [
+      "Use `collections.defaultdict` when missing keys should start with a default value. It avoids repeated key checks.",
+      "Use a context manager for files and locks so cleanup is deterministic after exceptions.",
+      "Prefer `enumerate()` when you need both an item and its index.",
+      "Use immutable tuples or frozen dataclasses for values that should not change."
+    ];
+  } else if (/\bflutter|dart\b/i.test(prompt)) {
+    tips = [
+      "Keep expensive work out of `build()`. Precompute derived values so rebuilds stay cheap.",
+      "Give list children stable keys when identity matters.",
+      "Cancel subscriptions and controllers in `dispose()`.",
+      "Use `const` widgets for stable immutable subtrees."
+    ];
+  } else if (/\bsql\b/i.test(prompt)) {
+    tips = [
+      "Check query plans before adding indexes. `EXPLAIN ANALYZE` shows where time is spent.",
+      "Index for the query's filter and sort pattern, not each column in isolation.",
+      "Use explicit, short transactions for multi-step state changes.",
+      "Test nullable predicates carefully because `NULL` uses three-valued logic."
+    ];
+  } else {
+    tips = [
+      "Write down the time complexity before coding the solution.",
+      "Write one boundary-case test before the happy path.",
+      "Make invalid states unrepresentable when the type system allows it.",
+      "Log identifiers and outcomes, not secrets or whole payloads."
+    ];
   }
-
-  if (/\bflutter|dart\b/i.test(prompt)) {
-    return [
-      "Today: keep expensive work out of `build()`.",
-      "Precompute derived values in state/providers so rebuilds stay cheap and predictable."
-    ].join("\n");
-  }
-
-  if (/\bsql\b/i.test(prompt)) {
-    return [
-      "Today: check query plans before adding indexes.",
-      "`EXPLAIN ANALYZE` tells you whether the database is scanning, sorting, or using the index you expected."
-    ].join("\n");
-  }
-
-  return [
-    "Today: write down the time complexity before coding the solution.",
-    "It forces you to choose the data structure first instead of patching performance later."
-  ].join("\n");
+  return `Today: ${tips[index % tips.length]!}`;
 }
 
-function bookInsight(prompt: string): string {
+function bookInsight(prompt: string, index: number): string {
+  let insights: string[];
   if (/\batomic habits\b/i.test(prompt)) {
-    return [
-      "Today's insight from Atomic Habits: habits get easier when the cue is obvious and the action is small.",
-      "Prompt: choose one habit and define the exact cue that will trigger it today."
-    ].join("\n");
+    insights = [
+      "Habits get easier when the cue is obvious and the action is small.\nPrompt: define the exact cue for one habit today.",
+      "Identity-based habits focus on the person each repetition supports.\nPrompt: finish “I am becoming someone who…”",
+      "Environment often beats willpower.\nPrompt: move one useful cue into sight.",
+      "Avoid turning one missed day into two.\nPrompt: define the smallest recovery action."
+    ];
+  } else {
+    insights = [
+      "Capture one idea you can apply in the next 24 hours: one action, situation, and expected benefit.",
+      "Choose one claim from your reading and write what evidence would change your mind.",
+      "Explain one chapter idea in three sentences without looking at the book.",
+      "Connect one idea from the book to a decision you made this week."
+    ];
   }
+  return `Today's reading prompt: ${insights[index % insights.length]!}`;
+}
 
-  return [
-    "Today's reading prompt: capture one idea you can apply in the next 24 hours.",
-    "Keep it concrete: one action, one situation, one expected benefit."
-  ].join("\n");
+function historyIndex(agent: AgentRow): number {
+  const parsed = agent.parsed_intent ?? {};
+  const history =
+    parsed.history && typeof parsed.history === "object"
+      ? Object.keys(parsed.history as Record<string, unknown>).length
+      : 0;
+  const covered = Array.isArray(parsed.topics_covered)
+    ? parsed.topics_covered.length
+    : 0;
+  return history + covered;
+}
+
+function pick<T>(agent: AgentRow, values: readonly T[]): T {
+  return values[historyIndex(agent) % values.length]!;
 }
 
 function dailyTask(prompt: string): {

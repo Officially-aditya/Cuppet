@@ -4,7 +4,10 @@ import {
   renderedDataSummary,
   type RenderedAgentMessage
 } from "../agents/output.js";
-import { synthesizeConnectorDigest } from "../agents/connector-summarizer.js";
+import {
+  connectorRecipeContext,
+  synthesizeConnectorDigest
+} from "../agents/connector-summarizer.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { ConnectorAuthRequiredError } from "./errors.js";
@@ -265,7 +268,8 @@ export async function renderSlackAgent(
     agentName: agent.name,
     userPrompt: agent.prompt,
     records,
-    maxItems: 20
+    maxItems: 20,
+    ...connectorRecipeContext(agent.parsed_intent)
   });
   const channels = new Set(selected.map((item) => item.channelId));
   const urgentCount = activity.filter((item) =>

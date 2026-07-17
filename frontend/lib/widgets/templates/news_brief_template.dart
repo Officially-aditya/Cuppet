@@ -13,6 +13,28 @@ class NewsBriefTemplate extends StatelessWidget {
     final title = data['title']?.toString() ?? 'Update';
     final itemsList = data['items'];
     final items = _normalizedItems(itemsList);
+    final tldr =
+        data['tldr'] is List
+            ? (data['tldr'] as List)
+                .map((item) => item.toString().trim())
+                .where((item) => item.isNotEmpty)
+                .toList(growable: false)
+            : const <String>[];
+    final perspectives =
+        data['perspectives'] is List
+            ? (data['perspectives'] as List)
+                .whereType<Map>()
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList(growable: false)
+            : const <Map<String, dynamic>>[];
+    final timeline =
+        data['timeline'] is List
+            ? (data['timeline'] as List)
+                .whereType<Map>()
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList(growable: false)
+            : const <Map<String, dynamic>>[];
+    final whyItMatters = data['why_it_matters']?.toString().trim();
     final featuredIndex = items.indexWhere(
       (item) => _hasVisibleText(item['headline']?.toString() ?? ''),
     );
@@ -36,6 +58,14 @@ class NewsBriefTemplate extends StatelessWidget {
           ),
         ),
         const SizedBox(height: SydneySpacing.sm),
+        if (tldr.isNotEmpty) ...[
+          _NewsContextSection(
+            title: 'TL;DR',
+            lines: tldr,
+            icon: Icons.bolt_rounded,
+          ),
+          const SizedBox(height: SydneySpacing.sm),
+        ],
         if (items.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: SydneySpacing.xs),
@@ -60,6 +90,37 @@ class NewsBriefTemplate extends StatelessWidget {
               ],
             ],
           ),
+        if (perspectives.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.sm),
+          _NewsContextSection(
+            title: 'Perspectives',
+            lines: perspectives
+                .map(
+                  (item) =>
+                      '${item['label'] ?? 'View'}: ${item['summary'] ?? ''}',
+                )
+                .toList(growable: false),
+            icon: Icons.balance_rounded,
+          ),
+        ],
+        if (whyItMatters != null && whyItMatters.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.sm),
+          _NewsContextSection(
+            title: 'Why it matters',
+            lines: [whyItMatters],
+            icon: Icons.insights_rounded,
+          ),
+        ],
+        if (timeline.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.sm),
+          _NewsContextSection(
+            title: 'Lead-story timeline',
+            lines: timeline
+                .map((item) => '${item['date'] ?? ''}: ${item['event'] ?? ''}')
+                .toList(growable: false),
+            icon: Icons.timeline_rounded,
+          ),
+        ],
       ],
     );
   }
@@ -115,6 +176,61 @@ class NewsBriefTemplate extends StatelessWidget {
     }
 
     return items;
+  }
+}
+
+class _NewsContextSection extends StatelessWidget {
+  const _NewsContextSection({
+    required this.title,
+    required this.lines,
+    required this.icon,
+  });
+
+  final String title;
+  final List<String> lines;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      decoration: BoxDecoration(
+        color: SydneyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+        border: Border.all(color: SydneyColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: SydneyColors.primary),
+              const SizedBox(width: SydneySpacing.xs),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: SydneyColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: SydneySpacing.xs),
+          for (final line in lines)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: MarkdownText(
+                text: lines.length > 1 ? '• $line' : line,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: SydneyColors.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 

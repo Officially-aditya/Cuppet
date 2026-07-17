@@ -33,9 +33,18 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
 
   Future<void> _loadParsedIntent() async {
     try {
-      final parsed = await ref
-          .read(agentServiceProvider)
-          .parseAgentPrompt(widget.draft.prompt);
+      final service = ref.read(agentServiceProvider);
+      final request = CreateAgentRequest(
+        prompt: widget.draft.prompt,
+        templateId: widget.draft.templateId,
+        recipeId: widget.draft.recipeId,
+        recipeVersion: widget.draft.recipeVersion,
+        recipeInputs: widget.draft.recipeInputs,
+      );
+      final parsed =
+          widget.draft.recipeId == null
+              ? await service.parseAgentPrompt(widget.draft.prompt)
+              : await service.parseAgentRecipe(request);
       if (mounted) {
         setState(() {
           _parsedIntent = parsed;
@@ -396,6 +405,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
             CreateAgentRequest(
               prompt: widget.draft.prompt,
               templateId: widget.draft.templateId,
+              recipeId: widget.draft.recipeId,
+              recipeVersion: widget.draft.recipeVersion,
+              recipeInputs: widget.draft.recipeInputs,
             ),
           );
 

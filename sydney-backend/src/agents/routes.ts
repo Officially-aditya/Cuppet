@@ -39,10 +39,15 @@ import {
 } from "./agent-service.js";
 import {
   agentConfigurationView,
+  compileAgentRecipe,
   compileAgentDefinition,
   definitionToParsedIntent,
   validateCompiledDefinition
 } from "./runtime/compiler.js";
+import {
+  listAgentRecipeProfiles,
+  publicAgentRecipeProfile
+} from "./runtime/recipe-registry.js";
 import {
   insertConfiguredAgent,
   loadCurrentAgentDefinition,
@@ -57,9 +62,23 @@ import {
 
 const createAgentSchema = z
   .object({
-    prompt: validatedTextSchema({ field: "Prompt", min: 3, max: 4000 })
+    prompt: validatedTextSchema({ field: "Prompt", min: 3, max: 4000 }).optional(),
+    recipe_id: z.string().trim().regex(/^[a-z][a-z0-9_]{1,79}$/).optional(),
+    recipe_version: z.number().int().positive().optional(),
+    recipe_inputs: z.record(z.unknown()).optional()
   })
-  .strict();
+  .strict()
+  .refine((body) => Boolean(body.prompt || body.recipe_id), {
+    message: "Provide a prompt or a recipe_id."
+  })
+  .refine(
+    (body) =>
+      Boolean(body.recipe_id) ||
+      (body.recipe_version === undefined && body.recipe_inputs === undefined),
+    {
+      message: "recipe_version and recipe_inputs require recipe_id."
+    }
+  );
 
 const updateAgentSchema = z
   .object({
@@ -89,6 +108,13 @@ const agentMessageActionSchema = z
   .strict();
 
 export async function agentRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/agents/recipes", { preHandler: requireAuth }, async () => ({
+    schema_version: 1,
+    recipes: listAgentRecipeProfiles({ visibleOnly: true }).map(
+      publicAgentRecipeProfile
+    )
+  }));
+
   app.get("/agents", { preHandler: requireAuth }, async (request) => {
     const userId = request.auth!.userId;
     await ensureAssistantContact(userId);
@@ -208,7 +234,14 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const parsedIntent = await parseIntentHybrid(body.data.prompt);
+    let creation: Awaited<ReturnType<typeof resolveAgentCreationRequest>>;
+    try {
+      creation = await resolveAgentCreationRequest(body.data);
+    } catch (error) {
+      if (!body.data.recipe_id) throw error;
+      return invalidRecipeReply(reply, error);
+    }
+    const { parsedIntent, prompt } = creation;
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     parsedIntent.active_until = oneYearLater.toISOString();
@@ -222,6 +255,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         }
       });
     }
+    const definition = compileAgentDefinition(parsedIntent, prompt);
 
     const client = await pool.connect();
     let agent: any;
@@ -232,7 +266,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         userId,
         name: parsedIntent.name,
         avatar: parsedIntent.avatar,
-        prompt: body.data.prompt,
+        prompt,
         parsedIntent,
         createdBy: "api"
       });
@@ -249,7 +283,6 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     } finally {
       client.release();
     }
-    const definition = compileAgentDefinition(parsedIntent, body.data.prompt);
     await syncAgentScheduleForUser(agent, userId);
     await publishRealtimeEvent({
       type: "agent.created",
@@ -404,7 +437,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
               output_template: "content_extractor"
             }
           : {}),
-        ...preservedAgentState(existingParsedIntent)
+        ...preservedAgentState(existingParsedIntent),
+        ...(reparsed.intent === existingParsedIntent.intent
+          ? preservedRecipeConfiguration(existingParsedIntent)
+          : {})
       };
       nextPrompt = description;
     }
@@ -441,6 +477,18 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       nextParsedIntent.realtime_enabled = body.data.realtime_enabled;
     }
     nextParsedIntent.schedule_cron = nextSchedule;
+    if (
+      nextParsedIntent.recipe_inputs &&
+      typeof nextParsedIntent.recipe_inputs === "object" &&
+      !Array.isArray(nextParsedIntent.recipe_inputs) &&
+      "schedule" in nextParsedIntent.recipe_inputs &&
+      nextSchedule
+    ) {
+      nextParsedIntent.recipe_inputs = {
+        ...nextParsedIntent.recipe_inputs,
+        schedule: nextSchedule
+      };
+    }
     if (nextSchedule) {
       nextParsedIntent.realtime_enabled = false;
     }
@@ -534,10 +582,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const parsedIntent = await parseIntentHybrid(body.data.prompt);
+    let creation: Awaited<ReturnType<typeof resolveAgentCreationRequest>>;
+    try {
+      creation = await resolveAgentCreationRequest(body.data);
+    } catch (error) {
+      if (!body.data.recipe_id) throw error;
+      return invalidRecipeReply(reply, error);
+    }
+    const { parsedIntent } = creation;
     const definition = parsedIntent.unsupported_connector
       ? null
-      : compileAgentDefinition(parsedIntent, body.data.prompt);
+      : creation.definition;
     return reply.send({
       parsed_intent: parsedIntent,
       ...(definition
@@ -706,6 +761,68 @@ function preservedAgentState(
     if (intent[key] !== undefined) preserved[key] = intent[key];
   }
   return preserved;
+}
+
+function preservedRecipeConfiguration(
+  intent: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    ...(typeof intent.recipe_version === "number"
+      ? { recipe_version: intent.recipe_version }
+      : {}),
+    ...(typeof intent.prompt_profile_version === "number"
+      ? { prompt_profile_version: intent.prompt_profile_version }
+      : {}),
+    ...(intent.recipe_inputs &&
+    typeof intent.recipe_inputs === "object" &&
+    !Array.isArray(intent.recipe_inputs)
+      ? {
+          recipe_inputs: {
+            ...(intent.recipe_inputs as Record<string, unknown>)
+          }
+        }
+      : {})
+  };
+}
+
+async function resolveAgentCreationRequest(
+  body: z.infer<typeof createAgentSchema>
+): Promise<{
+  parsedIntent: ParsedIntent;
+  prompt: string;
+  definition: ReturnType<typeof compileAgentDefinition> | null;
+}> {
+  if (body.recipe_id) {
+    return compileAgentRecipe({
+      recipeId: body.recipe_id,
+      recipeVersion: body.recipe_version,
+      recipeInputs: body.recipe_inputs,
+      prompt: body.prompt
+    });
+  }
+
+  const prompt = body.prompt!;
+  const parsedIntent = await parseIntentHybrid(prompt);
+  return {
+    parsedIntent,
+    prompt,
+    definition: parsedIntent.unsupported_connector
+      ? null
+      : compileAgentDefinition(parsedIntent, prompt)
+  };
+}
+
+function invalidRecipeReply(reply: FastifyReply, error: unknown) {
+  const message =
+    error instanceof Error && error.message.trim()
+      ? error.message.slice(0, 500)
+      : "The selected recipe configuration is invalid.";
+  return reply.code(400).send({
+    error: {
+      code: "INVALID_AGENT_RECIPE",
+      message
+    }
+  });
 }
 
 async function writeAgentCreatedMessage(

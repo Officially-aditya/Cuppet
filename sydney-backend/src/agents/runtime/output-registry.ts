@@ -73,7 +73,22 @@ const dataSummaryDataSchema = z
     footer: z.string().optional(),
     kind: z.string().optional(),
     timeline: z.array(z.unknown()).optional(),
-    messages: z.array(z.unknown()).optional()
+    messages: z.array(z.unknown()).optional(),
+    action_items: z
+      .array(
+        z.union([
+          z.string(),
+          z
+            .object({
+              label: z.string(),
+              priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+              due: z.string().optional(),
+              source: z.string().optional()
+            })
+            .strict()
+        ])
+      )
+      .optional()
   })
   .strict();
 
@@ -184,7 +199,31 @@ const newsBriefDataSchema = z
         })
         .strict()
     ),
-    initialItemCount: z.number().int().positive().optional()
+    initialItemCount: z.number().int().positive().optional(),
+    tldr: z.array(z.string()).max(3).optional(),
+    perspectives: z
+      .array(
+        z
+          .object({
+            label: z.string(),
+            summary: z.string(),
+            source: z.string().optional(),
+            url: z.string().url().optional()
+          })
+          .strict()
+      )
+      .optional(),
+    why_it_matters: z.string().optional(),
+    timeline: z
+      .array(
+        z
+          .object({
+            date: z.string(),
+            event: z.string()
+          })
+          .strict()
+      )
+      .optional()
   })
   .strict();
 
@@ -234,7 +273,15 @@ const dsaQuestionDataSchema = z
 const contentExtractorDataSchema = z
   .object({
     ideas: z.array(
-      z.object({ title: z.string(), hook: z.string() }).strict()
+      z
+        .object({
+          title: z.string(),
+          hook: z.string(),
+          angle: z.string().optional(),
+          audience_value: z.string().optional(),
+          evidence_summary: z.string().optional()
+        })
+        .strict()
     )
   })
   .strict();
@@ -254,7 +301,35 @@ const portfolioWatchDataSchema = z
         })
         .strict()
     ),
-    footer: z.string()
+    footer: z.string(),
+    material_events: z
+      .array(
+        z
+          .object({
+            ticker: z.string().optional(),
+            category: z.string(),
+            headline: z.string(),
+            summary: z.string().optional(),
+            source: z.string().optional(),
+            url: z.string().url().optional(),
+            occurred_at: z.string().optional()
+          })
+          .strict()
+      )
+      .optional(),
+    drivers: z.array(z.string()).optional(),
+    as_of: z.string().optional(),
+    data_quality: z
+      .union([
+        z.string(),
+        z
+          .object({
+            status: z.enum(["complete", "partial", "unavailable", "conflicting"]),
+            detail: z.string().optional()
+          })
+          .strict()
+      ])
+      .optional()
   })
   .strict();
 
@@ -284,7 +359,36 @@ const briefingCardDataSchema = z
         })
         .strict()
     ),
-    missing_sources: z.array(z.string()).optional()
+    missing_sources: z.array(z.string()).optional(),
+    priorities: z
+      .array(
+        z.union([
+          z.string(),
+          z
+            .object({
+              title: z.string(),
+              detail: z.string().optional(),
+              source: z.string().optional()
+            })
+            .strict()
+        ])
+      )
+      .optional(),
+    cross_source_insights: z.array(z.string()).optional(),
+    conflicts: z
+      .array(
+        z.union([
+          z.string(),
+          z
+            .object({
+              topic: z.string(),
+              detail: z.string(),
+              sources: z.array(z.string()).optional()
+            })
+            .strict()
+        ])
+      )
+      .optional()
   })
   .strict();
 
@@ -311,7 +415,16 @@ const entries: OutputRegistryEntry[] = [
   }),
   outputEntry("data_summary", dataSummaryDataSchema, {
     textualize: (data) =>
-      [data.title, data.summary, data.description, data.text, data.footer]
+      [
+        data.title,
+        data.summary,
+        data.description,
+        data.text,
+        ...(data.action_items ?? []).map((item: any) =>
+          typeof item === "string" ? `- ${item}` : `- ${item.label}`
+        ),
+        data.footer
+      ]
         .filter(Boolean)
         .join("\n\n"),
     preview: (data) =>
@@ -373,9 +486,11 @@ const entries: OutputRegistryEntry[] = [
     textualize: (data) =>
       [
         data.title,
+        ...(data.tldr ?? []).map((item: string) => `- ${item}`),
         ...data.items.map((item: any) =>
           [item.headline, item.summary].filter(Boolean).join(": ")
-        )
+        ),
+        data.why_it_matters
       ].join("\n\n"),
     preview: (data) => {
       const item = data.items[0];
@@ -433,13 +548,28 @@ const entries: OutputRegistryEntry[] = [
       [
         data.title,
         data.summary,
+        ...(data.priorities ?? []).map((priority: any) =>
+          typeof priority === "string"
+            ? `Priority: ${priority}`
+            : `Priority: ${priority.title}${
+                priority.detail ? ` — ${priority.detail}` : ""
+              }`
+        ),
         ...data.sections.flatMap((section: any) => [
           section.title,
           ...section.items.map(
             (item: any) =>
               `- ${item.title}${item.detail ? `: ${item.detail}` : ""}`
           )
-        ])
+        ]),
+        ...(data.cross_source_insights ?? []).map(
+          (insight: string) => `Insight: ${insight}`
+        ),
+        ...(data.conflicts ?? []).map((conflict: any) =>
+          typeof conflict === "string"
+            ? `Conflict: ${conflict}`
+            : `Conflict: ${conflict.topic} — ${conflict.detail}`
+        )
       ].join("\n"),
     preview: (data) =>
       data.sections[0]?.items[0]?.title || data.summary || data.title

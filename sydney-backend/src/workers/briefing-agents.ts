@@ -10,6 +10,14 @@ import {
 import type { AgentRunTrigger } from "../queue/index.js";
 import type { AgentRow } from "./agent-types.js";
 import { scheduledIntro, scheduledTitle } from "./schedule-labels.js";
+import { z } from "zod";
+import {
+  createLlmMessage,
+  extractLlmText,
+  llmConfigured,
+  totalLlmTokens
+} from "../agents/llm.js";
+import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.js";
 
 type BriefingIntent =
   | "daily_executive_briefing"
@@ -80,6 +88,35 @@ const configurations: Record<BriefingIntent, {
   }
 };
 
+const briefingSynthesisSchema = z
+  .object({
+    summary: z.string().trim().min(1).max(1200),
+    priorities: z
+      .array(
+        z
+          .object({
+            title: z.string().trim().min(1).max(300),
+            detail: z.string().trim().max(800).optional(),
+            source: z.string().trim().max(120).optional()
+          })
+          .strict()
+      )
+      .max(8),
+    cross_source_insights: z.array(z.string().trim().min(1).max(800)).max(8),
+    conflicts: z
+      .array(
+        z
+          .object({
+            topic: z.string().trim().min(1).max(300),
+            detail: z.string().trim().min(1).max(800),
+            sources: z.array(z.string().trim().min(1).max(120)).max(8).optional()
+          })
+          .strict()
+      )
+      .max(8)
+  })
+  .strict();
+
 export function isBriefingIntent(value: string): value is BriefingIntent {
   return value in configurations;
 }
@@ -123,18 +160,86 @@ export async function renderBriefingAgent(
   });
 
   const highlightCount = sections.reduce((sum, section) => sum + section.items.length, 0);
+  const mechanicalSummary = sections.length === 0
+    ? "Connect the suggested services to build this briefing."
+    : `${sections.length} connected sources checked · ${highlightCount} highlights surfaced`;
+  const synthesis = await synthesizeBriefingOnce({
+    intent,
+    agent,
+    sections
+  });
+  tokensUsed += synthesis?.tokensUsed ?? 0;
   return renderedBriefingCard(
     {
       eyebrow: config.eyebrow,
       title: config.title,
-      summary: sections.length === 0
-        ? "Connect the suggested services to build this briefing."
-        : `${sections.length} connected sources checked · ${highlightCount} highlights surfaced`,
+      summary: synthesis?.data.summary ?? mechanicalSummary,
       sections,
-      missing_sources: missingSources
+      missing_sources: missingSources,
+      ...(synthesis
+        ? {
+            priorities: synthesis.data.priorities,
+            cross_source_insights: synthesis.data.cross_source_insights,
+            conflicts: synthesis.data.conflicts
+          }
+        : {})
     },
     { sourceRefs, tokensUsed }
   );
+}
+
+async function synthesizeBriefingOnce(input: {
+  intent: BriefingIntent;
+  agent: AgentRow;
+  sections: BriefingCardMessageContent["data"]["sections"];
+}): Promise<{
+  data: z.infer<typeof briefingSynthesisSchema>;
+  tokensUsed: number;
+} | null> {
+  if (!llmConfigured() || input.sections.length === 0) return null;
+  try {
+    const parsed = input.agent.parsed_intent ?? {};
+    const prompt = buildRecipeExecutionPrompt({
+      recipeId: input.intent,
+      recipeVersion:
+        typeof parsed.recipe_version === "number"
+          ? parsed.recipe_version
+          : undefined,
+      promptProfileVersion:
+        typeof parsed.prompt_profile_version === "number"
+          ? parsed.prompt_profile_version
+          : undefined,
+      recipeInputs:
+        parsed.recipe_inputs &&
+        typeof parsed.recipe_inputs === "object" &&
+        !Array.isArray(parsed.recipe_inputs)
+          ? (parsed.recipe_inputs as Record<string, unknown>)
+          : {},
+      userPrompt: input.agent.prompt,
+      evidence: input.sections.map((section) => ({
+        source: section.source,
+        content: JSON.stringify(section)
+      })),
+      outputSchema:
+        '{"summary":"string","priorities":[{"title":"string","detail":"string","source":"string"}],"cross_source_insights":["string"],"conflicts":[{"topic":"string","detail":"string","sources":["string"]}]}',
+      runInstruction:
+        "Make one synthesis pass. Deduplicate evidence, identify supported cross-source relationships and conflicts, and rank the few priorities. Use no web search and do not add facts."
+    });
+    const response = await createLlmMessage({
+      maxTokens: 900,
+      system: prompt.system,
+      messages: [{ role: "user", content: prompt.user }]
+    });
+    const match = extractLlmText(response.content).match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    return {
+      data: briefingSynthesisSchema.parse(JSON.parse(match[0])),
+      tokensUsed: totalLlmTokens(response)
+    };
+  } catch {
+    // Mechanical partial-source cards remain the deterministic fallback.
+    return null;
+  }
 }
 
 function source(

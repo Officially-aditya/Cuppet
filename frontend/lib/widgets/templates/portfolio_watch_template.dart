@@ -15,6 +15,13 @@ class PortfolioWatchTemplate extends StatelessWidget {
     final text = data['text']?.toString();
     final footer = data['footer']?.toString();
     final stocks = templateMaps(data['stocks']);
+    final events = templateMaps(data['material_events']);
+    final drivers = templateStrings(data['drivers']);
+    final asOf = data['as_of']?.toString();
+    final quality =
+        data['data_quality'] is Map
+            ? Map<String, dynamic>.from(data['data_quality'] as Map)
+            : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,6 +34,30 @@ class PortfolioWatchTemplate extends StatelessWidget {
               height: 1.45,
             ),
           ),
+          const SizedBox(height: SydneySpacing.md),
+        ],
+        if (asOf != null || quality != null) ...[
+          Wrap(
+            spacing: SydneySpacing.xs,
+            runSpacing: SydneySpacing.xs,
+            children: [
+              if (asOf != null) _MarketMeta(label: 'As of', value: asOf),
+              if (quality != null)
+                _MarketMeta(
+                  label: 'Data',
+                  value: quality['status']?.toString() ?? 'partial',
+                ),
+            ],
+          ),
+          if (quality?['detail'] != null) ...[
+            const SizedBox(height: SydneySpacing.xs),
+            Text(
+              quality!['detail'].toString(),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: SydneyColors.subtleInk),
+            ),
+          ],
           const SizedBox(height: SydneySpacing.md),
         ],
         Row(
@@ -102,7 +133,114 @@ class PortfolioWatchTemplate extends StatelessWidget {
             ],
           ),
         ),
+        if (events.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.md),
+          Text(
+            'MATERIAL EVENTS',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: SydneyColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: SydneySpacing.sm),
+          for (final event in events)
+            Padding(
+              padding: const EdgeInsets.only(bottom: SydneySpacing.xs),
+              child: _MaterialEvent(event: event),
+            ),
+        ],
+        if (drivers.isNotEmpty) ...[
+          const SizedBox(height: SydneySpacing.sm),
+          Text(
+            'Supported drivers',
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          for (final driver in drivers)
+            Text(
+              '• $driver',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: SydneyColors.onSurfaceVariant,
+                height: 1.35,
+              ),
+            ),
+        ],
       ],
+    );
+  }
+}
+
+class _MarketMeta extends StatelessWidget {
+  const _MarketMeta({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: SydneyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(SydneyRadius.xs),
+      ),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: SydneyColors.mutedInk),
+      ),
+    );
+  }
+}
+
+class _MaterialEvent extends StatelessWidget {
+  const _MaterialEvent({required this.event});
+
+  final Map<String, dynamic> event;
+
+  @override
+  Widget build(BuildContext context) {
+    final headline = event['headline']?.toString() ?? 'Market event';
+    final summary = event['summary']?.toString();
+    final ticker = event['ticker']?.toString();
+    final category = event['category']?.toString();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(SydneySpacing.sm),
+      decoration: BoxDecoration(
+        color: SydneyColors.surface,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+        border: Border.all(color: SydneyColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (ticker != null || category != null)
+            Text(
+              [ticker, category].whereType<String>().join(' · ').toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: SydneyColors.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          Text(
+            headline,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: SydneyColors.ink,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (summary != null && summary.isNotEmpty)
+            Text(
+              summary,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: SydneyColors.onSurfaceVariant,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

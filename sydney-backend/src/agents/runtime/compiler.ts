@@ -1,6 +1,7 @@
 import type { ParsedIntent } from "../parser.js";
 import {
   agentDefinitionV1Schema,
+  safetyLevelRank,
   type AgentDefinitionV1
 } from "./definition.js";
 import {
@@ -13,6 +14,13 @@ import {
   isScheduledOutputContract,
   type ScheduledOutputContractId
 } from "./output-registry.js";
+import {
+  getAgentRecipeProfile,
+  hasAgentRecipeProfile,
+  recipePromptProfile,
+  validateRecipeInputs,
+  type AgentRecipeProfileV1
+} from "./recipe-registry.js";
 
 const BRIEFING_RECIPES = new Set([
   "daily_executive_briefing",
@@ -72,13 +80,23 @@ export function compileAgentDefinition(
     );
   }
 
-  const contract = outputContract(parsedIntent.output_template);
-  const capability = capabilityForRecipe(parsedIntent.intent);
+  const profile = hasAgentRecipeProfile(parsedIntent.intent)
+    ? getAgentRecipeProfile(
+        parsedIntent.intent,
+        parsedIntent.recipe_version
+      )
+    : getAgentRecipeProfile("custom_read_agent");
+  const recipeInputs = validateRecipeInputs(
+    profile,
+    parsedIntent.recipe_inputs ?? inferredRecipeInputs(profile, parsedIntent)
+  );
+  const contract = profile.output_contract;
+  const capability = profile.capability;
   const stepId = "deliver";
   const definition = agentDefinitionV1Schema.parse({
     schema_version: 1,
     goal: prompt.trim(),
-    instructions: [parsedIntent.action],
+    instructions: [profile.action],
     trigger: triggerForIntent(parsedIntent),
     steps: [
       {
@@ -87,10 +105,13 @@ export function compileAgentDefinition(
         capability_version: "1.0",
         depends_on: [],
         config: {
-          recipe_id: parsedIntent.intent,
+          recipe_id: profile.id,
+          recipe_version: profile.version,
+          prompt_profile_version: profile.prompt_profile_version,
+          recipe_inputs: recipeInputs,
           prompt: prompt.trim(),
-          action: parsedIntent.action,
-          connector_ids: parsedIntent.connector_ids,
+          action: profile.action,
+          connector_ids: [...profile.required_connectors],
           output_contract: contract,
           ...(parsedIntent.response_limit
             ? { response_limit: parsedIntent.response_limit }
@@ -118,7 +139,7 @@ export function compileAgentDefinition(
       allowed_message_actions: allowedActions(contract)
     },
     policy: {
-      safety_level: parsedIntent.safety_level,
+      safety_level: profile.safety_level,
       response_limit: parsedIntent.response_limit ?? "balanced",
       notifications_muted:
         (parsedIntent as ParsedIntent & { notifications_muted?: boolean })
@@ -126,12 +147,92 @@ export function compileAgentDefinition(
       active_until: parsedIntent.active_until ?? null
     },
     metadata: {
-      recipe_id: parsedIntent.intent
+      recipe_id: profile.id,
+      recipe_version: profile.version,
+      prompt_profile_version: profile.prompt_profile_version,
+      recipe_inputs: recipeInputs
     }
   });
 
   validateCompiledDefinition(definition);
   return definition;
+}
+
+export function parsedIntentForRecipe(input: {
+  recipeId: string;
+  recipeVersion?: number;
+  recipeInputs?: Record<string, unknown>;
+  prompt?: string;
+}): ParsedIntent {
+  const profile = getAgentRecipeProfile(input.recipeId, input.recipeVersion);
+  const recipeInputs = validateRecipeInputs(profile, input.recipeInputs);
+  const schedule =
+    typeof recipeInputs.schedule === "string"
+      ? recipeInputs.schedule
+      : profile.default_trigger.type === "schedule"
+        ? profile.default_trigger.cron
+        : null;
+  const githubRepositories = Array.isArray(recipeInputs.repository_filters)
+    ? recipeInputs.repository_filters.filter(
+        (value): value is string => typeof value === "string"
+      )
+    : [];
+  const draftPlatform =
+    profile.id === "content_extractor" &&
+    typeof recipeInputs.platform === "string"
+      ? recipeInputs.platform
+      : undefined;
+  return {
+    name: profile.display.name,
+    avatar: profile.display.icon,
+    intent: profile.id,
+    connector: profile.required_connectors[0] ?? null,
+    connector_ids: [...profile.required_connectors],
+    unsupported_connector: null,
+    action: profile.action,
+    schedule_cron: schedule,
+    output_template: profile.output_contract,
+    template_config: templateConfiguration(profile.output_contract),
+    safety_level: profile.safety_level,
+    risk_level: "low",
+    permissions_needed: connectorPermissions(profile.required_connectors),
+    realtime_enabled: false,
+    response_limit: profile.response_limit,
+    recipe_version: profile.version,
+    prompt_profile_version: profile.prompt_profile_version,
+    recipe_inputs: recipeInputs,
+    ...(githubRepositories[0]
+      ? { github_repository: githubRepositories[0] }
+      : {}),
+    ...(draftPlatform === "twitter" ||
+    draftPlatform === "linkedin" ||
+    draftPlatform === "reddit" ||
+    draftPlatform === "generic"
+      ? { draft_platform: draftPlatform }
+      : {})
+  } as ParsedIntent;
+}
+
+export function compileAgentRecipe(input: {
+  recipeId: string;
+  recipeVersion?: number;
+  recipeInputs?: Record<string, unknown>;
+  prompt?: string;
+}): {
+  parsedIntent: ParsedIntent;
+  definition: AgentDefinitionV1;
+  prompt: string;
+} {
+  const parsedIntent = parsedIntentForRecipe(input);
+  const prompt = input.prompt?.trim() || getAgentRecipeProfile(
+    input.recipeId,
+    input.recipeVersion
+  ).display.example_prompt;
+  return {
+    parsedIntent,
+    definition: compileAgentDefinition(parsedIntent, prompt),
+    prompt
+  };
 }
 
 export function validateCompiledDefinition(
@@ -150,6 +251,33 @@ export function validateCompiledDefinition(
     (step) => step.id === definition.output.from_step
   )!;
   const outputCapability = getCapabilityDefinition(outputStep.capability);
+  if (
+    definition.metadata.recipe_id &&
+    definition.metadata.recipe_version &&
+    definition.metadata.prompt_profile_version
+  ) {
+    const profile = getAgentRecipeProfile(
+      definition.metadata.recipe_id,
+      definition.metadata.recipe_version
+    );
+    recipePromptProfile(
+      profile,
+      definition.metadata.prompt_profile_version
+    );
+    if (profile.capability !== outputStep.capability) {
+      throw new Error("The recipe cannot change its registered capability.");
+    }
+    if (profile.output_contract !== definition.output.contract) {
+      throw new Error("The recipe cannot change its output contract.");
+    }
+    if (
+      safetyLevelRank(definition.policy.safety_level) >
+      safetyLevelRank(profile.safety_level)
+    ) {
+      throw new Error("The recipe cannot increase its registered safety level.");
+    }
+    validateRecipeInputs(profile, definition.metadata.recipe_inputs);
+  }
   if (
     outputCapability.requiredConnectors(outputStep.config).some(
       (connector) =>
@@ -219,6 +347,15 @@ export function definitionToParsedIntent(
     ...(typeof config.github_repository === "string"
       ? { github_repository: config.github_repository }
       : {}),
+    ...(definition.metadata.recipe_version
+      ? { recipe_version: definition.metadata.recipe_version }
+      : {}),
+    ...(definition.metadata.prompt_profile_version
+      ? { prompt_profile_version: definition.metadata.prompt_profile_version }
+      : {}),
+    ...(definition.metadata.recipe_inputs
+      ? { recipe_inputs: definition.metadata.recipe_inputs }
+      : {}),
     notifications_muted: definition.policy.notifications_muted,
     follow_up_mode: definition.interaction.follow_up_mode,
     ...(definition.interaction.draft_platform
@@ -264,11 +401,17 @@ export function agentConfigurationView(
     interaction: definition.interaction,
     policy: definition.policy,
     recipe_id: definition.metadata.recipe_id,
+    recipe_version: definition.metadata.recipe_version,
+    prompt_profile_version: definition.metadata.prompt_profile_version,
+    recipe_inputs: definition.metadata.recipe_inputs,
     permissions_needed: connectorPermissions(connectors)
   };
 }
 
 function capabilityForRecipe(recipe: string): CapabilityId {
+  if (hasAgentRecipeProfile(recipe)) {
+    return getAgentRecipeProfile(recipe).capability;
+  }
   if (BRIEFING_RECIPES.has(recipe)) return "briefing.compose";
   if (CONNECTOR_RECIPES.has(recipe)) return "connector.digest";
   if (NEWS_RECIPES.has(recipe)) return "news.research";
@@ -279,6 +422,19 @@ function capabilityForRecipe(recipe: string): CapabilityId {
   if (recipe === "scheduled_reminder") return "reminder.deliver";
   if (DETERMINISTIC_RECIPES.has(recipe)) return "deterministic.report";
   return "custom.report";
+}
+
+function inferredRecipeInputs(
+  profile: AgentRecipeProfileV1,
+  parsedIntent: ParsedIntent
+): Record<string, unknown> {
+  const inputs: Record<string, unknown> = {};
+  for (const field of profile.fields) {
+    if (field.id === "schedule" && parsedIntent.schedule_cron) {
+      inputs.schedule = parsedIntent.schedule_cron;
+    }
+  }
+  return inputs;
 }
 
 function triggerForIntent(parsedIntent: ParsedIntent): AgentDefinitionV1["trigger"] {

@@ -44,6 +44,15 @@ export type DataSummaryMessageContent = {
       timestamp?: string;
       category: "attention" | "reply" | "finance" | "system" | "update";
     }>;
+    action_items?: Array<
+      | string
+      | {
+          label: string;
+          priority?: "low" | "medium" | "high" | "urgent";
+          due?: string;
+          source?: string;
+        }
+    >;
   };
 };
 
@@ -162,6 +171,15 @@ export type NewsBriefMessageContent = {
     title: string;
     items: NewsBriefItem[];
     initialItemCount?: number;
+    tldr?: string[];
+    perspectives?: Array<{
+      label: string;
+      summary: string;
+      source?: string;
+      url?: string;
+    }>;
+    why_it_matters?: string;
+    timeline?: Array<{ date: string; event: string }>;
   };
 };
 
@@ -225,6 +243,9 @@ export type ContentExtractorMessageContent = {
     ideas: Array<{
       title: string;
       hook: string;
+      angle?: string;
+      audience_value?: string;
+      evidence_summary?: string;
     }>;
   };
 };
@@ -243,6 +264,23 @@ export type PortfolioWatchMessageContent = {
       range: string;
     }>;
     footer: string;
+    material_events?: Array<{
+      ticker?: string;
+      category: string;
+      headline: string;
+      summary?: string;
+      source?: string;
+      url?: string;
+      occurred_at?: string;
+    }>;
+    drivers?: string[];
+    as_of?: string;
+    data_quality?:
+      | string
+      | {
+          status: "complete" | "partial" | "unavailable" | "conflicting";
+          detail?: string;
+        };
   };
 };
 
@@ -265,6 +303,13 @@ export type BriefingCardMessageContent = {
       }>;
     }>;
     missing_sources?: string[];
+    priorities?: Array<
+      string | { title: string; detail?: string; source?: string }
+    >;
+    cross_source_insights?: string[];
+    conflicts?: Array<
+      string | { topic: string; detail: string; sources?: string[] }
+    >;
   };
 };
 

@@ -1,15 +1,30 @@
 import '../config/env.dart';
 import '../models/agent.dart';
+import '../models/agent_recipe.dart';
 import 'api.dart';
 
 class CreateAgentRequest {
-  const CreateAgentRequest({required this.prompt, required this.templateId});
+  const CreateAgentRequest({
+    required this.prompt,
+    required this.templateId,
+    this.recipeId,
+    this.recipeVersion,
+    this.recipeInputs,
+  });
 
   final String prompt;
   final String templateId;
+  final String? recipeId;
+  final int? recipeVersion;
+  final Map<String, dynamic>? recipeInputs;
 
   Map<String, dynamic> toJson() {
-    return {'prompt': prompt};
+    return {
+      'prompt': prompt,
+      if (recipeId != null) 'recipe_id': recipeId,
+      if (recipeVersion != null) 'recipe_version': recipeVersion,
+      if (recipeInputs != null) 'recipe_inputs': recipeInputs,
+    };
   }
 }
 
@@ -18,6 +33,25 @@ class AgentService {
 
   final ApiClient _api;
   List<Agent>? _mockAgents;
+
+  Future<List<AgentRecipe>> listRecipes() async {
+    try {
+      final response = await _api.get<Map<String, dynamic>>('/agents/recipes');
+      final recipes = response.data?['recipes'];
+      return (recipes is List ? recipes : const [])
+          .whereType<Map>()
+          .map(
+            (recipe) => AgentRecipe.fromJson(Map<String, dynamic>.from(recipe)),
+          )
+          .where((recipe) => recipe.id.isNotEmpty)
+          .toList(growable: false);
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not load agent recipes. Please try again.',
+      );
+    }
+  }
 
   Future<List<Agent>> listAgents() async {
     if (Env.useMockData) {
@@ -61,13 +95,14 @@ class AgentService {
         lastMessagePreview: 'Setup checklist finalized.',
         latestMessageAt: DateTime.now(),
         accentColor: 0xFF006046,
-        parsedIntent: request.templateId == 'tracker'
-            ? const {
-                'intent': 'habit_tracker',
-                'output_template': 'streak_counter',
-                'history': {},
-              }
-            : null,
+        parsedIntent:
+            request.templateId == 'tracker'
+                ? const {
+                  'intent': 'habit_tracker',
+                  'output_template': 'streak_counter',
+                  'history': {},
+                }
+                : null,
       );
       _mockAgents = Agent.sortForInbox([..._mockAgents!, created]);
       return created;
@@ -127,10 +162,7 @@ class AgentService {
     }
 
     try {
-      await _api.patch<Map<String, dynamic>>(
-        '/agents/$agentId',
-        data: patch,
-      );
+      await _api.patch<Map<String, dynamic>>('/agents/$agentId', data: patch);
     } catch (error) {
       throw apiExceptionFrom(error, 'Could not update the agent.');
     }
@@ -161,13 +193,46 @@ class AgentService {
           'agent_preview': responseData?['agent_preview'],
       });
       if (data == null) {
-        throw const ApiException('The server did not return the parsed intent.');
+        throw const ApiException(
+          'The server did not return the parsed intent.',
+        );
       }
       return data;
     } catch (error) {
       throw apiExceptionFrom(
         error,
         'We could not analyze that prompt. Please try again.',
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> parseAgentRecipe(
+    CreateAgentRequest request,
+  ) async {
+    try {
+      final response = await _api.post<Map<String, dynamic>>(
+        '/agents/parse',
+        data: request.toJson(),
+      );
+      final responseData = response.data;
+      final parsed = responseData?['parsed_intent'];
+      final data = agentConfigurationCompatibilityView({
+        if (parsed != null) 'parsed_intent': parsed,
+        if (responseData?['configuration'] != null)
+          'configuration': responseData?['configuration'],
+        if (responseData?['agent_preview'] != null)
+          'agent_preview': responseData?['agent_preview'],
+      });
+      if (data == null) {
+        throw const ApiException(
+          'The server did not return the parsed intent.',
+        );
+      }
+      return data;
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not validate that recipe. Please try again.',
       );
     }
   }
@@ -187,10 +252,7 @@ class AgentService {
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       await _api.post<void>(
         '/agents/$agentId/messages/$messageId/action',
-        data: {
-          'action': action,
-          'date': dateString,
-        },
+        data: {'action': action, 'date': dateString},
       );
     } catch (error) {
       throw apiExceptionFrom(error, 'Could not complete the study action.');
@@ -214,8 +276,10 @@ class AgentService {
 List<Agent> _buildMockAgents() {
   final now = DateTime.now();
   final yesterday = now.subtract(const Duration(days: 1));
-  final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  final yesterdayStr = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+  final todayStr =
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  final yesterdayStr =
+      '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
   final todayAt941 = DateTime(now.year, now.month, now.day, 9, 41);
   return [
     Agent(
@@ -266,10 +330,7 @@ List<Agent> _buildMockAgents() {
       parsedIntent: {
         'intent': 'dsa_question',
         'output_template': 'dsa_question',
-        'history': {
-          todayStr: true,
-          yesterdayStr: true,
-        }
+        'history': {todayStr: true, yesterdayStr: true},
       },
     ),
   ];

@@ -67,6 +67,9 @@ export type CapabilityDefinition = {
 const adapterConfigSchema = z
   .object({
     recipe_id: z.string().regex(/^[a-z][a-z0-9_]{1,79}$/),
+    recipe_version: z.number().int().positive().optional(),
+    prompt_profile_version: z.number().int().positive().optional(),
+    recipe_inputs: z.record(z.unknown()).optional(),
     prompt: z.string().min(1).max(4000),
     action: z.string().min(1).max(4000),
     connector_ids: z.array(z.string()).max(8).default([]),

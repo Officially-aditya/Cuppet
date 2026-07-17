@@ -27,6 +27,19 @@ class DataSummaryTemplate extends StatelessWidget {
         data['summary']?.toString() ?? data['description']?.toString();
     final metrics = templateMaps(data['metrics']);
     final items = templateMaps(data['items']);
+    final actionItems =
+        data['action_items'] is List
+            ? (data['action_items'] as List)
+                .map(
+                  (item) =>
+                      item is Map
+                          ? Map<String, dynamic>.from(item)['label']?.toString()
+                          : item.toString(),
+                )
+                .whereType<String>()
+                .where((item) => item.trim().isNotEmpty)
+                .toList(growable: false)
+            : const <String>[];
     final blocks = _summaryBlocks(summary, title);
     final showIntro =
         intro != null &&
@@ -115,6 +128,28 @@ class DataSummaryTemplate extends StatelessWidget {
                     ],
                   ],
                 ),
+              ],
+              if (actionItems.isNotEmpty) ...[
+                const SizedBox(height: SydneySpacing.md),
+                Text(
+                  'ACTION ITEMS',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: SydneyColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: SydneySpacing.xs),
+                for (final item in actionItems)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• $item',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SydneyColors.onSurface,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
               ],
             ],
           ),

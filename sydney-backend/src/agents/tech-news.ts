@@ -10,9 +10,15 @@ import {
 } from "./llm.js";
 import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
+import { z } from "zod";
+import { buildRecipeExecutionPrompt } from "./runtime/execution-prompt.js";
 
 type NewsBriefOptions = {
   heading?: string;
+  recipeId?: string;
+  recipeVersion?: number;
+  promptProfileVersion?: number;
+  recipeInputs?: Record<string, unknown>;
 };
 
 type SourceRef = {
@@ -31,21 +37,73 @@ type LlmWebSearchResult = {
 };
 
 const maxContinuationTurns = 2;
+const newsBriefResponseSchema = z
+  .object({
+    tldr: z.array(z.string().trim().min(1).max(500)).length(3),
+    items: z
+      .array(
+        z
+          .object({
+            headline: z.string().trim().min(1).max(300),
+            summary: z.string().trim().min(1).max(1800),
+            category: z.string().trim().max(120).optional(),
+            source: z.string().trim().max(300).optional(),
+            url: z.string().url().optional()
+          })
+          .strict()
+      )
+      .min(1)
+      .max(5),
+    perspectives: z
+      .array(
+        z
+          .object({
+            label: z.string().trim().min(1).max(160),
+            summary: z.string().trim().min(1).max(1000),
+            source: z.string().trim().max(300).optional(),
+            url: z.string().url().optional()
+          })
+          .strict()
+      )
+      .max(6)
+      .optional(),
+    why_it_matters: z.string().trim().min(1).max(1800).optional(),
+    timeline: z
+      .array(
+        z
+          .object({
+            date: z.string().trim().min(1).max(120),
+            event: z.string().trim().min(1).max(700)
+          })
+          .strict()
+      )
+      .max(5)
+      .optional()
+  })
+  .strict();
 
 export async function createTechNewsBrief(
   userPrompt: string,
   trigger: AgentRunTrigger,
   options: NewsBriefOptions = {}
 ): Promise<RenderedAgentMessage> {
+  const promptLayers = buildNewsSystemPrompt({
+    agentName: "Tech News Agent",
+    focus:
+      "Prefer AI, developer platforms, consumer tech, security, and policy stories.",
+    userPrompt,
+    options: {
+      ...options,
+      recipeId: options.recipeId ?? "tech_news_brief"
+    }
+  });
   return createWebNewsBrief({
     options,
-    systemPrompt: buildNewsSystemPrompt({
-      agentName: "Tech News Agent",
-      focus:
-        "Prefer AI, developer platforms, consumer tech, security, and policy stories.",
-      userPrompt
-    }),
-    userMessage: buildTechNewsPrompt(userPrompt, trigger)
+    systemPrompt: promptLayers.system,
+    userMessage: [
+      promptLayers.user,
+      buildTechNewsPrompt(userPrompt, trigger)
+    ].join("\n")
   });
 }
 
@@ -54,15 +112,23 @@ export async function createGeneralNewsBrief(
   trigger: AgentRunTrigger,
   options: NewsBriefOptions = {}
 ): Promise<RenderedAgentMessage> {
+  const promptLayers = buildNewsSystemPrompt({
+    agentName: "News Agent",
+    focus:
+      "Prefer high-impact world, business, technology, policy, science, and India-relevant stories.",
+    userPrompt,
+    options: {
+      ...options,
+      recipeId: options.recipeId ?? "news_brief"
+    }
+  });
   return createWebNewsBrief({
     options,
-    systemPrompt: buildNewsSystemPrompt({
-      agentName: "News Agent",
-      focus:
-        "Prefer high-impact world, business, technology, policy, science, and India-relevant stories.",
-      userPrompt
-    }),
-    userMessage: buildGeneralNewsPrompt(userPrompt, trigger)
+    systemPrompt: promptLayers.system,
+    userMessage: [
+      promptLayers.user,
+      buildGeneralNewsPrompt(userPrompt, trigger)
+    ].join("\n")
   });
 }
 
@@ -107,8 +173,11 @@ async function createWebNewsBrief(input: {
   }
 
   const heading = input.options.heading || "News brief";
-  const parsed = parseNewsBriefText(heading, body);
-  return renderedNewsBrief({ ...parsed, initialItemCount: 3 }, {
+  const parsed = parseStructuredNewsBrief(body);
+  const data = parsed
+    ? { title: heading, ...parsed, initialItemCount: 5 }
+    : { ...parseNewsBriefText(heading, body), initialItemCount: 5 };
+  return renderedNewsBrief(data, {
     sourceRefs: extractSourceRefs(allContent),
     tokensUsed
   });
@@ -135,27 +204,36 @@ function buildNewsSystemPrompt(input: {
   agentName: string;
   focus: string;
   userPrompt: string;
-}): string {
+  options: NewsBriefOptions;
+}) {
   const todayStr = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric"
   });
-  return [
-    `You are Sydney's ${input.agentName}.`,
-    `Today's date is ${todayStr}.`,
-    "Use web search for current information.",
-    "CRITICAL: Search results must be extremely fresh. ONLY include news stories published within the last 24 to 48 hours. Do NOT include search results or news stories older than 2 days.",
-    "Return only the final digest. Do not mention that you searched.",
-    "Keep it concise: one short headline sentence, then exactly 6 to 7 numbered items.",
-    "Each numbered item must be a clear, concise TLDR; style summary of the news, explaining the event, context, and why it matters in 2-3 sentences.",
-    "Do NOT include any other sections, tables, headers (like 'The Two Sides', 'Why It Matters'), debates, or extra analysis. The output must consist ONLY of the intro sentence and the 6-7 numbered news items.",
-    "CRITICAL: Analyze the user's original request. If the user asks for news about a specific topic, theme, exam, company, technology, or interest (for example, 'UGC NET exam' or 'React updates'), you MUST restrict all search queries and all final news digest items to be ONLY about that specific topic. Do NOT include any general, world, political, tech, or unrelated news in this case.",
-    `Otherwise, default to this general focus: ${input.focus}`,
-    "Avoid rumors, minor product updates, duplicate stories, and market-price-only items.",
-    "Do not insert line breaks inside a numbered item."
-  ].join(" ");
+  return buildRecipeExecutionPrompt({
+    recipeId: input.options.recipeId ?? "news_brief",
+    recipeVersion: input.options.recipeVersion,
+    promptProfileVersion: input.options.promptProfileVersion,
+    recipeInputs: input.options.recipeInputs,
+    userPrompt: input.userPrompt,
+    outputSchema: [
+      '{"tldr":["three concise strings"],',
+      '"items":[{"headline":"string","summary":"grounded context and why it matters","category":"string","source":"string","url":"https://..."}],',
+      '"perspectives":[{"label":"string","summary":"evidence-supported view","source":"string","url":"https://..."}],',
+      '"why_it_matters":"string",',
+      '"timeline":[{"date":"string","event":"string"}]}'
+    ].join(""),
+    runInstruction: [
+      `Today is ${todayStr}. Use bounded native web search for current information.`,
+      "Include exactly five ranked, non-duplicate stories when five are supported; return fewer rather than inventing evidence.",
+      "The TL;DR must contain exactly three items. Perspectives are optional and must be evidence-supported.",
+      "The timeline is only for the lead story and should contain at most five short events.",
+      `Default focus: ${input.focus}`,
+      `Agent role: ${input.agentName}.`
+    ].join(" ")
+  });
 }
 
 function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): string {
@@ -171,15 +249,7 @@ function buildTechNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): stri
     `Run trigger: ${trigger}.`,
     "Search the web for extremely fresh, recent, high-signal technology news (published within the last 24-48 hours) from reputable sources that are directly relevant to the user's original request. Do not return old search results.",
     "If the request specifies a topic, focus your search and all news brief items exclusively on that topic.",
-    "Use this exact output shape:",
-    "Tech news brief for today:",
-    "1. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "2. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "3. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "4. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "5. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "6. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "7. <headline>: <TLDR; style summary explaining the news and why it matters>"
+    "Return the registered JSON output shape described by the system policy."
   ].join("\n");
 }
 
@@ -196,16 +266,20 @@ function buildGeneralNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): s
     `Run trigger: ${trigger}.`,
     "Search the web for extremely fresh, recent, high-signal news (published within the last 24-48 hours) from reputable sources that are directly relevant to the user's original request. Do not return old search results.",
     "If the request specifies a topic, focus your search and all news brief items exclusively on that topic.",
-    "Use this exact output shape:",
-    "News brief for today:",
-    "1. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "2. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "3. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "4. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "5. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "6. <headline>: <TLDR; style summary explaining the news and why it matters>",
-    "7. <headline>: <TLDR; style summary explaining the news and why it matters>"
+    "Return the registered JSON output shape described by the system policy."
   ].join("\n");
+}
+
+function parseStructuredNewsBrief(
+  value: string
+): z.infer<typeof newsBriefResponseSchema> | null {
+  const match = value.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return newsBriefResponseSchema.parse(JSON.parse(match[0]));
+  } catch {
+    return null;
+  }
 }
 
 function withHeading(body: string, heading: string | undefined): string {
