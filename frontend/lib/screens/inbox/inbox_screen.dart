@@ -50,7 +50,10 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final dismissedIds = ref.watch(dismissedBriefingIdsProvider);
     final visibleBriefings =
         (briefings.value ?? const <Message>[])
-            .where((briefing) => !_isBriefingDismissed(briefing, dismissedIds))
+            .where(
+              (briefing) =>
+                  !dismissedIds.contains(_briefingMessageKey(briefing)),
+            )
             .toList(growable: false);
 
     return Scaffold(
@@ -162,14 +165,13 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
 
   Future<void> _openBriefing(Message briefing) async {
     final messageKey = _briefingMessageKey(briefing);
-    final agentKey = _briefingAgentKey(briefing);
     final dismissed = ref.read(dismissedBriefingIdsProvider);
-    if (_isBriefingDismissed(briefing, dismissed)) return;
+    if (dismissed.contains(messageKey)) return;
 
-    // Optimistic hide by message + agent so handoff copies cannot reappear.
+    // Optimistic hide survives tab switches while this handoff is in flight.
     final dismisser = ref.read(dismissedBriefingIdsProvider.notifier);
     dismisser.dismiss(messageKey);
-    dismisser.dismiss(agentKey);
+    var handoffCompleted = false;
 
     try {
       final assistantId = await ref
@@ -178,6 +180,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             agentId: briefing.threadId,
             messageId: briefing.id,
           );
+      handoffCompleted = true;
       ref.invalidate(briefingsProvider);
       ref.invalidate(agentsProvider);
       final agents = await ref.read(agentServiceProvider).listAgents();
@@ -189,9 +192,14 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       ).pushNamed(AppRoutes.thread, arguments: assistant);
     } catch (error) {
       if (!mounted) return;
-      // Restore if the handoff never completed so the user can retry.
-      dismisser.restore(messageKey);
-      dismisser.restore(agentKey);
+      final canRetryHandoff =
+          !handoffCompleted &&
+          error is ApiException &&
+          error.statusCode != null &&
+          error.retryable;
+      if (canRetryHandoff) {
+        dismisser.restore(messageKey);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -206,17 +214,10 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   }
 }
 
-bool _isBriefingDismissed(Message briefing, Set<String> dismissedIds) {
-  return dismissedIds.contains(_briefingMessageKey(briefing)) ||
-      dismissedIds.contains(_briefingAgentKey(briefing));
-}
-
 String _briefingMessageKey(Message briefing) {
   if (briefing.id.isNotEmpty) return 'msg:${briefing.id}';
   return 'msg:${briefing.threadId}:${briefing.createdAt.toIso8601String()}';
 }
-
-String _briefingAgentKey(Message briefing) => 'agent:${briefing.threadId}';
 
 class _InboxList extends StatelessWidget {
   const _InboxList({

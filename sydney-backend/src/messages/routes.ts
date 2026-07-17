@@ -240,24 +240,6 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       const assistantId = await ensureAssistantContact(userId);
       const title = briefingTitle(source.content);
 
-      // Dismiss from home immediately so slow LLM work cannot leave the card stuck.
-      await pool.query(
-        `
-          UPDATE agent_messages
-          SET content = jsonb_set(
-            CASE
-              WHEN jsonb_typeof(content->'data') = 'object' THEN content
-              ELSE jsonb_set(content, '{data}', '{}'::jsonb, true)
-            END,
-            '{data,home_dismissed_at}',
-            to_jsonb(NOW()::text),
-            true
-          )
-          WHERE id = $1 AND agent_id = $2 AND user_id = $3
-        `,
-        [messageId, agentId, userId]
-      );
-
       const question = `Open “${title}” as context. Give me a short orientation, then help me explore any part of the report in detail.`;
       const sourceData = source.content.data;
       // Copy into Assistant for thread context only — never reappear on the home surface.
@@ -302,9 +284,35 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           sourceRefs: source.source_refs,
           createdAt: offsetDate(now, 1)
         });
+        await client.query(
+          `
+            UPDATE agent_messages
+            SET content = jsonb_set(
+              CASE
+                WHEN jsonb_typeof(content->'data') = 'object' THEN content
+                ELSE jsonb_set(content, '{data}', '{}'::jsonb, true)
+              END,
+              '{data,home_dismissed_at}',
+              to_jsonb(NOW()::text),
+              true
+            )
+            WHERE id = $1 AND agent_id = $2 AND user_id = $3
+          `,
+          [messageId, agentId, userId]
+        );
         await touchAgentWithClient(client, userId, assistantId);
         await client.query("COMMIT");
-        await publishMessageEvents(userId, [briefingMessage, assistantMessage]);
+        try {
+          await publishMessageEvents(userId, [
+            briefingMessage,
+            assistantMessage
+          ]);
+        } catch (error) {
+          request.log.warn(
+            { error, userId, assistantId, messageId },
+            "Briefing handoff committed but realtime publication failed"
+          );
+        }
         return reply.code(201).send({
           assistant_agent_id: assistantId,
           message: briefingMessage,

@@ -76,6 +76,20 @@ class _FixedAgentService extends AgentService {
   Future<List<Agent>> listAgents() async => agents;
 }
 
+class _FailingAgentService extends AgentService {
+  _FailingAgentService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  @override
+  Future<List<Agent>> listAgents() {
+    throw const ApiException(
+      'Assistant could not load.',
+      statusCode: 503,
+      retryable: true,
+    );
+  }
+}
+
 Widget _host({
   required List<Agent> agents,
   List<Message> briefings = const [],
@@ -238,6 +252,130 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Assistant opened'), findsOneWidget);
+  });
+
+  testWidgets('dismissing one briefing keeps newer cards from that agent', (
+    tester,
+  ) async {
+    final handoff = Completer<String>();
+    final firstBriefing = Message(
+      id: 'first-briefing-id',
+      threadId: 'briefing-agent-id',
+      sender: MessageSender.agent,
+      createdAt: DateTime(2026, 7, 17, 7),
+      content: const {
+        'template': 'briefing_card',
+        'data': {'title': 'First briefing'},
+      },
+    );
+    final newerBriefing = Message(
+      id: 'newer-briefing-id',
+      threadId: 'briefing-agent-id',
+      sender: MessageSender.agent,
+      createdAt: DateTime(2026, 7, 18, 7),
+      content: const {
+        'template': 'briefing_card',
+        'data': {'title': 'Newer briefing'},
+      },
+    );
+
+    await tester.pumpWidget(
+      _host(
+        agents: [_assistant],
+        briefings: [firstBriefing, newerBriefing],
+        messageService: _PendingMessageService(handoff),
+        agentService: _FixedAgentService([_assistant]),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('home_briefing_first-briefing-id')),
+    );
+    await tester.pump();
+
+    expect(find.text('First briefing'), findsNothing);
+    expect(find.text('Newer briefing'), findsOneWidget);
+
+    handoff.complete(_assistant.id);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('failed briefing handoff restores the card for retry', (
+    tester,
+  ) async {
+    final handoff = Completer<String>();
+    final briefing = Message(
+      id: 'retry-briefing-id',
+      threadId: 'briefing-agent-id',
+      sender: MessageSender.agent,
+      createdAt: DateTime(2026, 7, 17),
+      content: const {
+        'template': 'briefing_card',
+        'data': {'title': 'Retry this briefing'},
+      },
+    );
+
+    await tester.pumpWidget(
+      _host(
+        agents: [_assistant],
+        briefings: [briefing],
+        messageService: _PendingMessageService(handoff),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('home_briefing_retry-briefing-id')),
+    );
+    await tester.pump();
+    expect(find.text('Retry this briefing'), findsNothing);
+
+    handoff.completeError(
+      const ApiException(
+        'The briefing handoff failed.',
+        statusCode: 503,
+        retryable: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Retry this briefing'), findsOneWidget);
+    expect(find.textContaining('briefing handoff failed'), findsOneWidget);
+  });
+
+  testWidgets('completed handoff stays dismissed if Assistant loading fails', (
+    tester,
+  ) async {
+    final handoff = Completer<String>()..complete(_assistant.id);
+    final briefing = Message(
+      id: 'completed-briefing-id',
+      threadId: 'briefing-agent-id',
+      sender: MessageSender.agent,
+      createdAt: DateTime(2026, 7, 17),
+      content: const {
+        'template': 'briefing_card',
+        'data': {'title': 'Completed briefing'},
+      },
+    );
+
+    await tester.pumpWidget(
+      _host(
+        agents: [_assistant],
+        briefings: [briefing],
+        messageService: _PendingMessageService(handoff),
+        agentService: _FailingAgentService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('home_briefing_completed-briefing-id')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Completed briefing'), findsNothing);
+    expect(find.textContaining('Assistant could not load'), findsOneWidget);
   });
 
   testWidgets('workspace layout preserves agent thread navigation', (
