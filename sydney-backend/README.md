@@ -201,6 +201,13 @@ The backend uses a provider-neutral model layer. Set `LLM_PROVIDER=gemini`
 (the default) with `GEMINI_API_KEY` to use Gemini and Google Search grounding.
 `GEMINI_MODEL` defaults to `gemini-3.1-flash-lite`.
 
+Set `TAVILY_API_KEY` to route explicit user search commands such as
+`search for ...` through Tavily first. Tavily results are supplied to the
+selected model as bounded, untrusted evidence with source links. Missing keys,
+empty results, timeouts, and Tavily errors fall back to the selected model's
+native web-search tool. Ordinary chat and scheduled agent runs do not call
+Tavily.
+
 Anthropic support remains available: set `LLM_PROVIDER=anthropic`,
 `ANTHROPIC_API_KEY`, and optionally `ANTHROPIC_MODEL`. Claude server-side web
 search must be enabled for the Anthropic organization when agents need current
