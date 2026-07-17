@@ -113,9 +113,7 @@ export function routeAgentMessage(
 ): AgentMessageRoute {
   const normalized = normalizeText(text);
   const lower = normalized.toLowerCase();
-  const unsupported = UNSUPPORTED_CHAT_CONNECTORS.find((connector) =>
-    lower.includes(connector)
-  );
+  const unsupported = findBlockedUnsupportedConnectorMention(agent, lower);
 
   if (unsupported) {
     return {
@@ -403,6 +401,53 @@ function normalizeInstruction(
   }
 
   return normalized;
+}
+
+/**
+ * Platforms that content/drafting agents write *for*, not OAuth connectors.
+ * Mentioning them in chat must not short-circuit to "I can't add X access yet."
+ */
+const draftOutputPlatforms = new Set(["twitter", "linkedin"]);
+
+/**
+ * Returns an unsupported connector name only when the user is asking to connect
+ * or access a service we don't support — not when naming a post style/platform.
+ */
+export function findBlockedUnsupportedConnectorMention(
+  agent: AgentMessageRouterContext,
+  lower: string
+): string | undefined {
+  const mentioned = UNSUPPORTED_CHAT_CONNECTORS.find((connector) =>
+    lower.includes(connector)
+  );
+  if (!mentioned) return undefined;
+
+  // Content extractor (and draft-style wording) use Twitter/LinkedIn as formats.
+  if (draftOutputPlatforms.has(mentioned) && isDraftPlatformContext(agent, lower)) {
+    return undefined;
+  }
+
+  return mentioned;
+}
+
+function isDraftPlatformContext(
+  agent: AgentMessageRouterContext,
+  lower: string
+): boolean {
+  if (agent.parsed_intent.intent === "content_extractor") {
+    return true;
+  }
+  // "draft a twitter post", "write a linkedin update", "tweet about …"
+  if (
+    /\b(?:draft|write|compose|generate|create)\b/.test(lower) &&
+    /\b(?:post|tweet|thread|caption|update|content)\b/.test(lower)
+  ) {
+    return true;
+  }
+  if (/\b(?:tweet|tweets|tweeted)\b/.test(lower)) {
+    return true;
+  }
+  return false;
 }
 
 function scoreRunNow(

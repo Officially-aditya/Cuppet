@@ -41,6 +41,53 @@ test("ordinary follow-ups cannot update agent instructions", () => {
   }
 });
 
+test("content drafting agents can mention Twitter without connector rejection", () => {
+  const draftingAgent = {
+    name: "Content Extractor",
+    prompt:
+      "Search the web for trending topics and generate Twitter, LinkedIn, or Reddit drafts.",
+    parsed_intent: {
+      ...parsedIntent,
+      name: "Content Extractor",
+      intent: "content_extractor",
+      connector: null,
+      connector_ids: [],
+      action: "Finds latest relevant topics and generates post drafts.",
+      output_template: "content_extractor",
+      permissions_needed: []
+    },
+    schedule_cron: "0 9 * * *",
+    status: "active" as const
+  };
+
+  const searchAndDraft = routeAgentMessage(
+    draftingAgent,
+    "Search for AI chip news and draft a Twitter post about it"
+  );
+  assert.notEqual(searchAndDraft.intent, "unsupported");
+  assert.notEqual(searchAndDraft.reason, "requested_unsupported_connector");
+
+  const linkedInDraft = routeAgentMessage(
+    draftingAgent,
+    "Write a LinkedIn post about remote work trends"
+  );
+  assert.notEqual(linkedInDraft.intent, "unsupported");
+});
+
+test("explicit connect-Twitter requests stay unsupported", () => {
+  const route = routeAgentMessage(agent, "Connect my Twitter account");
+  assert.equal(route.intent, "unsupported");
+  assert.match(route.reply ?? "", /twitter/i);
+});
+
+test("draft-style Twitter wording is allowed even outside content extractor agents", () => {
+  const route = routeAgentMessage(
+    agent,
+    "Draft a twitter post summarizing today's top story"
+  );
+  assert.notEqual(route.intent, "unsupported");
+});
+
 test("agent updates require and accept an explicit update-agent command", () => {
   const route = routeAgentMessage(
     agent,
