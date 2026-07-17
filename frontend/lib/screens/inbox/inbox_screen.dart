@@ -50,10 +50,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final dismissedIds = ref.watch(dismissedBriefingIdsProvider);
     final visibleBriefings =
         (briefings.value ?? const <Message>[])
-            .where(
-              (briefing) =>
-                  !dismissedIds.contains(_briefingDismissKey(briefing)),
-            )
+            .where((briefing) => !_isBriefingDismissed(briefing, dismissedIds))
             .toList(growable: false);
 
     return Scaffold(
@@ -164,12 +161,15 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   }
 
   Future<void> _openBriefing(Message briefing) async {
-    final dismissKey = _briefingDismissKey(briefing);
+    final messageKey = _briefingMessageKey(briefing);
+    final agentKey = _briefingAgentKey(briefing);
     final dismissed = ref.read(dismissedBriefingIdsProvider);
-    if (dismissed.contains(dismissKey)) return;
+    if (_isBriefingDismissed(briefing, dismissed)) return;
 
-    // Optimistic hide — provider state survives tab switches / list rebuilds.
-    ref.read(dismissedBriefingIdsProvider.notifier).dismiss(dismissKey);
+    // Optimistic hide by message + agent so handoff copies cannot reappear.
+    final dismisser = ref.read(dismissedBriefingIdsProvider.notifier);
+    dismisser.dismiss(messageKey);
+    dismisser.dismiss(agentKey);
 
     try {
       final assistantId = await ref
@@ -190,7 +190,8 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     } catch (error) {
       if (!mounted) return;
       // Restore if the handoff never completed so the user can retry.
-      ref.read(dismissedBriefingIdsProvider.notifier).restore(dismissKey);
+      dismisser.restore(messageKey);
+      dismisser.restore(agentKey);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -205,10 +206,17 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   }
 }
 
-String _briefingDismissKey(Message briefing) {
-  if (briefing.id.isNotEmpty) return briefing.id;
-  return '${briefing.threadId}:${briefing.createdAt.toIso8601String()}';
+bool _isBriefingDismissed(Message briefing, Set<String> dismissedIds) {
+  return dismissedIds.contains(_briefingMessageKey(briefing)) ||
+      dismissedIds.contains(_briefingAgentKey(briefing));
 }
+
+String _briefingMessageKey(Message briefing) {
+  if (briefing.id.isNotEmpty) return 'msg:${briefing.id}';
+  return 'msg:${briefing.threadId}:${briefing.createdAt.toIso8601String()}';
+}
+
+String _briefingAgentKey(Message briefing) => 'agent:${briefing.threadId}';
 
 class _InboxList extends StatelessWidget {
   const _InboxList({

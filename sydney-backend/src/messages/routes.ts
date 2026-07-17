@@ -180,15 +180,20 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     const { rows } = await pool.query(
       `
         SELECT * FROM (
-          SELECT DISTINCT ON (agent_id)
-            id, agent_id, user_id, role, content, source_refs, read_at, created_at
-          FROM agent_messages
-          WHERE user_id = $1
-            AND created_at > NOW() - ($2::int * INTERVAL '1 day')
-            AND role = 'agent'
-            AND content->>'template' = 'briefing_card'
-            AND content #>> '{data,home_dismissed_at}' IS NULL
-          ORDER BY agent_id, created_at DESC
+          SELECT DISTINCT ON (m.agent_id)
+            m.id, m.agent_id, m.user_id, m.role, m.content, m.source_refs,
+            m.read_at, m.created_at
+          FROM agent_messages m
+          INNER JOIN agents a ON a.id = m.agent_id AND a.user_id = m.user_id
+          WHERE m.user_id = $1
+            AND m.created_at > NOW() - ($2::int * INTERVAL '1 day')
+            AND m.role = 'agent'
+            AND m.content->>'template' = 'briefing_card'
+            AND m.content #>> '{data,home_dismissed_at}' IS NULL
+            -- Handoff copies live on Assistant with assistant_context=true; never show those on home.
+            AND COALESCE(m.content #>> '{data,assistant_context}', 'false') <> 'true'
+            AND a.is_assistant = FALSE
+          ORDER BY m.agent_id, m.created_at DESC
         ) latest
         ORDER BY created_at DESC
         LIMIT 6
@@ -255,6 +260,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       const question = `Open “${title}” as context. Give me a short orientation, then help me explore any part of the report in detail.`;
       const sourceData = source.content.data;
+      // Copy into Assistant for thread context only — never reappear on the home surface.
       const assistantBriefingContent = {
         ...source.content,
         data: {
@@ -263,7 +269,8 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
           !Array.isArray(sourceData)
             ? (sourceData as Record<string, unknown>)
             : {}),
-          assistant_context: true
+          assistant_context: true,
+          home_dismissed_at: new Date().toISOString()
         }
       };
       let answer: string;
