@@ -223,6 +223,7 @@ function customizeRecipeInputsFromPrompt(
   prompt?: string
 ): Record<string, unknown> {
   if (!prompt?.trim() || !NEWS_RECIPES.has(profile.id)) return inputs;
+  if (prompt.trim() === profile.display.example_prompt.trim()) return inputs;
 
   const topics = newsTopicsFromPrompt(prompt);
   if (topics.length === 0) return inputs;
@@ -261,13 +262,23 @@ function customizeRecipeInputsFromPrompt(
 function newsTopicsFromPrompt(prompt: string): string[] {
   const topics: string[] = [];
   const generic = new Set([
+    "agent",
+    "brief",
+    "briefing",
     "breaking",
     "current",
     "daily",
+    "digest",
     "general",
     "global",
     "latest",
     "local",
+    "rank",
+    "ranks",
+    "research",
+    "researches",
+    "summarize",
+    "summarizes",
     "top",
     "world"
   ]);
@@ -275,6 +286,14 @@ function newsTopicsFromPrompt(prompt: string): string[] {
     let candidate = raw
       .split(/\band\b/i)
       .at(-1)!
+      .replace(
+        /^(?:please\s+)?(?:build|create|deliver|give|make|send|set\s+up)\s+(?:me\s+)?(?:(?:a|an|the)\s+)?/i,
+        ""
+      )
+      .replace(
+        /^i\s+(?:need|want|would\s+like)\s+(?:(?:a|an|the)\s+)?/i,
+        ""
+      )
       .replace(
         /^(?:(?:a|an|about|breaking|current|daily|latest|the|top|with)\s+)+/i,
         ""

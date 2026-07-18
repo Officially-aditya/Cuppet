@@ -168,6 +168,13 @@ void main() {
         ],
       ),
       AgentRecipeField(
+        id: 'categories',
+        label: 'Categories',
+        type: 'text_list',
+        required: false,
+        defaultValue: ['world', 'business', 'technology'],
+      ),
+      AgentRecipeField(
         id: 'schedule',
         label: 'Schedule',
         type: 'schedule',
@@ -189,7 +196,11 @@ void main() {
               templateLabel: 'Email agent',
               recipeId: 'email_digest',
               recipeVersion: 1,
-              recipeInputs: {'scope': 'unread', 'schedule': '0 18 * * *'},
+              recipeInputs: {
+                'scope': 'unread',
+                'categories': ['world', 'business', 'technology'],
+                'schedule': '0 18 * * *',
+              },
               recipeFields: fields,
             ),
           ),
@@ -206,6 +217,23 @@ void main() {
     expect(find.text('Message scope'), findsOneWidget);
     expect(find.text('Unread messages'), findsOneWidget);
     expect(find.byKey(const ValueKey('recipe-setting-scope')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('recipe-setting-categories-item-0')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Categories'), findsOneWidget);
+    expect(find.text('World'), findsOneWidget);
+    expect(find.text('Business'), findsOneWidget);
+    expect(find.text('Technology'), findsOneWidget);
+    expect(find.text('world, business, technology'), findsNothing);
+    expect(
+      tester
+          .getTopLeft(
+            find.byKey(const ValueKey('recipe-setting-categories-item-0')),
+          )
+          .dx,
+      closeTo(tester.getTopLeft(find.text('Categories')).dx, 0.1),
+    );
     expect(find.byType(TextFormField), findsNothing);
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     expect(find.byType(SwitchListTile), findsNothing);

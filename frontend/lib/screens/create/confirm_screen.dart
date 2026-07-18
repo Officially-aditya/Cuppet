@@ -486,6 +486,7 @@ class _RecipeSettingsReview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var index = 0; index < fields.length; index++) ...[
           _RecipeSettingRow(
@@ -509,6 +510,20 @@ class _RecipeSettingRow extends StatelessWidget {
   final AgentRecipeField field;
   final Object? value;
 
+  List<String> get _displayItems {
+    if (value is! List) return const [];
+    return (value as List)
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .map(_listItemLabel)
+        .toList(growable: false);
+  }
+
+  String _listItemLabel(String item) {
+    if (field.id != 'categories' || item.isEmpty) return item;
+    return '${item[0].toUpperCase()}${item.substring(1)}';
+  }
+
   String get _displayValue {
     if (field.type == 'enum') {
       for (final option in field.options) {
@@ -521,11 +536,7 @@ class _RecipeSettingRow extends StatelessWidget {
       return value == true ? 'Enabled' : 'Disabled';
     }
     if (value is List) {
-      final items = (value as List)
-          .map((item) => item.toString().trim())
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false);
-      return items.isEmpty ? 'Not specified' : items.join(', ');
+      return _displayItems.isEmpty ? 'Not specified' : _displayItems.join(', ');
     }
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? 'Not specified' : text;
@@ -535,33 +546,112 @@ class _RecipeSettingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: '${field.label}: $_displayValue',
-      child: Row(
+      child: SizedBox(
         key: ValueKey('recipe-setting-${field.id}'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              field.label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: CuppetWorkspaceColors.muted,
-                height: 1.35,
-              ),
-            ),
-          ),
-          const SizedBox(width: SydneySpacing.md),
-          Flexible(
-            child: Text(
-              _displayValue,
-              textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: CuppetWorkspaceColors.ink,
-                fontWeight: FontWeight.w700,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
+        width: double.infinity,
+        child:
+            value is List
+                ? _RecipeListSetting(
+                  label: field.label,
+                  fieldId: field.id,
+                  items: _displayItems,
+                )
+                : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        field.label,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CuppetWorkspaceColors.muted,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: SydneySpacing.md),
+                    Flexible(
+                      child: Text(
+                        _displayValue,
+                        textAlign: TextAlign.right,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CuppetWorkspaceColors.ink,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
       ),
+    );
+  }
+}
+
+class _RecipeListSetting extends StatelessWidget {
+  const _RecipeListSetting({
+    required this.label,
+    required this.fieldId,
+    required this.items,
+  });
+
+  final String label;
+  final String fieldId;
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: CuppetWorkspaceColors.muted,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: SydneySpacing.sm),
+        if (items.isEmpty)
+          Text(
+            'Not specified',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: CuppetWorkspaceColors.ink,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+          )
+        else
+          Wrap(
+            alignment: WrapAlignment.start,
+            spacing: SydneySpacing.sm,
+            runSpacing: SydneySpacing.sm,
+            children: [
+              for (var index = 0; index < items.length; index++)
+                Container(
+                  key: ValueKey('recipe-setting-$fieldId-item-$index'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: CuppetWorkspaceColors.softSage,
+                    borderRadius: BorderRadius.circular(SydneyRadius.full),
+                    border: Border.all(
+                      color: CuppetWorkspaceColors.panelBorder,
+                    ),
+                  ),
+                  child: Text(
+                    items[index],
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: CuppetWorkspaceColors.primaryInk,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+      ],
     );
   }
 }

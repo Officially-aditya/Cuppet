@@ -94,6 +94,30 @@ test("every recipe compiles a reproducible pinned definition", () => {
 });
 
 test("edited news template prompts customize only registered recipe inputs", () => {
+  const profile = getAgentRecipeProfile("news_brief");
+  const untouched = compileAgentRecipe({
+    recipeId: "news_brief",
+    prompt: profile.display.example_prompt
+  });
+  assert.deepEqual(untouched.parsedIntent.recipe_inputs?.topics, [
+    "top stories"
+  ]);
+  assert.deepEqual(untouched.parsedIntent.recipe_inputs?.categories, [
+    "world",
+    "business",
+    "technology",
+    "policy",
+    "science"
+  ]);
+
+  const genericCreation = compileAgentRecipe({
+    recipeId: "news_brief",
+    prompt: "Create a daily news agent."
+  });
+  assert.deepEqual(genericCreation.parsedIntent.recipe_inputs?.topics, [
+    "top stories"
+  ]);
+
   const ai = compileAgentRecipe({
     recipeId: "news_brief",
     prompt:
