@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeNewsBriefJson } from "./structured-json.js";
 
 export const scheduledOutputContractIds = [
   "plain_text",
@@ -483,6 +484,7 @@ const entries: OutputRegistryEntry[] = [
     preview: (data) => data.insight || data.rows[0]?.label || data.title
   }),
   outputEntry("news_brief", newsBriefDataSchema, {
+    normalize: normalizeNewsBriefOutput,
     textualize: (data) =>
       [
         data.title,
@@ -700,6 +702,69 @@ function normalizeStudyGuide(
   return normalized;
 }
 
+function normalizeNewsBriefOutput(
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const candidates: string[] = [];
+  for (const key of ["body", "text", "summary"]) {
+    if (typeof data[key] === "string") candidates.push(data[key]);
+  }
+  if (Array.isArray(data.items)) {
+    for (const rawItem of data.items) {
+      const item = asOptionalRecord(rawItem);
+      if (!item) continue;
+      for (const key of ["summary", "body", "text"]) {
+        if (typeof item[key] === "string") candidates.push(item[key]);
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const decoded = normalizeNewsBriefJson(candidate);
+    if (!decoded) continue;
+    return {
+      title: newsBriefTitle(data),
+      ...decoded,
+      ...newsBriefInitialCount(data)
+    };
+  }
+  if (candidates.some(looksLikeNewsJson)) {
+    return {
+      title: newsBriefTitle(data),
+      items: [
+        {
+          summary:
+            "I couldn’t assemble a complete, verifiable news brief for this run. Please try again."
+        }
+      ],
+      ...newsBriefInitialCount(data)
+    };
+  }
+  return data;
+}
+
+function looksLikeNewsJson(value: string): boolean {
+  return (
+    value.includes("{") &&
+    (/"items"\s*:/.test(value) || /"tldr"\s*:/.test(value))
+  );
+}
+
+function newsBriefTitle(data: Record<string, unknown>): string {
+  return typeof data.title === "string" && data.title.trim()
+    ? data.title
+    : "News brief";
+}
+
+function newsBriefInitialCount(
+  data: Record<string, unknown>
+): Record<string, number> {
+  const count = data.initialItemCount;
+  return typeof count === "number" && Number.isInteger(count) && count > 0
+    ? { initialItemCount: count }
+    : {};
+}
+
 function interactiveStateEffects(
   action: TrustedMessageAction,
   data: Record<string, any>,
@@ -726,6 +791,12 @@ function asRecord(value: unknown): Record<string, unknown> {
     throw new Error("Output data must be an object.");
   }
   return value as Record<string, unknown>;
+}
+
+function asOptionalRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function firstLine(value: string): string {

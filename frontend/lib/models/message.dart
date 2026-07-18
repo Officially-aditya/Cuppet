@@ -1,3 +1,5 @@
+import 'template_payload_recovery.dart';
+
 enum MessageSender { user, agent, system }
 
 enum MessageDeliveryState { sending, sent, failed }
@@ -28,10 +30,10 @@ class Message {
   Map<String, dynamic> get data {
     final raw = content['data'];
     if (raw is Map<String, dynamic>) {
-      return raw;
+      return recoverTemplatePayload(template, raw);
     }
     if (raw is Map) {
-      return Map<String, dynamic>.from(raw);
+      return recoverTemplatePayload(template, Map<String, dynamic>.from(raw));
     }
     return const {};
   }

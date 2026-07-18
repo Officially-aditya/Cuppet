@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/design/tokens.dart';
 import 'package:sydney/models/message.dart';
+import 'package:sydney/models/template_payload_recovery.dart';
 import 'package:sydney/screens/auth/sign_in_screen.dart';
 import 'package:sydney/screens/auth/sign_up_screen.dart';
 import 'package:sydney/widgets/templates/checklist_template.dart';
@@ -20,6 +21,112 @@ Widget templateHost(Widget child) {
 
 void main() {
   group('template payload resilience', () {
+    testWidgets('news JSON embedded in a summary is restored before rendering', (
+      tester,
+    ) async {
+      const rawJson =
+          '{"tldr":["First signal","Second signal","Third signal"],'
+          '"items":[{"headline":"AI model released",'
+          '"summary":"A grounded account of the release.",'
+          '"source":"Example"}],'
+          '"why_it_matters":"The release changes the competitive landscape."}';
+      final message = Message(
+        id: 'malformed-news',
+        threadId: 'news-thread',
+        sender: MessageSender.agent,
+        createdAt: DateTime(2026, 7, 18),
+        content: const {
+          'template': 'news_brief',
+          'data': {
+            'title': "Here's the news you requested.",
+            'items': [
+              {'summary': rawJson},
+            ],
+          },
+        },
+      );
+
+      await tester.pumpWidget(
+        templateHost(NewsBriefTemplate(data: message.data)),
+      );
+
+      expect(find.text('TL;DR'), findsOneWidget);
+      expect(find.text('AI model released'), findsOneWidget);
+      expect(find.textContaining('{"tldr"'), findsNothing);
+      expect(
+        find.text('The release changes the competitive landscape.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    test('truncated news JSON retains complete stories', () {
+      const rawJson =
+          '{"tldr":["One","Two","Three"],"items":['
+          '{"headline":"Complete story","summary":"Complete summary"},'
+          '{"headline":"Cut off","summary":"unfinished';
+      final recovered = recoverTemplatePayload('news_brief', {
+        'title': 'News',
+        'items': [
+          {'summary': rawJson},
+        ],
+      });
+
+      expect(recovered['tldr'], ['One', 'Two', 'Three']);
+      expect(recovered['items'], [
+        {'headline': 'Complete story', 'summary': 'Complete summary'},
+      ]);
+    });
+
+    test('wholly truncated news JSON becomes a readable retry message', () {
+      const rawJson =
+          '{"tldr":["unfinished"],"items":['
+          '{"headline":"Cut off","summary":"';
+      final recovered = recoverTemplatePayload('news_brief', {
+        'title': 'News',
+        'items': [
+          {'summary': rawJson},
+        ],
+      });
+
+      final summary = (recovered['items'] as List).first['summary'].toString();
+      expect(summary, contains('couldn’t assemble a complete'));
+      expect(summary, isNot(contains('{"tldr"')));
+    });
+
+    test(
+      'other model-backed renderer payloads use the same recovery boundary',
+      () {
+        final content = recoverTemplatePayload('content_extractor', {
+          'ideas': [
+            {
+              'title': 'raw',
+              'hook':
+                  '{"ideas":[{"title":"Recovered idea","hook":"Useful hook"}]}',
+            },
+          ],
+        });
+        final briefing = recoverTemplatePayload('briefing_card', {
+          'title': 'Briefing',
+          'sections': [
+            {
+              'title': 'raw',
+              'items': [
+                {
+                  'title':
+                      '{"title":"Recovered briefing","sections":['
+                      '{"title":"Inbox","items":[{"title":"Reply today"}]}]}',
+                },
+              ],
+            },
+          ],
+        });
+
+        expect((content['ideas'] as List).first['title'], 'Recovered idea');
+        expect((briefing['sections'] as List).first['title'], 'Inbox');
+      },
+    );
+
     testWidgets('briefing card opens from its full tappable surface', (
       tester,
     ) async {

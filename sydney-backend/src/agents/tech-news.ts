@@ -12,6 +12,10 @@ import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from
 import { userInstructionBlock } from "../security/prompt-guard.js";
 import { z } from "zod";
 import { buildRecipeExecutionPrompt } from "./runtime/execution-prompt.js";
+import {
+  normalizeNewsBriefJson,
+  type NormalizedNewsBriefJson
+} from "./runtime/structured-json.js";
 
 type NewsBriefOptions = {
   heading?: string;
@@ -190,7 +194,7 @@ async function createNewsMessage(
   return createLlmMessage({
     messages,
     system: systemPrompt,
-    maxTokens: 1200,
+    maxTokens: 2400,
     tools: [
       {
         name: "web_search",
@@ -230,6 +234,7 @@ function buildNewsSystemPrompt(input: {
       "Include exactly five ranked, non-duplicate stories when five are supported; return fewer rather than inventing evidence.",
       "The TL;DR must contain exactly three items. Perspectives are optional and must be evidence-supported.",
       "The timeline is only for the lead story and should contain at most five short events.",
+      "Keep every story summary under 90 words and every optional perspective under 60 words.",
       `Default focus: ${input.focus}`,
       `Agent role: ${input.agentName}.`
     ].join(" ")
@@ -272,14 +277,11 @@ function buildGeneralNewsPrompt(userPrompt: string, trigger: AgentRunTrigger): s
 
 function parseStructuredNewsBrief(
   value: string
-): z.infer<typeof newsBriefResponseSchema> | null {
-  const match = value.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try {
-    return newsBriefResponseSchema.parse(JSON.parse(match[0]));
-  } catch {
-    return null;
-  }
+): z.infer<typeof newsBriefResponseSchema> | NormalizedNewsBriefJson | null {
+  const normalized = normalizeNewsBriefJson(value);
+  if (!normalized) return null;
+  const strict = newsBriefResponseSchema.safeParse(normalized);
+  return strict.success ? strict.data : normalized;
 }
 
 function withHeading(body: string, heading: string | undefined): string {
