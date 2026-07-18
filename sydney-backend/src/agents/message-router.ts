@@ -5,6 +5,7 @@ import {
   looksLikeContentDraftPrompt,
   UNSUPPORTED_CHAT_CONNECTORS
 } from "./unsupported-connectors.js";
+export { describeSchedule } from "./schedule-description.js";
 
 export type AgentMessageRouteIntent =
   | "chat"
@@ -723,47 +724,8 @@ function scheduleOverrideFromText(text: string): string | null {
   return `${minute} ${hour} * * *`;
 }
 
-export function describeSchedule(cron: string): string {
-  const daily = cron.match(/^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+\*$/);
-  if (daily) {
-    return `every day at ${formatTime(Number(daily[2]), Number(daily[1]))}`;
-  }
-
-  const weekly = cron.match(/^(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+(\d)$/);
-  if (weekly) {
-    return `weekly on ${weekdayName(Number(weekly[3]))} at ${formatTime(Number(weekly[2]), Number(weekly[1]))}`;
-  }
-
-  const monthly = cron.match(/^(\d{1,2})\s+(\d{1,2})\s+1\s+\*\s+\*$/);
-  if (monthly) {
-    return `monthly on day 1 at ${formatTime(Number(monthly[2]), Number(monthly[1]))}`;
-  }
-
-  return `on schedule ${cron}`;
-}
-
 function restoreAcronyms(value: string): string {
   return value.replace(/\bdsa\b/gi, "DSA");
-}
-
-function formatTime(hour24: number, minute: number): string {
-  const meridiem = hour24 >= 12 ? "PM" : "AM";
-  const hour12 = hour24 % 12 || 12;
-  return `${hour12}:${String(minute).padStart(2, "0")} ${meridiem}`;
-}
-
-function weekdayName(day: number): string {
-  return (
-    [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday"
-    ][day] ?? "Monday"
-  );
 }
 
 function to24Hour(

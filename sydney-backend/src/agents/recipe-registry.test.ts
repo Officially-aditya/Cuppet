@@ -52,6 +52,19 @@ test("the backend exposes exactly the twelve current structured templates", () =
     assert.equal(publicProfile.recipe_version, 1);
     assert.ok(Array.isArray(publicProfile.fields));
     assert.equal("prompt_profiles" in publicProfile, false);
+    assert.doesNotMatch(
+      (publicProfile.display as { example_prompt: string }).example_prompt,
+      /\d{1,2}\s+\d{1,2}\s+\S+\s+\S+\s+\S+/
+    );
+    assert.doesNotMatch(
+      (publicProfile.display as { example_prompt: string }).example_prompt,
+      /\bagent\s+agent\b/i
+    );
+    const schedule = publicProfile.fields.find(
+      (field) => field.type === "schedule"
+    );
+    assert.ok(schedule?.display_default_value);
+    assert.doesNotMatch(schedule.display_default_value, /[*]/);
   }
 });
 
@@ -78,6 +91,33 @@ test("every recipe compiles a reproducible pinned definition", () => {
       compiled.definition.metadata.recipe_inputs
     );
   }
+});
+
+test("edited news template prompts customize only registered recipe inputs", () => {
+  const ai = compileAgentRecipe({
+    recipeId: "news_brief",
+    prompt:
+      "Keep the local news section, but replace global news with AI news. Run it every day at 6:00 AM."
+  });
+  assert.deepEqual(ai.parsedIntent.recipe_inputs?.topics, ["AI"]);
+  assert.deepEqual(ai.parsedIntent.recipe_inputs?.categories, ["technology"]);
+  assert.equal(
+    ai.parsedIntent.recipe_inputs?.geography,
+    "local plus topic-relevant coverage"
+  );
+  assert.match(ai.parsedIntent.action, /focused on AI/i);
+  assert.equal(
+    (ai.definition.metadata.recipe_inputs?.topics as string[])[0],
+    "AI"
+  );
+
+  const fifa = compileAgentRecipe({
+    recipeId: "news_brief",
+    prompt: "Create a daily FIFA news briefing."
+  });
+  assert.deepEqual(fifa.parsedIntent.recipe_inputs?.topics, ["FIFA"]);
+  assert.deepEqual(fifa.parsedIntent.recipe_inputs?.categories, ["sports"]);
+  assert.match(fifa.parsedIntent.action, /focused on FIFA/i);
 });
 
 test("recipe inputs reject unknown fields and invalid finite choices", () => {

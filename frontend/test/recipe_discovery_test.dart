@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/config/routes.dart';
 import 'package:sydney/models/agent_recipe.dart';
 import 'package:sydney/providers/agents_provider.dart';
+import 'package:sydney/screens/create/confirm_screen.dart';
 import 'package:sydney/screens/create/create_screen.dart';
 import 'package:sydney/services/agent_service.dart';
 import 'package:sydney/services/api.dart';
@@ -17,6 +18,30 @@ class _RecipeService extends AgentService {
 
   @override
   Future<List<AgentRecipe>> listRecipes() async => recipes;
+
+  @override
+  Future<Map<String, dynamic>> parseAgentRecipe(
+    CreateAgentRequest request,
+  ) async {
+    final aiNews = request.prompt.contains('AI news');
+    return {
+      'name': 'Inbox Review',
+      'action':
+          aiNews
+              ? 'Researches and ranks a current-news briefing focused on AI.'
+              : 'Summarizes the selected inbox scope.',
+      'permissions_needed': aiNews ? ['Web search'] : ['Gmail'],
+      'output_template': aiNews ? 'news_brief' : 'data_summary',
+      'schedule_cron': '0 18 * * *',
+      'recipe_inputs':
+          aiNews
+              ? {
+                'topics': ['AI'],
+                'schedule': '0 18 * * *',
+              }
+              : request.recipeInputs,
+    };
+  }
 }
 
 class _FailingRecipeService extends AgentService {
@@ -100,10 +125,14 @@ void main() {
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
         'Summarize my inbox.',
       );
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Summarize only AI newsletters.',
+      );
       await tester.fling(find.byType(ListView), const Offset(0, 1000), 1000);
       await tester.pumpAndSettle();
-      expect(find.text('RECIPE SETTINGS'), findsOneWidget);
-      expect(find.byKey(const ValueKey('recipe-field-scope')), findsOneWidget);
+      expect(find.text('RECIPE SETTINGS'), findsNothing);
+      expect(find.byKey(const ValueKey('recipe-field-scope')), findsNothing);
 
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
@@ -111,10 +140,140 @@ void main() {
       final draft = pushed?.arguments as AgentCreationDraft;
       expect(draft.recipeId, 'email_digest');
       expect(draft.recipeVersion, 1);
+      expect(draft.prompt, 'Summarize only AI newsletters.');
       expect(draft.recipeInputs['scope'], 'unread');
       expect(draft.recipeInputs['schedule'], '0 18 * * *');
+      expect(draft.recipeFields.map((field) => field.id), [
+        'scope',
+        'schedule',
+      ]);
     },
   );
+
+  testWidgets('confirmation shows recipe preferences as read-only details', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const fields = [
+      AgentRecipeField(
+        id: 'scope',
+        label: 'Message scope',
+        type: 'enum',
+        required: true,
+        defaultValue: 'unread',
+        options: [
+          {'value': 'unread', 'label': 'Unread messages'},
+          {'value': 'important', 'label': 'Important messages'},
+        ],
+      ),
+      AgentRecipeField(
+        id: 'schedule',
+        label: 'Schedule',
+        type: 'schedule',
+        required: true,
+        defaultValue: '0 18 * * *',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          agentServiceProvider.overrideWithValue(_RecipeService(const [])),
+        ],
+        child: const MaterialApp(
+          home: ConfirmScreen(
+            draft: AgentCreationDraft(
+              prompt: 'Summarize my inbox.',
+              templateId: 'email',
+              templateLabel: 'Email agent',
+              recipeId: 'email_digest',
+              recipeVersion: 1,
+              recipeInputs: {'scope': 'unread', 'schedule': '0 18 * * *'},
+              recipeFields: fields,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Preferences'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Message scope'), findsOneWidget);
+    expect(find.text('Unread messages'), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-setting-scope')), findsOneWidget);
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(find.byType(SwitchListTile), findsNothing);
+    expect(find.text('Daily at 6:00 PM · your local time'), findsOneWidget);
+  });
+
+  testWidgets('confirmation preserves an edited template prompt and inputs', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const editedPrompt =
+        'Keep local headlines, but replace global news with AI news and explain why each story matters.';
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          agentServiceProvider.overrideWithValue(_RecipeService(const [])),
+        ],
+        child: const MaterialApp(
+          home: ConfirmScreen(
+            draft: AgentCreationDraft(
+              prompt: editedPrompt,
+              templateId: 'news',
+              templateLabel: 'News agent',
+              recipeId: 'news_brief',
+              recipeVersion: 1,
+              recipeInputs: {
+                'topics': ['top stories'],
+                'schedule': '0 18 * * *',
+              },
+              recipeFields: [
+                AgentRecipeField(
+                  id: 'topics',
+                  label: 'Topics',
+                  type: 'text_list',
+                  required: true,
+                  defaultValue: ['top stories'],
+                ),
+                AgentRecipeField(
+                  id: 'schedule',
+                  label: 'Schedule',
+                  type: 'schedule',
+                  required: true,
+                  defaultValue: '0 18 * * *',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(editedPrompt), findsOneWidget);
+    expect(find.text('top stories'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Preferences'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Topics'), findsOneWidget);
+    expect(find.text('AI'), findsOneWidget);
+    expect(
+      find.text('Researches and ranks a current-news briefing focused on AI.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('recipe discovery failure shows custom plus retry only', (
     tester,

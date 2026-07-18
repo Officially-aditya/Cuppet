@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../design/tokens.dart';
+import '../../models/agent_recipe.dart';
+import '../../models/agent_schedule.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/timezone_provider.dart';
 import '../../services/agent_service.dart';
@@ -24,6 +26,14 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
   bool _loading = true;
   Map<String, dynamic>? _parsedIntent;
   String? _error;
+
+  Map<String, dynamic> get _resolvedRecipeInputs {
+    final parsedInputs = _parsedIntent?['recipe_inputs'];
+    if (parsedInputs is Map) {
+      return Map<String, dynamic>.from(parsedInputs);
+    }
+    return widget.draft.recipeInputs;
+  }
 
   @override
   void initState() {
@@ -61,81 +71,6 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
           _loading = false;
         });
       }
-    }
-  }
-
-  String _describeTiming(
-    Map<String, dynamic>? parsed, {
-    required String? timeZone,
-  }) {
-    final cron = parsed?['schedule_cron']?.toString();
-    if (cron == null) return 'Whenever you message it';
-
-    String scheduled(String label) =>
-        '$label · ${timeZone ?? 'your local time'}';
-
-    final parts = cron.split(' ');
-    if (parts.length < 5) return scheduled('Runs on schedule: $cron');
-
-    final minuteStr = parts[0];
-    final hourStr = parts[1];
-    final dom = parts[2];
-    final dow = parts[4];
-
-    final minute = int.tryParse(minuteStr);
-    final hour = int.tryParse(hourStr);
-    if (minute == null || hour == null) {
-      return scheduled('Runs on schedule: $cron');
-    }
-
-    final hourNum = hour == 0 || hour == 12 ? 12 : hour % 12;
-    final ampm = hour < 12 ? 'AM' : 'PM';
-    final minutePad = minute.toString().padLeft(2, '0');
-    final timeStr = '$hourNum:$minutePad $ampm';
-
-    if (dow == '1-5') {
-      return scheduled('Weekdays at $timeStr');
-    }
-
-    if (dow == '*') {
-      if (dom == '*') {
-        return scheduled('Daily at $timeStr');
-      } else {
-        final suffix = _daySuffix(dom);
-        return scheduled('Monthly on the $dom$suffix at $timeStr');
-      }
-    }
-
-    final days = {
-      '0': 'Sundays',
-      '1': 'Mondays',
-      '2': 'Tuesdays',
-      '3': 'Wednesdays',
-      '4': 'Thursdays',
-      '5': 'Fridays',
-      '6': 'Saturdays',
-      '7': 'Sundays',
-    };
-    if (days.containsKey(dow)) {
-      return scheduled('Weekly on ${days[dow]} at $timeStr');
-    }
-
-    return scheduled('Runs on schedule: $cron');
-  }
-
-  String _daySuffix(String dayStr) {
-    final day = int.tryParse(dayStr);
-    if (day == null) return '';
-    if (day >= 11 && day <= 13) return 'th';
-    switch (day % 10) {
-      case 1:
-        return 'st';
-      case 2:
-        return 'nd';
-      case 3:
-        return 'rd';
-      default:
-        return 'th';
     }
   }
 
@@ -179,6 +114,9 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
             : const <String>[];
     final timeZone =
         ref.watch(timezonePreferencesProvider).value?.displayedTimeZone;
+    final preferenceFields = widget.draft.recipeFields
+        .where((field) => field.id != 'schedule')
+        .toList(growable: false);
 
     return Scaffold(
       key: const ValueKey('confirm-agent-screen'),
@@ -301,8 +239,6 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                                 const SizedBox(height: SydneySpacing.sm),
                                 Text(
                                   widget.draft.prompt,
-                                  maxLines: 5,
-                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(
                                     context,
                                   ).textTheme.bodySmall?.copyWith(
@@ -336,13 +272,27 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                       icon: Icons.schedule_rounded,
                       title: 'When it runs',
                       child: Text(
-                        _describeTiming(_parsedIntent, timeZone: timeZone),
+                        readableAgentSchedule(
+                          _parsedIntent?['schedule_cron']?.toString(),
+                          timeZone: timeZone,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: CuppetWorkspaceColors.muted,
                           height: 1.35,
                         ),
                       ),
                     ),
+                    if (preferenceFields.isNotEmpty) ...[
+                      const SizedBox(height: SydneySpacing.md),
+                      _InfoCard(
+                        icon: Icons.tune_rounded,
+                        title: 'Preferences',
+                        child: _RecipeSettingsReview(
+                          fields: preferenceFields,
+                          values: _resolvedRecipeInputs,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: SydneySpacing.md),
                     _InfoCard(
                       icon: Icons.output_rounded,
@@ -407,7 +357,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
               templateId: widget.draft.templateId,
               recipeId: widget.draft.recipeId,
               recipeVersion: widget.draft.recipeVersion,
-              recipeInputs: widget.draft.recipeInputs,
+              recipeInputs: _resolvedRecipeInputs,
             ),
           );
 
@@ -519,6 +469,95 @@ class _AccessPill extends StatelessWidget {
               color: CuppetWorkspaceColors.ink,
               fontSize: 10,
               fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecipeSettingsReview extends StatelessWidget {
+  const _RecipeSettingsReview({required this.fields, required this.values});
+
+  final List<AgentRecipeField> fields;
+  final Map<String, dynamic> values;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var index = 0; index < fields.length; index++) ...[
+          _RecipeSettingRow(
+            field: fields[index],
+            value: values[fields[index].id] ?? fields[index].defaultValue,
+          ),
+          if (index != fields.length - 1) ...[
+            const SizedBox(height: SydneySpacing.sm),
+            const Divider(height: 1, color: CuppetWorkspaceColors.border),
+            const SizedBox(height: SydneySpacing.sm),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _RecipeSettingRow extends StatelessWidget {
+  const _RecipeSettingRow({required this.field, required this.value});
+
+  final AgentRecipeField field;
+  final Object? value;
+
+  String get _displayValue {
+    if (field.type == 'enum') {
+      for (final option in field.options) {
+        if (option['value']?.toString() == value?.toString()) {
+          return option['label']?.toString() ?? value?.toString() ?? '';
+        }
+      }
+    }
+    if (field.type == 'boolean') {
+      return value == true ? 'Enabled' : 'Disabled';
+    }
+    if (value is List) {
+      final items = (value as List)
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+      return items.isEmpty ? 'Not specified' : items.join(', ');
+    }
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? 'Not specified' : text;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '${field.label}: $_displayValue',
+      child: Row(
+        key: ValueKey('recipe-setting-${field.id}'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              field.label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: CuppetWorkspaceColors.muted,
+                height: 1.35,
+              ),
+            ),
+          ),
+          const SizedBox(width: SydneySpacing.md),
+          Flexible(
+            child: Text(
+              _displayValue,
+              textAlign: TextAlign.right,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: CuppetWorkspaceColors.ink,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
             ),
           ),
         ],

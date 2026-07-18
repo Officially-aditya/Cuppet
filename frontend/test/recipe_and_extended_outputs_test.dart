@@ -18,7 +18,8 @@ void main() {
         'name': 'News agent',
         'description': 'Ranked news',
         'icon': 'newspaper',
-        'example_prompt': 'Create news.',
+        'example_prompt':
+            'Create a News agent agent. Run it on schedule 0 18 * * *.',
       },
       'required_connectors': ['web_search'],
       'fields': [
@@ -36,12 +37,23 @@ void main() {
     });
     expect(recipe.id, 'news_brief');
     expect(recipe.defaultInputs, {'freshness': '48_hours'});
+    expect(
+      recipe.examplePrompt,
+      'Create a News agent. Run it daily at 6:00 PM.',
+    );
 
     final oldRequest = const CreateAgentRequest(
       prompt: 'Custom prompt',
       templateId: 'custom',
     );
     expect(oldRequest.toJson(), {'prompt': 'Custom prompt'});
+    final customDraftRequest = const CreateAgentRequest(
+      prompt: 'Custom prompt',
+      templateId: 'custom',
+      recipeVersion: 1,
+      recipeInputs: {},
+    );
+    expect(customDraftRequest.toJson(), {'prompt': 'Custom prompt'});
 
     final structured = CreateAgentRequest(
       prompt: recipe.examplePrompt,

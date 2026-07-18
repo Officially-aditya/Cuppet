@@ -1,4 +1,5 @@
 import type { ParsedIntent } from "./parser.js";
+import { describeSchedule } from "./schedule-description.js";
 
 type AgentCreationThreadMessage = {
   role: "agent";
@@ -107,13 +108,13 @@ function safetyDescription(level: ParsedIntent["safety_level"]): string {
 
 export function agentCreationReadyDetail(
   parsedIntent: ParsedIntent,
-  describeSchedule: (cron: string) => string = (cron) => `on schedule ${cron}`
+  scheduleDescription: (cron: string) => string = describeSchedule
 ): string {
   if (parsedIntent.realtime_enabled) {
     return "It will react to matching activity and notify you immediately.";
   }
   if (parsedIntent.schedule_cron) {
-    return `It will run ${describeSchedule(parsedIntent.schedule_cron)}.`;
+    return `It will run ${scheduleDescription(parsedIntent.schedule_cron)}.`;
   }
   return "It is ready for manual runs.";
 }

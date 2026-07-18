@@ -165,7 +165,11 @@ export function parsedIntentForRecipe(input: {
   prompt?: string;
 }): ParsedIntent {
   const profile = getAgentRecipeProfile(input.recipeId, input.recipeVersion);
-  const recipeInputs = validateRecipeInputs(profile, input.recipeInputs);
+  const baseInputs = validateRecipeInputs(profile, input.recipeInputs);
+  const recipeInputs = validateRecipeInputs(
+    profile,
+    customizeRecipeInputsFromPrompt(profile, baseInputs, input.prompt)
+  );
   const schedule =
     typeof recipeInputs.schedule === "string"
       ? recipeInputs.schedule
@@ -189,7 +193,7 @@ export function parsedIntentForRecipe(input: {
     connector: profile.required_connectors[0] ?? null,
     connector_ids: [...profile.required_connectors],
     unsupported_connector: null,
-    action: profile.action,
+    action: recipeAction(profile, recipeInputs),
     schedule_cron: schedule,
     output_template: profile.output_contract,
     template_config: templateConfiguration(profile.output_contract),
@@ -211,6 +215,119 @@ export function parsedIntentForRecipe(input: {
       ? { draft_platform: draftPlatform }
       : {})
   } as ParsedIntent;
+}
+
+function customizeRecipeInputsFromPrompt(
+  profile: AgentRecipeProfileV1,
+  inputs: Record<string, unknown>,
+  prompt?: string
+): Record<string, unknown> {
+  if (!prompt?.trim() || !NEWS_RECIPES.has(profile.id)) return inputs;
+
+  const topics = newsTopicsFromPrompt(prompt);
+  if (topics.length === 0) return inputs;
+
+  const lowerTopics = topics.join(" ").toLowerCase();
+  const categories = /\b(?:fifa|football|soccer|sport|sports)\b/.test(lowerTopics)
+    ? ["sports"]
+    : /\b(?:ai|artificial intelligence|machine learning|technology|tech)\b/.test(
+          lowerTopics
+        )
+      ? ["technology"]
+      : inputs.categories;
+  const lowerPrompt = prompt.toLowerCase();
+  const hasLocal = /\blocal\s+news\b/.test(lowerPrompt);
+  const removesGlobal =
+    /\b(?:replace|remove)\s+(?:the\s+)?global\s+news\b/.test(lowerPrompt) ||
+    /\binstead\s+of\s+(?:the\s+)?global\s+news\b/.test(lowerPrompt);
+  const hasGlobal =
+    /\bglobal\s+news\b/.test(lowerPrompt) && !removesGlobal;
+  const geography = hasLocal && hasGlobal
+    ? "local and global"
+    : hasLocal
+      ? "local plus topic-relevant coverage"
+      : hasGlobal
+        ? "global"
+        : "topic-relevant";
+
+  return {
+    ...inputs,
+    topics,
+    ...(categories ? { categories } : {}),
+    geography
+  };
+}
+
+function newsTopicsFromPrompt(prompt: string): string[] {
+  const topics: string[] = [];
+  const generic = new Set([
+    "breaking",
+    "current",
+    "daily",
+    "general",
+    "global",
+    "latest",
+    "local",
+    "top",
+    "world"
+  ]);
+  const add = (raw: string): void => {
+    let candidate = raw
+      .split(/\band\b/i)
+      .at(-1)!
+      .replace(
+        /^(?:(?:a|an|about|breaking|current|daily|latest|the|top|with)\s+)+/i,
+        ""
+      )
+      .trim();
+    if (candidate.split(/\s+/).length > 4) return;
+    const lastWord = candidate.split(/\s+/).at(-1)?.toLowerCase() ?? "";
+    if (
+      !candidate ||
+      generic.has(candidate.toLowerCase()) ||
+      generic.has(lastWord)
+    ) {
+      return;
+    }
+    candidate = candidate.replace(/\bai\b/gi, "AI");
+    if (
+      !topics.some(
+        (topic) => topic.toLowerCase() === candidate.toLowerCase()
+      )
+    ) {
+      topics.push(candidate);
+    }
+  };
+
+  for (const match of prompt.matchAll(
+    /\b([a-z][a-z0-9+.#/-]*(?:\s+[a-z][a-z0-9+.#/-]*){0,2})\s+news\b/gi
+  )) {
+    if (match[1]) add(match[1]);
+  }
+  const about = prompt.match(
+    /\bnews\s+(?:about|on|covering|focused\s+on)\s+([^.,;\n]{1,80})/i
+  );
+  if (about?.[1]) add(about[1]);
+  return topics.slice(0, 6);
+}
+
+function recipeAction(
+  profile: AgentRecipeProfileV1,
+  recipeInputs: Record<string, unknown>
+): string {
+  if (NEWS_RECIPES.has(profile.id) && Array.isArray(recipeInputs.topics)) {
+    const topics = recipeInputs.topics.filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0
+    );
+    if (
+      topics.length > 0 &&
+      !(topics.length === 1 && topics[0]!.toLowerCase() === "top stories")
+    ) {
+      return `Researches and ranks a current-news briefing focused on ${topics.join(", ")}.`;
+    }
+  }
+  return profile.action;
 }
 
 export function compileAgentRecipe(input: {

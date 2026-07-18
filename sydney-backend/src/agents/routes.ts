@@ -74,7 +74,9 @@ const createAgentSchema = z
   .refine(
     (body) =>
       Boolean(body.recipe_id) ||
-      (body.recipe_version === undefined && body.recipe_inputs === undefined),
+      (body.recipe_version === undefined &&
+        (body.recipe_inputs === undefined ||
+          Object.keys(body.recipe_inputs).length === 0)),
     {
       message: "recipe_version and recipe_inputs require recipe_id."
     }

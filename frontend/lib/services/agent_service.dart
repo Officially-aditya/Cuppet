@@ -21,9 +21,11 @@ class CreateAgentRequest {
   Map<String, dynamic> toJson() {
     return {
       'prompt': prompt,
-      if (recipeId != null) 'recipe_id': recipeId,
-      if (recipeVersion != null) 'recipe_version': recipeVersion,
-      if (recipeInputs != null) 'recipe_inputs': recipeInputs,
+      if (recipeId != null) ...{
+        'recipe_id': recipeId,
+        if (recipeVersion != null) 'recipe_version': recipeVersion,
+        if (recipeInputs != null) 'recipe_inputs': recipeInputs,
+      },
     };
   }
 }

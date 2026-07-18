@@ -10,6 +10,7 @@ import {
   type ScheduledOutputContractId
 } from "./output-registry.js";
 import { safetyLevelRank } from "./definition.js";
+import { describeSchedule } from "../schedule-description.js";
 
 const recipeCapabilityIds = [
   "briefing.compose",
@@ -51,6 +52,7 @@ export const agentRecipeFieldV1Schema = z
     type: z.enum(["text", "text_list", "enum", "number", "boolean", "schedule"]),
     required: z.boolean(),
     default_value: z.unknown().optional(),
+    display_default_value: z.string().max(300).optional(),
     placeholder: z.string().max(300).optional(),
     options: z.array(recipeFieldOptionSchema).max(30).optional(),
     min: z.number().optional(),
@@ -194,11 +196,12 @@ const scheduleField = (
 ): AgentRecipeFieldV1 => ({
   id: "schedule",
   label,
-  description: "A five-part cron schedule interpreted in your local time zone.",
+  description: "When the agent will run in your local time zone.",
   type: "schedule",
   required: true,
   default_value: value,
-  placeholder: value
+  display_default_value: describeSchedule(value),
+  placeholder: describeSchedule(value)
 });
 
 const text = (
@@ -660,6 +663,9 @@ function legacySeeds(): RecipeSeed[] {
 }
 
 function createProfile(seed: RecipeSeed): AgentRecipeProfileV1 {
+  const creationName = /\bagent$/i.test(seed.name)
+    ? seed.name
+    : `${seed.name} agent`;
   const profile = {
     schema_version: 1 as const,
     id: seed.id,
@@ -674,8 +680,8 @@ function createProfile(seed: RecipeSeed): AgentRecipeProfileV1 {
       sort_order: seed.sort ?? 1000,
       example_prompt:
         seed.example ??
-        `Create a ${seed.name} agent. ${seed.action}${
-          seed.schedule ? ` Run it on schedule ${seed.schedule}.` : ""
+        `Create a ${creationName}. ${seed.action}${
+          seed.schedule ? ` Run it ${describeSchedule(seed.schedule)}.` : ""
         }`
     },
     required_connectors: seed.connectors,

@@ -18,6 +18,7 @@ class AgentCreationDraft {
     this.recipeId,
     this.recipeVersion,
     this.recipeInputs = const {},
+    this.recipeFields = const [],
   });
 
   final String prompt;
@@ -28,6 +29,7 @@ class AgentCreationDraft {
   final String? recipeId;
   final int? recipeVersion;
   final Map<String, dynamic> recipeInputs;
+  final List<AgentRecipeField> recipeFields;
 }
 
 class CreateScreen extends StatefulWidget {
@@ -115,20 +117,6 @@ class _CreateScreenState extends State<CreateScreen> {
                 }
               },
             ),
-            if (_selectedRecipeFields.isNotEmpty) ...[
-              const SizedBox(height: SydneySpacing.lg),
-              const WorkspaceSectionLabel('Recipe settings'),
-              const SizedBox(height: SydneySpacing.sm),
-              _RecipeFields(
-                fields: _selectedRecipeFields,
-                values: _recipeInputs,
-                onChanged:
-                    (id, value) => setState(() {
-                      _recipeInputs = {..._recipeInputs, id: value};
-                      _error = null;
-                    }),
-              ),
-            ],
             if (_error != null) ...[
               const SizedBox(height: SydneySpacing.sm),
               Text(
@@ -193,13 +181,6 @@ class _CreateScreenState extends State<CreateScreen> {
     });
   }
 
-  List<AgentRecipeField> get _selectedRecipeFields {
-    for (final template in _templates) {
-      if (template.id == _selectedTemplate) return template.fields;
-    }
-    return const [];
-  }
-
   Future<void> _loadRecipes() async {
     ProviderContainer container;
     try {
@@ -255,6 +236,7 @@ class _CreateScreenState extends State<CreateScreen> {
         recipeId: selected.recipeId,
         recipeVersion: selected.recipeVersion,
         recipeInputs: Map<String, dynamic>.from(_recipeInputs),
+        recipeFields: selected.fields,
       ),
     );
   }
@@ -291,128 +273,6 @@ class _PromptEditor extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
         ),
       ),
-    );
-  }
-}
-
-class _RecipeFields extends StatelessWidget {
-  const _RecipeFields({
-    required this.fields,
-    required this.values,
-    required this.onChanged,
-  });
-
-  final List<AgentRecipeField> fields;
-  final Map<String, dynamic> values;
-  final void Function(String id, Object value) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return WorkspaceCard(
-      padding: const EdgeInsets.all(SydneySpacing.md),
-      child: Column(
-        children: [
-          for (var index = 0; index < fields.length; index++) ...[
-            _RecipeFieldControl(
-              field: fields[index],
-              value: values[fields[index].id] ?? fields[index].defaultValue,
-              onChanged: (value) => onChanged(fields[index].id, value),
-            ),
-            if (index != fields.length - 1)
-              const SizedBox(height: SydneySpacing.md),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _RecipeFieldControl extends StatelessWidget {
-  const _RecipeFieldControl({
-    required this.field,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final AgentRecipeField field;
-  final Object? value;
-  final ValueChanged<Object> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    if (field.type == 'boolean') {
-      return SwitchListTile.adaptive(
-        contentPadding: EdgeInsets.zero,
-        title: Text(field.label),
-        subtitle: field.description == null ? null : Text(field.description!),
-        value: value == true,
-        onChanged: onChanged,
-      );
-    }
-    if (field.type == 'enum' && field.options.isNotEmpty) {
-      final selected = value?.toString();
-      return DropdownButtonFormField<String>(
-        key: ValueKey('recipe-field-${field.id}'),
-        initialValue:
-            field.options.any((option) => option['value'] == selected)
-                ? selected
-                : field.options.first['value']?.toString(),
-        decoration: InputDecoration(
-          labelText: field.label,
-          helperText: field.description,
-        ),
-        items: field.options
-            .map(
-              (option) => DropdownMenuItem<String>(
-                value: option['value']?.toString(),
-                child: Text(
-                  option['label']?.toString() ??
-                      option['value']?.toString() ??
-                      '',
-                ),
-              ),
-            )
-            .toList(growable: false),
-        onChanged: (next) {
-          if (next != null) onChanged(next);
-        },
-      );
-    }
-
-    final initial =
-        field.type == 'text_list' && value is List
-            ? (value as List).join(', ')
-            : value?.toString() ?? '';
-    return TextFormField(
-      key: ValueKey('recipe-field-${field.id}'),
-      initialValue: initial,
-      keyboardType:
-          field.type == 'number'
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-      decoration: InputDecoration(
-        labelText: field.label,
-        helperText: field.description,
-        hintText: field.placeholder,
-      ),
-      onChanged: (next) {
-        if (field.type == 'text_list') {
-          onChanged(
-            next
-                .split(',')
-                .map((item) => item.trim())
-                .where((item) => item.isNotEmpty)
-                .toList(growable: false),
-          );
-          return;
-        }
-        if (field.type == 'number') {
-          final parsed = num.tryParse(next);
-          if (parsed != null) onChanged(parsed);
-          return;
-        }
-        onChanged(next);
-      },
     );
   }
 }

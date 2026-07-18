@@ -1,3 +1,5 @@
+import 'agent_schedule.dart';
+
 class AgentRecipeField {
   const AgentRecipeField({
     required this.id,
@@ -6,6 +8,7 @@ class AgentRecipeField {
     required this.required,
     this.description,
     this.defaultValue,
+    this.displayDefaultValue,
     this.placeholder,
     this.options = const [],
     this.min,
@@ -20,6 +23,7 @@ class AgentRecipeField {
       required: json['required'] == true,
       description: json['description']?.toString(),
       defaultValue: json['default_value'],
+      displayDefaultValue: json['display_default_value']?.toString(),
       placeholder: json['placeholder']?.toString(),
       options: (json['options'] is List ? json['options'] as List : const [])
           .whereType<Map>()
@@ -36,6 +40,7 @@ class AgentRecipeField {
   final bool required;
   final String? description;
   final Object? defaultValue;
+  final String? displayDefaultValue;
   final String? placeholder;
   final List<Map<String, dynamic>> options;
   final num? min;
@@ -68,7 +73,9 @@ class AgentRecipe {
       name: display['name']?.toString() ?? 'Agent',
       description: display['description']?.toString() ?? '',
       icon: display['icon']?.toString() ?? 'spark',
-      examplePrompt: display['example_prompt']?.toString() ?? '',
+      examplePrompt: _normalizeExamplePrompt(
+        display['example_prompt']?.toString() ?? '',
+      ),
       requiredConnectors: (json['required_connectors'] is List
               ? json['required_connectors'] as List
               : const [])
@@ -98,4 +105,11 @@ class AgentRecipe {
     for (final field in fields)
       if (field.defaultValue != null) field.id: field.defaultValue,
   };
+}
+
+String _normalizeExamplePrompt(String value) {
+  return humanizeScheduleText(value).replaceAllMapped(
+    RegExp(r'\bagent\s+agent\b', caseSensitive: false),
+    (match) => match.group(0)!.split(RegExp(r'\s+')).first,
+  );
 }
