@@ -21,7 +21,6 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _opacity;
-  late final Animation<double> _scale;
 
   @override
   void initState() {
@@ -33,10 +32,6 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
     _opacity = Tween<double>(
       begin: 0.82,
       end: 1,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _scale = Tween<double>(
-      begin: 0.98,
-      end: 1.03,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     if (!widget.ready) {
       _controller.repeat(reverse: true);
@@ -82,29 +77,26 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
                       body: Center(
                         child: FadeTransition(
                           opacity: _opacity,
-                          child: ScaleTransition(
-                            scale: _scale,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const CuppetMark(
-                                  key: ValueKey('cuppet-launch-animation'),
-                                  size: 180,
-                                  animate: true,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CuppetMark(
+                                key: ValueKey('cuppet-launch-animation'),
+                                size: 180,
+                                animate: true,
+                              ),
+                              const SizedBox(height: SydneySpacing.md),
+                              Text(
+                                'Cuppet',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium?.copyWith(
+                                  color: CuppetWorkspaceColors.primary,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.8,
                                 ),
-                                const SizedBox(height: SydneySpacing.md),
-                                Text(
-                                  'Cuppet',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineMedium?.copyWith(
-                                    color: CuppetWorkspaceColors.primary,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.8,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
