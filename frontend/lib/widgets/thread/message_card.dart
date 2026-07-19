@@ -130,36 +130,67 @@ class MessageCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (!isUser && message.isMultipart) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: SydneySpacing.sm,
+                  vertical: SydneySpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: SydneyColors.primarySoft,
+                  borderRadius: BorderRadius.circular(SydneyRadius.full),
+                ),
+                child: Text(
+                  'PART ${message.partIndex + 1} OF ${message.partCount}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: SydneyColors.primary,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .7,
+                  ),
+                ),
+              ),
+              const SizedBox(height: SydneySpacing.sm),
+            ],
             _TemplateRouter(
               message: message,
               isUser: isUser,
               onAction: onAction,
             ),
-            const SizedBox(height: SydneySpacing.sm),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                _formatMessageTime(message.createdAt),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: (useWorkspacePalette
-                          ? (isUser
-                              ? CuppetWorkspaceColors.ink
-                              : CuppetWorkspaceColors.muted)
-                          : (isUser ? SydneyColors.ink : SydneyColors.mutedInk))
-                      .withValues(alpha: 0.68),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0,
+            if (message.isLastPart) ...[
+              const SizedBox(height: SydneySpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  _formatMessageTime(message.createdAt),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: (useWorkspacePalette
+                            ? (isUser
+                                ? CuppetWorkspaceColors.ink
+                                : CuppetWorkspaceColors.muted)
+                            : (isUser
+                                ? SydneyColors.ink
+                                : SydneyColors.mutedInk))
+                        .withValues(alpha: 0.68),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: SydneySpacing.lg),
+      padding: EdgeInsets.only(
+        bottom:
+            message.isMultipart && !message.isLastPart
+                ? SydneySpacing.xs
+                : SydneySpacing.lg,
+      ),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: content,
@@ -224,7 +255,10 @@ class _TemplateRouter extends StatelessWidget {
       'streak_counter' => StreakCounterTemplate(data: data),
       'comparison' => ComparisonTemplate(data: data),
       'system' => SystemTemplate(data: data),
-      'news_brief' => NewsBriefTemplate(data: data),
+      'news_brief' => NewsBriefTemplate(
+        data: data,
+        showEmptyState: !message.isMultipart,
+      ),
       'study_guide' => StudyGuideTemplate(
         data: data,
         onAction: (actionData) {
@@ -243,6 +277,7 @@ class _TemplateRouter extends StatelessWidget {
       ),
       'content_extractor' => ContentExtractorTemplate(
         data: data,
+        startIndex: message.itemOffset,
         onAction: (actionData) {
           if (onAction != null) {
             onAction!({...actionData, 'messageId': message.id});
@@ -253,7 +288,7 @@ class _TemplateRouter extends StatelessWidget {
       'briefing_card' => BriefingCardTemplate(
         data: data,
         onOpen:
-            data['assistant_context'] == true
+            data['assistant_context'] == true || !message.isLastPart
                 ? null
                 : () {
                   if (onAction != null) {

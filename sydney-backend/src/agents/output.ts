@@ -313,7 +313,7 @@ export type BriefingCardMessageContent = {
   };
 };
 
-export type AgentMessageContent =
+type AgentMessagePayload =
   | PlainTextMessageContent
   | DataSummaryMessageContent
   | UrgencyListMessageContent
@@ -328,6 +328,17 @@ export type AgentMessageContent =
   | ContentExtractorMessageContent
   | PortfolioWatchMessageContent
   | BriefingCardMessageContent;
+
+export type AgentMessagePresentation = {
+  group_id: string;
+  part_index: number;
+  part_count: number;
+  item_offset?: number;
+};
+
+export type AgentMessageContent = AgentMessagePayload & {
+  presentation?: AgentMessagePresentation;
+};
 
 export type RenderedAgentMessage = {
   content: AgentMessageContent;

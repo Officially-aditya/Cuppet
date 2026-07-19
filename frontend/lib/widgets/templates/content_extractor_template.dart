@@ -7,11 +7,13 @@ class ContentExtractorTemplate extends StatelessWidget {
   const ContentExtractorTemplate({
     required this.data,
     this.onAction,
+    this.startIndex = 0,
     super.key,
   });
 
   final Map<String, dynamic> data;
   final ValueChanged<Map<String, dynamic>>? onAction;
+  final int startIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +85,7 @@ class ContentExtractorTemplate extends StatelessWidget {
           children: [
             for (int i = 0; i < ideas.length; i++) ...[
               _IdeaCard(
-                index: i + 1,
+                index: startIndex + i + 1,
                 title: ideas[i]['title']?.toString() ?? 'Content Idea',
                 hook: ideas[i]['hook']?.toString() ?? 'No description hook.',
                 angle: ideas[i]['angle']?.toString(),

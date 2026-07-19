@@ -6,7 +6,7 @@ import {
   type LlmContentBlock,
   type LlmTextMessage
 } from "./llm.js";
-import { renderedNewsBrief, parseNewsBriefText, type RenderedAgentMessage } from "./output.js";
+import { renderedPlainText, type RenderedAgentMessage } from "./output.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
 import { responseLimitInstruction } from "./parser.js";
 import { buildRecipeExecutionPrompt } from "./runtime/execution-prompt.js";
@@ -124,8 +124,7 @@ export async function renderLlmCustomAgent(input: {
     const body = extractLlmText(response.content) || extractLlmText(allContent);
     if (!body) return null;
 
-    const parsed = parseNewsBriefText(input.heading, body);
-    return renderedNewsBrief(parsed, {
+    return renderedPlainText(body, {
       sourceRefs: extractSourceRefs(allContent),
       tokensUsed
     });

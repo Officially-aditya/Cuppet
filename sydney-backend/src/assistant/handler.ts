@@ -21,6 +21,8 @@ import { isContextualAgentTarget } from "../agents/agent-target.js";
 import { parseIntentHybrid } from "../agents/llm-intent.js";
 import type { ParsedIntent } from "../agents/parser.js";
 import { describeSchedule } from "../agents/message-router.js";
+import type { AgentMessageContent } from "../agents/output.js";
+import { mergeAgentMessageContents } from "../agents/runtime/message-parts.js";
 import {
   agentCreationReadyDetail,
   agentCreationThreadMessage
@@ -771,17 +773,60 @@ async function latestManagedAgentOutput(
     content: unknown;
     source_refs: unknown[];
   }>(
-    `SELECT content, COALESCE(source_refs, '[]'::jsonb) AS source_refs
-     FROM agent_messages
-     WHERE user_id = $1
-       AND agent_id = $2
-       AND role = 'agent'
-       AND created_at > NOW() - ($3::int * INTERVAL '1 day')
-     ORDER BY created_at DESC
-     LIMIT 1`,
+    `WITH selected AS (
+       SELECT id, content, created_at
+       FROM agent_messages
+       WHERE user_id = $1
+         AND agent_id = $2
+         AND role = 'agent'
+         AND created_at > NOW() - ($3::int * INTERVAL '1 day')
+       ORDER BY created_at DESC
+       LIMIT 1
+     )
+     SELECT message.content,
+            COALESCE(message.source_refs, '[]'::jsonb) AS source_refs
+     FROM selected
+     INNER JOIN agent_messages AS message
+       ON message.user_id = $1
+      AND message.agent_id = $2
+      AND message.role = 'agent'
+      AND (
+        (
+          selected.content #>> '{presentation,group_id}' IS NULL
+          AND message.id = selected.id
+        )
+        OR (
+          selected.content #>> '{presentation,group_id}' IS NOT NULL
+          AND message.content #>> '{presentation,group_id}' =
+              selected.content #>> '{presentation,group_id}'
+        )
+      )
+     ORDER BY
+       COALESCE(
+         NULLIF(message.content #>> '{presentation,part_index}', '')::int,
+         0
+       ) ASC,
+       message.created_at ASC`,
     [userId, agentId, config.MESSAGE_RETENTION_DAYS]
   );
-  return rows[0] ?? null;
+  if (rows.length === 0) return null;
+  const content = mergeAgentMessageContents(
+    rows.map((row) => row.content as AgentMessageContent)
+  );
+  if (!content) return null;
+  const seen = new Set<string>();
+  const sourceRefs: unknown[] = [];
+  for (const row of rows) {
+    for (const reference of Array.isArray(row.source_refs)
+      ? row.source_refs
+      : []) {
+      const key = JSON.stringify(reference);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      sourceRefs.push(reference);
+    }
+  }
+  return { content, source_refs: sourceRefs };
 }
 
 function agentOutputText(content: unknown): string {

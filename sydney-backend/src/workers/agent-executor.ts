@@ -106,6 +106,7 @@ import {
 } from "../agents/runtime/state-store.js";
 import { outputNotificationSummary } from "../agents/runtime/output-registry.js";
 import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.js";
+import { splitAgentMessageContent } from "../agents/runtime/message-parts.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -515,7 +516,12 @@ async function executeAgentJob(
         agent_id: agent.id,
         message_id: message.id,
         run_id: run.id,
-        data: { role: "agent", trigger: job.data.trigger }
+        data: {
+          role: "agent",
+          trigger: job.data.trigger,
+          message_ids: message.ids,
+          part_count: message.partCount
+        }
       },
       {
         type: "run.completed",
@@ -576,7 +582,9 @@ async function executeAgentJob(
             role: "agent",
             trigger: job.data.trigger,
             connector_id: error.connectorId,
-            action_required: true
+            action_required: true,
+            message_ids: message.ids,
+            part_count: message.partCount
           }
         },
         {
@@ -629,7 +637,12 @@ async function executeAgentJob(
         agent_id: agent.id,
         message_id: message.id,
         run_id: run.id,
-        data: { role: "agent", trigger: job.data.trigger }
+        data: {
+          role: "agent",
+          trigger: job.data.trigger,
+          message_ids: message.ids,
+          part_count: message.partCount
+        }
       },
       {
         type: "run.failed",
@@ -766,25 +779,32 @@ async function persistRunMessage(
     additionalTopicsCovered?: string[];
     stateEvents?: AgentStateEvent[];
   }
-): Promise<{ id: string }> {
+): Promise<{ id: string; ids: string[]; partCount: number }> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const { rows } = await client.query<{ id: string }>(
-      `
-        INSERT INTO agent_messages
-          (agent_id, user_id, role, content, source_refs)
-        VALUES ($1, $2, 'agent', $3, $4)
-        RETURNING id
-      `,
-      [
-        input.agent.id,
-        input.agent.user_id,
-        JSON.stringify(input.content),
-        JSON.stringify(input.sourceRefs)
-      ]
-    );
-    const message = rows[0]!;
+    const contents = splitAgentMessageContent(input.content, input.runId);
+    const messages: Array<{ id: string }> = [];
+    const createdAt = Date.now();
+    for (let index = 0; index < contents.length; index++) {
+      const { rows } = await client.query<{ id: string }>(
+        `
+          INSERT INTO agent_messages
+            (agent_id, user_id, role, content, source_refs, created_at)
+          VALUES ($1, $2, 'agent', $3, $4, $5)
+          RETURNING id
+        `,
+        [
+          input.agent.id,
+          input.agent.user_id,
+          JSON.stringify(contents[index]),
+          JSON.stringify(input.sourceRefs),
+          new Date(createdAt + index)
+        ]
+      );
+      messages.push(rows[0]!);
+    }
+    const message = messages[0]!;
 
     await client.query(
       "UPDATE agents SET last_message_at = NOW() WHERE id = $1",
@@ -840,7 +860,11 @@ async function persistRunMessage(
     }
 
     await client.query("COMMIT");
-    return message;
+    return {
+      id: message.id,
+      ids: messages.map((item) => item.id),
+      partCount: messages.length
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

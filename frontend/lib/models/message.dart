@@ -38,6 +38,36 @@ class Message {
     return const {};
   }
 
+  Map<String, dynamic> get presentation {
+    final raw = content['presentation'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return const {};
+  }
+
+  String? get groupId {
+    final value = presentation['group_id']?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  int get partIndex =>
+      int.tryParse(presentation['part_index']?.toString() ?? '') ?? 0;
+
+  int get partCount {
+    final value =
+        int.tryParse(presentation['part_count']?.toString() ?? '') ?? 1;
+    return value < 1 ? 1 : value;
+  }
+
+  int get itemOffset =>
+      int.tryParse(presentation['item_offset']?.toString() ?? '') ?? 0;
+
+  bool get isMultipart => groupId != null && partCount > 1;
+
+  bool get isFirstPart => !isMultipart || partIndex <= 0;
+
+  bool get isLastPart => !isMultipart || partIndex >= partCount - 1;
+
   String get preview {
     final text = data['text']?.toString() ?? content['text']?.toString();
     if (text != null && text.trim().isNotEmpty) {

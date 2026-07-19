@@ -46,6 +46,11 @@ import {
   isScheduledOutputContract,
   textualizeOutput
 } from "../agents/runtime/output-registry.js";
+import {
+  mergeAgentMessageContents,
+  messageGroupId
+} from "../agents/runtime/message-parts.js";
+import type { AgentMessageContent } from "../agents/output.js";
 
 const sendMessageSchema = z
   .object({
@@ -206,6 +211,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
             AND m.created_at > NOW() - ($2::int * INTERVAL '1 day')
             AND m.role = 'agent'
             AND m.content->>'template' = 'briefing_card'
+            AND COALESCE(m.content #>> '{presentation,part_index}', '0') = '0'
             AND m.content #>> '{data,home_dismissed_at}' IS NULL
             -- Handoff copies live on Assistant with assistant_context=true; never show those on home.
             AND COALESCE(m.content #>> '{data,assistant_context}', 'false') <> 'true'
@@ -231,28 +237,23 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       const userId = request.auth!.userId;
       if (!isUuid(agentId) || !isUuid(messageId)) return agentNotFound(reply);
 
-      const { rows } = await pool.query<{
-        content: Record<string, unknown>;
-        source_refs: unknown[];
-      }>(
-        `
-          SELECT content, COALESCE(source_refs, '[]'::jsonb) AS source_refs
-          FROM agent_messages
-          WHERE id = $1
-            AND agent_id = $2
-            AND user_id = $3
-            AND created_at > NOW() - ($4::int * INTERVAL '1 day')
-            AND role = 'agent'
-            AND content->>'template' = 'briefing_card'
-        `,
-        [messageId, agentId, userId, config.MESSAGE_RETENTION_DAYS]
+      const sourceGroup = await loadAgentMessageGroup(
+        userId,
+        agentId,
+        messageId
       );
-      const source = rows[0];
-      if (!source) {
+      const sourceContent = mergeAgentMessageContents(
+        sourceGroup.rows.map((row) => row.content as AgentMessageContent)
+      );
+      if (!sourceContent || sourceContent.template !== "briefing_card") {
         return reply.code(404).send({
           error: { code: "MESSAGE_NOT_FOUND", message: "Briefing message not found." }
         });
       }
+      const source = {
+        content: sourceContent as unknown as Record<string, unknown>,
+        source_refs: mergeSourceRefs(sourceGroup.rows)
+      };
 
       const assistantId = await ensureAssistantContact(userId);
       const title = briefingTitle(source.content);
@@ -313,9 +314,16 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
               to_jsonb(NOW()::text),
               true
             )
-            WHERE id = $1 AND agent_id = $2 AND user_id = $3
+            WHERE agent_id = $2 AND user_id = $3
+              AND (
+                id = $1
+                OR (
+                  $4::text IS NOT NULL
+                  AND content #>> '{presentation,group_id}' = $4
+                )
+              )
           `,
-          [messageId, agentId, userId]
+          [messageId, agentId, userId, sourceGroup.groupId]
         );
         await touchAgentWithClient(client, userId, assistantId);
         await client.query("COMMIT");
@@ -1040,21 +1048,11 @@ async function latestAgentReplyText(
   userId: string,
   agentId: string
 ): Promise<string | null> {
-  const { rows } = await pool.query<{ content: any }>(
-    `
-      SELECT content
-      FROM agent_messages
-      WHERE user_id = $1
-        AND agent_id = $2
-        AND role = 'agent'
-        AND created_at > NOW() - ($3::int * INTERVAL '1 day')
-      ORDER BY created_at DESC
-      LIMIT 1
-    `,
-    [userId, agentId, config.MESSAGE_RETENTION_DAYS]
+  const group = await loadAgentMessageGroup(userId, agentId);
+  const content = mergeAgentMessageContents(
+    group.rows.map((row) => row.content as AgentMessageContent)
   );
-
-  return rows[0] ? extractBodyFromContent(rows[0].content) : null;
+  return content ? extractBodyFromContent(content) : null;
 }
 
 async function latestAssistantBriefingContext(
@@ -1102,30 +1100,101 @@ async function latestAgentReply(
   agentId: string,
   sourceMessageId?: string
 ): Promise<{ body: string | null; sourceRefs: unknown[] }> {
-  const { rows } = await pool.query<{ content: any; source_refs: unknown[] }>(
-    `
-      SELECT content,
-      COALESCE(source_refs, '[]'::jsonb) AS source_refs
-      FROM agent_messages
-      WHERE user_id = $1
-        AND agent_id = $2
-        AND role = 'agent'
-        AND created_at > NOW() - ($3::int * INTERVAL '1 day')
-        AND ($4::uuid IS NULL OR id = $4)
-      ORDER BY created_at DESC
-      LIMIT 1
-    `,
-    [userId, agentId, config.MESSAGE_RETENTION_DAYS, sourceMessageId ?? null]
+  const group = await loadAgentMessageGroup(
+    userId,
+    agentId,
+    sourceMessageId
   );
-
-  if (!rows[0]) {
+  const content = mergeAgentMessageContents(
+    group.rows.map((row) => row.content as AgentMessageContent)
+  );
+  if (!content) {
     return { body: null, sourceRefs: [] };
   }
 
   return {
-    body: extractBodyFromContent(rows[0].content),
-    sourceRefs: rows[0].source_refs
+    body: extractBodyFromContent(content),
+    sourceRefs: mergeSourceRefs(group.rows)
   };
+}
+
+type AgentMessageGroupRow = {
+  id: string;
+  content: unknown;
+  source_refs: unknown[];
+};
+
+async function loadAgentMessageGroup(
+  userId: string,
+  agentId: string,
+  sourceMessageId?: string
+): Promise<{ rows: AgentMessageGroupRow[]; groupId: string | null }> {
+  const { rows } = await pool.query<AgentMessageGroupRow>(
+    `
+      WITH selected AS (
+        SELECT id, content, created_at
+        FROM agent_messages
+        WHERE user_id = $1
+          AND agent_id = $2
+          AND role = 'agent'
+          AND created_at > NOW() - ($3::int * INTERVAL '1 day')
+          AND ($4::uuid IS NULL OR id = $4)
+        ORDER BY created_at DESC
+        LIMIT 1
+      )
+      SELECT message.id,
+             message.content,
+             COALESCE(message.source_refs, '[]'::jsonb) AS source_refs
+      FROM selected
+      INNER JOIN agent_messages AS message
+        ON message.user_id = $1
+       AND message.agent_id = $2
+       AND message.role = 'agent'
+       AND (
+         (
+           selected.content #>> '{presentation,group_id}' IS NULL
+           AND message.id = selected.id
+         )
+         OR (
+           selected.content #>> '{presentation,group_id}' IS NOT NULL
+           AND message.content #>> '{presentation,group_id}' =
+               selected.content #>> '{presentation,group_id}'
+         )
+       )
+      ORDER BY
+        COALESCE(
+          NULLIF(message.content #>> '{presentation,part_index}', '')::int,
+          0
+        ) ASC,
+        message.created_at ASC
+    `,
+    [
+      userId,
+      agentId,
+      config.MESSAGE_RETENTION_DAYS,
+      sourceMessageId ?? null
+    ]
+  );
+  return {
+    rows,
+    groupId: rows.length > 0 ? messageGroupId(rows[0]!.content) : null
+  };
+}
+
+function mergeSourceRefs(rows: AgentMessageGroupRow[]): unknown[] {
+  const seen = new Set<string>();
+  const merged: unknown[] = [];
+  for (const row of rows) {
+    for (const reference of Array.isArray(row.source_refs)
+      ? row.source_refs
+      : []) {
+      const key = JSON.stringify(reference);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(reference);
+    }
+  }
+  return merged;
 }
 
 async function recentUserMessageTexts(

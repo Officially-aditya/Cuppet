@@ -4,9 +4,14 @@ import '../../design/tokens.dart';
 import '../sydney_primitives.dart';
 
 class NewsBriefTemplate extends StatelessWidget {
-  const NewsBriefTemplate({required this.data, super.key});
+  const NewsBriefTemplate({
+    required this.data,
+    this.showEmptyState = true,
+    super.key,
+  });
 
   final Map<String, dynamic> data;
+  final bool showEmptyState;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +71,7 @@ class NewsBriefTemplate extends StatelessWidget {
           ),
           const SizedBox(height: SydneySpacing.sm),
         ],
-        if (items.isEmpty)
+        if (items.isEmpty && showEmptyState)
           Padding(
             padding: const EdgeInsets.only(left: SydneySpacing.xs),
             child: Text(
@@ -76,7 +81,7 @@ class NewsBriefTemplate extends StatelessWidget {
               ),
             ),
           )
-        else
+        else if (items.isNotEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,

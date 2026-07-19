@@ -191,7 +191,12 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           LIMIT 1
         ) latest_message ON TRUE
         LEFT JOIN LATERAL (
-          SELECT COUNT(*) AS unread_count
+          SELECT COUNT(
+            DISTINCT COALESCE(
+              content #>> '{presentation,group_id}',
+              id::text
+            )
+          ) AS unread_count
           FROM agent_messages
           WHERE agent_id = a.id
             AND user_id = a.user_id
