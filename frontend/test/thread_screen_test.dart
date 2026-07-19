@@ -108,6 +108,7 @@ void setMobileViewport(
 void main() {
   testWidgets('thread layout fits a narrow mobile viewport', (tester) async {
     setMobileViewport(tester, size: const Size(320, 700));
+    final createdAt = DateTime.now();
     final messages = [
       Message.plainText(
         id: 'agent-message',
@@ -115,14 +116,14 @@ void main() {
         sender: MessageSender.agent,
         text:
             'Here is a deliberately long agent response that should wrap inside the message card without overflowing the mobile screen.',
-        createdAt: _testDate,
+        createdAt: createdAt,
       ),
       Message.plainText(
         id: 'user-message',
         threadId: testAgent.threadId,
         sender: MessageSender.user,
         text: 'Thanks. Please continue with the next part.',
-        createdAt: _testDate,
+        createdAt: createdAt,
       ),
     ];
 
@@ -190,6 +191,97 @@ void main() {
     expect(find.text('Agent response'), findsOneWidget);
     expect(find.text('User reply'), findsOneWidget);
     expect(find.text(testAgent.name), findsOneWidget);
+  });
+
+  testWidgets('thread labels today, yesterday, and older calendar days', (
+    tester,
+  ) async {
+    setMobileViewport(tester, size: const Size(390, 1400));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day, 12);
+    final yesterday = DateTime(now.year, now.month, now.day - 1, 12);
+    final messages = [
+      Message.plainText(
+        id: 'older-message',
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        text: 'Older update',
+        createdAt: DateTime(2000, 1, 3, 12),
+      ),
+      Message.plainText(
+        id: 'yesterday-message',
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        text: 'Yesterday update',
+        createdAt: yesterday,
+      ),
+      Message.plainText(
+        id: 'today-message',
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        text: 'Today update',
+        createdAt: today,
+      ),
+    ];
+
+    await tester.pumpWidget(threadHost(loadMessages: () async => messages));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MONDAY, JANUARY 3, 2000'), findsOneWidget);
+    expect(find.text('YESTERDAY'), findsOneWidget);
+    expect(find.text('TODAY'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('multipart messages stay beneath one calendar-day label', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final firstPartAt = today.subtract(const Duration(milliseconds: 1));
+    const groupId = 'run-across-midnight';
+    final messages = [
+      Message(
+        id: 'part-one',
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        createdAt: firstPartAt,
+        content: const {
+          'template': 'plain_text',
+          'presentation': {
+            'group_id': groupId,
+            'part_index': 0,
+            'part_count': 2,
+          },
+          'data': {'body': 'First part'},
+        },
+      ),
+      Message(
+        id: 'part-two',
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        createdAt: today,
+        content: const {
+          'template': 'plain_text',
+          'presentation': {
+            'group_id': groupId,
+            'part_index': 1,
+            'part_count': 2,
+          },
+          'data': {'body': 'Second part'},
+        },
+      ),
+    ];
+
+    await tester.pumpWidget(threadHost(loadMessages: () async => messages));
+    await tester.pumpAndSettle();
+
+    expect(find.text('YESTERDAY'), findsOneWidget);
+    expect(find.text('TODAY'), findsNothing);
+    expect(find.text('First part'), findsOneWidget);
+    expect(find.text('Second part'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('content idea draft keeps the selected output as its source', (

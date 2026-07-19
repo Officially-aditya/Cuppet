@@ -452,6 +452,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   if (_pendingUserMessage != null) {
                     displayItems.add(_pendingUserMessage!);
                   }
+                  final archivedEntries = _threadListEntries(_archivedMessages);
+                  final liveEntries = _threadListEntries(
+                    displayItems,
+                    showTodayWhenEmpty: true,
+                  );
 
                   // Show typing indicator while awaiting response or agent is thinking.
                   final showTyping =
@@ -460,12 +465,11 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   final showArchiveBoundary =
                       archiveState?.enabled == true ||
                       archiveState?.actionRequired == true;
-                  final prefixCount =
-                      _archivedMessages.length +
-                      (showArchiveBoundary ? 1 : 0) +
-                      1;
                   final itemCount =
-                      prefixCount + displayItems.length + (showTyping ? 1 : 0);
+                      archivedEntries.length +
+                      (showArchiveBoundary ? 1 : 0) +
+                      liveEntries.length +
+                      (showTyping ? 1 : 0);
 
                   return ListView.builder(
                     controller: _scrollController,
@@ -474,12 +478,14 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     ),
                     itemCount: itemCount,
                     itemBuilder: (context, index) {
-                      if (index < _archivedMessages.length) {
-                        return _ArchivedMessageTile(
-                          message: _archivedMessages[index],
-                        );
+                      if (index < archivedEntries.length) {
+                        final entry = archivedEntries[index];
+                        if (entry.dayLabel != null) {
+                          return _ThreadDayPill(label: entry.dayLabel!);
+                        }
+                        return _ArchivedMessageTile(message: entry.message!);
                       }
-                      var relativeIndex = index - _archivedMessages.length;
+                      var relativeIndex = index - archivedEntries.length;
                       if (showArchiveBoundary && relativeIndex == 0) {
                         return _ArchiveBoundary(
                           state: archiveState!,
@@ -495,12 +501,12 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                         );
                       }
                       if (showArchiveBoundary) relativeIndex -= 1;
-                      if (relativeIndex == 0) {
-                        return const _ThreadDayPill();
-                      }
-                      final messageIndex = relativeIndex - 1;
-                      if (messageIndex < displayItems.length) {
-                        final message = displayItems[messageIndex];
+                      if (relativeIndex < liveEntries.length) {
+                        final entry = liveEntries[relativeIndex];
+                        if (entry.dayLabel != null) {
+                          return _ThreadDayPill(label: entry.dayLabel!);
+                        }
+                        final message = entry.message!;
                         final isSelected = _selectedMessage?.id == message.id;
                         return GestureDetector(
                           onLongPress: () {
@@ -1261,6 +1267,90 @@ class _ArchiveBoundary extends StatelessWidget {
   }
 }
 
+class _ThreadListEntry {
+  const _ThreadListEntry.day(this.dayLabel) : message = null;
+
+  const _ThreadListEntry.message(this.message) : dayLabel = null;
+
+  final String? dayLabel;
+  final Message? message;
+}
+
+List<_ThreadListEntry> _threadListEntries(
+  List<Message> messages, {
+  bool showTodayWhenEmpty = false,
+  DateTime? now,
+}) {
+  final localNow = (now ?? DateTime.now()).toLocal();
+  if (messages.isEmpty) {
+    return showTodayWhenEmpty
+        ? [_ThreadListEntry.day(_threadDayLabel(localNow, localNow))]
+        : const [];
+  }
+
+  final entries = <_ThreadListEntry>[];
+  final groupDays = <String, DateTime>{};
+  DateTime? previousDay;
+  for (final message in messages) {
+    final actualDay = _dateOnly(message.createdAt.toLocal());
+    final groupId = message.groupId;
+    final messageDay =
+        groupId == null
+            ? actualDay
+            : groupDays.putIfAbsent(groupId, () => actualDay);
+    if (previousDay == null || !_sameCalendarDay(previousDay, messageDay)) {
+      entries.add(_ThreadListEntry.day(_threadDayLabel(messageDay, localNow)));
+      previousDay = messageDay;
+    }
+    entries.add(_ThreadListEntry.message(message));
+  }
+  return entries;
+}
+
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+bool _sameCalendarDay(DateTime left, DateTime right) =>
+    left.year == right.year &&
+    left.month == right.month &&
+    left.day == right.day;
+
+String _threadDayLabel(DateTime value, DateTime now) {
+  final day = _dateOnly(value.toLocal());
+  final today = _dateOnly(now.toLocal());
+  if (_sameCalendarDay(day, today)) return 'TODAY';
+  final yesterday = DateTime(today.year, today.month, today.day - 1);
+  if (_sameCalendarDay(day, yesterday)) return 'YESTERDAY';
+
+  const weekdays = [
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
+    'SATURDAY',
+    'SUNDAY',
+  ];
+  const months = [
+    'JANUARY',
+    'FEBRUARY',
+    'MARCH',
+    'APRIL',
+    'MAY',
+    'JUNE',
+    'JULY',
+    'AUGUST',
+    'SEPTEMBER',
+    'OCTOBER',
+    'NOVEMBER',
+    'DECEMBER',
+  ];
+  final date =
+      '${weekdays[day.weekday - 1]}, '
+      '${months[day.month - 1]} ${day.day}';
+  return day.year == today.year ? date : '$date, ${day.year}';
+}
+
 class _ArchivedMessageTile extends StatelessWidget {
   const _ArchivedMessageTile({required this.message});
 
@@ -1293,11 +1383,14 @@ class _ArchivedMessageTile extends StatelessWidget {
 }
 
 class _ThreadDayPill extends StatelessWidget {
-  const _ThreadDayPill();
+  const _ThreadDayPill({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
+      key: ValueKey('thread-day-$label'),
       padding: const EdgeInsets.only(bottom: SydneySpacing.lg),
       child: Center(
         child: Container(
@@ -1311,7 +1404,7 @@ class _ThreadDayPill extends StatelessWidget {
             border: Border.all(color: CuppetWorkspaceColors.panelBorder),
           ),
           child: Text(
-            'TODAY',
+            label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: CuppetWorkspaceColors.primaryInk,
               letterSpacing: 1.1,
