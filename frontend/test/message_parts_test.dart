@@ -81,6 +81,53 @@ void main() {
     expect(find.text('No content for this run.'), findsNothing);
   });
 
+  testWidgets('third news message renders context without an empty warning', (
+    tester,
+  ) async {
+    final message = Message.fromJson({
+      'id': 'news-context',
+      'agent_id': 'agent',
+      'role': 'agent',
+      'created_at': '2026-07-19T10:00:00Z',
+      'content': {
+        'template': 'news_brief',
+        'presentation': {
+          'group_id': 'run-news',
+          'part_index': 2,
+          'part_count': 3,
+        },
+        'data': {
+          'title': 'AI news — Context and timeline',
+          'items': <Object>[],
+          'perspectives': [
+            {
+              'label': 'Industry',
+              'summary': 'Builders welcomed lower serving costs.',
+            },
+          ],
+          'why_it_matters': 'The release changes product economics.',
+          'timeline': [
+            {'date': '2026-07-18', 'event': 'The lead model was announced.'},
+          ],
+        },
+      },
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(child: MessageCard(message: message)),
+        ),
+      ),
+    );
+
+    expect(find.text('Perspectives'), findsOneWidget);
+    expect(find.text('Why it matters'), findsOneWidget);
+    expect(find.text('Lead-story timeline'), findsOneWidget);
+    expect(find.text('No content for this run.'), findsNothing);
+    expect(find.text('PART 3 OF 3'), findsNothing);
+  });
+
   testWidgets('content ideas retain numbering across message parts', (
     tester,
   ) async {

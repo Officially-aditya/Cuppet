@@ -213,7 +213,12 @@ function splitNewsBrief(content: AgentMessageContent): AgentMessageContent[] {
     return [content];
   }
 
-  return [
+  const hasContext = Boolean(
+    data.perspectives?.length ||
+      data.why_it_matters ||
+      data.timeline?.length
+  );
+  const parts: AgentMessageContent[] = [
     {
       template: "news_brief",
       version: "1.0",
@@ -231,7 +236,17 @@ function splitNewsBrief(content: AgentMessageContent): AgentMessageContent[] {
         items: data.items,
         ...(data.initialItemCount
           ? { initialItemCount: data.initialItemCount }
-          : {}),
+          : {})
+      }
+    }
+  ];
+  if (hasContext) {
+    parts.push({
+      template: "news_brief",
+      version: "1.0",
+      data: {
+        title: `${data.title} — Context and timeline`,
+        items: [],
         ...(data.why_it_matters
           ? { why_it_matters: data.why_it_matters }
           : {}),
@@ -240,8 +255,9 @@ function splitNewsBrief(content: AgentMessageContent): AgentMessageContent[] {
           : {}),
         ...(data.timeline ? { timeline: data.timeline } : {})
       }
-    }
-  ];
+    });
+  }
+  return parts;
 }
 
 function splitDataSummary(

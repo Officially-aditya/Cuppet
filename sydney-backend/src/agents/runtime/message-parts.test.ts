@@ -6,7 +6,7 @@ import {
   splitAgentMessageContent
 } from "./message-parts.js";
 
-test("splits news into a TLDR message and one detailed story message", () => {
+test("splits enriched news into TLDR, details, and context messages", () => {
   const content: AgentMessageContent = {
     template: "news_brief",
     version: "1.0",
@@ -42,19 +42,22 @@ test("splits news into a TLDR message and one detailed story message", () => {
   };
 
   const parts = splitAgentMessageContent(content, "run-news");
-  assert.equal(parts.length, 2);
+  assert.equal(parts.length, 3);
   assert.deepEqual(
     parts.map((part) => part.presentation),
     [
-      { group_id: "run-news", part_index: 0, part_count: 2 },
-      { group_id: "run-news", part_index: 1, part_count: 2 }
+      { group_id: "run-news", part_index: 0, part_count: 3 },
+      { group_id: "run-news", part_index: 1, part_count: 3 },
+      { group_id: "run-news", part_index: 2, part_count: 3 }
     ]
   );
   assert.equal(parts[0]!.template, "news_brief");
   assert.equal(parts[1]!.template, "news_brief");
+  assert.equal(parts[2]!.template, "news_brief");
   if (
     parts[0]!.template !== "news_brief" ||
-    parts[1]!.template !== "news_brief"
+    parts[1]!.template !== "news_brief" ||
+    parts[2]!.template !== "news_brief"
   ) {
     return;
   }
@@ -63,11 +66,39 @@ test("splits news into a TLDR message and one detailed story message", () => {
   assert.equal(parts[0]!.data.why_it_matters, undefined);
   assert.equal(parts[1]!.data.items.length, 5);
   assert.equal(parts[1]!.data.tldr, undefined);
-  assert.equal(parts[1]!.data.why_it_matters, content.data.why_it_matters);
+  assert.equal(parts[1]!.data.why_it_matters, undefined);
   assert.match(parts[1]!.data.title, /Detailed coverage$/);
+  assert.equal(parts[2]!.data.items.length, 0);
+  assert.equal(parts[2]!.data.why_it_matters, content.data.why_it_matters);
+  assert.equal(parts[2]!.data.perspectives?.length, 1);
+  assert.equal(parts[2]!.data.timeline?.length, 1);
+  assert.match(parts[2]!.data.title, /Context and timeline$/);
 
   const merged = mergeAgentMessageContents(parts);
   assert.deepEqual(merged, content);
+});
+
+test("keeps news at two messages when no context sections exist", () => {
+  const content: AgentMessageContent = {
+    template: "news_brief",
+    version: "1.0",
+    data: {
+      title: "Product news",
+      tldr: ["Two launches led the day."],
+      items: [
+        { headline: "Launch one", summary: "The first product shipped." },
+        { headline: "Launch two", summary: "The second product shipped." }
+      ]
+    }
+  };
+
+  const parts = splitAgentMessageContent(content, "run-news-compact");
+  assert.equal(parts.length, 2);
+  assert.deepEqual(
+    parts.map((part) => part.presentation?.part_count),
+    [2, 2]
+  );
+  assert.deepEqual(mergeAgentMessageContents(parts), content);
 });
 
 test("keeps compact and interactive outputs as one message", () => {
