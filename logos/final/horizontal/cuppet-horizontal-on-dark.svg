@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 560 144"
+     role="img"
+     aria-labelledby="cuppet-horizontal-on-dark-title cuppet-horizontal-on-dark-desc">
+  <title id="cuppet-horizontal-on-dark-title">Cuppet logo for dark backgrounds</title>
+  <desc id="cuppet-horizontal-on-dark-desc">A brightened Cuppet Courier messenger beside a warm ivory Cuppet wordmark.</desc>
+  <defs>
+    <linearGradient id="cuppet-horizontal-on-dark-coral" x1="37" y1="13" x2="76" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFAD98"/>
+      <stop offset="1" stop-color="#E56B7D"/>
+    </linearGradient>
+    <linearGradient id="cuppet-horizontal-on-dark-indigo" x1="38" y1="52" x2="109" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8C84D0"/>
+      <stop offset="1" stop-color="#554F91"/>
+    </linearGradient>
+    <linearGradient id="cuppet-horizontal-on-dark-teal" x1="30" y1="110" x2="75" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#168177"/>
+      <stop offset="1" stop-color="#45C6B3"/>
+    </linearGradient>
+    <linearGradient id="cuppet-horizontal-on-dark-amber" x1="78" y1="38" x2="112" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8D58C"/>
+      <stop offset="1" stop-color="#E8A14E"/>
+    </linearGradient>
+  </defs>
+  <g id="cuppet-horizontal-on-dark-symbol" transform="translate(8 8)" stroke-linejoin="round">
+    <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#7770B5"/>
+    <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#F07B72"/>
+    <path d="m47 57-10-44 42 26Z" fill="url(#cuppet-horizontal-on-dark-coral)"/>
+    <path d="m41 71-12 43 44-31Z" fill="url(#cuppet-horizontal-on-dark-teal)"/>
+    <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#cuppet-horizontal-on-dark-indigo)"/>
+    <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+    <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#cuppet-horizontal-on-dark-amber)"/>
+    <path d="m108 55 17 7-18 6Z" fill="#FF9A87"/>
+    <path d="m72 84 18-25 18 9Z" fill="#756DAF" opacity=".8"/>
+    <circle cx="101" cy="53" r="3" fill="#17201C"/>
+  </g>
+  <text id="cuppet-horizontal-on-dark-wordmark"
+        x="158"
+        y="98"
+        fill="#F5F3EE"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="72"
+        font-weight="700"
+        letter-spacing="-3">Cuppet</text>
+</svg>

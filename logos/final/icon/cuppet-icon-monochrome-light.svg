@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 128 128"
+     role="img"
+     aria-labelledby="cuppet-icon-monochrome-light-title cuppet-icon-monochrome-light-desc">
+  <title id="cuppet-icon-monochrome-light-title">Cuppet Courier light monochrome mark</title>
+  <desc id="cuppet-icon-monochrome-light-desc">A single-color warm ivory origami messenger for dark backgrounds.</desc>
+  <defs>
+    <mask id="cuppet-icon-monochrome-light-eye-mask">
+      <rect width="128" height="128" fill="#FFFFFF"/>
+      <circle cx="101" cy="53" r="3" fill="#000000"/>
+    </mask>
+  </defs>
+  <g id="cuppet-icon-monochrome-light-bird"
+     fill="#F5F3EE"
+     stroke-linejoin="round"
+     mask="url(#cuppet-icon-monochrome-light-eye-mask)">
+    <path d="m13 47 35 9-7 16-28-8 17-7Z"/>
+    <path d="m13 88 28-16 8 8-26 21 7-18Z"/>
+    <path d="m47 57-10-44 42 26Z"/>
+    <path d="m41 71-12 43 44-31Z"/>
+    <path d="m45 56 34-18 31 24-38 22-31-13Z"/>
+    <path d="m45 56 34-18-7 46-31-13Z"/>
+    <path d="m79 38 25 9 9 14-5 7-18-9Z"/>
+    <path d="m108 55 17 7-18 6Z"/>
+    <path d="m72 84 18-25 18 9Z"/>
+  </g>
+</svg>

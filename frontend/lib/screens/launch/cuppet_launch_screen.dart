@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../../widgets/cuppet_logo.dart';
 
 class CuppetLaunchScreen extends StatefulWidget {
   const CuppetLaunchScreen({
@@ -86,14 +87,10 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(
-                                  'assets/logos/cuppet.png',
-                                  key: const ValueKey(
-                                    'cuppet-launch-animation',
-                                  ),
-                                  width: 220,
-                                  height: 220,
-                                  fit: BoxFit.contain,
+                                const CuppetMark(
+                                  key: ValueKey('cuppet-launch-animation'),
+                                  size: 180,
+                                  animate: true,
                                 ),
                                 const SizedBox(height: SydneySpacing.md),
                                 Text(

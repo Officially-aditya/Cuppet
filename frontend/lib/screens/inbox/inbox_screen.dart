@@ -48,13 +48,11 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final agents = ref.watch(agentsProvider);
     final briefings = ref.watch(briefingsProvider);
     final dismissedIds = ref.watch(dismissedBriefingIdsProvider);
-    final visibleBriefings =
-        (briefings.value ?? const <Message>[])
-            .where(
-              (briefing) =>
-                  !dismissedIds.contains(_briefingMessageKey(briefing)),
-            )
-            .toList(growable: false);
+    final visibleBriefings = (briefings.value ?? const <Message>[])
+        .where(
+          (briefing) => !dismissedIds.contains(_briefingMessageKey(briefing)),
+        )
+        .toList(growable: false);
 
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
@@ -62,6 +60,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         eyebrow: 'Your workspace',
         title: 'Cuppet',
         subtitle: 'Your delegation agents',
+        showBrandMark: true,
       ),
       body: SafeArea(
         bottom: false,

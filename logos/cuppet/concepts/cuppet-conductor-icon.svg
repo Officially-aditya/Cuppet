@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 128 128"
+     role="img"
+     aria-labelledby="cuppet-conductor-icon-title cuppet-conductor-icon-desc">
+  <title id="cuppet-conductor-icon-title">Cuppet Conductor icon</title>
+  <desc id="cuppet-conductor-icon-desc">An open green letter C surrounding a hub that coordinates three connected nodes.</desc>
+  <g id="cuppet-conductor-icon-mark" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M95 27 A47 47 0 1 0 95 101"
+          stroke="#006046"
+          stroke-width="18"/>
+    <path d="M61 64 96 34 M61 64h45 M61 64l35 30"
+          stroke="#3F7D57"
+          stroke-width="8"/>
+  </g>
+  <g id="cuppet-conductor-icon-nodes">
+    <circle cx="61" cy="64" r="10" fill="#006046"/>
+    <circle cx="99" cy="32" r="9" fill="#D9A441"/>
+    <circle cx="108" cy="64" r="9" fill="#3F7D57"/>
+    <circle cx="99" cy="96" r="9" fill="#D9A441"/>
+  </g>
+</svg>

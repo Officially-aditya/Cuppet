@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../design/tokens.dart';
+import 'cuppet_logo.dart';
 
 class WorkspaceAppBar extends StatelessWidget implements PreferredSizeWidget {
   const WorkspaceAppBar({
     required this.eyebrow,
     required this.title,
     required this.subtitle,
+    this.showBrandMark = false,
     super.key,
   });
 
   final String eyebrow;
   final String title;
   final String subtitle;
+  final bool showBrandMark;
 
   @override
   Size get preferredSize => const Size.fromHeight(116);
@@ -41,15 +44,27 @@ class WorkspaceAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
           const SizedBox(height: SydneySpacing.sm),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: CuppetWorkspaceColors.ink,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              height: 1.05,
-              letterSpacing: -0.7,
-            ),
+          Row(
+            children: [
+              if (showBrandMark) ...[
+                const CuppetMark(size: 36),
+                const SizedBox(width: SydneySpacing.sm),
+              ],
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: CuppetWorkspaceColors.ink,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    height: 1.05,
+                    letterSpacing: -0.7,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: SydneySpacing.sm),
           Text(

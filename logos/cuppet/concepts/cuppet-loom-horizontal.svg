@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 560 144"
+     role="img"
+     aria-labelledby="cuppet-loom-horizontal-title cuppet-loom-horizontal-desc">
+  <title id="cuppet-loom-horizontal-title">Cuppet Handoff Loom logo</title>
+  <desc id="cuppet-loom-horizontal-desc">Four shaded geometric ribbons weave around a warm ivory result tile beside the Cuppet wordmark.</desc>
+  <defs>
+    <linearGradient id="cuppet-loom-horizontal-teal" x1="18" y1="18" x2="70" y2="62" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#20A092"/>
+      <stop offset="1" stop-color="#075E59"/>
+    </linearGradient>
+    <linearGradient id="cuppet-loom-horizontal-coral" x1="72" y1="24" x2="108" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F58A73"/>
+      <stop offset="1" stop-color="#BE4E60"/>
+    </linearGradient>
+    <linearGradient id="cuppet-loom-horizontal-amber" x1="106" y1="78" x2="56" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4C66D"/>
+      <stop offset="1" stop-color="#D68632"/>
+    </linearGradient>
+    <linearGradient id="cuppet-loom-horizontal-indigo" x1="50" y1="110" x2="18" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#55508F"/>
+      <stop offset="1" stop-color="#29264F"/>
+    </linearGradient>
+  </defs>
+  <g id="cuppet-loom-horizontal-symbol" transform="translate(8 8)" stroke-linejoin="round">
+    <path d="M17 48 46 18c4-4 8-4 13-1l24 14-31 31Z" fill="url(#cuppet-loom-horizontal-teal)"/>
+    <path d="m79 29 32 20c5 3 6 8 4 13L101 91 67 57Z" fill="url(#cuppet-loom-horizontal-coral)"/>
+    <path d="m101 86-28 27c-4 4-9 4-13 1L34 98l34-34Z" fill="url(#cuppet-loom-horizontal-amber)"/>
+    <path d="M38 101 16 76c-3-4-4-8-1-13l15-27 35 34Z" fill="url(#cuppet-loom-horizontal-indigo)"/>
+    <path d="m17 48 13-12 35 34-13 13Z" fill="#1F2858" opacity=".42"/>
+    <path d="m79 29 4 2-31 31-8-8Z" fill="#F5F3EE" opacity=".2"/>
+    <path d="m101 86-33-22 8-8 31 24Z" fill="#9F3F56" opacity=".34"/>
+    <path d="M38 101 68 64l8 8-28 35Z" fill="#B76A35" opacity=".38"/>
+    <rect x="49" y="49" width="30" height="30" rx="8" fill="#F5F3EE" transform="rotate(45 64 64)"/>
+    <circle cx="64" cy="64" r="5" fill="#17201C"/>
+  </g>
+  <text id="cuppet-loom-horizontal-wordmark"
+        x="158"
+        y="98"
+        fill="#17201C"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="72"
+        font-weight="700"
+        letter-spacing="-3">Cuppet</text>
+</svg>

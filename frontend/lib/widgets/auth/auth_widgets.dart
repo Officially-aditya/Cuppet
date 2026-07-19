@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
+import '../cuppet_logo.dart';
 import '../workspace_primitives.dart';
 
 /// Shared logo badge used on sign-in / sign-up screens.
@@ -10,12 +11,21 @@ class AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Image.asset(
-        'assets/logos/cuppet.png',
-        width: 240,
-        height: 132,
-        fit: BoxFit.contain,
-        semanticLabel: 'Cuppet logo',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CuppetMark(size: 78),
+          const SizedBox(width: SydneySpacing.md),
+          Text(
+            'Cuppet',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+              color: CuppetWorkspaceColors.ink,
+              fontSize: 38,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -419,10 +429,7 @@ class AuthSecondaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(SydneyRadius.md),
         ),
         minimumSize: const Size.fromHeight(50),
-        textStyle: const TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
       ),
       child: child,
     );

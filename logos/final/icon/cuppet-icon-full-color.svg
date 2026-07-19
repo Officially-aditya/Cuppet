@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 128 128"
+     role="img"
+     aria-labelledby="cuppet-icon-full-color-title cuppet-icon-full-color-desc">
+  <title id="cuppet-icon-full-color-title">Cuppet Courier mark</title>
+  <desc id="cuppet-icon-full-color-desc">A colorful origami messenger in flight, representing an AI agent carrying work and returning with a message.</desc>
+  <defs>
+    <linearGradient id="cuppet-icon-full-color-coral" x1="37" y1="13" x2="76" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9A7F"/>
+      <stop offset="1" stop-color="#C94F66"/>
+    </linearGradient>
+    <linearGradient id="cuppet-icon-full-color-indigo" x1="38" y1="52" x2="109" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5D579D"/>
+      <stop offset="1" stop-color="#29264F"/>
+    </linearGradient>
+    <linearGradient id="cuppet-icon-full-color-teal" x1="30" y1="110" x2="75" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B625B"/>
+      <stop offset="1" stop-color="#2BA898"/>
+    </linearGradient>
+    <linearGradient id="cuppet-icon-full-color-amber" x1="78" y1="38" x2="112" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4C66D"/>
+      <stop offset="1" stop-color="#DB8833"/>
+    </linearGradient>
+  </defs>
+  <g id="cuppet-icon-full-color-bird" stroke-linejoin="round">
+    <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#55508F"/>
+    <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#E56B61"/>
+    <path d="m47 57-10-44 42 26Z" fill="url(#cuppet-icon-full-color-coral)"/>
+    <path d="m41 71-12 43 44-31Z" fill="url(#cuppet-icon-full-color-teal)"/>
+    <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#cuppet-icon-full-color-indigo)"/>
+    <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+    <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#cuppet-icon-full-color-amber)"/>
+    <path d="m108 55 17 7-18 6Z" fill="#F58A73"/>
+    <path d="m72 84 18-25 18 9Z" fill="#3F356D" opacity=".65"/>
+  </g>
+  <circle id="cuppet-icon-full-color-eye" cx="101" cy="53" r="3" fill="#17201C"/>
+</svg>

@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1200 820"
+     role="img"
+     aria-labelledby="cuppet-final-preview-title cuppet-final-preview-desc">
+  <title id="cuppet-final-preview-title">Cuppet Courier final logo system</title>
+  <desc id="cuppet-final-preview-desc">A presentation board showing the Cuppet Courier logo on light and dark backgrounds with app-icon and monochrome treatments.</desc>
+  <defs>
+    <linearGradient id="cuppet-final-preview-coral" x1="37" y1="13" x2="76" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9A7F"/>
+      <stop offset="1" stop-color="#C94F66"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-indigo" x1="38" y1="52" x2="109" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5D579D"/>
+      <stop offset="1" stop-color="#29264F"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-teal" x1="30" y1="110" x2="75" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B625B"/>
+      <stop offset="1" stop-color="#2BA898"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-amber" x1="78" y1="38" x2="112" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4C66D"/>
+      <stop offset="1" stop-color="#DB8833"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-dark-coral" x1="37" y1="13" x2="76" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFAD98"/>
+      <stop offset="1" stop-color="#E56B7D"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-dark-indigo" x1="38" y1="52" x2="109" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8C84D0"/>
+      <stop offset="1" stop-color="#554F91"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-dark-teal" x1="30" y1="110" x2="75" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#168177"/>
+      <stop offset="1" stop-color="#45C6B3"/>
+    </linearGradient>
+    <linearGradient id="cuppet-final-preview-dark-amber" x1="78" y1="38" x2="112" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8D58C"/>
+      <stop offset="1" stop-color="#E8A14E"/>
+    </linearGradient>
+    <mask id="cuppet-final-preview-dark-mark-mask">
+      <rect width="128" height="128" fill="#FFFFFF"/>
+      <circle cx="101" cy="53" r="3" fill="#000000"/>
+    </mask>
+    <mask id="cuppet-final-preview-light-mark-mask">
+      <rect width="128" height="128" fill="#FFFFFF"/>
+      <circle cx="101" cy="53" r="3" fill="#000000"/>
+    </mask>
+  </defs>
+
+  <rect width="1200" height="820" rx="32" fill="#F5F3EE"/>
+  <text x="64" y="72"
+        fill="#17201C"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="34"
+        font-weight="700"
+        letter-spacing="-1">Cuppet Courier · selected direction</text>
+  <text x="64" y="106"
+        fill="#706E6A"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="17"
+        font-weight="500">AI agents as contacts that carry work and return with messages</text>
+
+  <g id="cuppet-final-preview-primary">
+    <rect x="48" y="142" width="1104" height="180" rx="26" fill="#FCFBFA" stroke="#D4D9D2" stroke-width="2"/>
+    <g transform="translate(88 160)">
+      <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#55508F"/>
+      <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#E56B61"/>
+      <path d="m47 57-10-44 42 26Z" fill="url(#cuppet-final-preview-coral)"/>
+      <path d="m41 71-12 43 44-31Z" fill="url(#cuppet-final-preview-teal)"/>
+      <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#cuppet-final-preview-indigo)"/>
+      <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+      <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#cuppet-final-preview-amber)"/>
+      <path d="m108 55 17 7-18 6Z" fill="#F58A73"/>
+      <path d="m72 84 18-25 18 9Z" fill="#3F356D" opacity=".65"/>
+      <circle cx="101" cy="53" r="3" fill="#17201C"/>
+      <text x="154" y="98"
+            fill="#17201C"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="72"
+            font-weight="700"
+            letter-spacing="-3">Cuppet</text>
+    </g>
+    <text x="866" y="235"
+          fill="#706E6A"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="16"
+          font-weight="600"
+          letter-spacing="1.2">PRIMARY · LIGHT</text>
+  </g>
+
+  <g id="cuppet-final-preview-on-dark">
+    <rect x="48" y="350" width="1104" height="180" rx="26" fill="#17201C"/>
+    <g transform="translate(88 368)">
+      <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#7770B5"/>
+      <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#F07B72"/>
+      <path d="m47 57-10-44 42 26Z" fill="url(#cuppet-final-preview-dark-coral)"/>
+      <path d="m41 71-12 43 44-31Z" fill="url(#cuppet-final-preview-dark-teal)"/>
+      <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#cuppet-final-preview-dark-indigo)"/>
+      <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+      <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#cuppet-final-preview-dark-amber)"/>
+      <path d="m108 55 17 7-18 6Z" fill="#FF9A87"/>
+      <path d="m72 84 18-25 18 9Z" fill="#756DAF" opacity=".8"/>
+      <circle cx="101" cy="53" r="3" fill="#17201C"/>
+      <text x="154" y="98"
+            fill="#F5F3EE"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="72"
+            font-weight="700"
+            letter-spacing="-3">Cuppet</text>
+    </g>
+    <text x="876" y="443"
+          fill="#BEC9C2"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="16"
+          font-weight="600"
+          letter-spacing="1.2">REVERSED · DARK</text>
+  </g>
+
+  <g id="cuppet-final-preview-icons">
+    <rect x="48" y="558" width="1104" height="210" rx="26" fill="#FCFBFA" stroke="#D4D9D2" stroke-width="2"/>
+    <g transform="translate(104 584)">
+      <rect x="4" y="4" width="120" height="120" rx="30" fill="#F5F3EE" stroke="#EAE9E8" stroke-width="2"/>
+      <g transform="translate(12 11) scale(.82)">
+        <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#55508F"/>
+        <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#E56B61"/>
+        <path d="m47 57-10-44 42 26Z" fill="url(#cuppet-final-preview-coral)"/>
+        <path d="m41 71-12 43 44-31Z" fill="url(#cuppet-final-preview-teal)"/>
+        <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#cuppet-final-preview-indigo)"/>
+        <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+        <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#cuppet-final-preview-amber)"/>
+        <path d="m108 55 17 7-18 6Z" fill="#F58A73"/>
+        <path d="m72 84 18-25 18 9Z" fill="#3F356D" opacity=".65"/>
+        <circle cx="101" cy="53" r="3" fill="#17201C"/>
+      </g>
+      <text x="64" y="158"
+            text-anchor="middle"
+            fill="#706E6A"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="14"
+            font-weight="600">APP ICON</text>
+    </g>
+
+    <g transform="translate(438 584)">
+      <g fill="#17201C" mask="url(#cuppet-final-preview-dark-mark-mask)">
+        <path d="m13 47 35 9-7 16-28-8 17-7Z"/>
+        <path d="m13 88 28-16 8 8-26 21 7-18Z"/>
+        <path d="m47 57-10-44 42 26Z"/>
+        <path d="m41 71-12 43 44-31Z"/>
+        <path d="m45 56 34-18 31 24-38 22-31-13Z"/>
+        <path d="m45 56 34-18-7 46-31-13Z"/>
+        <path d="m79 38 25 9 9 14-5 7-18-9Z"/>
+        <path d="m108 55 17 7-18 6Z"/>
+        <path d="m72 84 18-25 18 9Z"/>
+      </g>
+      <text x="64" y="158"
+            text-anchor="middle"
+            fill="#706E6A"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="14"
+            font-weight="600">MONO DARK</text>
+    </g>
+
+    <g transform="translate(762 574)">
+      <rect width="180" height="144" rx="24" fill="#17201C"/>
+      <g transform="translate(26 8)" fill="#F5F3EE" mask="url(#cuppet-final-preview-light-mark-mask)">
+        <path d="m13 47 35 9-7 16-28-8 17-7Z"/>
+        <path d="m13 88 28-16 8 8-26 21 7-18Z"/>
+        <path d="m47 57-10-44 42 26Z"/>
+        <path d="m41 71-12 43 44-31Z"/>
+        <path d="m45 56 34-18 31 24-38 22-31-13Z"/>
+        <path d="m45 56 34-18-7 46-31-13Z"/>
+        <path d="m79 38 25 9 9 14-5 7-18-9Z"/>
+        <path d="m108 55 17 7-18 6Z"/>
+        <path d="m72 84 18-25 18 9Z"/>
+      </g>
+      <text x="90" y="175"
+            text-anchor="middle"
+            fill="#706E6A"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="14"
+            font-weight="600">MONO LIGHT</text>
+    </g>
+  </g>
+</svg>

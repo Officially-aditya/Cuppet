@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../../models/agent.dart';
+import '../cuppet_logo.dart';
 import '../workspace_primitives.dart';
 
 class AgentListItem extends StatelessWidget {
@@ -109,14 +110,15 @@ class _AgentAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background =
-        agent.isAssistant
-            ? CuppetWorkspaceColors.primary
-            : CuppetWorkspaceColors.softSage;
-    final foreground =
-        agent.isAssistant
-            ? CuppetWorkspaceColors.card
-            : CuppetWorkspaceColors.primaryInk;
+    if (agent.isAssistant) {
+      return CuppetAssistantAvatar(
+        key: ValueKey('assistant-avatar-${agent.id}'),
+        size: 44,
+      );
+    }
+
+    final background = CuppetWorkspaceColors.softSage;
+    final foreground = CuppetWorkspaceColors.primaryInk;
 
     return Container(
       width: 44,
@@ -124,10 +126,7 @@ class _AgentAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(SydneyRadius.md),
-        border:
-            agent.isAssistant
-                ? null
-                : Border.all(color: CuppetWorkspaceColors.panelBorder),
+        border: Border.all(color: CuppetWorkspaceColors.panelBorder),
       ),
       alignment: Alignment.center,
       child: Text(

@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1200 690"
+     role="img"
+     aria-labelledby="cuppet-concepts-preview-title cuppet-concepts-preview-desc">
+  <title id="cuppet-concepts-preview-title">Three Cuppet logo concepts</title>
+  <desc id="cuppet-concepts-preview-desc">A comparison board showing Conductor, Handoff Loom, and Courier logo directions for Cuppet.</desc>
+  <defs>
+    <linearGradient id="cuppet-preview-loom-teal" x1="18" y1="18" x2="70" y2="62" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#20A092"/>
+      <stop offset="1" stop-color="#075E59"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-loom-coral" x1="72" y1="24" x2="108" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F58A73"/>
+      <stop offset="1" stop-color="#BE4E60"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-loom-amber" x1="106" y1="78" x2="56" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4C66D"/>
+      <stop offset="1" stop-color="#D68632"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-loom-indigo" x1="50" y1="110" x2="18" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#55508F"/>
+      <stop offset="1" stop-color="#29264F"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-courier-coral" x1="37" y1="13" x2="76" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9A7F"/>
+      <stop offset="1" stop-color="#C94F66"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-courier-indigo" x1="38" y1="52" x2="109" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5D579D"/>
+      <stop offset="1" stop-color="#29264F"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-courier-teal" x1="30" y1="110" x2="75" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B625B"/>
+      <stop offset="1" stop-color="#2BA898"/>
+    </linearGradient>
+    <linearGradient id="cuppet-preview-courier-amber" x1="78" y1="38" x2="112" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4C66D"/>
+      <stop offset="1" stop-color="#DB8833"/>
+    </linearGradient>
+  </defs>
+  <rect id="cuppet-preview-background" width="1200" height="690" rx="32" fill="#F5F3EE"/>
+  <text x="64" y="74"
+        fill="#17201C"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="34"
+        font-weight="700"
+        letter-spacing="-1">Cuppet · logo directions</text>
+  <text x="64" y="108"
+        fill="#706E6A"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="17"
+        font-weight="500">Distinctive shapes for delegation, movement, and messages</text>
+
+  <g id="cuppet-preview-conductor">
+    <rect x="48" y="150" width="1104" height="146" rx="24" fill="#FCFBFA" stroke="#D4D9D2" stroke-width="2"/>
+    <g transform="translate(76 159)">
+      <path d="M111 31 A49 49 0 1 0 111 113"
+            fill="none"
+            stroke="#006046"
+            stroke-width="19"
+            stroke-linecap="round"/>
+      <path d="M76 72 112 40 M76 72h47 M76 72l36 32"
+            fill="none"
+            stroke="#3F7D57"
+            stroke-width="8"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+      <circle cx="76" cy="72" r="10" fill="#006046"/>
+      <circle cx="115" cy="38" r="9" fill="#D9A441"/>
+      <circle cx="125" cy="72" r="9" fill="#3F7D57"/>
+      <circle cx="115" cy="106" r="9" fill="#D9A441"/>
+      <text x="158" y="98"
+            fill="#17201C"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="72"
+            font-weight="700"
+            letter-spacing="-3">Cuppet</text>
+    </g>
+    <text x="740" y="208"
+          fill="#006046"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="19"
+          font-weight="700"
+          letter-spacing="1.2">01 · CONDUCTOR</text>
+    <text x="740" y="241"
+          fill="#706E6A"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="17">One workspace coordinating many agents</text>
+  </g>
+
+  <g id="cuppet-preview-loom">
+    <rect x="48" y="320" width="1104" height="146" rx="24" fill="#FCFBFA" stroke="#D4D9D2" stroke-width="2"/>
+    <g transform="translate(84 329)">
+      <path d="M17 48 46 18c4-4 8-4 13-1l24 14-31 31Z" fill="url(#cuppet-preview-loom-teal)"/>
+      <path d="m79 29 32 20c5 3 6 8 4 13L101 91 67 57Z" fill="url(#cuppet-preview-loom-coral)"/>
+      <path d="m101 86-28 27c-4 4-9 4-13 1L34 98l34-34Z" fill="url(#cuppet-preview-loom-amber)"/>
+      <path d="M38 101 16 76c-3-4-4-8-1-13l15-27 35 34Z" fill="url(#cuppet-preview-loom-indigo)"/>
+      <path d="m17 48 13-12 35 34-13 13Z" fill="#1F2858" opacity=".42"/>
+      <path d="m79 29 4 2-31 31-8-8Z" fill="#F5F3EE" opacity=".2"/>
+      <path d="m101 86-33-22 8-8 31 24Z" fill="#9F3F56" opacity=".34"/>
+      <path d="M38 101 68 64l8 8-28 35Z" fill="#B76A35" opacity=".38"/>
+      <rect x="49" y="49" width="30" height="30" rx="8" fill="#F5F3EE" transform="rotate(45 64 64)"/>
+      <circle cx="64" cy="64" r="5" fill="#17201C"/>
+      <text x="150" y="98"
+            fill="#17201C"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="72"
+            font-weight="700"
+            letter-spacing="-3">Cuppet</text>
+    </g>
+    <text x="740" y="378"
+          fill="#006046"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="19"
+          font-weight="700"
+          letter-spacing="1.2">02 · HANDOFF LOOM</text>
+    <text x="740" y="411"
+          fill="#706E6A"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="17">Colorful workstreams woven around a finished result</text>
+  </g>
+
+  <g id="cuppet-preview-courier">
+    <rect x="48" y="490" width="1104" height="146" rx="24" fill="#FCFBFA" stroke="#D4D9D2" stroke-width="2"/>
+    <g transform="translate(84 499)">
+      <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#55508F"/>
+      <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#E56B61"/>
+      <path d="m47 57-10-44 42 26Z" fill="url(#cuppet-preview-courier-coral)"/>
+      <path d="m41 71-12 43 44-31Z" fill="url(#cuppet-preview-courier-teal)"/>
+      <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#cuppet-preview-courier-indigo)"/>
+      <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+      <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#cuppet-preview-courier-amber)"/>
+      <path d="m108 55 17 7-18 6Z" fill="#F58A73"/>
+      <path d="m72 84 18-25 18 9Z" fill="#3F356D" opacity=".65"/>
+      <circle cx="101" cy="53" r="3" fill="#17201C"/>
+      <text x="150" y="98"
+            fill="#17201C"
+            font-family="'Avenir Next', Avenir, Arial, sans-serif"
+            font-size="72"
+            font-weight="700"
+            letter-spacing="-3">Cuppet</text>
+    </g>
+    <text x="740" y="548"
+          fill="#006046"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="19"
+          font-weight="700"
+          letter-spacing="1.2">03 · COURIER</text>
+    <text x="740" y="581"
+          fill="#706E6A"
+          font-family="'Avenir Next', Avenir, Arial, sans-serif"
+          font-size="17">A distinctive messenger that carries delegated work</text>
+  </g>
+</svg>

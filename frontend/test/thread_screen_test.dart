@@ -193,6 +193,29 @@ void main() {
     expect(find.text(testAgent.name), findsOneWidget);
   });
 
+  testWidgets('Assistant thread uses the Cuppet Courier avatar', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final assistant = testAgent.copyWith(
+      id: 'assistant-id',
+      threadId: 'assistant-id',
+      name: 'Assistant',
+      avatarInitials: 'CU',
+      isAssistant: true,
+    );
+
+    await tester.pumpWidget(
+      threadHost(agent: assistant, loadMessages: () async => []),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('assistant-thread-avatar')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('thread labels today, yesterday, and older calendar days', (
     tester,
   ) async {

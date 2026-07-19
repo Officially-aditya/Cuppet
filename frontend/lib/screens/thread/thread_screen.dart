@@ -20,6 +20,7 @@ import '../../widgets/thread/reply_bar.dart';
 import '../../widgets/thread/typing_indicator.dart';
 import '../../services/notification_clear_service.dart';
 import '../../services/api.dart';
+import '../../widgets/cuppet_logo.dart';
 import '../../widgets/sydney_primitives.dart';
 
 class ThreadScreen extends ConsumerStatefulWidget {
@@ -269,27 +270,33 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   },
                   child: Row(
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: CuppetWorkspaceColors.softSage,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: CuppetWorkspaceColors.panelBorder,
+                      if (agent.isAssistant)
+                        const CuppetAssistantAvatar(
+                          key: ValueKey('assistant-thread-avatar'),
+                          size: 32,
+                        )
+                      else
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: CuppetWorkspaceColors.softSage,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: CuppetWorkspaceColors.panelBorder,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            agent.avatarInitials,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelMedium?.copyWith(
+                              color: CuppetWorkspaceColors.primaryInk,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          agent.avatarInitials,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelMedium?.copyWith(
-                            color: CuppetWorkspaceColors.primaryInk,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
                       const SizedBox(width: SydneySpacing.md),
                       Flexible(
                         child: Column(

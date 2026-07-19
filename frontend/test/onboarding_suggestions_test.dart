@@ -145,6 +145,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TRY CUPPET'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('assistant-avatar-assistant-id')),
+      findsOneWidget,
+    );
     expect(find.text('Want AI to deliver news every morning?'), findsOneWidget);
     expect(
       find.text('Want to sharpen your coding skills daily?'),
@@ -238,9 +242,7 @@ void main() {
 
     expect(find.text('Your morning plan'), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey('open_briefing_in_assistant')),
-    );
+    await tester.tap(find.byKey(const ValueKey('open_briefing_in_assistant')));
     await tester.pump();
 
     expect(find.text('Your morning plan'), findsNothing);

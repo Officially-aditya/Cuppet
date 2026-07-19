@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 560 144"
+     role="img"
+     aria-labelledby="cuppet-conductor-horizontal-title cuppet-conductor-horizontal-desc">
+  <title id="cuppet-conductor-horizontal-title">Cuppet Conductor logo</title>
+  <desc id="cuppet-conductor-horizontal-desc">An open green letter C coordinates three connected nodes beside the Cuppet wordmark.</desc>
+  <g id="cuppet-conductor-horizontal-symbol" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M111 31 A49 49 0 1 0 111 113"
+          stroke="#006046"
+          stroke-width="19"/>
+    <path d="M76 72 112 40 M76 72h47 M76 72l36 32"
+          stroke="#3F7D57"
+          stroke-width="8"/>
+  </g>
+  <g id="cuppet-conductor-horizontal-nodes">
+    <circle cx="76" cy="72" r="10" fill="#006046"/>
+    <circle cx="115" cy="38" r="9" fill="#D9A441"/>
+    <circle cx="125" cy="72" r="9" fill="#3F7D57"/>
+    <circle cx="115" cy="106" r="9" fill="#D9A441"/>
+  </g>
+  <text id="cuppet-conductor-horizontal-wordmark"
+        x="158"
+        y="98"
+        fill="#17201C"
+        font-family="'Avenir Next', Avenir, Arial, sans-serif"
+        font-size="72"
+        font-weight="700"
+        letter-spacing="-3">Cuppet</text>
+</svg>
