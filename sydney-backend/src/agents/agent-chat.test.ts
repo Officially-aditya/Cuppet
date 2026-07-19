@@ -116,6 +116,19 @@ test("keeps grounded mode for follow-ups and weak wording", () => {
   );
 });
 
+test("explicit self-contained story searches use research even with incidental referent words", () => {
+  assert.equal(
+    classifyAgentChatMode(
+      'Search the web for "This startup launched a new battery" and explain what happened in detail.'
+    ),
+    "research"
+  );
+  assert.equal(
+    classifyAgentChatMode("search for more on that story"),
+    "grounded"
+  );
+});
+
 test("detects prior-thread referents", () => {
   assert.equal(refersToPriorContext("tell me about that"), true);
   assert.equal(refersToPriorContext("the second item"), true);

@@ -7,11 +7,13 @@ class NewsBriefTemplate extends StatelessWidget {
   const NewsBriefTemplate({
     required this.data,
     this.showEmptyState = true,
+    this.onAction,
     super.key,
   });
 
   final Map<String, dynamic> data;
   final bool showEmptyState;
+  final ValueChanged<Map<String, dynamic>>? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +92,18 @@ class NewsBriefTemplate extends StatelessWidget {
                 _NewsItemCard(
                   item: items[index],
                   featured: index == featuredIndex,
+                  onExplore:
+                      onAction == null
+                          ? null
+                          : () => onAction!({
+                            'type': 'explore_news',
+                            'headline':
+                                items[index]['headline']?.toString() ?? '',
+                            if (items[index]['source'] != null)
+                              'source': items[index]['source'].toString(),
+                            if (items[index]['url'] != null)
+                              'url': items[index]['url'].toString(),
+                          }),
                 ),
                 const SizedBox(height: SydneySpacing.sm),
               ],
@@ -263,10 +277,15 @@ bool _isDetailLabel(String value) {
 }
 
 class _NewsItemCard extends StatefulWidget {
-  const _NewsItemCard({required this.item, required this.featured});
+  const _NewsItemCard({
+    required this.item,
+    required this.featured,
+    this.onExplore,
+  });
 
   final Map<String, dynamic> item;
   final bool featured;
+  final VoidCallback? onExplore;
 
   @override
   State<_NewsItemCard> createState() => _NewsItemCardState();
@@ -281,6 +300,8 @@ class _NewsItemCardState extends State<_NewsItemCard> {
     final summary = widget.item['summary']?.toString() ?? '';
     final hasSummary = _hasVisibleText(summary);
     final category = _newsCategory(widget.item);
+    final source = widget.item['source']?.toString().trim();
+    final url = widget.item['url']?.toString().trim();
 
     if (headline == null || headline.isEmpty || !hasSummary) {
       return Padding(
@@ -298,137 +319,169 @@ class _NewsItemCardState extends State<_NewsItemCard> {
       );
     }
 
-    if (widget.featured) {
-      return Container(
-        key: const ValueKey('news-featured-story'),
-        width: double.infinity,
-        padding: const EdgeInsets.all(SydneySpacing.md),
-        decoration: BoxDecoration(
-          color: SydneyColors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(SydneyRadius.md),
-          border: Border.all(
-            color: SydneyColors.primary.withValues(alpha: 0.28),
+    return Container(
+      key:
+          widget.featured
+              ? const ValueKey('news-featured-story')
+              : ValueKey('news-story-$headline'),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color:
+            widget.featured
+                ? SydneyColors.surfaceContainerLow
+                : SydneyColors.surface,
+        borderRadius: BorderRadius.circular(SydneyRadius.sm),
+        border: Border.all(
+          color:
+              widget.featured
+                  ? SydneyColors.primary.withValues(alpha: 0.28)
+                  : SydneyColors.line,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            borderRadius: BorderRadius.circular(SydneyRadius.sm),
+            child: Padding(
+              padding: const EdgeInsets.all(SydneySpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    margin: const EdgeInsets.only(right: SydneySpacing.sm),
+                    decoration: BoxDecoration(
+                      color: SydneyColors.primarySoft,
+                      borderRadius: BorderRadius.circular(SydneyRadius.sm),
+                    ),
+                    child: Icon(
+                      widget.featured
+                          ? Icons.newspaper_rounded
+                          : Icons.article_outlined,
+                      color: SydneyColors.primary,
+                      size: 17,
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MarkdownText(
+                          text: headline,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: SydneyColors.onSurface,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: SydneySpacing.xs),
+                        Wrap(
+                          spacing: SydneySpacing.xs,
+                          runSpacing: SydneySpacing.xs,
+                          children: [
+                            if (widget.featured)
+                              const _NewsLabel(
+                                label: 'Top story',
+                                prominent: true,
+                              ),
+                            _NewsLabel(label: category),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: SydneySpacing.xs),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more_rounded,
+                      color: SydneyColors.onSurfaceVariant.withValues(
+                        alpha: 0.8,
+                      ),
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                _NewsLabel(label: 'Top story', prominent: true),
-                Spacer(),
-                Icon(
-                  Icons.newspaper_rounded,
-                  color: SydneyColors.primary,
-                  size: 18,
-                ),
-              ],
-            ),
-            const SizedBox(height: SydneySpacing.md),
-            MarkdownText(
-              text: headline,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: SydneyColors.onSurface,
-                fontWeight: FontWeight.w800,
-                height: 1.25,
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                SydneySpacing.md,
+                0,
+                SydneySpacing.md,
+                SydneySpacing.md,
               ),
-            ),
-            const SizedBox(height: SydneySpacing.sm),
-            _NewsLabel(label: category),
-            const SizedBox(height: SydneySpacing.sm),
-            MarkdownText(
-              text: summary,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.onSurfaceVariant,
-                height: 1.45,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return InkWell(
-      onTap: () => setState(() => _isExpanded = !_isExpanded),
-      borderRadius: BorderRadius.circular(SydneyRadius.sm),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(SydneySpacing.md),
-        decoration: BoxDecoration(
-          color: SydneyColors.surface,
-          borderRadius: BorderRadius.circular(SydneyRadius.sm),
-          border: Border.all(color: SydneyColors.line),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  margin: const EdgeInsets.only(right: SydneySpacing.sm),
-                  decoration: BoxDecoration(
-                    color: SydneyColors.primarySoft,
-                    borderRadius: BorderRadius.circular(SydneyRadius.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1, color: SydneyColors.line),
+                  const SizedBox(height: SydneySpacing.sm),
+                  MarkdownText(
+                    text: summary,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SydneyColors.onSurfaceVariant,
+                      height: 1.4,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.article_outlined,
-                    color: SydneyColors.primary,
-                    size: 17,
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      MarkdownText(
-                        text: headline,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.onSurface,
-                          fontWeight: FontWeight.w700,
-                          height: 1.3,
+                  if (source != null && source.isNotEmpty) ...[
+                    const SizedBox(height: SydneySpacing.sm),
+                    MarkdownText(
+                      text:
+                          url != null && url.isNotEmpty
+                              ? 'Source: [$source]($url)'
+                              : 'Source: $source',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: SydneyColors.mutedInk,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  if (widget.onExplore != null) ...[
+                    const SizedBox(height: SydneySpacing.xs),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: widget.onExplore,
+                        icon: const Icon(
+                          Icons.travel_explore_rounded,
+                          size: 15,
+                        ),
+                        label: const Text('Explore more'),
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: SydneySpacing.sm,
+                            vertical: SydneySpacing.xs,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: SydneyColors.primary,
+                          textStyle: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                       ),
-                      const SizedBox(height: SydneySpacing.xs),
-                      _NewsLabel(label: category),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: SydneySpacing.xs),
-                AnimatedRotation(
-                  turns: _isExpanded ? 0.5 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.expand_more_rounded,
-                    color: SydneyColors.onSurfaceVariant.withValues(alpha: 0.8),
-                    size: 16,
-                  ),
-                ),
-              ],
-            ),
-            AnimatedCrossFade(
-              firstChild: const SizedBox(width: double.infinity),
-              secondChild: Padding(
-                padding: const EdgeInsets.only(top: SydneySpacing.sm, left: 40),
-                child: MarkdownText(
-                  text: summary,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: SydneyColors.onSurfaceVariant,
-                    height: 1.35,
-                  ),
-                ),
+                    ),
+                  ],
+                ],
               ),
-              crossFadeState:
-                  _isExpanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 200),
-              sizeCurve: Curves.easeInOut,
             ),
-          ],
-        ),
+            crossFadeState:
+                _isExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
       ),
     );
   }

@@ -6,7 +6,7 @@ import {
   splitAgentMessageContent
 } from "./message-parts.js";
 
-test("splits an enriched five-story news brief into three semantic parts", () => {
+test("splits news into a TLDR message and one detailed story message", () => {
   const content: AgentMessageContent = {
     template: "news_brief",
     version: "1.0",
@@ -42,19 +42,29 @@ test("splits an enriched five-story news brief into three semantic parts", () =>
   };
 
   const parts = splitAgentMessageContent(content, "run-news");
-  assert.equal(parts.length, 3);
+  assert.equal(parts.length, 2);
   assert.deepEqual(
     parts.map((part) => part.presentation),
     [
-      { group_id: "run-news", part_index: 0, part_count: 3 },
-      { group_id: "run-news", part_index: 1, part_count: 3 },
-      { group_id: "run-news", part_index: 2, part_count: 3 }
+      { group_id: "run-news", part_index: 0, part_count: 2 },
+      { group_id: "run-news", part_index: 1, part_count: 2 }
     ]
   );
   assert.equal(parts[0]!.template, "news_brief");
-  if (parts[0]!.template !== "news_brief") return;
-  assert.equal(parts[0]!.data.items.length, 2);
+  assert.equal(parts[1]!.template, "news_brief");
+  if (
+    parts[0]!.template !== "news_brief" ||
+    parts[1]!.template !== "news_brief"
+  ) {
+    return;
+  }
+  assert.equal(parts[0]!.data.items.length, 0);
   assert.equal(parts[0]!.data.tldr?.length, 3);
+  assert.equal(parts[0]!.data.why_it_matters, undefined);
+  assert.equal(parts[1]!.data.items.length, 5);
+  assert.equal(parts[1]!.data.tldr, undefined);
+  assert.equal(parts[1]!.data.why_it_matters, content.data.why_it_matters);
+  assert.match(parts[1]!.data.title, /Detailed coverage$/);
 
   const merged = mergeAgentMessageContents(parts);
   assert.deepEqual(merged, content);

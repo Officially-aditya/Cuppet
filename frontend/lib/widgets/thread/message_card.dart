@@ -130,7 +130,9 @@ class MessageCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (!isUser && message.isMultipart) ...[
+            if (!isUser &&
+                message.isMultipart &&
+                message.template != 'news_brief') ...[
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: SydneySpacing.sm,
@@ -258,6 +260,11 @@ class _TemplateRouter extends StatelessWidget {
       'news_brief' => NewsBriefTemplate(
         data: data,
         showEmptyState: !message.isMultipart,
+        onAction: (actionData) {
+          if (onAction != null) {
+            onAction!({...actionData, 'messageId': message.id});
+          }
+        },
       ),
       'study_guide' => StudyGuideTemplate(
         data: data,

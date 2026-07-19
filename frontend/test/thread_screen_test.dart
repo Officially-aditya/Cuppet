@@ -242,6 +242,78 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('news Explore more sends a self-contained web research request', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    const sourceMessageId = '6e8bc625-abb8-43d7-aaf1-7986d9479f6a';
+    final messageService = _RecordingMessageService();
+    final messages = [
+      Message(
+        id: sourceMessageId,
+        threadId: testAgent.threadId,
+        sender: MessageSender.agent,
+        createdAt: _testDate,
+        content: const {
+          'template': 'news_brief',
+          'data': {
+            'title': 'AI news — Detailed coverage',
+            'items': [
+              {
+                'headline': 'A new efficient AI model launched',
+                'summary':
+                    'The model reduces serving costs while keeping benchmark quality.',
+                'category': 'AI',
+                'source': 'Example News',
+                'url': 'https://example.com/model',
+              },
+            ],
+          },
+        },
+      ),
+    ];
+
+    await tester.pumpWidget(
+      threadHost(
+        loadMessages: () async => messages,
+        messageService: messageService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final story = find.byKey(const ValueKey('news-featured-story'));
+    final storyDetails = find.descendant(
+      of: story,
+      matching: find.byType(AnimatedCrossFade),
+    );
+    expect(
+      tester.widget<AnimatedCrossFade>(storyDetails).crossFadeState,
+      CrossFadeState.showFirst,
+    );
+    await tester.tap(find.text('A new efficient AI model launched'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<AnimatedCrossFade>(storyDetails).crossFadeState,
+      CrossFadeState.showSecond,
+    );
+    expect(find.text('Explore more'), findsOneWidget);
+
+    await tester.tap(find.text('Explore more'));
+    await tester.pump();
+
+    expect(
+      messageService.sentText,
+      'Search the web for "A new efficient AI model launched" and explain in '
+      'detail what happened, the verified timeline, why it matters, and the '
+      'latest developments. Include source links.',
+    );
+    expect(messageService.sentSourceMessageId, sourceMessageId);
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('thread exposes Drive history only behind an explicit boundary', (
     tester,
   ) async {

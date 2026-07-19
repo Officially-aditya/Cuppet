@@ -118,7 +118,7 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.expand_more_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.expand_more_rounded), findsNWidgets(2));
     expect(find.byKey(const ValueKey('news-featured-story')), findsOneWidget);
     expect(find.text('Focus'), findsOneWidget);
 

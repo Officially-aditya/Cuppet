@@ -57,7 +57,7 @@ void main() {
         'presentation': {
           'group_id': 'run-news',
           'part_index': 0,
-          'part_count': 3,
+          'part_count': 2,
         },
         'data': {
           'title': 'AI news',
@@ -76,7 +76,7 @@ void main() {
       ),
     );
 
-    expect(find.text('PART 1 OF 3'), findsOneWidget);
+    expect(find.text('PART 1 OF 2'), findsNothing);
     expect(find.text('TL;DR'), findsOneWidget);
     expect(find.text('No content for this run.'), findsNothing);
   });

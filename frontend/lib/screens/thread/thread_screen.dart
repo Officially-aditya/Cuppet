@@ -763,6 +763,30 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final actionId = action['id']?.toString() ?? '';
     final connectorId = _connectorIdFromAction(action);
 
+    if (actionType == 'explore_news') {
+      final rawHeadline = action['headline']?.toString() ?? '';
+      final normalizedHeadline =
+          rawHeadline
+              .replaceAll(RegExp(r'\s+'), ' ')
+              .replaceAll('"', "'")
+              .trim();
+      if (normalizedHeadline.isEmpty) return;
+      final headline =
+          normalizedHeadline.length > 500
+              ? normalizedHeadline.substring(0, 500)
+              : normalizedHeadline;
+      final sourceMessageId = action['messageId']?.toString().trim();
+      await _sendReply(
+        'Search the web for "$headline" and explain in detail what happened, '
+        'the verified timeline, why it matters, and the latest developments. '
+        'Include source links.',
+        const [],
+        sourceMessageId:
+            sourceMessageId?.isNotEmpty == true ? sourceMessageId : null,
+      );
+      return;
+    }
+
     if (actionType == 'open_in_assistant') {
       final messageId = action['messageId']?.toString();
       if (messageId == null || messageId.isEmpty) return;

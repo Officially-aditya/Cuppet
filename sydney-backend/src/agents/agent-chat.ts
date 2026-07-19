@@ -15,6 +15,7 @@ import {
 import {
   appendManualWebSearchSources,
   loadManualWebSearchEvidence,
+  manualWebSearchQuery,
   manualWebSearchEvidenceBlock,
   type ManualWebSearchEvidence
 } from "./manual-web-search.js";
@@ -183,6 +184,9 @@ export function classifyAgentChatMode(
   const trimmed = text.trim();
   if (!trimmed) return "grounded";
   const lower = trimmed.toLowerCase();
+  if (manualWebSearchQuery(trimmed)) {
+    return "research";
+  }
   if (refersToPriorContext(lower)) {
     // "search for more on that story" stays grounded (or hybrid later).
     return "grounded";
