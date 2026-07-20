@@ -28,6 +28,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-3.1-flash-lite"),
   TAVILY_API_KEY: z.string().optional(),
+  FIRECRAWL_API_KEY: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   appendManualWebSearchSources,
   manualWebSearchQuery,
+  searchFirecrawl,
   searchTavily
 } from "./manual-web-search.js";
 
@@ -108,6 +109,65 @@ test("Tavily empty results allow native search fallback", async () => {
   });
 
   assert.equal(evidence, null);
+});
+
+test("Firecrawl search sends a bounded web request and normalizes results", async () => {
+  let requestUrl = "";
+  let requestHeaders: Headers | undefined;
+  let requestBody: Record<string, unknown> | undefined;
+
+  const evidence = await searchFirecrawl("battery news", {
+    apiKey: "fc-test",
+    fetchImpl: async (input, init) => {
+      requestUrl = String(input);
+      requestHeaders = new Headers(init?.headers);
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          id: "firecrawl-job-123",
+          data: {
+            web: [
+              {
+                title: "Battery update",
+                url: "https://example.com/firecrawl#section",
+                description: "A manufacturer opened a battery pilot."
+              },
+              {
+                title: "Unsafe URL",
+                url: "file:///tmp/private",
+                description: "Must be discarded."
+              },
+              {
+                title: "Empty result",
+                url: "https://example.com/empty",
+                description: ""
+              }
+            ]
+          }
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }
+  });
+
+  assert.equal(requestUrl, "https://api.firecrawl.dev/v2/search");
+  assert.equal(requestHeaders?.get("authorization"), "Bearer fc-test");
+  assert.deepEqual(requestBody, {
+    query: "battery news",
+    limit: 3,
+    sources: ["web"],
+    timeout: 6000
+  });
+  assert.equal(evidence?.provider, "firecrawl");
+  assert.equal(evidence?.requestId, "firecrawl-job-123");
+  assert.deepEqual(evidence?.results, [
+    {
+      title: "Battery update",
+      url: "https://example.com/firecrawl",
+      content: "A manufacturer opened a battery pilot."
+    }
+  ]);
 });
 
 test("manual search answers always expose the retrieved source links", () => {

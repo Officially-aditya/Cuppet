@@ -5,6 +5,7 @@ import {
 } from "../security/prompt-guard.js";
 
 const tavilySearchUrl = "https://api.tavily.com/search";
+const firecrawlSearchUrl = "https://api.firecrawl.dev/v2/search";
 const maxSearchResults = 3;
 
 export type ManualWebSearchResult = {
@@ -16,7 +17,7 @@ export type ManualWebSearchResult = {
 };
 
 export type ManualWebSearchEvidence = {
-  provider: "tavily";
+  provider: "tavily" | "firecrawl";
   query: string;
   results: ManualWebSearchResult[];
   requestId?: string;
@@ -27,6 +28,8 @@ type TavilySearchOptions = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 };
+
+type FirecrawlSearchOptions = TavilySearchOptions;
 
 export function manualWebSearchQuery(text: string): string | null {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -56,13 +59,25 @@ export async function loadManualWebSearchEvidence(
   text: string
 ): Promise<ManualWebSearchEvidence | null> {
   const query = manualWebSearchQuery(text);
-  if (!query || !config.TAVILY_API_KEY) return null;
+  if (!query) return null;
 
-  try {
-    return await searchTavily(query);
-  } catch {
-    return null;
+  const searches = [
+    ...(config.TAVILY_API_KEY
+      ? [() => searchTavily(query)]
+      : []),
+    ...(config.FIRECRAWL_API_KEY
+      ? [() => searchFirecrawl(query)]
+      : [])
+  ];
+  for (const search of searches) {
+    try {
+      const evidence = await search();
+      if (evidence) return evidence;
+    } catch {
+      // Try the next configured provider. Native model search is the final fallback.
+    }
   }
+  return null;
 }
 
 export async function searchTavily(
@@ -113,12 +128,63 @@ export async function searchTavily(
   };
 }
 
+export async function searchFirecrawl(
+  query: string,
+  options: FirecrawlSearchOptions = {}
+): Promise<ManualWebSearchEvidence | null> {
+  const apiKey = options.apiKey ?? config.FIRECRAWL_API_KEY;
+  if (!apiKey) return null;
+
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const timeoutMs = options.timeoutMs ?? 6_000;
+  const response = await fetchImpl(firecrawlSearchUrl, {
+    method: "POST",
+    signal: AbortSignal.timeout(timeoutMs),
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      query: query.slice(0, 500),
+      limit: maxSearchResults,
+      sources: ["web"],
+      timeout: timeoutMs
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Firecrawl search failed (${response.status}).`);
+  }
+
+  const payload = (await response.json()) as Record<string, unknown>;
+  const data =
+    payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)
+      ? (payload.data as Record<string, unknown>)
+      : {};
+  const rawResults = Array.isArray(data.web) ? data.web : [];
+  const results = rawResults
+    .map(normalizeFirecrawlResult)
+    .filter((result): result is ManualWebSearchResult => result !== null)
+    .slice(0, maxSearchResults);
+  if (results.length === 0) return null;
+
+  return {
+    provider: "firecrawl",
+    query,
+    results,
+    ...(typeof payload.id === "string"
+      ? { requestId: payload.id.slice(0, 200) }
+      : {})
+  };
+}
+
 export function manualWebSearchEvidenceBlock(
   evidence: ManualWebSearchEvidence
 ): string {
   return untrustedDataBlock(
-    "tavily_search_results",
+    "web_search_results",
     JSON.stringify({
+      provider: evidence.provider,
       query: evidence.query,
       results: evidence.results
     }),
@@ -180,6 +246,31 @@ function normalizeTavilyResult(value: unknown): ManualWebSearchResult | null {
       ? { publishedDate: result.published_date.slice(0, 100) }
       : {})
   };
+}
+
+function normalizeFirecrawlResult(
+  value: unknown
+): ManualWebSearchResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  const url = safeWebUrl(result.url);
+  if (!url) return null;
+
+  const title = sanitizeUntrustedText(
+    typeof result.title === "string" ? result.title : url,
+    300
+  );
+  const content = sanitizeUntrustedText(
+    typeof result.description === "string"
+      ? result.description
+      : typeof result.markdown === "string"
+        ? result.markdown
+        : "",
+    2400
+  );
+  if (!content) return null;
+
+  return { title, url, content };
 }
 
 function safeWebUrl(value: unknown): string | null {

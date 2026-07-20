@@ -29,9 +29,10 @@ test("Assistant uses Tavily evidence for explicit manual search", async () => {
     );
 
     assert.equal(requests.tavily.length, 1);
+    assert.equal(requests.firecrawl.length, 0);
     assert.equal(requests.gemini.length, 1);
     assert.equal(requests.gemini[0]?.tools, undefined);
-    assert.match(JSON.stringify(requests.gemini[0]), /tavily_search_results/);
+    assert.match(JSON.stringify(requests.gemini[0]), /web_search_results/);
     assert.match(reply, /https:\/\/example\.com\/battery/);
   });
 });
@@ -51,17 +52,18 @@ test("agent chat uses Tavily only for explicit manual research", async () => {
     });
 
     assert.equal(requests.tavily.length, 1);
+    assert.equal(requests.firecrawl.length, 0);
     assert.equal(requests.gemini.length, 1);
     assert.equal(requests.gemini[0]?.tools, undefined);
     const geminiRequest = JSON.stringify(requests.gemini[0]);
-    assert.match(geminiRequest, /tavily_search_results/);
+    assert.match(geminiRequest, /web_search_results/);
     assert.doesNotMatch(geminiRequest, /Old output/);
     assert.doesNotMatch(geminiRequest, /Old conversation/);
     assert.match(reply, /https:\/\/example\.com\/battery/);
   });
 });
 
-test("Tavily failure falls back to Gemini native search", async () => {
+test("Tavily failure falls back to Firecrawl search", async () => {
   await withSearchProviders(
     async (requests) => {
       const reply = await createAssistantChatReply(
@@ -69,10 +71,27 @@ test("Tavily failure falls back to Gemini native search", async () => {
       );
 
       assert.equal(requests.tavily.length, 1);
+      assert.equal(requests.firecrawl.length, 1);
+      assert.equal(requests.gemini[0]?.tools, undefined);
+      assert.match(reply, /https:\/\/example\.com\/firecrawl-battery/);
+    },
+    { tavilyStatus: 503 }
+  );
+});
+
+test("external search failures fall back to Gemini native search", async () => {
+  await withSearchProviders(
+    async (requests) => {
+      const reply = await createAssistantChatReply(
+        "search for new solid-state battery announcements"
+      );
+
+      assert.equal(requests.tavily.length, 1);
+      assert.equal(requests.firecrawl.length, 1);
       assert.deepEqual(requests.gemini[0]?.tools, [{ googleSearch: {} }]);
       assert.equal(reply, "Native grounded answer");
     },
-    { tavilyStatus: 503, nativeGrounding: true }
+    { tavilyStatus: 503, firecrawlStatus: 429, nativeGrounding: true }
   );
 });
 
@@ -84,6 +103,7 @@ test("non-manual current-information queries skip Tavily", async () => {
       );
 
       assert.equal(requests.tavily.length, 0);
+      assert.equal(requests.firecrawl.length, 0);
       assert.deepEqual(requests.gemini[0]?.tools, [{ googleSearch: {} }]);
     },
     { nativeGrounding: true }
@@ -93,16 +113,23 @@ test("non-manual current-information queries skip Tavily", async () => {
 async function withSearchProviders(
   run: (requests: {
     tavily: Record<string, unknown>[];
+    firecrawl: Record<string, unknown>[];
     gemini: Record<string, unknown>[];
   }) => Promise<void>,
-  options: { tavilyStatus?: number; nativeGrounding?: boolean } = {}
+  options: {
+    tavilyStatus?: number;
+    firecrawlStatus?: number;
+    nativeGrounding?: boolean;
+  } = {}
 ): Promise<void> {
   const originalProvider = config.LLM_PROVIDER;
   const originalGeminiKey = config.GEMINI_API_KEY;
   const originalTavilyKey = config.TAVILY_API_KEY;
+  const originalFirecrawlKey = config.FIRECRAWL_API_KEY;
   const originalFetch = globalThis.fetch;
   const requests = {
     tavily: [] as Record<string, unknown>[],
+    firecrawl: [] as Record<string, unknown>[],
     gemini: [] as Record<string, unknown>[]
   };
 
@@ -110,6 +137,7 @@ async function withSearchProviders(
     config.LLM_PROVIDER = "gemini";
     config.GEMINI_API_KEY = "test-gemini-key";
     config.TAVILY_API_KEY = "tvly-test";
+    config.FIRECRAWL_API_KEY = "fc-test";
     globalThis.fetch = async (input, init) => {
       const url = String(input);
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
@@ -130,6 +158,32 @@ async function withSearchProviders(
                 ]
               })
             : JSON.stringify({ detail: "Search unavailable" }),
+          {
+            status,
+            headers: { "content-type": "application/json" }
+          }
+        );
+      }
+      if (url === "https://api.firecrawl.dev/v2/search") {
+        requests.firecrawl.push(body);
+        const status = options.firecrawlStatus ?? 200;
+        return new Response(
+          status === 200
+            ? JSON.stringify({
+                success: true,
+                id: "firecrawl-request-123",
+                data: {
+                  web: [
+                    {
+                      title: "Firecrawl battery source",
+                      url: "https://example.com/firecrawl-battery",
+                      description:
+                        "A manufacturer opened a solid-state battery pilot."
+                    }
+                  ]
+                }
+              })
+            : JSON.stringify({ success: false, error: "Search unavailable" }),
           {
             status,
             headers: { "content-type": "application/json" }
@@ -182,6 +236,7 @@ async function withSearchProviders(
     config.LLM_PROVIDER = originalProvider;
     config.GEMINI_API_KEY = originalGeminiKey;
     config.TAVILY_API_KEY = originalTavilyKey;
+    config.FIRECRAWL_API_KEY = originalFirecrawlKey;
     globalThis.fetch = originalFetch;
   }
 }

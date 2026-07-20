@@ -203,10 +203,12 @@ The backend uses a provider-neutral model layer. Set `LLM_PROVIDER=gemini`
 
 Set `TAVILY_API_KEY` to route explicit user search commands such as
 `search for ...` through Tavily first. Tavily results are supplied to the
-selected model as bounded, untrusted evidence with source links. Missing keys,
-empty results, timeouts, and Tavily errors fall back to the selected model's
-native web-search tool. Ordinary chat and scheduled agent runs do not call
-Tavily.
+selected model as bounded, untrusted evidence with source links. Set
+`FIRECRAWL_API_KEY` to use Firecrawl Search as the next external provider when
+Tavily is unavailable, returns no usable results, times out, or exhausts its
+quota. If neither external provider returns evidence, the request falls back to
+the selected model's native web-search tool. Ordinary chat and scheduled agent
+runs do not call these external providers.
 
 Anthropic support remains available: set `LLM_PROVIDER=anthropic`,
 `ANTHROPIC_API_KEY`, and optionally `ANTHROPIC_MODEL`. Claude server-side web
