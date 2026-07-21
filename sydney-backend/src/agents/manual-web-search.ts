@@ -101,7 +101,7 @@ export async function searchTavily(
     body: JSON.stringify({
       query: query.slice(0, 500),
       search_depth: options.searchDepth ?? "advanced",
-      topic: options.topic ?? "news",
+      topic: options.topic ?? detectSearchTopic(query),
       ...(options.timeRange ? { time_range: options.timeRange } : {}),
       max_results: maxSearchResults,
       include_answer: false,
@@ -212,6 +212,27 @@ export function appendManualWebSearchSources(
   return sources ? `${reply.trim()}\n\n### Sources\n\n${sources}` : reply.trim();
 }
 
+export function detectSearchTopic(query: string): "general" | "news" | "finance" {
+  const lower = query.toLowerCase();
+
+  if (
+    /\b(?:stock|stocks|shares|ticker|earnings|market cap|crypto|bitcoin|btc|ethereum|eth|nasdaq|nyse)\b/i.test(
+      lower
+    )
+  ) {
+    return "finance";
+  }
+
+  if (
+    /\b(?:latest|current|recent|today|news|headline|headlines|update|updates|announcement|announcements|release|released|launched|launch|confirmed|delayed|cancelled|what happened|developments|breakthroughs)\b/i.test(
+      lower
+    )
+  ) {
+    return "news";
+  }
+
+  return "general";
+}
 function hasUnresolvedSearchReferent(query: string): boolean {
   return (
     /^(?:more\s+)?(?:on|about)\s+(?:this|that|these|those|it|them|the\s+(?:first|second|third|last|previous|above|story|item|result|topic))\b/i.test(

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   appendManualWebSearchSources,
+  detectSearchTopic,
   manualWebSearchQuery,
   searchFirecrawl,
   searchTavily
@@ -34,6 +35,15 @@ test("manual search detection accepts explicit self-contained commands", () => {
     manualWebSearchQuery("look up the company mentioned above"),
     null
   );
+});
+
+test("detectSearchTopic classifies queries into news, finance, or general", () => {
+  assert.equal(detectSearchTopic("React 20 release notes"), "news");
+  assert.equal(detectSearchTopic("latest quantum computing developments"), "news");
+  assert.equal(detectSearchTopic("Apple stock price today"), "finance");
+  assert.equal(detectSearchTopic("Bitcoin market cap updates"), "finance");
+  assert.equal(detectSearchTopic("how does raft consensus work"), "general");
+  assert.equal(detectSearchTopic("Rust async await syntax example"), "general");
 });
 
 test("Tavily search sends a bounded basic request and normalizes results", async () => {
