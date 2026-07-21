@@ -92,143 +92,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _showDeleteAccountConfirmation() async {
-    final confirmed = await showAdaptiveDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog.adaptive(
-          title: Text(
-            'Delete your account?',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: CuppetWorkspaceColors.ink,
-            ),
-          ),
-          content: Text(
-            'This action is permanent and cannot be undone. All your agents, active schedules, chat history, memories, and connected configurations will be deleted immediately.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: CuppetWorkspaceColors.muted,
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: CuppetWorkspaceColors.muted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Delete permanently',
-                style: TextStyle(
-                  color: SydneyColors.danger,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed == true && mounted) {
-      final doubleConfirmed = await showAdaptiveDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return AlertDialog.adaptive(
-            title: Text(
-              'Are you absolutely sure?',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: SydneyColors.danger,
-              ),
-            ),
-            content: Text(
-              'This is the final warning. This action cannot be undone. Once deleted, your account and all stored data are gone forever.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: CuppetWorkspaceColors.muted,
-                height: 1.4,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
-                  'Go back',
-                  style: TextStyle(
-                    color: CuppetWorkspaceColors.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Yes, delete forever',
-                  style: TextStyle(
-                    color: SydneyColors.danger,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (doubleConfirmed == true && mounted) {
-        _deleteAccount();
-      }
-    }
-  }
-
-  Future<void> _deleteAccount() async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          color: CuppetWorkspaceColors.primary,
-        ),
-      ),
-    );
-
-    try {
-      await ref.read(authControllerProvider.notifier).deleteAccount();
-      if (mounted) {
-        Navigator.of(context).pop(); // Dismiss loading indicator
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.signIn,
-          (route) => false,
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Dismiss loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: SydneyColors.danger,
-            content: Text(
-              readableAuthError(error),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-  }
-
   String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
@@ -273,6 +136,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: SydneySpacing.sm),
               WorkspaceCard(
                 key: const ValueKey('settings-profile-card'),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.profile),
                 child: Row(
                   children: [
                     Container(
@@ -322,6 +186,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ],
                         ],
                       ),
+                    ),
+                    const SizedBox(width: SydneySpacing.md),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: CuppetWorkspaceColors.primaryInk,
+                      size: 20,
                     ),
                   ],
                 ),
@@ -459,49 +329,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
               const SizedBox(height: SydneySpacing.xl),
-              _SettingsGroup(
-                title: 'Account Actions',
-                children: [
-                  _SettingsTile(
-                    key: const ValueKey('settings-delete-account-card'),
-                    title: 'Delete my account',
-                    description: 'Permanently remove your profile and all associated data.',
-                    icon: Icons.delete_forever_outlined,
-                    backgroundColor: SydneyColors.dangerSoft,
-                    iconColor: SydneyColors.danger,
-                    trailing: const Icon(
-                      Icons.chevron_right_rounded,
-                      color: SydneyColors.danger,
-                      size: 20,
-                    ),
-                    onTap: _showDeleteAccountConfirmation,
-                  ),
-                ],
-              ),
-              const SizedBox(height: SydneySpacing.xl),
-              OutlinedButton.icon(
-                key: const ValueKey('settings-sign-out'),
-                onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) {
-                    Navigator.of(
-                      context,
-                    ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
-                  }
-                },
-                icon: const Icon(Icons.logout_rounded, size: 18),
-                label: const Text('Sign out'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SydneyColors.danger,
-                  backgroundColor: CuppetWorkspaceColors.card,
-                  side: const BorderSide(color: SydneyColors.danger),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(SydneyRadius.md),
-                  ),
-                  minimumSize: const Size.fromHeight(48),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
             ],
           ),
         ),
@@ -537,13 +364,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 class _SettingsIcon extends StatelessWidget {
   const _SettingsIcon({
     required this.icon,
-    this.backgroundColor,
-    this.iconColor,
   });
 
   final IconData icon;
-  final Color? backgroundColor;
-  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -551,14 +374,14 @@ class _SettingsIcon extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: backgroundColor ?? CuppetWorkspaceColors.softSage,
+        color: CuppetWorkspaceColors.softSage,
         borderRadius: BorderRadius.circular(SydneyRadius.md),
       ),
       alignment: Alignment.center,
       child: Icon(
         icon,
         size: 19,
-        color: iconColor ?? CuppetWorkspaceColors.primaryInk,
+        color: CuppetWorkspaceColors.primaryInk,
       ),
     );
   }
@@ -640,8 +463,6 @@ class _SettingsTile extends StatelessWidget {
     required this.title,
     required this.description,
     required this.icon,
-    this.iconColor,
-    this.backgroundColor,
     this.trailing,
     this.onTap,
     super.key,
@@ -650,8 +471,6 @@ class _SettingsTile extends StatelessWidget {
   final String title;
   final String description;
   final IconData icon;
-  final Color? iconColor;
-  final Color? backgroundColor;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -663,8 +482,6 @@ class _SettingsTile extends StatelessWidget {
         children: [
           _SettingsIcon(
             icon: icon,
-            iconColor: iconColor,
-            backgroundColor: backgroundColor,
           ),
           const SizedBox(width: SydneySpacing.md),
           Expanded(

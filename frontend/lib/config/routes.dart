@@ -13,4 +13,5 @@ class AppRoutes {
   static const settings = '/settings';
   static const storage = '/settings/storage';
   static const memory = '/settings/memory';
+  static const profile = '/settings/profile';
 }

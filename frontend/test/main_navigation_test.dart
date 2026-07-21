@@ -10,6 +10,7 @@ import 'package:sydney/providers/connectors_provider.dart';
 import 'package:sydney/providers/timezone_provider.dart';
 import 'package:sydney/screens/connectors/connectors_screen.dart';
 import 'package:sydney/screens/settings/settings_screen.dart';
+import 'package:sydney/screens/settings/profile_screen.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
 import 'package:sydney/widgets/workspace_primitives.dart';
 
@@ -60,6 +61,8 @@ Widget navigationHost(Widget screen) {
             (_) => const Scaffold(body: Text('Connectors destination')),
         AppRoutes.storage:
             (_) => const Scaffold(body: Text('Storage destination')),
+        AppRoutes.profile:
+            (_) => const ProfileScreen(),
       },
     ),
   );
@@ -115,21 +118,25 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('settings-storage-card')), findsOneWidget);
-    expect(find.byType(WorkspaceSectionLabel), findsNWidgets(5));
+    expect(find.byType(WorkspaceSectionLabel), findsNWidgets(4));
     expect(find.text('Push notifications'), findsOneWidget);
     expect(find.text('Automatic time zone'), findsOneWidget);
+    expect(find.text('Sign out'), findsNothing);
+
+    // Tap on profile card to open the Profile Screen
+    await tester.tap(find.byKey(const ValueKey('settings-profile-card')));
+    await tester.pumpAndSettle();
+
+    // Now we are on Profile Screen
+    expect(find.text('Profile'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
-    final signOutButton = tester.widget<OutlinedButton>(
-      find.byKey(const ValueKey('settings-sign-out')),
-    );
-    expect(
-      signOutButton.style?.foregroundColor?.resolve(const {}),
-      SydneyColors.danger,
-    );
-    expect(
-      signOutButton.style?.side?.resolve(const {})?.color,
-      SydneyColors.danger,
-    );
+    expect(find.byKey(const ValueKey('settings-sign-out')), findsOneWidget);
+    expect(find.byKey(const ValueKey('settings-delete-account-card')), findsOneWidget);
+
+    // Tap back button to return to Settings Screen
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Inbox'), findsOneWidget);
     expect(find.text('Connectors'), findsWidgets);
     expect(find.text('Settings'), findsWidgets);
