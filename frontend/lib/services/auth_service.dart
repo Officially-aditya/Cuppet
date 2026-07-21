@@ -179,6 +179,20 @@ class AuthService {
     await _api.clearSessionToken();
   }
 
+  Future<void> deleteAccount() async {
+    if (!Env.useMockData) {
+      try {
+        await _api.delete<void>('/users/me');
+      } catch (error) {
+        throw apiExceptionFrom(
+          error,
+          'We could not delete your account. Please try again.',
+        );
+      }
+    }
+    await _api.clearSessionToken();
+  }
+
   Future<AuthSession> _sessionFromResponse(
     Response<Map<String, dynamic>> response,
   ) async {

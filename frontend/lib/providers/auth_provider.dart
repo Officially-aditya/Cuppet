@@ -118,6 +118,14 @@ class AuthController extends AsyncNotifier<AuthState> {
     await ref.read(authServiceProvider).signOut();
     state = const AsyncValue<AuthState>.data(AuthState.signedOut());
   }
+
+  Future<void> deleteAccount() async {
+    state = const AsyncValue<AuthState>.loading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(authServiceProvider).deleteAccount();
+      return const AuthState.signedOut();
+    });
+  }
 }
 
 String readableAuthError(Object error) {

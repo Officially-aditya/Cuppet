@@ -7,7 +7,10 @@ import { z } from "zod";
 import { requireAuth } from "../auth/middleware.js";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
-import { rescheduleActiveAgentSchedulesForUser } from "../agents/scheduler.js";
+import {
+  rescheduleActiveAgentSchedulesForUser,
+  removeScheduleForAgent
+} from "../agents/scheduler.js";
 import {
   effectiveTimeZone,
   ianaTimeZoneSchema,
@@ -148,6 +151,42 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
           preferences: preferencePayload(updated),
           schedule_sync: scheduleSync
         };
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+  );
+
+  app.delete(
+    "/users/me",
+    { preHandler: requireAuth },
+    async (request, reply) => {
+      if (accountBindingMismatch(request)) {
+        return accountChanged(reply);
+      }
+
+      const userId = request.auth!.userId;
+      const client = await pool.connect();
+
+      try {
+        await client.query("BEGIN");
+
+        const agentsResult = await client.query<{ id: string }>(
+          `SELECT id FROM agents WHERE user_id = $1`,
+          [userId]
+        );
+        for (const agent of agentsResult.rows) {
+          await removeScheduleForAgent(agent.id);
+        }
+
+        await client.query("DELETE FROM users WHERE id = $1", [userId]);
+
+        await client.query("COMMIT");
+
+        return reply.code(200).send({ success: true });
       } catch (error) {
         await client.query("ROLLBACK").catch(() => undefined);
         throw error;
