@@ -289,7 +289,12 @@ export function routeAgentMessage(
     };
   }
 
-  if (isConversational(lower) || looksLikeQuestion(lower) || !hasCommandVerb(lower)) {
+  if (
+    isConversational(lower) ||
+    looksLikeQuestion(lower) ||
+    !hasCommandVerb(lower) ||
+    isConversationalCorrectionOrPushback(lower)
+  ) {
     return {
       intent: "chat",
       confidence: 0.78,
@@ -471,6 +476,10 @@ function scoreRunNow(
   reason: string;
   timeRange?: "today" | "latest" | "current";
 } {
+  if (isConversationalCorrectionOrPushback(lower)) {
+    return { confidence: 0, reason: "conversational_pushback_or_correction" };
+  }
+
   if (isExplicitRunNowRequest(lower)) {
     return {
       confidence: 0.95,
@@ -678,6 +687,15 @@ function isConversational(lower: string): boolean {
   return /^(ok|okay|cool|thanks|thank you|got it|nice|great|perfect|hmm|yeah|yes|no)\b/.test(
     lower
   );
+}
+
+export function isConversationalCorrectionOrPushback(lower: string): boolean {
+  const pushbackPrefix =
+    /^(?:no|actually|wait|hold on|nope|wrong|incorrect|are you sure|wait a second|wait a sec)\b/i;
+  const recheckPhrases =
+    /\b(?:check\s+again|look\s+again|try\s+again|re-?check|double\s+check|look\s+at\s+it\s+again|search\s+again|check\s+once\s+more|check\s+it\s+again)\b/i;
+
+  return pushbackPrefix.test(lower) || recheckPhrases.test(lower);
 }
 
 function isScheduleOnlyText(value: string): boolean {

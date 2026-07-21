@@ -171,6 +171,21 @@ test("LLM route overrides cannot bypass explicit update phrasing", () => {
   assert.equal(decision.needsLlmReply, true);
 });
 
+test("conversational pushbacks and re-checks route to chat follow-up instead of run_now", () => {
+  for (const text of [
+    "No it actually launched today, check again",
+    "Wait, look again",
+    "Are you sure? check today's news",
+    "Check again please",
+    "Actually check once more",
+    "Double check that for me",
+    "Wrong, try again"
+  ]) {
+    const route = routeAgentMessage(agent, text);
+    assert.equal(route.intent, "chat", `Expected chat for: "${text}"`);
+  }
+});
+
 test("routes a last-commit question to a fresh GitHub agent run", () => {
   const githubIntent: ParsedIntent = {
     ...parsedIntent,
