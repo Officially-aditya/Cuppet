@@ -440,7 +440,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       try {
         const result = await handleAssistantMessage({
           userId,
-          userName: request.auth!.user.name,
+          userName: request.auth!.user.name ?? undefined,
           assistantId: agentId,
           text: body.data.text,
           attachmentIds: body.data.attachment_ids,
@@ -675,7 +675,11 @@ async function handleAssistantTextMessage(
         userId,
         assistantId
       );
-      const userName = request.auth!.user.name || "";
+      const userResult = await client.query<{ name: string | null }>(
+        "SELECT name FROM users WHERE id = $1",
+        [userId]
+      );
+      const userName = userResult.rows[0]?.name || "";
       const firstName = userName.trim().split(/\s+/)[0] || "";
       const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
