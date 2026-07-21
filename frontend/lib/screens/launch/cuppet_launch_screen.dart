@@ -77,26 +77,10 @@ class _CuppetLaunchScreenState extends State<CuppetLaunchScreen>
                       body: Center(
                         child: FadeTransition(
                           opacity: _opacity,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const CuppetMark(
-                                key: ValueKey('cuppet-launch-animation'),
-                                size: 180,
-                                animate: true,
-                              ),
-                              const SizedBox(height: SydneySpacing.md),
-                              Text(
-                                'Cuppet',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium?.copyWith(
-                                  color: CuppetWorkspaceColors.primary,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.8,
-                                ),
-                              ),
-                            ],
+                          child: const CuppetMark(
+                            key: ValueKey('cuppet-launch-animation'),
+                            size: 180,
+                            animate: true,
                           ),
                         ),
                       ),
