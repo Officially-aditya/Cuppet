@@ -141,7 +141,6 @@ void main() {
     // Now we are on Profile Screen
     expect(find.text('Profile'), findsOneWidget);
     expect(find.text('What should cuppet call you'), findsOneWidget);
-    expect(find.byKey(const ValueKey('profile-sign-out')), findsOneWidget);
     expect(find.byKey(const ValueKey('settings-delete-account-card')), findsOneWidget);
 
     // Tap back button to return to Settings Screen

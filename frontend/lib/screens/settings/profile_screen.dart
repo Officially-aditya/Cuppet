@@ -336,69 +336,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       children: [
                         InkWell(
-                          key: const ValueKey('profile-sign-out'),
-                          onTap: () async {
-                            final navigator = Navigator.of(context);
-                            await ref.read(authControllerProvider.notifier).signOut();
-                            navigator.pushNamedAndRemoveUntil(
-                              AppRoutes.signIn,
-                              (route) => false,
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(SydneySpacing.lg),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: SydneyColors.infoSoft,
-                                    borderRadius: BorderRadius.circular(SydneyRadius.md),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.logout_rounded,
-                                    size: 19,
-                                    color: SydneyColors.info,
-                                  ),
-                                ),
-                                const SizedBox(width: SydneySpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Sign out',
-                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                          color: CuppetWorkspaceColors.ink,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(height: SydneySpacing.xs),
-                                      Text(
-                                        'Log out of your current session on this device.',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: CuppetWorkspaceColors.muted,
-                                          fontWeight: FontWeight.w500,
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: CuppetWorkspaceColors.border,
-                          indent: SydneySpacing.lg + 40 + SydneySpacing.md,
-                        ),
-                        InkWell(
                           key: const ValueKey('settings-delete-account-card'),
                           onTap: _showDeleteAccountConfirmation,
                           child: Padding(
