@@ -27,6 +27,9 @@ type TavilySearchOptions = {
   apiKey?: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  searchDepth?: "basic" | "advanced";
+  topic?: "general" | "news" | "finance";
+  timeRange?: "day" | "week" | "month" | "year" | "d" | "w" | "m" | "y";
 };
 
 type FirecrawlSearchOptions = TavilySearchOptions;
@@ -97,8 +100,9 @@ export async function searchTavily(
     },
     body: JSON.stringify({
       query: query.slice(0, 500),
-      search_depth: "basic",
-      topic: "general",
+      search_depth: options.searchDepth ?? "advanced",
+      topic: options.topic ?? "news",
+      ...(options.timeRange ? { time_range: options.timeRange } : {}),
       max_results: maxSearchResults,
       include_answer: false,
       include_raw_content: false,

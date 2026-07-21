@@ -79,8 +79,8 @@ test("Tavily search sends a bounded basic request and normalizes results", async
   assert.equal(requestHeaders?.get("authorization"), "Bearer tvly-test");
   assert.deepEqual(requestBody, {
     query: "battery news",
-    search_depth: "basic",
-    topic: "general",
+    search_depth: "advanced",
+    topic: "news",
     max_results: 3,
     include_answer: false,
     include_raw_content: false,
