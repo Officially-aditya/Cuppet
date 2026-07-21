@@ -23,6 +23,7 @@ type AssistantSearchMode = "none" | "native" | "external";
 export async function createAssistantChatReply(
   text: string,
   context?: {
+    userName?: string;
     briefing?: string;
     sourceRefs?: unknown[];
     stm?: Array<{ role: string; text: string; attachmentContext?: string }>;
@@ -47,7 +48,7 @@ export async function createAssistantChatReply(
       context,
       manualSearchEvidence
     );
-    const system = assistantSystemPrompt(searchMode);
+    const system = assistantSystemPrompt(searchMode, context?.userName);
     let response = await createAssistantMessage(messages, system, searchMode);
     const allContent: LlmContentBlock[] = [...response.content];
 
@@ -94,7 +95,7 @@ function createAssistantMessage(
   });
 }
 
-function assistantSystemPrompt(searchMode: AssistantSearchMode): string {
+function assistantSystemPrompt(searchMode: AssistantSearchMode, userName?: string): string {
   const searchInstruction =
     searchMode === "external"
       ? [
@@ -108,8 +109,12 @@ function assistantSystemPrompt(searchMode: AssistantSearchMode): string {
       : searchMode === "native"
         ? "For latest, current, recent, or news questions, use web search before answering. Include source names and links when useful."
         : "If current/private data is required and no data is provided, say it is unavailable in this response. Suggest a connector only when one of the supported connectors directly provides that data. Never write conversational notes or trailing instructions about automating updates or setting up connectors.";
+  const nameInstruction = userName
+    ? `The user's first name is ${userName}. Feel free to greet or refer to them by their name naturally when appropriate.`
+    : "";
   return [
     "You are Cuppet, a context-aware concierge inside a mobile delegation app.",
+    nameInstruction,
     PROMPT_SECURITY_SYSTEM,
     "You can answer normal chat questions directly.",
     "You can explain Cuppet: users can create dedicated agent contacts that run on schedules or on demand.",

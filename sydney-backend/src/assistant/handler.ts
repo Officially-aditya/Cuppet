@@ -113,6 +113,7 @@ type PendingAction = {
 
 export async function handleAssistantMessage(input: {
   userId: string;
+  userName?: string;
   assistantId: string;
   text?: string;
   attachmentIds?: string[];
@@ -214,6 +215,7 @@ export async function handleAssistantMessage(input: {
     outcome = await executeRoute({
       route,
       userId: input.userId,
+      userName: input.userName,
       assistantId: input.assistantId,
       sourceMessageId: written.userMessage.id,
       text: currentInstruction,
@@ -265,6 +267,7 @@ type AssistantOutcome = {
 async function executeRoute(input: {
   route: Exclude<AssistantRoute, { kind: "confirm" }>;
   userId: string;
+  userName?: string;
   assistantId: string;
   sourceMessageId: string;
   text: string;
@@ -406,6 +409,7 @@ async function executeRoute(input: {
       return { content: connectorActionContent(result.failures) };
     }
     const answer = await createAssistantChatReply(input.text, {
+      userName: input.userName,
       stm: input.kernel.stm,
       memories: input.kernel.ltm,
       evidence: result.evidence,
@@ -434,6 +438,7 @@ async function executeRoute(input: {
   }
   const briefing = await latestBriefing(input.userId, input.assistantId);
   const reply = await createAssistantChatReply(input.text, {
+    userName: input.userName,
     stm: input.kernel.stm,
     memories: input.kernel.ltm,
     ...(briefing ?? {}),

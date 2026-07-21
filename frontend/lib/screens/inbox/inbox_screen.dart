@@ -14,6 +14,7 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/templates/briefing_card_template.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class InboxScreen extends ConsumerStatefulWidget {
@@ -54,10 +55,32 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         )
         .toList(growable: false);
 
+    final authState = ref.watch(authControllerProvider);
+    final user = authState.asData?.value.user;
+    final defaultDisplayName = user?.displayName ?? '';
+    final preferredName = ref.watch(preferredNameProvider);
+    final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
+
+    final String eyebrowText;
+    if (displayName.isEmpty || displayName == 'Cuppet User') {
+      eyebrowText = 'Your workspace';
+    } else {
+      final displayNameParts = displayName.trim().split(RegExp(r'\s+'));
+      final firstName = displayNameParts.isNotEmpty && displayNameParts.first.isNotEmpty
+          ? displayNameParts.first
+          : '';
+      if (firstName.isEmpty) {
+        eyebrowText = 'Your workspace';
+      } else {
+        final capitalizedFirstName = '${firstName[0].toUpperCase()}${firstName.substring(1)}';
+        eyebrowText = "$capitalizedFirstName's Workspace";
+      }
+    }
+
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
-      appBar: const WorkspaceAppBar(
-        eyebrow: 'Your workspace',
+      appBar: WorkspaceAppBar(
+        eyebrow: eyebrowText,
         title: 'Cuppet',
         subtitle: 'Your delegation agents',
         showBrandMark: true,

@@ -275,7 +275,12 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       };
       let answer: string;
       try {
+        const userName = request.auth!.user.name || "";
+        const firstName = userName.trim().split(/\s+/)[0] || "";
+        const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
         answer = await createAssistantChatReply(question, {
+          userName: capitalizedFirstName,
           briefing: JSON.stringify(source.content),
           sourceRefs: source.source_refs
         });
@@ -435,6 +440,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
       try {
         const result = await handleAssistantMessage({
           userId,
+          userName: request.auth!.user.name,
           assistantId: agentId,
           text: body.data.text,
           attachmentIds: body.data.attachment_ids,
@@ -669,9 +675,16 @@ async function handleAssistantTextMessage(
         userId,
         assistantId
       );
+      const userName = request.auth!.user.name || "";
+      const firstName = userName.trim().split(/\s+/)[0] || "";
+      const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
       const reply = await createAssistantChatReply(
         text,
-        briefingContext ?? undefined
+        {
+          ...(briefingContext ?? {}),
+          userName: capitalizedFirstName
+        }
       );
       const assistantMessage = await insertMessage(client, {
         agentId: assistantId,

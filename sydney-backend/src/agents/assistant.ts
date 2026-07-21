@@ -33,6 +33,32 @@ export async function ensureAssistantContact(userId: string): Promise<string> {
       return existing.rows[0].id;
     }
 
+    const userResult = await client.query<{ name: string | null }>(
+      "SELECT name FROM users WHERE id = $1",
+      [userId]
+    );
+    const userName = userResult.rows[0]?.name || "there";
+    const displayNameParts = userName.trim().split(/\s+/);
+    const firstName = displayNameParts[0] || "there";
+    const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+
+    const assistantContent = {
+      template: "plain_text",
+      version: "1.0",
+      data: {
+        headline: `Hey ${capitalizedFirstName}! I'm Cuppet.`,
+        body:
+          "I can chat with you like Claude or ChatGPT. The real magic is agents: tell me what you want, and I can create a contact that messages you on schedule.",
+        items: [
+          {
+            title: "Try this",
+            summary: "\"Create an agent that delivers tech news every day at 7am.\""
+          }
+        ],
+        footer: "What would you like to do?"
+      }
+    };
+
     const created = await client.query<{ id: string }>(
       `
         INSERT INTO agents
@@ -60,7 +86,7 @@ export async function ensureAssistantContact(userId: string): Promise<string> {
           (agent_id, user_id, role, content, source_refs)
         VALUES ($1, $2, 'agent', $3, '[]'::jsonb)
       `,
-      [assistantId, userId, JSON.stringify(ASSISTANT_CONTENT)]
+      [assistantId, userId, JSON.stringify(assistantContent)]
     );
 
     await client.query("COMMIT");
