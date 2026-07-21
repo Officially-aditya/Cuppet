@@ -115,7 +115,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('settings-storage-card')), findsOneWidget);
-    expect(find.byType(WorkspaceSectionLabel), findsNWidgets(4));
+    expect(find.byType(WorkspaceSectionLabel), findsNWidgets(5));
     expect(find.text('Push notifications'), findsOneWidget);
     expect(find.text('Automatic time zone'), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);

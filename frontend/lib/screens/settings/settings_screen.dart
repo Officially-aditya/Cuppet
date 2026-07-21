@@ -276,8 +276,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Row(
                   children: [
                     Container(
-                      width: 52,
-                      height: 52,
+                      width: 64,
+                      height: 64,
                       decoration: const BoxDecoration(
                         color: CuppetWorkspaceColors.softSage,
                         shape: BoxShape.circle,
@@ -285,9 +285,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       alignment: Alignment.center,
                       child: Text(
                         initials,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: CuppetWorkspaceColors.primaryInk,
                           fontWeight: FontWeight.w800,
+                          fontSize: 20,
                         ),
                       ),
                     ),
@@ -302,7 +303,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               context,
                             ).textTheme.titleSmall?.copyWith(
                               color: CuppetWorkspaceColors.ink,
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -326,281 +327,193 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: SydneySpacing.xl),
-              const WorkspaceSectionLabel('Preferences'),
-              const SizedBox(height: SydneySpacing.sm),
-              WorkspaceCard(
-                key: const ValueKey('settings-push-card'),
-                child: Row(
-                  children: [
-                    const _SettingsIcon(icon: Icons.notifications_outlined),
-                    const SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title: 'Push notifications',
-                        description:
-                            _pushEnabled
-                                ? 'Message and agent status alerts are active.'
-                                : 'Enable message and agent status alerts.',
-                      ),
-                    ),
-                    const SizedBox(width: SydneySpacing.sm),
-                    ConstrainedBox(
+              _SettingsGroup(
+                title: 'Preferences',
+                children: [
+                  _SettingsTile(
+                    key: const ValueKey('settings-push-card'),
+                    title: 'Push notifications',
+                    description: _pushEnabled
+                        ? 'Message and agent status alerts are active.'
+                        : 'Enable message and agent status alerts.',
+                    icon: Icons.notifications_outlined,
+                    trailing: ConstrainedBox(
                       constraints: const BoxConstraints(
                         minWidth: 48,
                         minHeight: 48,
                       ),
                       child: Center(
-                        child:
-                            _pushLoading
-                                ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: CuppetWorkspaceColors.primary,
-                                  ),
-                                )
-                                : Switch.adaptive(
-                                  value: _pushEnabled,
-                                  activeTrackColor:
-                                      CuppetWorkspaceColors.primary,
-                                  activeThumbColor: Colors.white,
-                                  onChanged: _togglePush,
+                        child: _pushLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: CuppetWorkspaceColors.primary,
                                 ),
+                              )
+                            : Switch.adaptive(
+                                value: _pushEnabled,
+                                activeTrackColor: CuppetWorkspaceColors.primary,
+                                activeThumbColor: Colors.white,
+                                onChanged: _togglePush,
+                              ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: SydneySpacing.md),
-              WorkspaceCard(
-                key: const ValueKey('settings-timezone-card'),
-                child: Row(
-                  children: [
-                    const _SettingsIcon(icon: Icons.public_rounded),
-                    const SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title:
-                            followsDevice == false
-                                ? 'Fixed time zone'
-                                : 'Automatic time zone',
-                        description: _timeZoneDescription(
-                          displayedTimeZone: displayedTimeZone,
-                          followsDevice: followsDevice,
-                          syncPending: timeZoneState?.syncPending == true,
-                        ),
-                      ),
+                  ),
+                  _SettingsTile(
+                    key: const ValueKey('settings-timezone-card'),
+                    title: followsDevice == false
+                        ? 'Fixed time zone'
+                        : 'Automatic time zone',
+                    description: _timeZoneDescription(
+                      displayedTimeZone: displayedTimeZone,
+                      followsDevice: followsDevice,
+                      syncPending: timeZoneState?.syncPending == true,
                     ),
-                    const SizedBox(width: SydneySpacing.sm),
-                    ConstrainedBox(
+                    icon: Icons.public_rounded,
+                    trailing: ConstrainedBox(
                       constraints: const BoxConstraints(
                         minWidth: 48,
                         minHeight: 48,
                       ),
                       child: Center(
-                        child:
-                            timeZoneBusy
-                                ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: CuppetWorkspaceColors.primary,
-                                  ),
-                                )
-                                : Switch.adaptive(
-                                  key: const ValueKey(
-                                    'automatic-timezone-switch',
-                                  ),
-                                  value: followsDevice ?? true,
-                                  activeTrackColor:
-                                      CuppetWorkspaceColors.primary,
-                                  activeThumbColor: Colors.white,
-                                  onChanged:
-                                      timeZoneState?.preferencesLoaded == true
-                                          ? _toggleAutomaticTimeZone
-                                          : null,
+                        child: timeZoneBusy
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: CuppetWorkspaceColors.primary,
                                 ),
+                              )
+                            : Switch.adaptive(
+                                key: const ValueKey(
+                                  'automatic-timezone-switch',
+                                ),
+                                value: followsDevice ?? true,
+                                activeTrackColor: CuppetWorkspaceColors.primary,
+                                activeThumbColor: Colors.white,
+                                onChanged:
+                                    timeZoneState?.preferencesLoaded == true
+                                        ? _toggleAutomaticTimeZone
+                                        : null,
+                              ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: SydneySpacing.md),
-              WorkspaceCard(
-                key: const ValueKey('settings-memory-card'),
-                onTap: () => Navigator.of(context).pushNamed(AppRoutes.memory),
-                child: const Row(
-                  children: [
-                    _SettingsIcon(icon: Icons.psychology_alt_outlined),
-                    SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title: 'Memory',
-                        description:
-                            'Review confirmed details remembered by Assistant.',
-                      ),
-                    ),
-                    SizedBox(width: SydneySpacing.md),
-                    Icon(
+                  ),
+                  _SettingsTile(
+                    key: const ValueKey('settings-memory-card'),
+                    title: 'Memory',
+                    description: 'Review confirmed details remembered by Assistant.',
+                    icon: Icons.psychology_alt_outlined,
+                    trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
                       size: 20,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: SydneySpacing.md),
-              WorkspaceCard(
-                key: const ValueKey('settings-storage-card'),
-                onTap: () => Navigator.of(context).pushNamed(AppRoutes.storage),
-                child: const Row(
-                  children: [
-                    _SettingsIcon(icon: Icons.storage_outlined),
-                    SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title: 'Storage',
-                        description:
-                            'Manage 30-day history and Google Drive archives.',
-                      ),
-                    ),
-                    SizedBox(width: SydneySpacing.md),
-                    Icon(
+                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.memory),
+                  ),
+                  _SettingsTile(
+                    key: const ValueKey('settings-storage-card'),
+                    title: 'Storage',
+                    description: 'Manage 30-day history and Google Drive archives.',
+                    icon: Icons.storage_outlined,
+                    trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
                       size: 20,
                     ),
-                  ],
-                ),
+                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.storage),
+                  ),
+                ],
               ),
               const SizedBox(height: SydneySpacing.xl),
-              const WorkspaceSectionLabel('Security'),
-              const SizedBox(height: SydneySpacing.sm),
-              WorkspaceCard(
-                key: const ValueKey('settings-connectors-card'),
-                onTap:
-                    () => Navigator.of(context).pushNamed(AppRoutes.connectors),
-                child: const Row(
-                  children: [
-                    _SettingsIcon(icon: Icons.hub_outlined),
-                    SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title: 'Connectors',
-                        description:
-                            'Review accounts approved for backend access.',
-                      ),
-                    ),
-                    SizedBox(width: SydneySpacing.md),
-                    Icon(
+              _SettingsGroup(
+                title: 'Security',
+                children: [
+                  _SettingsTile(
+                    key: const ValueKey('settings-connectors-card'),
+                    title: 'Connectors',
+                    description: 'Review accounts approved for backend access.',
+                    icon: Icons.hub_outlined,
+                    trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
                       size: 20,
                     ),
-                  ],
-                ),
+                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.connectors),
+                  ),
+                ],
               ),
               const SizedBox(height: SydneySpacing.xl),
-              const WorkspaceSectionLabel('Privacy'),
-              const SizedBox(height: SydneySpacing.sm),
-              const WorkspaceCard(
-                key: ValueKey('settings-privacy-card'),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SettingsIcon(icon: Icons.shield_outlined),
-                    SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title: 'Session storage',
-                        description:
-                            'Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected.',
-                      ),
-                    ),
-                  ],
-                ),
+              const _SettingsGroup(
+                title: 'Privacy',
+                children: [
+                  _SettingsTile(
+                    key: ValueKey('settings-privacy-card'),
+                    title: 'Session storage',
+                    description: 'Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected.',
+                    icon: Icons.shield_outlined,
+                  ),
+                ],
               ),
               const SizedBox(height: SydneySpacing.xl),
-              const WorkspaceSectionLabel('Account Actions'),
-              const SizedBox(height: SydneySpacing.sm),
-              WorkspaceCard(
-                key: const ValueKey('settings-delete-account-card'),
-                onTap: _showDeleteAccountConfirmation,
-                child: const Row(
-                  children: [
-                    _SettingsIcon(
-                      icon: Icons.delete_forever_outlined,
-                      backgroundColor: SydneyColors.dangerSoft,
-                      iconColor: SydneyColors.danger,
-                    ),
-                    SizedBox(width: SydneySpacing.md),
-                    Expanded(
-                      child: _SettingsCopy(
-                        title: 'Delete my account',
-                        description:
-                            'Permanently remove your profile and all associated data.',
-                      ),
-                    ),
-                    SizedBox(width: SydneySpacing.md),
-                    Icon(
+              _SettingsGroup(
+                title: 'Account Actions',
+                children: [
+                  _SettingsTile(
+                    key: const ValueKey('settings-delete-account-card'),
+                    title: 'Delete my account',
+                    description: 'Permanently remove your profile and all associated data.',
+                    icon: Icons.delete_forever_outlined,
+                    backgroundColor: SydneyColors.dangerSoft,
+                    iconColor: SydneyColors.danger,
+                    trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: SydneyColors.danger,
                       size: 20,
                     ),
-                  ],
+                    onTap: _showDeleteAccountConfirmation,
+                  ),
+                ],
+              ),
+              const SizedBox(height: SydneySpacing.xl),
+              OutlinedButton.icon(
+                key: const ValueKey('settings-sign-out'),
+                onPressed: () async {
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('Sign out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SydneyColors.danger,
+                  backgroundColor: CuppetWorkspaceColors.card,
+                  side: const BorderSide(color: SydneyColors.danger),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(SydneyRadius.md),
+                  ),
+                  minimumSize: const Size.fromHeight(48),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            color: CuppetWorkspaceColors.background,
-            padding: const EdgeInsets.fromLTRB(
-              SydneySpacing.page,
-              SydneySpacing.sm,
-              SydneySpacing.page,
-              SydneySpacing.md,
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 2,
+        onSelected:
+            (index) => navigateToMainDestination(
+              context,
+              currentIndex: 2,
+              selectedIndex: index,
             ),
-            child: OutlinedButton.icon(
-              key: const ValueKey('settings-sign-out'),
-              onPressed: () async {
-                await ref.read(authControllerProvider.notifier).signOut();
-                if (context.mounted) {
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
-                }
-              },
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              label: const Text('Sign out'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: SydneyColors.danger,
-                backgroundColor: CuppetWorkspaceColors.card,
-                side: const BorderSide(color: SydneyColors.danger),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(SydneyRadius.md),
-                ),
-                minimumSize: const Size.fromHeight(48),
-                textStyle: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-          AppBottomNav(
-            currentIndex: 2,
-            onSelected:
-                (index) => navigateToMainDestination(
-                  context,
-                  currentIndex: 2,
-                  selectedIndex: index,
-                ),
-          ),
-        ],
       ),
     );
   }
@@ -639,7 +552,7 @@ class _SettingsIcon extends StatelessWidget {
       height: 40,
       decoration: BoxDecoration(
         color: backgroundColor ?? CuppetWorkspaceColors.softSage,
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.circular(SydneyRadius.md),
       ),
       alignment: Alignment.center,
       child: Icon(
@@ -681,5 +594,99 @@ class _SettingsCopy extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({
+    required this.title,
+    required this.children,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        WorkspaceSectionLabel(title),
+        const SizedBox(height: SydneySpacing.sm),
+        WorkspaceCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (int i = 0; i < children.length; i++) ...[
+                children[i],
+                if (i < children.length - 1)
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: CuppetWorkspaceColors.border,
+                    indent: SydneySpacing.lg + 40 + SydneySpacing.md,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.title,
+    required this.description,
+    required this.icon,
+    this.iconColor,
+    this.backgroundColor,
+    this.trailing,
+    this.onTap,
+    super.key,
+  });
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color? iconColor;
+  final Color? backgroundColor;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tileContent = Padding(
+      padding: const EdgeInsets.all(SydneySpacing.lg),
+      child: Row(
+        children: [
+          _SettingsIcon(
+            icon: icon,
+            iconColor: iconColor,
+            backgroundColor: backgroundColor,
+          ),
+          const SizedBox(width: SydneySpacing.md),
+          Expanded(
+            child: _SettingsCopy(
+              title: title,
+              description: description,
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: SydneySpacing.sm),
+            trailing!,
+          ],
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        child: tileContent,
+      );
+    }
+    return tileContent;
   }
 }
