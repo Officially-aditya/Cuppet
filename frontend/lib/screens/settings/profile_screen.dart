@@ -14,6 +14,21 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialName = ref.read(preferredNameProvider);
+    _nameController = TextEditingController(text: initialName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
@@ -163,7 +178,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final user = authState.asData?.value.user;
-    final displayName = user?.displayName ?? 'Cuppet User';
+    final defaultDisplayName = user?.displayName ?? 'Cuppet User';
+    final preferredName = ref.watch(preferredNameProvider);
+    final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
     final email = user?.email ?? '';
     final initials = _initials(displayName);
 
@@ -237,6 +254,74 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
+                    'PREFERRED NAME',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: CuppetWorkspaceColors.primaryInk,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.9,
+                    ),
+                  ),
+                  const SizedBox(height: SydneySpacing.sm),
+                  WorkspaceCard(
+                    padding: const EdgeInsets.all(SydneySpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'What should cuppet call you',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: CuppetWorkspaceColors.ink,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: SydneySpacing.md),
+                        TextField(
+                          controller: _nameController,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: CuppetWorkspaceColors.ink,
+                            height: 1.4,
+                          ),
+                          cursorColor: CuppetWorkspaceColors.primary,
+                          onChanged: (val) {
+                            ref.read(preferredNameProvider.notifier).setPreferredName(val.trim());
+                          },
+                          decoration: InputDecoration(
+                            hintText: defaultDisplayName,
+                            fillColor: CuppetWorkspaceColors.background,
+                            filled: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: SydneySpacing.md,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(SydneyRadius.md),
+                              borderSide: const BorderSide(color: CuppetWorkspaceColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(SydneyRadius.md),
+                              borderSide: const BorderSide(color: CuppetWorkspaceColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(SydneyRadius.md),
+                              borderSide: const BorderSide(
+                                color: CuppetWorkspaceColors.primary,
+                                width: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: SydneySpacing.xl),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
                     'ACCOUNT ACTIONS',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: CuppetWorkspaceColors.primaryInk,
@@ -251,7 +336,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: Column(
                       children: [
                         InkWell(
-                          key: const ValueKey('settings-sign-out'),
+                          key: const ValueKey('profile-sign-out'),
                           onTap: () async {
                             final navigator = Navigator.of(context);
                             await ref.read(authControllerProvider.notifier).signOut();

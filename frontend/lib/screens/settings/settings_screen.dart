@@ -103,7 +103,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final user = authState.asData?.value.user;
-    final displayName = user?.displayName ?? 'Cuppet User';
+    final defaultDisplayName = user?.displayName ?? 'Cuppet User';
+    final preferredName = ref.watch(preferredNameProvider);
+    final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
     final email = user?.email ?? '';
     final initials = _initials(displayName);
     final timeZoneAsync = ref.watch(timezonePreferencesProvider);
@@ -329,6 +331,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
               const SizedBox(height: SydneySpacing.xl),
+              OutlinedButton.icon(
+                key: const ValueKey('settings-sign-out'),
+                onPressed: () async {
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('Sign out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SydneyColors.danger,
+                  backgroundColor: CuppetWorkspaceColors.card,
+                  side: const BorderSide(color: SydneyColors.danger),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(SydneyRadius.md),
+                  ),
+                  minimumSize: const Size.fromHeight(48),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
             ],
           ),
         ),

@@ -121,7 +121,18 @@ void main() {
     expect(find.byType(WorkspaceSectionLabel), findsNWidgets(4));
     expect(find.text('Push notifications'), findsOneWidget);
     expect(find.text('Automatic time zone'), findsOneWidget);
-    expect(find.text('Sign out'), findsNothing);
+    expect(find.text('Sign out'), findsOneWidget);
+    final signOutButton = tester.widget<OutlinedButton>(
+      find.byKey(const ValueKey('settings-sign-out')),
+    );
+    expect(
+      signOutButton.style?.foregroundColor?.resolve(const {}),
+      SydneyColors.danger,
+    );
+    expect(
+      signOutButton.style?.side?.resolve(const {})?.color,
+      SydneyColors.danger,
+    );
 
     // Tap on profile card to open the Profile Screen
     await tester.tap(find.byKey(const ValueKey('settings-profile-card')));
@@ -129,8 +140,8 @@ void main() {
 
     // Now we are on Profile Screen
     expect(find.text('Profile'), findsOneWidget);
-    expect(find.text('Sign out'), findsOneWidget);
-    expect(find.byKey(const ValueKey('settings-sign-out')), findsOneWidget);
+    expect(find.text('What should cuppet call you'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-sign-out')), findsOneWidget);
     expect(find.byKey(const ValueKey('settings-delete-account-card')), findsOneWidget);
 
     // Tap back button to return to Settings Screen

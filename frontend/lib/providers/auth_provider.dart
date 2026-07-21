@@ -128,6 +128,38 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 }
 
+final preferredNameProvider = NotifierProvider<PreferredNameNotifier, String>(
+  PreferredNameNotifier.new,
+);
+
+class PreferredNameNotifier extends Notifier<String> {
+  @override
+  String build() {
+    _load();
+    return '';
+  }
+
+  Future<void> _load() async {
+    try {
+      final secureStorage = ref.watch(secureStorageProvider);
+      final name = await secureStorage.read(key: 'preferred_name');
+      state = name ?? '';
+    } catch (_) {
+      state = '';
+    }
+  }
+
+  Future<void> setPreferredName(String name) async {
+    try {
+      final secureStorage = ref.read(secureStorageProvider);
+      await secureStorage.write(key: 'preferred_name', value: name);
+      state = name;
+    } catch (_) {
+      state = name;
+    }
+  }
+}
+
 String readableAuthError(Object error) {
   return friendlyErrorMessage(
     error,
