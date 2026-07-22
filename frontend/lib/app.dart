@@ -15,6 +15,7 @@ import 'providers/messages_provider.dart';
 import 'providers/timezone_provider.dart';
 import 'services/push_service.dart';
 import 'services/notification_clear_service.dart';
+import 'screens/auth/email_sign_in_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/sign_up_screen.dart';
 import 'screens/connectors/add_connector_screen.dart';
@@ -47,6 +48,7 @@ class SydneyApp extends ConsumerWidget {
   Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     return switch (settings.name) {
       AppRoutes.signIn => _route(settings, const SignInScreen()),
+      AppRoutes.signInWithEmail => _route(settings, const EmailSignInScreen()),
       AppRoutes.signUp => _route(settings, const SignUpScreen()),
       AppRoutes.inbox => _route(settings, const AuthGate()),
       AppRoutes.create => _route(settings, const CreateScreen()),

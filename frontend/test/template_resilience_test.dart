@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/design/tokens.dart';
 import 'package:sydney/models/message.dart';
 import 'package:sydney/models/template_payload_recovery.dart';
+import 'package:sydney/config/routes.dart';
+import 'package:sydney/screens/auth/email_sign_in_screen.dart';
 import 'package:sydney/screens/auth/sign_in_screen.dart';
 import 'package:sydney/screens/auth/sign_up_screen.dart';
 import 'package:sydney/widgets/templates/checklist_template.dart';
@@ -744,9 +746,8 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: SignInScreen())),
+        const ProviderScope(child: MaterialApp(home: EmailSignInScreen())),
       );
-      await tester.tap(find.text('Sign in with Email'));
       await tester.pumpAndSettle();
 
       final fields = tester.widgetList<TextFormField>(

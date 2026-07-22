@@ -61,14 +61,14 @@ const SizedBox(height: SydneySpacing.sm),
 LoginOptionCard(
 title: 'Sign in with Google',
 subtitle: 'Access your account with your Google account.',
-icon: null, // FIX: SVG assets are not valid for the IconData? type expected by LoginOptionCard. Setting to null for now.
+leadingWidget: const GoogleMark(),
 onTap: loading ? null : _continueWithGoogle,
 ),
 const SizedBox(height: SydneySpacing.sm),
 LoginOptionCard(
 title: 'Sign in with Email',
 subtitle: 'Access your account with your email and password.',
-icon: null, // FIX: SVG assets are not valid for the IconData? type expected by LoginOptionCard. Setting to null for now.
+icon: Icons.mail_outline_rounded,
 onTap: loading
 ? null
 : () =>
