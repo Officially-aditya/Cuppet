@@ -224,17 +224,13 @@ function buildNewsSystemPrompt(input: {
     userPrompt: input.userPrompt,
     outputSchema: [
       '{"tldr":["three concise strings"],',
-      '"items":[{"headline":"string","summary":"grounded context and why it matters","category":"string","source":"string","url":"https://..."}],',
-      '"perspectives":[{"label":"string","summary":"evidence-supported view","source":"string","url":"https://..."}],',
-      '"why_it_matters":"string",',
-      '"timeline":[{"date":"string","event":"string"}]}'
+      '"items":[{"headline":"string","summary":"grounded context","category":"string","source":"string","url":"https://..."}]}'
     ].join(""),
     runInstruction: [
       `Today is ${todayStr}. Use bounded native web search for current information.`,
       "Include exactly five ranked, non-duplicate stories when five are supported; return fewer rather than inventing evidence.",
-      "The TL;DR must contain exactly three items. Perspectives are optional and must be evidence-supported.",
-      "The timeline is only for the lead story and should contain at most five short events.",
-      "Keep every story summary under 90 words and every optional perspective under 60 words.",
+      "The TL;DR must contain exactly three items.",
+      "Keep every story summary under 90 words.",
       `Default focus: ${input.focus}`,
       `Agent role: ${input.agentName}.`
     ].join(" ")

@@ -1,4 +1,5 @@
 import type { ParsedIntent } from "./parser.js";
+import { manualWebSearchQuery } from "./manual-web-search.js";
 import {
   DRAFT_OUTPUT_PLATFORMS,
   isUnsupportedConnectorAccessRequest,
@@ -254,6 +255,19 @@ export function routeAgentMessage(
   }
 
   if (
+    manualWebSearchQuery(text) !== null ||
+    /^(?:please\s+)?(?:search|web\s+search|google|look\s+up|research)\b/i.test(lower)
+  ) {
+    return {
+      intent: "chat",
+      confidence: 0.92,
+      reason: "explicit_search_chat_request",
+      slots: {},
+      patch: {}
+    };
+  }
+
+  if (
     scheduleCron !== null ||
     /^(?:also|and|plus|along with|add|include|set|make it|have it)\b/.test(lower)
   ) {
@@ -489,6 +503,13 @@ function scoreRunNow(
   }
 
   if (
+    manualWebSearchQuery(lower) !== null ||
+    /^(?:please\s+)?(?:search|web\s+search|google|look\s+up|research)\b/i.test(lower)
+  ) {
+    return { confidence: 0, reason: "explicit_search_chat_request" };
+  }
+
+  if (
     /\b(?:draft|write|explain|translate|format|create post|write post|draft post)\b/i.test(lower) ||
     lower.includes("generate draft")
   ) {
@@ -568,7 +589,7 @@ function mentionsAgentConnector(lower: string): boolean {
 }
 
 function hasCommandVerb(lower: string): boolean {
-  return /\b(send|show|give|provide|tell|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do|add|include|update|change|set|pause|resume|delete|remove|stop|connect)\b/.test(
+  return /\b(send|show|give|provide|tell|fetch|get|prepare|deliver|summari[sz]e|recap|brief|check|scan|find|read|run|do|add|include|update|change|set|pause|resume|delete|remove|stop|connect|search|research|google)\b/.test(
     lower
   );
 }
