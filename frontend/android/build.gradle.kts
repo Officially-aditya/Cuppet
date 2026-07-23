@@ -27,7 +27,7 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
-    
+
     fun configureAndroid(proj: Project) {
         val android = proj.extensions.findByName("android")
         if (android != null) {
@@ -41,6 +41,15 @@ subprojects {
         project.afterEvaluate {
             configureAndroid(project)
         }
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java).configureEach {
+        compilerOptions.jvmTarget.set(
+            if (project.name == "flutter_web_auth_2")
+                org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+            else
+                org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        )
     }
 }
 

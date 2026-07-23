@@ -8,6 +8,7 @@ import '../../models/message.dart';
 import '../../models/attachment.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api.dart';
+import 'telegram_attachment_sheet.dart';
 
 class ReplyBar extends ConsumerStatefulWidget {
   const ReplyBar({
@@ -251,43 +252,24 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
   void _showAttachmentOptions(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return _AttachmentSheet(
-          onPickFile: (storeInDrive) => _pickAndUploadFile(storeInDrive, false),
-          onPickPhoto: (storeInDrive) => _pickAndUploadFile(storeInDrive, true),
+        return TelegramAttachmentSheet(
+          onFilesPicked: (files, storeInDrive) {
+            _uploadPickedFiles(files, storeInDrive);
+          },
         );
       },
     );
   }
 
-  Future<void> _pickAndUploadFile(bool storeInDrive, bool isPhotoOnly) async {
+  Future<void> _uploadPickedFiles(
+    List<PickedAttachmentItem> files,
+    bool storeInDrive,
+  ) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions:
-            isPhotoOnly
-                ? const ['jpg', 'jpeg', 'png', 'webp']
-                : const [
-                  'jpg',
-                  'jpeg',
-                  'png',
-                  'webp',
-                  'pdf',
-                  'txt',
-                  'md',
-                  'markdown',
-                  'csv',
-                  'json',
-                ],
-        allowMultiple: true,
-        withData: true,
-      );
-
-      if (!mounted) return;
-      if (result == null || result.files.isEmpty) {
-        return;
-      }
+      if (files.isEmpty) return;
 
       setState(() => _sending = true);
       final remaining = 4 - _attachments.length;
@@ -296,14 +278,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
           'You can attach up to four files at a time. Choose fewer files and try again.',
         );
       }
-      final selected = result.files.take(remaining).toList();
+      final selected = files.take(remaining).toList();
       final uploaded = <ComposerAttachment>[];
       for (final file in selected) {
-        if (file.bytes == null) {
-          throw ApiException(
-            '${file.name} couldn’t be read. Choose the file again and retry.',
-          );
-        }
         if (file.size > 15 * 1024 * 1024) {
           throw ApiException(
             '${file.name} is larger than 15 MB. Choose a smaller file and try again.',
@@ -314,7 +291,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
           context,
         ).showSnackBar(SnackBar(content: Text('Uploading ${file.name}...')));
         final formData = FormData.fromMap({
-          'file': MultipartFile.fromBytes(file.bytes!, filename: file.name),
+          'file': MultipartFile.fromBytes(file.bytes, filename: file.name),
           'store_in_drive': storeInDrive ? 'true' : 'false',
         });
         final response = await ref
@@ -391,106 +368,5 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
         setState(() => _sending = false);
       }
     }
-  }
-}
-
-class _AttachmentSheet extends StatefulWidget {
-  const _AttachmentSheet({required this.onPickFile, required this.onPickPhoto});
-
-  final ValueChanged<bool> onPickFile;
-  final ValueChanged<bool> onPickPhoto;
-
-  @override
-  State<_AttachmentSheet> createState() => _AttachmentSheetState();
-}
-
-class _AttachmentSheetState extends State<_AttachmentSheet> {
-  bool _saveToDrive = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: CuppetWorkspaceColors.background,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(SydneyRadius.lg),
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        SydneySpacing.page,
-        SydneySpacing.md,
-        SydneySpacing.page,
-        SydneySpacing.xl,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 38,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: SydneySpacing.lg),
-              decoration: BoxDecoration(
-                color: CuppetWorkspaceColors.panelBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Text(
-            'Add Attachment',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: SydneySpacing.md),
-          SwitchListTile.adaptive(
-            title: const Text(
-              'Save backup copy to Google Drive',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            subtitle: const Text(
-              'Requires linked Google Drive connector',
-              style: TextStyle(fontSize: 12),
-            ),
-            value: _saveToDrive,
-            onChanged: (val) {
-              setState(() => _saveToDrive = val);
-            },
-            activeTrackColor: CuppetWorkspaceColors.primary,
-          ),
-          const Divider(color: CuppetWorkspaceColors.panelBorder),
-          ListTile(
-            leading: const Icon(
-              Icons.photo_library_outlined,
-              color: CuppetWorkspaceColors.primaryInk,
-            ),
-            title: const Text(
-              'Upload Photo',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              widget.onPickPhoto(_saveToDrive);
-            },
-          ),
-          ListTile(
-            leading: const Icon(
-              Icons.description_outlined,
-              color: CuppetWorkspaceColors.primaryInk,
-            ),
-            title: const Text(
-              'Upload Document / File',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              widget.onPickFile(_saveToDrive);
-            },
-          ),
-        ],
-      ),
-    );
   }
 }

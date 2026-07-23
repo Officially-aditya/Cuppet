@@ -290,7 +290,7 @@ const seeds: RecipeSeed[] = [
   {
     id: "news_brief",
     name: "News agent",
-    description: "Five ranked current stories with a TL;DR, context, perspectives, and a lead-story timeline.",
+    description: "Five ranked current stories with a TL;DR.",
     icon: "newspaper",
     category: "news",
     connectors: ["web_search"],
@@ -309,8 +309,8 @@ const seeds: RecipeSeed[] = [
       scheduleField("0 6 * * *")
     ],
     ranking: "Rank exactly five non-duplicate stories by material impact, freshness, source reliability, and fit to the configured topics and geography.",
-    evidence: "Every factual story and optional perspective must be supported by retrieved evidence. Label uncertainty and omit unsupported claims.",
-    style: "Produce three short TL;DR bullets, five ranked stories, concise why-it-matters context, evidence-supported perspectives only when meaningful, and a short lead-story timeline."
+    evidence: "Every factual story must be supported by retrieved evidence. Label uncertainty and omit unsupported claims.",
+    style: "Produce three short TL;DR bullets and five ranked stories."
   },
   {
     id: "tech_news_brief",

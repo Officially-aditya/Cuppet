@@ -212,3 +212,18 @@ test("routes a last-commit question to a fresh GitHub agent run", () => {
   assert.equal(route.reason, "fresh_agent_data_request");
   assert.equal(route.slots.timeRange, "latest");
 });
+
+test("routes explore_news and search keywords to chat instead of creating a new run", () => {
+  for (const text of [
+    'Search the web for "Apple releases M4 Mac" and explain in detail what happened, the verified timeline, why it matters, and the latest developments. Include source links.',
+    "search for React 20 release notes",
+    "search AI news today",
+    "google solid state batteries"
+  ]) {
+    const route = routeAgentMessage(agent, text);
+    assert.equal(route.intent, "chat", `Expected chat for: "${text}"`);
+    const decision = decideAgentInstruction(agent, text);
+    assert.equal(decision.kind, "chat", `Expected chat decision for: "${text}"`);
+    assert.equal(decision.needsLlmReply, true, `Expected needsLlmReply for: "${text}"`);
+  }
+});

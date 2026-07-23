@@ -41,7 +41,7 @@ export function manualWebSearchQuery(text: string): string | null {
   const politePrefix =
     "(?:(?:please|kindly)\\s+)?(?:(?:can|could|would|will)\\s+you\\s+)?";
   const command =
-    "(?:search(?:\\s+the\\s+web)?(?:\\s+for)?|web\\s+search(?:\\s+for)?|look\\s+up|look\\s+into|research|google|find\\s+online)";
+    "(?:search(?:\\s+(?:the\\s+)?web|\\s+on\\s+google)?(?:\\s+for)?|web\\s+search(?:\\s+for)?|look\\s+up|look\\s+into|research|google|find\\s+online)";
   const match = normalized.match(
     new RegExp(`^${politePrefix}${command}\\s+(.+)$`, "i")
   );
