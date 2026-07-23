@@ -1,5 +1,6 @@
 import type { AgentRunTrigger } from "../queue/index.js";
 import type { AgentRow } from "./agent-types.js";
+import { newsTopicsFromPrompt } from "../agents/runtime/compiler.js";
 
 export function scheduledIntro(
   agent: AgentRow,
@@ -45,7 +46,31 @@ export function withPeriod(text: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
-export function topicLabel(prompt: string, fallback: string): string {
+export function topicLabel(
+  input: string | { prompt?: string; parsed_intent?: { recipe_inputs?: Record<string, unknown> } },
+  fallback: string
+): string {
+  if (typeof input === "object" && input !== null) {
+    const recipeInputs = input.parsed_intent?.recipe_inputs;
+    if (recipeInputs && Array.isArray(recipeInputs.topics)) {
+      const topics = recipeInputs.topics.filter(
+        (t): t is string =>
+          typeof t === "string" &&
+          t.trim().length > 0 &&
+          t.toLowerCase() !== "top stories"
+      );
+      if (topics.length > 0) {
+        return `${topics.join(" & ")} brief`;
+      }
+    }
+  }
+
+  const prompt = typeof input === "string" ? input : input.prompt ?? "";
+  const extracted = newsTopicsFromPrompt(prompt);
+  if (extracted.length > 0) {
+    return `${extracted.join(" & ")} brief`;
+  }
+
   const funding = prompt.match(
     /\b(?:about|on)\s+(.+?)\s+(?:every|daily|at|morning|evening|weekly|$)/i
   );

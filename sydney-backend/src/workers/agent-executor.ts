@@ -286,7 +286,7 @@ const connectorPendingConfigs: Record<string, ConnectorPendingConfig> = {
 const renderers: Record<string, AgentRenderer> = {
   tech_news_brief: ({ agent, trigger }) =>
     createTechNewsBrief(agent.prompt, trigger, {
-      heading: scheduledIntro(agent, "tech news", trigger),
+      heading: scheduledIntro(agent, topicLabel(agent, "tech news"), trigger),
       recipeId: "tech_news_brief",
       recipeVersion: numberValue(agent.parsed_intent.recipe_version),
       promptProfileVersion: numberValue(
@@ -296,7 +296,7 @@ const renderers: Record<string, AgentRenderer> = {
     }),
   news_brief: ({ agent, trigger }) =>
     createGeneralNewsBrief(agent.prompt, trigger, {
-      heading: scheduledIntro(agent, topicLabel(agent.prompt, "news"), trigger),
+      heading: scheduledIntro(agent, topicLabel(agent, "news"), trigger),
       recipeId: "news_brief",
       recipeVersion: numberValue(agent.parsed_intent.recipe_version),
       promptProfileVersion: numberValue(

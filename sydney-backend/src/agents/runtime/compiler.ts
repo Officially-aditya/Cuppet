@@ -259,7 +259,7 @@ function customizeRecipeInputsFromPrompt(
   };
 }
 
-function newsTopicsFromPrompt(prompt: string): string[] {
+export function newsTopicsFromPrompt(prompt: string): string[] {
   const topics: string[] = [];
   const generic = new Set([
     "agent",
@@ -271,8 +271,11 @@ function newsTopicsFromPrompt(prompt: string): string[] {
     "digest",
     "general",
     "global",
+    "headline",
+    "headlines",
     "latest",
     "local",
+    "news",
     "rank",
     "ranks",
     "research",
@@ -280,6 +283,8 @@ function newsTopicsFromPrompt(prompt: string): string[] {
     "summarize",
     "summarizes",
     "top",
+    "update",
+    "updates",
     "world"
   ]);
   const add = (raw: string): void => {
@@ -296,6 +301,10 @@ function newsTopicsFromPrompt(prompt: string): string[] {
       )
       .replace(
         /^(?:(?:a|an|about|breaking|current|daily|latest|the|top|with)\s+)+/i,
+        ""
+      )
+      .replace(
+        /(?:\s+(?:every|daily|at\b|\d{1,2}(?::\d{2})?\s*(?:am|pm)?|morning|evening|weekly|each\s+day|each\s+morning|every\s+day).*)*$/i,
         ""
       )
       .trim();
@@ -319,14 +328,20 @@ function newsTopicsFromPrompt(prompt: string): string[] {
   };
 
   for (const match of prompt.matchAll(
-    /\b([a-z][a-z0-9+.#/-]*(?:\s+[a-z][a-z0-9+.#/-]*){0,2})\s+news\b/gi
+    /\b([a-z][a-z0-9+.#/-]*(?:\s+[a-z][a-z0-9+.#/-]*){0,2})\s+(?:news|headlines?|briefing|updates?|digest)\b/gi
   )) {
     if (match[1]) add(match[1]);
   }
   const about = prompt.match(
-    /\bnews\s+(?:about|on|covering|focused\s+on)\s+([^.,;\n]{1,80})/i
+    /\b(?:news|headlines?|briefing|updates?|digest)\s+(?:about|on|covering|focused\s+on|for|regarding|in|related\s+to)\s+([^.,;\n]{1,80})/i
   );
   if (about?.[1]) add(about[1]);
+
+  const directAbout = prompt.match(
+    /\b(?:about|on|covering|focused\s+on|regarding)\s+([^.,;\n]{1,80})/i
+  );
+  if (topics.length === 0 && directAbout?.[1]) add(directAbout[1]);
+
   return topics.slice(0, 6);
 }
 
