@@ -212,13 +212,12 @@ class AuthService {
   }
 
   Future<void> _ensureGoogleSignInInitialized() async {
-    if (Env.googleServerClientId.isEmpty) {
-      throw const ApiException('Google sign-in is missing its client ID.');
-    }
+    final serverClientId =
+        Env.googleServerClientId.isNotEmpty ? Env.googleServerClientId : null;
 
     try {
       _googleInitialization ??= GoogleSignIn.instance.initialize(
-        serverClientId: Env.googleServerClientId,
+        serverClientId: serverClientId,
       );
       await _googleInitialization;
     } catch (_) {
