@@ -211,14 +211,20 @@ class AuthService {
     );
   }
 
-  Future<void> _ensureGoogleSignInInitialized() {
+  Future<void> _ensureGoogleSignInInitialized() async {
     if (Env.googleServerClientId.isEmpty) {
       throw const ApiException('Google sign-in is missing its client ID.');
     }
 
-    return _googleInitialization ??= GoogleSignIn.instance.initialize(
-      serverClientId: Env.googleServerClientId,
-    );
+    try {
+      _googleInitialization ??= GoogleSignIn.instance.initialize(
+        serverClientId: Env.googleServerClientId,
+      );
+      await _googleInitialization;
+    } catch (_) {
+      _googleInitialization = null;
+      rethrow;
+    }
   }
 
   String? _sessionCookieFromHeaders(Headers headers) {

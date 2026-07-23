@@ -288,9 +288,15 @@ async function createSession(
 }
 
 function googleAudiences(): string[] {
-  return [config.GOOGLE_CLIENT_ID, config.GOOGLE_ANDROID_CLIENT_ID].filter(
-    (value): value is string => Boolean(value?.trim())
-  );
+  const defaults = [
+    "196727476983-mcou7vm9g1kar5nr9217sq3ljrbtv53g.apps.googleusercontent.com"
+  ];
+  const configured = [
+    config.GOOGLE_CLIENT_ID,
+    config.GOOGLE_ANDROID_CLIENT_ID
+  ].filter((value): value is string => Boolean(value?.trim()));
+
+  return [...new Set([...defaults, ...configured])];
 }
 
 function stringClaim(value: unknown): string | null {
