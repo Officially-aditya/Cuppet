@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "847353841069",
+    "project_id": "sydney-4fc9e",
+    "storage_bucket": "sydney-4fc9e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:847353841069:android:ebab60514cb0555c144d24",
+        "android_client_info": {
+          "package_name": "com.example.sydney"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "196727476983-mcou7vm9g1kar5nr9217sq3ljrbtv53g.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "847353841069-androiddebug.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.sydney",
+            "certificate_hash": "1782ad38ef02342342a1206146629ac0417acbbf"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhZm6m6HcJshLOV_2CKl1tWTTw9UVA788"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

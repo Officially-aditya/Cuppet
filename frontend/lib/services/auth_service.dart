@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../config/env.dart';
@@ -129,94 +128,38 @@ class AuthService {
 
     try {
       await _ensureGoogleSignInInitialized();
-      if (GoogleSignIn.instance.supportsAuthenticate()) {
-        final account = await GoogleSignIn.instance.authenticate();
-        final idToken = account.authentication.idToken;
-        if (idToken != null && idToken.isNotEmpty) {
-          final response = await _api.post<Map<String, dynamic>>(
-            '/auth/mobile/google',
-            data: {'idToken': idToken},
-            options: skipAuthOptions(),
-          );
-
-          final data = response.data;
-          final token = data?['token']?.toString();
-          final userData = data?['user'];
-          if (token != null && token.isNotEmpty && userData is Map) {
-            await _api.writeSessionToken(token);
-            return AuthSession(
-              user: User.fromJson(Map<String, dynamic>.from(userData)),
-              token: token,
-            );
-          }
-        }
+      if (!GoogleSignIn.instance.supportsAuthenticate()) {
+        throw const ApiException(
+          'Google sign-in is not available on this device.',
+        );
       }
-    } catch (_) {
-      // Native sign-in unconfigured or failed; fall through to web OAuth flow.
-    }
 
-    return _continueWithGoogleWeb();
-  }
-
-  Future<AuthSession> _continueWithGoogleWeb() async {
-    try {
-      final callbackUri = Uri(
-        scheme: Env.authCallbackScheme,
-        host: 'auth',
-        path: '/google',
-      );
-      final authOrigin =
-          Env.authOrigin.endsWith('/')
-              ? Env.authOrigin.substring(0, Env.authOrigin.length - 1)
-              : Env.authOrigin;
-      final mobileCallbackUri = Uri.parse(
-        '$authOrigin/auth/mobile/google/callback',
-      ).replace(queryParameters: {'redirect_uri': callbackUri.toString()});
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw const ApiException('Google did not return an ID token.');
+      }
 
       final response = await _api.post<Map<String, dynamic>>(
-        '/auth/sign-in/social',
-        data: {
-          'provider': 'google',
-          'disableRedirect': true,
-          'requestSignUp': true,
-          'callbackURL': mobileCallbackUri.toString(),
-          'newUserCallbackURL': mobileCallbackUri.toString(),
-          'errorCallbackURL': callbackUri.toString(),
-        },
-        options: authRouteOptions(),
+        '/auth/mobile/google',
+        data: {'idToken': idToken},
+        options: skipAuthOptions(),
       );
 
-      final authUrl = response.data?['url']?.toString();
-      if (authUrl == null || authUrl.isEmpty) {
-        throw const ApiException('Google sign-in is not configured yet.');
-      }
-
-      final result = await FlutterWebAuth2.authenticate(
-        url: authUrl,
-        callbackUrlScheme: Env.authCallbackScheme,
-      );
-      final params = _callbackParameters(Uri.parse(result));
-      final error = params['error'];
-      if (error != null && error.isNotEmpty) {
-        throw ApiException('Google sign-in did not finish. $error');
-      }
-
-      final token = params['token'];
-      if (token == null || token.isEmpty) {
-        throw const ApiException('Google did not return a session token.');
-      }
-
-      await _api.writeSessionToken(token);
-      final me = await _api.get<Map<String, dynamic>>('/users/me');
-      final userData = me.data?['user'];
-      if (userData is! Map) {
+      final data = response.data;
+      final token = data?['token']?.toString();
+      final userData = data?['user'];
+      if (token == null || token.isEmpty || userData is! Map) {
         throw const ApiException('The server returned an incomplete session.');
       }
 
+      await _api.writeSessionToken(token);
       return AuthSession(
         user: User.fromJson(Map<String, dynamic>.from(userData)),
         token: token,
       );
+    } on GoogleSignInException catch (error) {
+      throw ApiException(_googleSignInExceptionMessage(error));
     } catch (error) {
       throw apiExceptionFrom(
         error,
@@ -312,12 +255,18 @@ class AuthService {
   }
 }
 
-Map<String, String> _callbackParameters(Uri uri) {
-  final params = <String, String>{...uri.queryParameters};
-  if (uri.fragment.isNotEmpty) {
-    params.addAll(Uri.splitQueryString(uri.fragment));
-  }
-  return params;
+String _googleSignInExceptionMessage(GoogleSignInException error) {
+  return switch (error.code) {
+    GoogleSignInExceptionCode.canceled => 'Google sign-in was cancelled.',
+    GoogleSignInExceptionCode.interrupted =>
+      'Google sign-in was interrupted. Please try again.',
+    GoogleSignInExceptionCode.clientConfigurationError ||
+    GoogleSignInExceptionCode.providerConfigurationError =>
+      'Google sign-in is not configured correctly for this app.',
+    GoogleSignInExceptionCode.uiUnavailable =>
+      'Google sign-in is not available on this device.',
+    _ => 'Google sign-in did not finish. Please try again.',
+  };
 }
 
 Options skipAuthOptions() {
