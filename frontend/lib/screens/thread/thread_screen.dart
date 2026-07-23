@@ -36,27 +36,18 @@ class ThreadScreen extends ConsumerStatefulWidget {
 PopupMenuItem<String> _agentMenuItem(
   BuildContext context, {
   required String value,
-  required IconData icon,
   required String label,
 }) {
   return PopupMenuItem<String>(
     value: value,
-    child: Row(
-      children: [
-        Icon(icon, size: 18, color: CuppetWorkspaceColors.primaryInk),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: CuppetWorkspaceColors.ink,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
+    child: Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: CuppetWorkspaceColors.ink,
+        fontWeight: FontWeight.w600,
+      ),
     ),
   );
 }
@@ -354,29 +345,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 actions: [
                   PopupMenuButton<String>(
                     constraints: const BoxConstraints(
-                      minWidth: 248,
-                      maxWidth: 280,
+                      minWidth: 160,
+                      maxWidth: 205,
                     ),
-                    icon: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: CuppetWorkspaceColors.card,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: CuppetWorkspaceColors.border),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0A1C1A17),
-                            blurRadius: 6,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.more_vert_rounded,
-                        size: 18,
-                        color: CuppetWorkspaceColors.ink,
-                      ),
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      size: 20,
+                      color: CuppetWorkspaceColors.ink,
                     ),
                     tooltip: 'More options',
                     shape: RoundedRectangleBorder(
@@ -397,35 +372,27 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             _agentMenuItem(
                               context,
                               value: 'run_now',
-                              icon: Icons.play_circle_outline_rounded,
                               label: 'Run agent now',
                             ),
                           _agentMenuItem(
                             context,
                             value: 'preferences',
-                            icon: Icons.settings_outlined,
                             label: 'Agent preferences',
                           ),
                           if (_shouldShowHeatmap(agent))
                             _agentMenuItem(
                               context,
                               value: 'view_heatmap',
-                              icon: Icons.calendar_month_rounded,
                               label: 'View progress heatmap',
                             ),
                           _agentMenuItem(
                             context,
                             value: 'clear_chat',
-                            icon: Icons.delete_sweep_rounded,
                             label: 'Clear chat',
                           ),
                           _agentMenuItem(
                             context,
                             value: 'mute',
-                            icon:
-                                agent.notificationsMuted
-                                    ? Icons.notifications_outlined
-                                    : Icons.notifications_off_outlined,
                             label:
                                 agent.notificationsMuted
                                     ? 'Unmute agent'
