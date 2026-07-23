@@ -43,7 +43,8 @@ class Env {
 
   static const googleServerClientId = String.fromEnvironment(
     'SYDNEY_GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: '',
+    defaultValue:
+        '196727476983-mcou7vm9g1kar5nr9217sq3ljrbtv53g.apps.googleusercontent.com',
   );
 
   static const useMockData = bool.fromEnvironment(
