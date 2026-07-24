@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'agent_schedule.dart';
 
 enum AgentAvailability { ready, thinking, paused }
 
@@ -35,6 +36,30 @@ class Agent {
 
   bool get hasUnread => unreadCount > 0;
   bool get notificationsMuted => parsedIntent?['notifications_muted'] == true;
+
+  String? get scheduleCron {
+    final raw = parsedIntent?['schedule_cron']?.toString();
+    if (raw != null && raw.isNotEmpty) return raw;
+    final trigger = parsedIntent?['trigger'];
+    if (trigger is Map && trigger['type'] == 'schedule') {
+      return trigger['cron']?.toString();
+    }
+    return null;
+  }
+
+  String get scheduledTimingLabel {
+    if (availability == AgentAvailability.paused) {
+      return 'PAUSED';
+    }
+    if (availability == AgentAvailability.thinking) {
+      return 'THINKING...';
+    }
+    final cron = scheduleCron;
+    if (cron == null || cron.trim().isEmpty) {
+      return 'ON DEMAND';
+    }
+    return formatScheduledTiming(cron).toUpperCase();
+  }
 
   Agent copyWith({
     String? id,

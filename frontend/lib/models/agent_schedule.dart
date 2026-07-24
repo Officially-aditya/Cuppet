@@ -30,6 +30,31 @@ String humanizeScheduleText(String text) {
   return result;
 }
 
+String formatScheduledTiming(String cron) {
+  final parts = cron.trim().split(RegExp(r'\s+'));
+  if (parts.length != 5) return 'Scheduled';
+
+  final minute = int.tryParse(parts[0]);
+  final hour = int.tryParse(parts[1]);
+  if (minute == null ||
+      hour == null ||
+      minute < 0 ||
+      minute > 59 ||
+      hour < 0 ||
+      hour > 23) {
+    return 'Scheduled';
+  }
+
+  final hour12 = hour == 0 || hour == 12 ? 12 : hour % 12;
+  final suffix = hour < 12 ? 'am' : 'pm';
+  final timeStr =
+      minute == 0
+          ? '$hour12$suffix'
+          : '$hour12:${minute.toString().padLeft(2, '0')}$suffix';
+
+  return 'Scheduled at $timeStr';
+}
+
 String _scheduleDescription(String cron) {
   final parts = cron.trim().split(RegExp(r'\s+'));
   if (parts.length != 5) return 'Runs on a custom schedule';

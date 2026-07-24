@@ -317,11 +317,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                 const SizedBox(width: 6),
                                 Text(
-                                  agent.availability == AgentAvailability.paused
-                                      ? 'PAUSED'
-                                      : 'ACTIVE',
+                                  agent.scheduledTimingLabel,
                                   style: Theme.of(
                                     context,
                                   ).textTheme.labelSmall?.copyWith(
