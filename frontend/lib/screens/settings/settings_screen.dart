@@ -7,6 +7,7 @@ import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/timezone_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/user_avatar.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -92,13 +93,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return '?';
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -107,7 +101,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final preferredName = ref.watch(preferredNameProvider);
     final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
     final email = user?.email ?? '';
-    final initials = _initials(displayName);
     final timeZoneAsync = ref.watch(timezonePreferencesProvider);
     final timeZoneState = timeZoneAsync.value;
     final displayedTimeZone = timeZoneState?.displayedTimeZone;
@@ -141,23 +134,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () => Navigator.of(context).pushNamed(AppRoutes.profile),
                 child: Row(
                   children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: const BoxDecoration(
-                        color: CuppetWorkspaceColors.softSage,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        initials,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: CuppetWorkspaceColors.primaryInk,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20,
-                        ),
-                      ),
-                    ),
+                    UserAvatar(user: user, size: 64),
                     const SizedBox(width: SydneySpacing.lg),
                     Expanded(
                       child: Column(

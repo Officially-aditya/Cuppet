@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/user_avatar.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -27,13 +28,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     super.dispose();
-  }
-
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return '?';
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   Future<void> _showDeleteAccountConfirmation() async {
@@ -182,7 +176,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final preferredName = ref.watch(preferredNameProvider);
     final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
     final email = user?.email ?? '';
-    final initials = _initials(displayName);
 
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
@@ -212,22 +205,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               WorkspaceCard(
                 child: Column(
                   children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const BoxDecoration(
-                        color: CuppetWorkspaceColors.softSage,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        initials,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: CuppetWorkspaceColors.primaryInk,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
+                    UserAvatar(user: user, size: 80),
                     const SizedBox(height: SydneySpacing.md),
                     Text(
                       displayName,
@@ -312,6 +290,70 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: SydneySpacing.xl),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'CHOOSE AVATAR',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: CuppetWorkspaceColors.primaryInk,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.9,
+                    ),
+                  ),
+                  const SizedBox(height: SydneySpacing.sm),
+                  WorkspaceCard(
+                    padding: const EdgeInsets.all(SydneySpacing.md),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        for (final iconPath in kUserAvatarIcons) ...[
+                          InkWell(
+                            onTap: () {
+                              ref
+                                  .read(preferredAvatarProvider.notifier)
+                                  .setPreferredAvatar(iconPath);
+                            },
+                            borderRadius: BorderRadius.circular(SydneyRadius.full),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 52,
+                              height: 52,
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: (ref.watch(preferredAvatarProvider) == iconPath ||
+                                          (ref.watch(preferredAvatarProvider).isEmpty &&
+                                              userAvatarIconPath(user) == iconPath))
+                                      ? CuppetWorkspaceColors.primary
+                                      : Colors.transparent,
+                                  width: 2.5,
+                                ),
+                              ),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: CuppetWorkspaceColors.softSage,
+                                  shape: BoxShape.circle,
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Image.asset(
+                                  iconPath,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
