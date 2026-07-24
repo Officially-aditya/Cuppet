@@ -42,6 +42,7 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
 
   List<AssetEntity> _galleryAssets = [];
   bool _loadingGallery = true;
+  bool _hasGalleryAccess = true;
 
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -91,14 +92,35 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
             setState(() {
               _galleryAssets = entities;
               _loadingGallery = false;
+              _hasGalleryAccess = true;
             });
             return;
           }
         }
+      } else {
+        if (mounted) {
+          setState(() {
+            _hasGalleryAccess = false;
+            _loadingGallery = false;
+          });
+        }
+        return;
       }
     } catch (_) {}
     if (mounted) {
-      setState(() => _loadingGallery = false);
+      setState(() {
+        _loadingGallery = false;
+        _hasGalleryAccess = _galleryAssets.isNotEmpty;
+      });
+    }
+  }
+
+  Future<void> _requestGalleryPermission() async {
+    final PermissionState ps = await PhotoManager.requestPermissionExtend();
+    if (ps.isAuth || ps.hasAccess) {
+      await _loadGalleryPhotos();
+    } else {
+      await PhotoManager.openSetting();
     }
   }
 
@@ -219,7 +241,8 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
           }
         }
         if (items.isNotEmpty) {
-          Navigator.pop(context);
+        if (!mounted) return;
+        Navigator.pop(context);
           widget.onFilesPicked(items, _saveToDrive);
         }
       }
@@ -318,8 +341,9 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
   }
 
   Widget _buildGalleryTab(BuildContext context) {
-    // Grid: 1st tile is Live Camera, followed by preloaded gallery photos + 1 fallback tile
-    final totalCount = 1 + _galleryAssets.length + 1;
+    // Grid: 1st tile is Live Camera, optional 2nd tile if gallery permission needed, followed by photos + fallback tile
+    final showPermissionTile = !_hasGalleryAccess && _galleryAssets.isEmpty;
+    final totalCount = 1 + (showPermissionTile ? 1 : 0) + _galleryAssets.length + 1;
 
     return Padding(
       key: const ValueKey('tab-gallery'),
@@ -337,8 +361,13 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
             return _buildCameraTile(context);
           }
 
-          final assetIndex = index - 1;
-          if (assetIndex < _galleryAssets.length) {
+          if (showPermissionTile && index == 1) {
+            // Permission Grant Tile
+            return _buildPermissionTile(context);
+          }
+
+          final assetIndex = index - 1 - (showPermissionTile ? 1 : 0);
+          if (assetIndex >= 0 && assetIndex < _galleryAssets.length) {
             // Preloaded Gallery Photo Tile
             final asset = _galleryAssets[assetIndex];
             return GestureDetector(
@@ -394,6 +423,40 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildPermissionTile(BuildContext context) {
+    return GestureDetector(
+      onTap: _requestGalleryPermission,
+      child: Container(
+        decoration: BoxDecoration(
+          color: SydneyColors.primarySoft,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: CuppetWorkspaceColors.primary),
+        ),
+        padding: const EdgeInsets.all(SydneySpacing.xs),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.photo_library_outlined,
+              color: CuppetWorkspaceColors.primaryInk,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Allow Access',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: CuppetWorkspaceColors.primaryInk,
+                fontWeight: FontWeight.w800,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

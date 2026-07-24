@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cuppet requires photo library access to attach images to conversations.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Cuppet requires permission to save photos to your photo library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Cuppet requires camera access to capture photos and attach them to messages.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Cuppet requires microphone access for video recording.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
