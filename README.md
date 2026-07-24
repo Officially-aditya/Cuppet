@@ -1,4 +1,4 @@
-# Sydney
+# Cuppet
 
 Mobile-first AI delegation app. Create persistent AI agents with one plain-language sentence — they run on schedules, use your connected accounts, and message you like WhatsApp contacts.
 
@@ -6,7 +6,7 @@ Mobile-first AI delegation app. Create persistent AI agents with one plain-langu
 
 ## What it does
 
-Sydney is a **messaging interface for AI agents**, not a dashboard or chatbot:
+Cuppet is a **messaging interface for AI agents**, not a dashboard or chatbot:
 
 | Layer | Experience |
 | --- | --- |
@@ -163,7 +163,7 @@ Protected routes accept Better Auth session cookies or `Authorization: Bearer <j
 
 | Doc | Purpose |
 | --- | --- |
-| [sydney_product.md](./sydney_product.md) | What Sydney is and who it’s for |
+| [sydney_product.md](./sydney_product.md) | What Cuppet is and who it’s for |
 | [sydney_technical.md](./sydney_technical.md) | Stack, schema, auth, queues |
 | [sydney_design.md](./sydney_design.md) | Design system |
 | [sydney_components.md](./sydney_components.md) | UI components |

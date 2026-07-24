@@ -1,12 +1,12 @@
-# Sydney Flutter Frontend
+# Cuppet Flutter Frontend
 
-Mobile-first Flutter frontend scaffold for Sydney, an AI delegation messaging app.
+Mobile-first Flutter frontend scaffold for Cuppet, an AI delegation messaging app.
 
 ## Scope
 
 - Frontend only.
 - Backend APIs are assumed to exist over REST and WebSocket.
-- The app stores only the Sydney session token in `flutter_secure_storage`.
+- The app stores only the Cuppet session token in `flutter_secure_storage`.
 - Connector OAuth is initiated in-app, but connector tokens must remain backend-owned.
 - Agent outputs are rendered as structured messages.
 
@@ -26,7 +26,7 @@ flutter run \
   --dart-define=SYDNEY_USE_MOCKS=true
 ```
 
-For the local Sydney backend:
+For the local Cuppet backend:
 
 ```sh
 # iOS simulator

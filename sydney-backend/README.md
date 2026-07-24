@@ -1,6 +1,6 @@
-# Sydney Backend
+# Cuppet Backend
 
-Backend foundation for Sydney.
+Backend foundation for Cuppet.
 
 ## Local Setup With Docker
 
@@ -179,7 +179,7 @@ digests; it is not used to check providers every few seconds.
 
 ## LLM and Input Security
 
-Sydney treats connector records, fetched document/email contents, source
+Cuppet treats connector records, fetched document/email contents, source
 metadata, web results, and prior generated output as untrusted data. These
 values are normalized, secret-redacted, prompt-injection screened, XML-escaped,
 and placed behind explicit prompt trust boundaries before reaching Gemini.
