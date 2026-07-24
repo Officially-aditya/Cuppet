@@ -154,6 +154,8 @@ class PreferredNameNotifier extends Notifier<String> {
       final secureStorage = ref.read(secureStorageProvider);
       await secureStorage.write(key: 'preferred_name', value: name);
       state = name;
+      final api = ref.read(apiClientProvider);
+      await api.patch('/users/me', data: {'name': name});
     } catch (_) {
       state = name;
     }
@@ -186,6 +188,8 @@ class PreferredAvatarNotifier extends Notifier<String> {
       final secureStorage = ref.read(secureStorageProvider);
       await secureStorage.write(key: 'preferred_avatar', value: avatarPath);
       state = avatarPath;
+      final api = ref.read(apiClientProvider);
+      await api.patch('/users/me', data: {'image': avatarPath});
     } catch (_) {
       state = avatarPath;
     }

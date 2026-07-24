@@ -27,6 +27,13 @@ const updatePreferencesSchema = z
     message: "At least one preference is required."
   });
 
+const updateUserSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    image: z.string().trim().min(1).max(500).optional()
+  })
+  .strict();
+
 type UserPreferenceRow = {
   time_zone: string | null;
   follow_device_time_zone: boolean;
@@ -38,6 +45,50 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     session: request.auth!.session,
     preferences: await loadPreferences(request.auth!.userId)
   }));
+
+  app.patch("/users/me", { preHandler: requireAuth }, async (request, reply) => {
+    if (accountBindingMismatch(request)) {
+      return accountChanged(reply);
+    }
+    const parsed = updateUserSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: {
+          code: "INVALID_USER_DATA",
+          message: parsed.error.issues[0]?.message ?? "Invalid user data."
+        }
+      });
+    }
+
+    const userId = request.auth!.userId;
+    const { name, image } = parsed.data;
+
+    const result = await pool.query<{
+      id: string;
+      email: string;
+      name: string | null;
+      image: string | null;
+    }>(
+      `
+        UPDATE users
+        SET name = COALESCE($2, name),
+            image = COALESCE($3, image),
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, email, name, image
+      `,
+      [userId, name ?? null, image ?? null]
+    );
+
+    const user = result.rows[0];
+    if (!user) {
+      return reply.code(404).send({
+        error: { code: "USER_NOT_FOUND", message: "User not found." }
+      });
+    }
+
+    return { user };
+  });
 
   app.get(
     "/users/me/preferences",
