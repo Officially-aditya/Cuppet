@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -169,21 +168,6 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: CuppetWorkspaceColors.primaryInk,
-                    size: 28,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: CuppetWorkspaceColors.card,
-                    disabledBackgroundColor: CuppetWorkspaceColors.border,
-                    side: const BorderSide(color: CuppetWorkspaceColors.border),
-                  ),
-                  onPressed:
-                      _sending ? null : () => _showAttachmentOptions(context),
-                ),
-                const SizedBox(width: SydneySpacing.xs),
                 Expanded(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -203,24 +187,42 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                       minLines: 1,
                       maxLines: 4,
                       textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: CuppetWorkspaceColors.ink,
+                        height: 1.4,
+                      ),
+                      decoration: InputDecoration(
                         hintText: 'Message agent',
-                        hintStyle: TextStyle(
+                        hintStyle: const TextStyle(
                           color: CuppetWorkspaceColors.muted,
                         ),
                         filled: false,
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: SydneySpacing.lg,
-                          vertical: 14,
+                        prefixIcon: IconButton(
+                          tooltip: 'Add attachment',
+                          icon: const Icon(
+                            Icons.add_rounded,
+                            color: CuppetWorkspaceColors.primaryInk,
+                            size: 22,
+                          ),
+                          onPressed:
+                              _sending ? null : () => _showAttachmentOptions(context),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: SydneySpacing.md,
+                          vertical: 13,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: SydneySpacing.md),
+                const SizedBox(width: SydneySpacing.sm),
                 SizedBox(
                   width: 48,
                   height: 48,
