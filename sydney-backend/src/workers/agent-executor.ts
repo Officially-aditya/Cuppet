@@ -2161,9 +2161,9 @@ function normalizeContentExtractorJson(value: unknown): Record<string, unknown> 
     return {
       title,
       hook,
-      ...(item.angle || item.perspective ? { angle: (item.angle ?? item.perspective).toString().trim() } : {}),
-      ...(item.audience_value || item.audienceValue ? { audience_value: (item.audience_value ?? item.audienceValue).toString().trim() } : {}),
-      ...(item.evidence_summary || item.evidenceSummary ? { evidence_summary: (item.evidence_summary ?? item.evidenceSummary).toString().trim() } : {})
+      ...(item.angle || item.perspective ? { angle: String(item.angle ?? item.perspective ?? "").trim() } : {}),
+      ...(item.audience_value || item.audienceValue ? { audience_value: String(item.audience_value ?? item.audienceValue ?? "").trim() } : {}),
+      ...(item.evidence_summary || item.evidenceSummary ? { evidence_summary: String(item.evidence_summary ?? item.evidenceSummary ?? "").trim() } : {})
     };
   }).filter(Boolean);
 
