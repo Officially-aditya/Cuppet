@@ -5,7 +5,7 @@ import '../../design/tokens.dart';
 import '../../models/agent.dart';
 import '../../providers/agents_provider.dart';
 import '../../services/api.dart';
-import '../../widgets/sydney_primitives.dart';
+import '../../widgets/workspace_primitives.dart';
 
 class AgentPreferencesScreen extends ConsumerStatefulWidget {
   const AgentPreferencesScreen({required this.agent, super.key});
@@ -92,215 +92,147 @@ class _AgentPreferencesScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SydneyColors.surface,
+      backgroundColor: CuppetWorkspaceColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: SydneyColors.surface.withValues(alpha: 0.95),
-        scrolledUnderElevation: 0,
+        backgroundColor: CuppetWorkspaceColors.background,
         elevation: 0,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: SydneyColors.line),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x04000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(
-                  Icons.arrow_back_rounded,
-                  size: 18,
-                  color: SydneyColors.ink,
-                ),
-              ),
-            ),
-          ),
-        ),
-        titleSpacing: 12,
+        scrolledUnderElevation: 0,
+        foregroundColor: CuppetWorkspaceColors.ink,
         title: Text(
           'Agent Preferences',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: CuppetWorkspaceColors.ink,
             fontSize: 20,
-            fontWeight: FontWeight.w900,
-            color: SydneyColors.ink,
-            letterSpacing: -0.5,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
       body: SafeArea(
-        bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
             SydneySpacing.md,
             SydneySpacing.page,
-            96,
+            SydneySpacing.xxl,
           ),
           children: [
             Text(
-              'Configure how this agent processes information and communicates with you.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
+              'Configure how ${widget.agent.name} processes information and communicates with you.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: CuppetWorkspaceColors.muted,
                 height: 1.35,
               ),
             ),
-            const SizedBox(height: SydneySpacing.md),
-            Container(
-              decoration: BoxDecoration(
-                color: SydneyColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
-                    offset: const Offset(4, 4),
-                    blurRadius: 8,
-                  ),
-                  const BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-4, -4),
-                    blurRadius: 8,
-                  ),
-                ],
-                border: Border.all(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              padding: const EdgeInsets.all(SydneySpacing.lg),
+            const SizedBox(height: SydneySpacing.xl),
+
+            // AGENT DESCRIPTION
+            const WorkspaceSectionLabel('Agent Description'),
+            const SizedBox(height: SydneySpacing.sm),
+            WorkspaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _PanelTitle(
-                    icon: Icons.info_outline_rounded,
-                    title: 'Agent Description',
-                  ),
-                  const SizedBox(height: SydneySpacing.md),
                   TextField(
                     key: const ValueKey('agent_description_field'),
                     controller: _descriptionController,
                     minLines: 3,
                     maxLines: 6,
                     textCapitalization: TextCapitalization.sentences,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurface,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: CuppetWorkspaceColors.ink,
                       height: 1.4,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Describe what this agent should do.',
                       helperText:
-                          'Use “update agent…” in chat for future changes.',
+                          'Use "update agent..." in chat for future changes.',
+                      helperStyle: const TextStyle(
+                        color: CuppetWorkspaceColors.muted,
+                        fontSize: 11,
+                      ),
                       helperMaxLines: 2,
                       filled: true,
-                      fillColor: SydneyColors.surfaceContainerLowest,
+                      fillColor: CuppetWorkspaceColors.background,
                       contentPadding: const EdgeInsets.all(SydneySpacing.md),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: SydneyColors.line),
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderSide: const BorderSide(
+                          color: CuppetWorkspaceColors.border,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: SydneyColors.line),
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderSide: const BorderSide(
+                          color: CuppetWorkspaceColors.border,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderSide: const BorderSide(
+                          color: CuppetWorkspaceColors.primary,
+                          width: 1.4,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: SydneySpacing.md),
-            Material(
-              color: SydneyColors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: SwitchListTile(
+            const SizedBox(height: SydneySpacing.xl),
+
+            // STATUS
+            const WorkspaceSectionLabel('Agent Status'),
+            const SizedBox(height: SydneySpacing.sm),
+            WorkspaceCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile.adaptive(
                 value: _isPaused,
                 onChanged: (paused) => setState(() => _isPaused = paused),
-                activeThumbColor: Colors.white,
-                activeTrackColor: SydneyColors.primary,
+                activeTrackColor: CuppetWorkspaceColors.primary,
                 title: Text(
                   _isPaused ? 'Resume agent' : 'Pause agent',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: SydneyColors.ink,
-                    fontWeight: FontWeight.w700,
+                    color: CuppetWorkspaceColors.ink,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 subtitle: Text(
                   _isPaused
                       ? 'This agent is paused and will not run on its schedule.'
                       : 'Turn this on to stop scheduled runs.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: CuppetWorkspaceColors.muted,
+                  ),
                 ),
                 secondary: Icon(
                   _isPaused
-                      ? Icons.play_circle_outline
-                      : Icons.pause_circle_outline,
-                  color: SydneyColors.primary,
+                      ? Icons.play_circle_outline_rounded
+                      : Icons.pause_circle_outline_rounded,
+                  color: CuppetWorkspaceColors.primaryInk,
                 ),
               ),
             ),
-            const SizedBox(height: SydneySpacing.md),
-            Container(
-              decoration: BoxDecoration(
-                color: SydneyColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
-                    offset: const Offset(4, 4),
-                    blurRadius: 8,
-                  ),
-                  const BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-4, -4),
-                    blurRadius: 8,
-                  ),
-                ],
-                border: Border.all(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              padding: const EdgeInsets.all(SydneySpacing.lg),
+            const SizedBox(height: SydneySpacing.xl),
+
+            // RESPONSE TIMING
+            const WorkspaceSectionLabel('Response Timing'),
+            const SizedBox(height: SydneySpacing.sm),
+            WorkspaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _PanelTitle(
-                    icon: Icons.tune_rounded,
-                    title: 'Response Timing',
-                  ),
-                  const SizedBox(height: SydneySpacing.xs),
                   Text(
                     'Select when the agent should deliver updates or actions.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: SydneyColors.mutedInk,
+                      color: CuppetWorkspaceColors.muted,
+                      height: 1.3,
                     ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   _TimingOption(
                     title: 'Real-time',
-                    subtitle: 'Notify me when a matching external event occurs',
+                    subtitle:
+                        'Notify me when a matching external event occurs',
                     selected: _responseTiming == 'real-time',
                     onTap: () => setState(() => _responseTiming = 'real-time'),
                   ),
@@ -314,51 +246,29 @@ class _AgentPreferencesScreenState
                 ],
               ),
             ),
-            const SizedBox(height: SydneySpacing.md),
-            Container(
-              decoration: BoxDecoration(
-                color: SydneyColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
-                    offset: const Offset(4, 4),
-                    blurRadius: 8,
-                  ),
-                  const BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-4, -4),
-                    blurRadius: 8,
-                  ),
-                ],
-                border: Border.all(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              padding: const EdgeInsets.all(SydneySpacing.lg),
+            const SizedBox(height: SydneySpacing.xl),
+
+            // RESPONSE LIMIT
+            const WorkspaceSectionLabel('Response Verbosity'),
+            const SizedBox(height: SydneySpacing.sm),
+            WorkspaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _PanelTitle(
-                    icon: Icons.layers_outlined,
-                    title: 'Response Limit',
-                  ),
-                  const SizedBox(height: SydneySpacing.xs),
                   Text(
                     "Adjust the verbosity of the agent's output.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: SydneyColors.mutedInk,
+                      color: CuppetWorkspaceColors.muted,
+                      height: 1.3,
                     ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: SydneyColors.primary,
-                      inactiveTrackColor: SydneyColors.primarySoft,
-                      thumbColor: SydneyColors.primary,
-                      overlayColor: SydneyColors.primarySoft,
+                      activeTrackColor: CuppetWorkspaceColors.primary,
+                      inactiveTrackColor: CuppetWorkspaceColors.softSage,
+                      thumbColor: CuppetWorkspaceColors.primary,
+                      overlayColor: CuppetWorkspaceColors.softSage,
                     ),
                     child: Slider(
                       min: 1,
@@ -389,42 +299,20 @@ class _AgentPreferencesScreenState
                 ],
               ),
             ),
-            const SizedBox(height: SydneySpacing.md),
-            Container(
-              decoration: BoxDecoration(
-                color: SydneyColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF17201C).withValues(alpha: 0.05),
-                    offset: const Offset(4, 4),
-                    blurRadius: 8,
-                  ),
-                  const BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-4, -4),
-                    blurRadius: 8,
-                  ),
-                ],
-                border: Border.all(
-                  color: SydneyColors.line.withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-              ),
-              padding: const EdgeInsets.all(SydneySpacing.lg),
+            const SizedBox(height: SydneySpacing.xl),
+
+            // ACTIVE UNTIL
+            const WorkspaceSectionLabel('Active Until'),
+            const SizedBox(height: SydneySpacing.sm),
+            WorkspaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _PanelTitle(
-                    icon: Icons.calendar_month_outlined,
-                    title: 'Active Until',
-                  ),
-                  const SizedBox(height: SydneySpacing.xs),
                   Text(
                     "Set an expiration date for this agent's active duties.",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: SydneyColors.mutedInk,
+                      color: CuppetWorkspaceColors.muted,
+                      height: 1.3,
                     ),
                   ),
                   const SizedBox(height: SydneySpacing.md),
@@ -477,36 +365,41 @@ class _AgentPreferencesScreenState
                                 });
                               }
                             },
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SydneyColors.onSurface,
-                      fontWeight: FontWeight.w500,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: CuppetWorkspaceColors.ink,
+                      fontWeight: FontWeight.w600,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Unlimited',
-                      fillColor: SydneyColors.surfaceContainer,
+                      fillColor: CuppetWorkspaceColors.background,
                       filled: true,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SydneyColors.line),
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderSide: const BorderSide(
+                          color: CuppetWorkspaceColors.border,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: SydneyColors.line),
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
+                        borderSide: const BorderSide(
+                          color: CuppetWorkspaceColors.border,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(SydneyRadius.md),
                         borderSide: const BorderSide(
-                          color: SydneyColors.primary,
+                          color: CuppetWorkspaceColors.primary,
+                          width: 1.4,
                         ),
                       ),
                       suffixIcon: const Icon(
-                        Icons.chevron_right_rounded,
-                        color: SydneyColors.outlineVariant,
+                        Icons.calendar_today_rounded,
+                        color: CuppetWorkspaceColors.muted,
                         size: 18,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: SydneySpacing.lg,
-                        vertical: SydneySpacing.md,
+                        horizontal: SydneySpacing.md,
+                        vertical: 14,
                       ),
                     ),
                   ),
@@ -546,11 +439,12 @@ class _AgentPreferencesScreenState
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: CuppetWorkspaceColors.primary,
                       title: Text(
                         'Run indefinitely',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: SydneyColors.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
+                          color: CuppetWorkspaceColors.ink,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -558,48 +452,30 @@ class _AgentPreferencesScreenState
                 ],
               ),
             ),
+
             if (!widget.agent.isAssistant) ...[
-              const SizedBox(height: SydneySpacing.lg),
-              const SydneySectionLabel('Danger Zone'),
+              const SizedBox(height: SydneySpacing.xl),
+              const WorkspaceSectionLabel('Danger Zone'),
               const SizedBox(height: SydneySpacing.sm),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF991B1B).withValues(alpha: 0.03),
-                      offset: const Offset(4, 4),
-                      blurRadius: 8,
-                    ),
-                    const BoxShadow(
-                      color: Colors.white,
-                      offset: Offset(-4, -4),
-                      blurRadius: 8,
-                    ),
-                  ],
-                  border: Border.all(
-                    color: const Color(0xFFFCA5A5),
-                    width: 0.8,
-                  ),
-                ),
-                padding: const EdgeInsets.all(SydneySpacing.lg),
+              WorkspaceCard(
+                color: SydneyColors.dangerSoft,
+                borderColor: SydneyColors.dangerSoft,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Delete agent',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: const Color(0xFF991B1B),
+                        color: SydneyColors.danger,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Permanently delete this agent and all its messages. This action cannot be undone.',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFFB91C1C),
-                        fontWeight: FontWeight.w400,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SydneyColors.danger,
+                        fontWeight: FontWeight.w500,
                         height: 1.35,
                       ),
                     ),
@@ -609,36 +485,36 @@ class _AgentPreferencesScreenState
                       icon: const Icon(Icons.delete_outline_rounded, size: 16),
                       label: const Text('Delete Agent'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFDC2626),
-                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        foregroundColor: SydneyColors.danger,
+                        side: const BorderSide(color: SydneyColors.danger),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(SydneyRadius.md),
                         ),
                         minimumSize: const Size.fromHeight(44),
-                        textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
                   ],
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-      bottomNavigationBar: SydneyFooter(
-        child: FilledButton.icon(
-          onPressed: _savePreferences,
-          icon: const Icon(Icons.check_box_outlined, size: 18),
-          label: const Text('Save Preferences'),
-          style: FilledButton.styleFrom(
-            backgroundColor: SydneyColors.primary,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+
+            const SizedBox(height: SydneySpacing.xxl),
+            FilledButton.icon(
+              onPressed: _savePreferences,
+              icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+              label: const Text('Save Preferences'),
+              style: FilledButton.styleFrom(
+                backgroundColor: CuppetWorkspaceColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(SydneyRadius.lg),
+                ),
+                minimumSize: const Size.fromHeight(48),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
             ),
-            minimumSize: const Size.fromHeight(48),
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          ],
         ),
       ),
     );
@@ -823,31 +699,6 @@ class _AgentPreferencesScreenState
   }
 }
 
-class _PanelTitle extends StatelessWidget {
-  const _PanelTitle({required this.icon, required this.title});
-
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: SydneyColors.primary, size: 18),
-        const SizedBox(width: SydneySpacing.sm),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: SydneyColors.primary,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _TimingOption extends StatelessWidget {
   const _TimingOption({
     required this.title,
@@ -865,17 +716,17 @@ class _TimingOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: selected ? SydneyColors.primarySoft : SydneyColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(12),
+        color: selected ? CuppetWorkspaceColors.softSage : CuppetWorkspaceColors.card,
+        borderRadius: BorderRadius.circular(SydneyRadius.md),
         border: Border.all(
-          color: selected ? SydneyColors.primary : SydneyColors.line,
-          width: selected ? 1.2 : 0.8,
+          color: selected ? CuppetWorkspaceColors.primary : CuppetWorkspaceColors.border,
+          width: selected ? 1.4 : 1.0,
         ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(SydneyRadius.md),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(SydneySpacing.md),
@@ -889,17 +740,16 @@ class _TimingOption extends StatelessWidget {
                         title,
                         style: Theme.of(
                           context,
-                        ).textTheme.labelMedium?.copyWith(
-                          color: SydneyColors.ink,
-                          fontWeight: FontWeight.bold,
+                        ).textTheme.titleSmall?.copyWith(
+                          color: CuppetWorkspaceColors.ink,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: SydneyColors.onSurfaceVariant,
-                          fontWeight: FontWeight.w400,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: CuppetWorkspaceColors.muted,
                         ),
                       ),
                     ],
@@ -923,13 +773,14 @@ class _RadioDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 16,
-      height: 16,
+      width: 18,
+      height: 18,
       decoration: BoxDecoration(
-        color: selected ? SydneyColors.primary : Colors.transparent,
+        color: selected ? CuppetWorkspaceColors.primary : Colors.transparent,
         shape: BoxShape.circle,
         border: Border.all(
-          color: selected ? SydneyColors.primary : SydneyColors.outline,
+          color: selected ? CuppetWorkspaceColors.primary : CuppetWorkspaceColors.border,
+          width: 1.5,
         ),
       ),
       alignment: Alignment.center,
@@ -959,8 +810,8 @@ class _LimitLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: selected ? SydneyColors.primary : SydneyColors.onSurfaceVariant,
-        fontWeight: FontWeight.w800,
+        color: selected ? CuppetWorkspaceColors.primaryInk : CuppetWorkspaceColors.muted,
+        fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
       ),
     );
   }
