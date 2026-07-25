@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'template_payload_recovery.dart';
 
 enum MessageSender { user, agent, system }

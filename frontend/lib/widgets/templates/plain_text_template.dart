@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -244,7 +245,7 @@ List<_PlainTextBlock> _parseBlocks(String value) {
       (trimmedValue.startsWith('[') && trimmedValue.endsWith(']'))) {
     try {
       final decoded = jsonDecode(trimmedValue);
-      final prettyJson = const JsonEncoder.withIndent('  ').convert(decoded);
+      final prettyJson = JsonEncoder.withIndent('  ').convert(decoded);
       return [_PlainTextBlock(type: _PlainTextBlockType.code, text: prettyJson)];
     } catch (_) {
       // Not valid JSON, continue with normal block parsing
