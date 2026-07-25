@@ -125,16 +125,19 @@ const studyGuideResponseSchema = z.object({
 }).strict();
 
 const contentExtractorResponseSchema = z.object({
-  ideas: z.array(
-    z.object({
-      title: z.string().trim().min(1).max(200),
-      hook: z.string().trim().min(1).max(1000),
-      angle: z.string().trim().min(1).max(500).optional(),
-      audience_value: z.string().trim().min(1).max(500).optional(),
-      evidence_summary: z.string().trim().min(1).max(800).optional()
-    }).strict()
-  ).length(3)
-}).strict();
+  ideas: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(300),
+        hook: z.string().trim().min(1).max(1200),
+        angle: z.string().trim().max(800).optional(),
+        audience_value: z.string().trim().max(800).optional(),
+        evidence_summary: z.string().trim().max(1000).optional()
+      })
+    )
+    .min(1)
+    .max(6)
+});
 
 const dsaQuestionResponseSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -2211,7 +2214,7 @@ async function renderContentExtractorAgent(context: {
     ];
 
     let response = await createLlmMessage({
-      maxTokens: 1200,
+      maxTokens: 2000,
       system: systemPrompt,
       messages,
       tools: [
@@ -2231,7 +2234,7 @@ async function renderContentExtractorAgent(context: {
       }
       messages.push({ role: "assistant", content: response.content });
       response = await createLlmMessage({
-        maxTokens: 1200,
+        maxTokens: 2000,
         system: systemPrompt,
         messages,
         tools: [
