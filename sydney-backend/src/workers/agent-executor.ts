@@ -132,9 +132,9 @@ const contentExtractorResponseSchema = z.object({
       angle: z.string().trim().min(1).max(500).optional(),
       audience_value: z.string().trim().min(1).max(500).optional(),
       evidence_summary: z.string().trim().min(1).max(800).optional()
-    }).strict()
+    })
   ).length(3)
-}).strict();
+});
 
 const dsaQuestionResponseSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -2146,6 +2146,30 @@ function recordValue(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+function normalizeContentExtractorJson(value: unknown): Record<string, unknown> | null {
+  const record = value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+  if (!record) return null;
+  const rawIdeas = Array.isArray(record.ideas) ? record.ideas : [];
+  const ideas = rawIdeas.map((entry) => {
+    if (!entry || typeof entry !== "object") return null;
+    const item = entry as Record<string, unknown>;
+    const title = (item.title ?? item.headline ?? "").toString().trim();
+    const hook = (item.hook ?? item.summary ?? "").toString().trim();
+    if (!title || !hook) return null;
+    return {
+      title,
+      hook,
+      ...(item.angle || item.perspective ? { angle: (item.angle ?? item.perspective).toString().trim() } : {}),
+      ...(item.audience_value || item.audienceValue ? { audience_value: (item.audience_value ?? item.audienceValue).toString().trim() } : {}),
+      ...(item.evidence_summary || item.evidenceSummary ? { evidence_summary: (item.evidence_summary ?? item.evidenceSummary).toString().trim() } : {})
+    };
+  }).filter(Boolean);
+
+  return ideas.length >= 1 ? { ideas } : null;
+}
+
 async function renderContentExtractorAgent(context: {
   agent: AgentRow;
   trigger: AgentExecutorJobData["trigger"];
@@ -2159,7 +2183,7 @@ async function renderContentExtractorAgent(context: {
   const recentIdeas = Array.isArray(parsedIntent.topics_covered)
     ? parsedIntent.topics_covered
         .filter((value: unknown): value is string => typeof value === "string")
-        .slice(-30)
+        .slice(-5)
     : [];
 
   if (!llmConfigured()) {
@@ -2250,7 +2274,9 @@ async function renderContentExtractorAgent(context: {
     if (!match) {
       throw new Error("Invalid LLM response format: No JSON object found.");
     }
-    const data = contentExtractorResponseSchema.parse(JSON.parse(match[0]));
+    const rawParsed = JSON.parse(match[0]);
+    const normalized = normalizeContentExtractorJson(rawParsed) ?? rawParsed;
+    const data = contentExtractorResponseSchema.parse(normalized);
 
     const rendered = renderedContentExtractor(
       {
