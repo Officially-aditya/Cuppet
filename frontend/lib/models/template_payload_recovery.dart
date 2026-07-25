@@ -1,5 +1,63 @@
 import 'dart:convert';
 
+Map<String, dynamic> recoverMessageContentPayload(
+  Map<String, dynamic> content,
+) {
+  final currentTemplate = content['template']?.toString() ?? 'plain_text';
+  if (currentTemplate != 'plain_text') {
+    return content;
+  }
+
+  final data = content['data'];
+  if (data is! Map) {
+    return content;
+  }
+
+  final text = data['text']?.toString() ?? data['body']?.toString();
+  if (text == null || !text.contains('{')) {
+    return content;
+  }
+
+  final trimmed = text.trim();
+  final jsonCandidate = trimmed
+      .replaceAll(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\s*```$'), '')
+      .trim();
+
+  if (!jsonCandidate.startsWith('{') || !jsonCandidate.endsWith('}')) {
+    return content;
+  }
+
+  try {
+    final decoded = jsonDecode(jsonCandidate);
+    if (decoded is Map) {
+      final map = Map<String, dynamic>.from(decoded);
+      final template = map['template']?.toString();
+      final innerData = map['data'];
+
+      if (template != null && template != 'plain_text' && innerData is Map) {
+        return {
+          'template': template,
+          'data': Map<String, dynamic>.from(innerData),
+        };
+      }
+
+      for (final candidateTemplate in _recoverableTemplates) {
+        if (_matchesTemplate(candidateTemplate, map)) {
+          return {
+            'template': candidateTemplate,
+            'data': map,
+          };
+        }
+      }
+    }
+  } catch (_) {
+    // Retain original content
+  }
+
+  return content;
+}
+
 Map<String, dynamic> recoverTemplatePayload(
   String template,
   Map<String, dynamic> data,

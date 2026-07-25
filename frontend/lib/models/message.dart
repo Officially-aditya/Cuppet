@@ -137,10 +137,26 @@ class Message {
 
   factory Message.fromJson(Map<String, dynamic> json) {
     final rawContent = json['content'];
-    final parsedContent =
-        rawContent is Map
-            ? Map<String, dynamic>.from(rawContent)
-            : <String, dynamic>{'template': 'plain_text', 'data': {}};
+    Map<String, dynamic> parsedContent;
+
+    if (rawContent is Map) {
+      parsedContent = Map<String, dynamic>.from(rawContent);
+    } else if (rawContent is String && rawContent.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawContent.trim());
+        if (decoded is Map) {
+          parsedContent = Map<String, dynamic>.from(decoded);
+        } else {
+          parsedContent = {'template': 'plain_text', 'data': {'text': rawContent}};
+        }
+      } catch (_) {
+        parsedContent = {'template': 'plain_text', 'data': {'text': rawContent}};
+      }
+    } else {
+      parsedContent = <String, dynamic>{'template': 'plain_text', 'data': {}};
+    }
+
+    parsedContent = recoverMessageContentPayload(parsedContent);
     final archivedAttachments = json['attachments'];
     if (json['drive_backed'] == true && archivedAttachments is List) {
       final data =
