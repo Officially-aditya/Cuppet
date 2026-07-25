@@ -7,7 +7,7 @@ import '../../models/message.dart';
 import '../../models/attachment.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api.dart';
-import 'telegram_attachment_sheet.dart';
+import 'media_attachment_panel.dart';
 
 class ReplyBar extends ConsumerStatefulWidget {
   const ReplyBar({
@@ -257,7 +257,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return TelegramAttachmentSheet(
+        return IntegratedMediaAttachmentPanel(
           onFilesPicked: (files, storeInDrive) {
             _uploadPickedFiles(files, storeInDrive);
           },

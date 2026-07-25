@@ -21,8 +21,8 @@ class PickedAttachmentItem {
 
 enum AttachmentTab { gallery, file }
 
-class TelegramAttachmentSheet extends StatefulWidget {
-  const TelegramAttachmentSheet({
+class IntegratedMediaAttachmentPanel extends StatefulWidget {
+  const IntegratedMediaAttachmentPanel({
     required this.onFilesPicked,
     super.key,
   });
@@ -30,10 +30,10 @@ class TelegramAttachmentSheet extends StatefulWidget {
   final Function(List<PickedAttachmentItem> files, bool storeInDrive) onFilesPicked;
 
   @override
-  State<TelegramAttachmentSheet> createState() => _TelegramAttachmentSheetState();
+  State<IntegratedMediaAttachmentPanel> createState() => _IntegratedMediaAttachmentPanelState();
 }
 
-class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
+class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachmentPanel> {
   AttachmentTab _activeTab = AttachmentTab.gallery;
   bool _saveToDrive = false;
 
@@ -315,7 +315,7 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
                   child: Switch.adaptive(
                     value: _saveToDrive,
                     onChanged: (val) => setState(() => _saveToDrive = val),
-                    activeColor: CuppetWorkspaceColors.primary,
+                    activeTrackColor: CuppetWorkspaceColors.primary,
                   ),
                 ),
               ],
@@ -502,7 +502,7 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -537,9 +537,9 @@ class _TelegramAttachmentSheetState extends State<TelegramAttachmentSheet> {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.35),
+                  color: Colors.black.withValues(alpha: 0.35),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.85), width: 1.5),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
                 ),
                 child: const Icon(
                   Icons.camera_rounded,
