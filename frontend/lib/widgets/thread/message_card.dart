@@ -306,12 +306,42 @@ class _TemplateRouter extends StatelessWidget {
                   }
                 },
       ),
-      _ => const PlainTextTemplate(
-        data: {
-          'text':
-              'This message uses a template this app version does not support yet.',
-        },
-      ),
+      _ => const _UnsupportedTemplateCard(),
     };
   }
 }
+
+class _UnsupportedTemplateCard extends StatelessWidget {
+  const _UnsupportedTemplateCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(SydneySpacing.md),
+      decoration: BoxDecoration(
+        color: SydneyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(SydneyRadius.md),
+        border: Border.all(color: SydneyColors.line),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.extension_off_outlined,
+            size: 20,
+            color: SydneyColors.mutedInk,
+          ),
+          const SizedBox(width: SydneySpacing.sm),
+          Expanded(
+            child: Text(
+              'This message uses a display template supported in newer app versions.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: SydneyColors.mutedInk,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

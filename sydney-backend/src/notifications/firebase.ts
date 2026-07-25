@@ -37,3 +37,15 @@ export function getFirebaseMessaging(): Messaging | null {
   const app = firebaseApp || initializeFirebase();
   return app ? getMessaging(app) : null;
 }
+
+export function cleanPushNotificationText(text: string, maxLength = 120): string {
+  if (!text) return "";
+  const cleaned = text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[*_~`#]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (cleaned.length <= maxLength) return cleaned;
+  return `${cleaned.slice(0, maxLength - 1).trim()}…`;
+}
+

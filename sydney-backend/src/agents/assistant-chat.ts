@@ -163,16 +163,18 @@ function fallbackAssistantReply(
 ): string {
   if (context?.evidence?.length) {
     return context.evidence
-      .map((item) => `### ${item.connector}\n${item.summary}`)
+      .map((item) => `**${item.connector.toUpperCase()} Context**:\n${item.summary.trim()}`)
       .join("\n\n");
   }
   if (context?.attachmentEvidence) {
+    const cleanedAttachment = context.attachmentEvidence
+      .replace(/<\/?(?:untrusted_data|user_configuration)[^>]*>/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 3000);
     return [
-      "I extracted this context from the attachment, but richer analysis is currently unavailable:",
-      context.attachmentEvidence
-        .replace(/<\/?untrusted_data[^>]*>/g, "")
-        .trim()
-        .slice(0, 4000)
+      "Here is the context extracted from your attachment:",
+      cleanedAttachment
     ].join("\n\n");
   }
   const lower = text.trim().toLowerCase();

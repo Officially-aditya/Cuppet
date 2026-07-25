@@ -239,6 +239,18 @@ class _IndentedLine extends StatelessWidget {
 }
 
 List<_PlainTextBlock> _parseBlocks(String value) {
+  final trimmedValue = value.trim();
+  if ((trimmedValue.startsWith('{') && trimmedValue.endsWith('}')) ||
+      (trimmedValue.startsWith('[') && trimmedValue.endsWith(']'))) {
+    try {
+      final decoded = jsonDecode(trimmedValue);
+      final prettyJson = const JsonEncoder.withIndent('  ').convert(decoded);
+      return [_PlainTextBlock(type: _PlainTextBlockType.code, text: prettyJson)];
+    } catch (_) {
+      // Not valid JSON, continue with normal block parsing
+    }
+  }
+
   final blocks = <_PlainTextBlock>[];
   final paragraphLines = <String>[];
   final codeLines = <String>[];
