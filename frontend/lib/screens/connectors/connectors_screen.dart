@@ -5,7 +5,6 @@ import '../../design/tokens.dart';
 import '../../models/connector.dart';
 import '../../providers/connectors_provider.dart';
 import '../../services/api.dart';
-import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/workspace_primitives.dart';
@@ -39,15 +38,6 @@ class ConnectorsScreen extends ConsumerWidget {
                 onRetry: () => ref.invalidate(connectorsProvider),
               ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 1,
-        onSelected:
-            (index) => navigateToMainDestination(
-              context,
-              currentIndex: 1,
-              selectedIndex: index,
-            ),
       ),
     );
   }

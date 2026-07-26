@@ -8,7 +8,7 @@ import 'package:sydney/models/connector.dart';
 import 'package:sydney/providers/auth_provider.dart';
 import 'package:sydney/providers/connectors_provider.dart';
 import 'package:sydney/providers/timezone_provider.dart';
-import 'package:sydney/screens/connectors/connectors_screen.dart';
+import 'package:sydney/screens/main_shell.dart';
 import 'package:sydney/screens/settings/settings_screen.dart';
 import 'package:sydney/screens/settings/profile_screen.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
@@ -81,7 +81,7 @@ void main() {
   testWidgets('connectors is a main destination with persistent navigation', (
     tester,
   ) async {
-    await tester.pumpWidget(navigationHost(const ConnectorsScreen()));
+    await tester.pumpWidget(navigationHost(const MainShell(initialIndex: 1)));
     await tester.pumpAndSettle();
 
     final navigation = tester.widget<AppBottomNav>(find.byType(AppBottomNav));
@@ -98,7 +98,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(568, 768));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(navigationHost(const SettingsScreen()));
+    await tester.pumpWidget(navigationHost(const MainShell(initialIndex: 2)));
     await tester.pumpAndSettle();
 
     final navigation = tester.widget<AppBottomNav>(find.byType(AppBottomNav));
@@ -245,5 +245,38 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('bottom-nav-inbox')));
     expect(selectedIndex, 0);
     semantics.dispose();
+  });
+
+  testWidgets('main destinations change without replacing bottom navigation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(navigationHost(const MainShell(initialIndex: 1)));
+    await tester.pumpAndSettle();
+
+    final originalNavigation = tester.element(find.byType(AppBottomNav));
+    expect(
+      tester.widget<AppBottomNav>(find.byType(AppBottomNav)).currentIndex,
+      1,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('bottom-nav-settings')));
+    await tester.pumpAndSettle();
+
+    expect(tester.element(find.byType(AppBottomNav)), same(originalNavigation));
+    expect(
+      tester.widget<AppBottomNav>(find.byType(AppBottomNav)).currentIndex,
+      2,
+    );
+    expect(find.text('Preferences, security and scheduling.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('bottom-nav-inbox')));
+    await tester.pumpAndSettle();
+
+    expect(tester.element(find.byType(AppBottomNav)), same(originalNavigation));
+    expect(
+      tester.widget<AppBottomNav>(find.byType(AppBottomNav)).currentIndex,
+      0,
+    );
+    expect(find.text('Your delegation agents'), findsOneWidget);
   });
 }

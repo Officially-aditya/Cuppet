@@ -19,12 +19,10 @@ import 'screens/auth/email_sign_in_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/sign_up_screen.dart';
 import 'screens/connectors/add_connector_screen.dart';
-import 'screens/connectors/connectors_screen.dart';
 import 'screens/create/confirm_screen.dart';
 import 'screens/create/create_screen.dart';
-import 'screens/inbox/inbox_screen.dart';
 import 'screens/launch/cuppet_launch_screen.dart';
-import 'screens/settings/settings_screen.dart';
+import 'screens/main_shell.dart';
 import 'screens/settings/memory_screen.dart';
 import 'screens/settings/storage_screen.dart';
 import 'screens/settings/profile_screen.dart';
@@ -52,13 +50,16 @@ class SydneyApp extends ConsumerWidget {
       AppRoutes.signUp => _route(settings, const SignUpScreen()),
       AppRoutes.inbox => _route(settings, const AuthGate()),
       AppRoutes.create => _route(settings, const CreateScreen()),
-      AppRoutes.connectors => _route(settings, const ConnectorsScreen()),
+      AppRoutes.connectors => _route(
+        settings,
+        const MainShell(initialIndex: 1),
+      ),
       AppRoutes.addConnector => _route(settings, const AddConnectorScreen()),
       AppRoutes.agentPreferences => _route(
         settings,
         AgentPreferencesScreen(agent: settings.arguments as Agent),
       ),
-      AppRoutes.settings => _route(settings, const SettingsScreen()),
+      AppRoutes.settings => _route(settings, const MainShell(initialIndex: 2)),
       AppRoutes.storage => _route(settings, const StorageScreen()),
       AppRoutes.memory => _route(settings, const MemoryScreen()),
       AppRoutes.profile => _route(settings, const ProfileScreen()),
@@ -140,7 +141,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
             ready: ready,
             child:
                 ready
-                    ? const RealtimeBridge(child: InboxScreen())
+                    ? const RealtimeBridge(child: MainShell())
                     : const SizedBox.expand(),
           ),
         );

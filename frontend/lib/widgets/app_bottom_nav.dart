@@ -1,27 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/routes.dart';
 import '../design/tokens.dart';
-
-void navigateToMainDestination(
-  BuildContext context, {
-  required int currentIndex,
-  required int selectedIndex,
-}) {
-  if (selectedIndex == currentIndex) {
-    return;
-  }
-
-  final route = switch (selectedIndex) {
-    0 => AppRoutes.inbox,
-    1 => AppRoutes.connectors,
-    2 => AppRoutes.settings,
-    _ => null,
-  };
-  if (route != null) {
-    Navigator.of(context).pushReplacementNamed(route);
-  }
-}
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({

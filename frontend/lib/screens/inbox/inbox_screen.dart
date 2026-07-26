@@ -10,7 +10,6 @@ import '../../models/thread_launch_request.dart';
 import '../../providers/agents_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../services/api.dart';
-import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/templates/briefing_card_template.dart';
@@ -172,15 +171,6 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 0,
-        onSelected:
-            (index) => navigateToMainDestination(
-              context,
-              currentIndex: 0,
-              selectedIndex: index,
-            ),
       ),
     );
   }

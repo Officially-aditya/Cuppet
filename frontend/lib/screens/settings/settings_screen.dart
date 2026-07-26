@@ -6,7 +6,6 @@ import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/timezone_provider.dart';
-import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/workspace_primitives.dart';
 
@@ -334,15 +333,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 2,
-        onSelected:
-            (index) => navigateToMainDestination(
-              context,
-              currentIndex: 2,
-              selectedIndex: index,
-            ),
       ),
     );
   }
