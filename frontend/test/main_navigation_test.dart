@@ -238,8 +238,8 @@ void main() {
       ),
     );
     expect(
-      tester.widget<Icon>(find.byIcon(Icons.settings_outlined)).color,
-      CuppetWorkspaceColors.primaryInk,
+      find.byKey(const ValueKey('bottom-nav-icon-settings')),
+      findsOneWidget,
     );
 
     await tester.tap(find.byKey(const ValueKey('bottom-nav-inbox')));

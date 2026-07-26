@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../design/tokens.dart';
 
@@ -29,7 +30,7 @@ class AppBottomNav extends StatelessWidget {
                 Expanded(
                   child: _NavButton(
                     tooltip: 'Inbox',
-                    icon: Icons.inbox_outlined,
+                    iconAsset: 'assets/icons/bottom_nav_inbox.svg',
                     label: 'Inbox',
                     selected: currentIndex == 0,
                     onPressed: () => onSelected(0),
@@ -38,7 +39,7 @@ class AppBottomNav extends StatelessWidget {
                 Expanded(
                   child: _NavButton(
                     tooltip: 'Connectors',
-                    icon: Icons.public_rounded,
+                    iconAsset: 'assets/icons/bottom_nav_connectors.svg',
                     label: 'Connectors',
                     selected: currentIndex == 1,
                     onPressed: () => onSelected(1),
@@ -47,7 +48,7 @@ class AppBottomNav extends StatelessWidget {
                 Expanded(
                   child: _NavButton(
                     tooltip: 'Settings',
-                    icon: Icons.settings_outlined,
+                    iconAsset: 'assets/icons/bottom_nav_settings.svg',
                     label: 'Settings',
                     selected: currentIndex == 2,
                     onPressed: () => onSelected(2),
@@ -65,14 +66,14 @@ class AppBottomNav extends StatelessWidget {
 class _NavButton extends StatelessWidget {
   const _NavButton({
     required this.tooltip,
-    required this.icon,
+    required this.iconAsset,
     required this.label,
     required this.selected,
     required this.onPressed,
   });
 
   final String tooltip;
-  final IconData icon;
+  final String iconAsset;
   final String label;
   final bool selected;
   final VoidCallback onPressed;
@@ -97,37 +98,69 @@ class _NavButton extends StatelessWidget {
         excludeSemantics: true,
         child: InkWell(
           onTap: onPressed,
-          overlayColor: const WidgetStatePropertyAll(
-            CuppetWorkspaceColors.softSage,
-          ),
+          splashFactory: InkRipple.splashFactory,
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return CuppetWorkspaceColors.primary.withValues(alpha: 0.06);
+            }
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused)) {
+              return CuppetWorkspaceColors.primary.withValues(alpha: 0.035);
+            }
+            return Colors.transparent;
+          }),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  curve: Curves.easeOut,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
                   width: 42,
                   height: 26,
                   decoration: BoxDecoration(
                     color:
                         selected
-                            ? CuppetWorkspaceColors.softSage
+                            ? CuppetWorkspaceColors.softSage.withValues(
+                              alpha: 0.72,
+                            )
                             : Colors.transparent,
                     borderRadius: BorderRadius.circular(SydneyRadius.full),
                   ),
                   alignment: Alignment.center,
-                  child: Icon(icon, size: 20, color: foreground),
+                  child: TweenAnimationBuilder<Color?>(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    tween: ColorTween(end: foreground),
+                    builder:
+                        (context, color, child) => SvgPicture.asset(
+                          iconAsset,
+                          key: ValueKey(
+                            'bottom-nav-icon-${label.toLowerCase()}',
+                          ),
+                          width: 20,
+                          height: 20,
+                          colorFilter: ColorFilter.mode(
+                            color ?? foreground,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                  ),
                 ),
                 const SizedBox(height: SydneySpacing.xs),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: foreground,
-                    fontSize: 11,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  ),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  style: (Theme.of(context).textTheme.labelSmall ??
+                          const TextStyle())
+                      .copyWith(
+                        color: foreground,
+                        fontSize: 11,
+                        fontWeight:
+                            selected ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                  child: Text(label),
                 ),
               ],
             ),
