@@ -8,7 +8,13 @@ class AppBottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onSelected,
     super.key,
-  });
+  }) : assert(currentIndex >= 0 && currentIndex < _destinationsCount);
+
+  static const int _destinationsCount = 3;
+  static const double _indicatorWidth = 42;
+  static const double _indicatorHeight = 26;
+  static const double _indicatorTop = 7;
+  static const Duration _indicatorDuration = Duration(milliseconds: 320);
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
@@ -25,36 +31,72 @@ class AppBottomNav extends StatelessWidget {
           top: false,
           child: SizedBox(
             height: SydneySpacing.bottomNavHeight,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _NavButton(
-                    tooltip: 'Inbox',
-                    iconAsset: 'assets/icons/bottom_nav_inbox.svg',
-                    label: 'Inbox',
-                    selected: currentIndex == 0,
-                    onPressed: () => onSelected(0),
-                  ),
-                ),
-                Expanded(
-                  child: _NavButton(
-                    tooltip: 'Connectors',
-                    iconAsset: 'assets/icons/bottom_nav_connectors.svg',
-                    label: 'Connectors',
-                    selected: currentIndex == 1,
-                    onPressed: () => onSelected(1),
-                  ),
-                ),
-                Expanded(
-                  child: _NavButton(
-                    tooltip: 'Settings',
-                    iconAsset: 'assets/icons/bottom_nav_settings.svg',
-                    label: 'Settings',
-                    selected: currentIndex == 2,
-                    onPressed: () => onSelected(2),
-                  ),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final destinationWidth =
+                    constraints.maxWidth / _destinationsCount;
+                final indicatorStart =
+                    (currentIndex * destinationWidth) +
+                    ((destinationWidth - _indicatorWidth) / 2);
+
+                return Stack(
+                  children: [
+                    AnimatedPositionedDirectional(
+                      key: const ValueKey('bottom-nav-gliding-indicator'),
+                      duration: _indicatorDuration,
+                      curve: Curves.easeOutCubic,
+                      start: indicatorStart,
+                      top: _indicatorTop,
+                      width: _indicatorWidth,
+                      height: _indicatorHeight,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: CuppetWorkspaceColors.softSage.withValues(
+                              alpha: 0.72,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                              SydneyRadius.full,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _NavButton(
+                            tooltip: 'Inbox',
+                            iconAsset: 'assets/icons/bottom_nav_inbox.svg',
+                            label: 'Inbox',
+                            selected: currentIndex == 0,
+                            onPressed: () => onSelected(0),
+                          ),
+                        ),
+                        Expanded(
+                          child: _NavButton(
+                            tooltip: 'Connectors',
+                            iconAsset:
+                                'assets/icons/bottom_nav_connectors.svg',
+                            label: 'Connectors',
+                            selected: currentIndex == 1,
+                            onPressed: () => onSelected(1),
+                          ),
+                        ),
+                        Expanded(
+                          child: _NavButton(
+                            tooltip: 'Settings',
+                            iconAsset: 'assets/icons/bottom_nav_settings.svg',
+                            label: 'Settings',
+                            selected: currentIndex == 2,
+                            onPressed: () => onSelected(2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -98,14 +140,11 @@ class _NavButton extends StatelessWidget {
         excludeSemantics: true,
         child: InkWell(
           onTap: onPressed,
-          splashFactory: InkRipple.splashFactory,
+          splashFactory: NoSplash.splashFactory,
           overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return CuppetWorkspaceColors.primary.withValues(alpha: 0.06);
-            }
             if (states.contains(WidgetState.hovered) ||
                 states.contains(WidgetState.focused)) {
-              return CuppetWorkspaceColors.primary.withValues(alpha: 0.035);
+              return CuppetWorkspaceColors.ink.withValues(alpha: 0.035);
             }
             return Colors.transparent;
           }),
@@ -114,38 +153,28 @@ class _NavButton extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
+                SizedBox(
                   width: 42,
                   height: 26,
-                  decoration: BoxDecoration(
-                    color:
-                        selected
-                            ? CuppetWorkspaceColors.softSage.withValues(
-                              alpha: 0.72,
-                            )
-                            : Colors.transparent,
-                    borderRadius: BorderRadius.circular(SydneyRadius.full),
-                  ),
-                  alignment: Alignment.center,
-                  child: TweenAnimationBuilder<Color?>(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOutCubic,
-                    tween: ColorTween(end: foreground),
-                    builder:
-                        (context, color, child) => SvgPicture.asset(
-                          iconAsset,
-                          key: ValueKey(
-                            'bottom-nav-icon-${label.toLowerCase()}',
+                  child: Center(
+                    child: TweenAnimationBuilder<Color?>(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      tween: ColorTween(end: foreground),
+                      builder:
+                          (context, color, child) => SvgPicture.asset(
+                            iconAsset,
+                            key: ValueKey(
+                              'bottom-nav-icon-${label.toLowerCase()}',
+                            ),
+                            width: 20,
+                            height: 20,
+                            colorFilter: ColorFilter.mode(
+                              color ?? foreground,
+                              BlendMode.srcIn,
+                            ),
                           ),
-                          width: 20,
-                          height: 20,
-                          colorFilter: ColorFilter.mode(
-                            color ?? foreground,
-                            BlendMode.srcIn,
-                          ),
-                        ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: SydneySpacing.xs),
