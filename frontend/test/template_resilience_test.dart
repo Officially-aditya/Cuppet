@@ -4,9 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/design/tokens.dart';
 import 'package:sydney/models/message.dart';
 import 'package:sydney/models/template_payload_recovery.dart';
-import 'package:sydney/config/routes.dart';
 import 'package:sydney/screens/auth/email_sign_in_screen.dart';
-import 'package:sydney/screens/auth/sign_in_screen.dart';
 import 'package:sydney/screens/auth/sign_up_screen.dart';
 import 'package:sydney/widgets/templates/checklist_template.dart';
 import 'package:sydney/widgets/templates/comparison_template.dart';
@@ -23,6 +21,95 @@ Widget templateHost(Widget child) {
 
 void main() {
   group('template payload resilience', () {
+    test('top-level raw JSON values remain visible as plain text', () {
+      final listMessage = Message.fromJson({
+        'id': 'raw-list',
+        'agent_id': 'agent',
+        'role': 'agent',
+        'content': [
+          {'title': 'Raw result'},
+        ],
+      });
+      final scalarMessage = Message.fromJson({
+        'id': 'raw-scalar',
+        'agent_id': 'agent',
+        'role': 'agent',
+        'content': 17,
+      });
+
+      expect(listMessage.template, 'plain_text');
+      expect(listMessage.data['text'], '[{"title":"Raw result"}]');
+      expect(scalarMessage.template, 'plain_text');
+      expect(scalarMessage.data['text'], '17');
+    });
+
+    test(
+      'raw payload recovery keeps presentation metadata and rejects actions',
+      () {
+        const presentation = {
+          'group_id': 'raw-output-group',
+          'part_index': 0,
+          'part_count': 2,
+        };
+        final actionPayload = Message.fromJson({
+          'id': 'raw-action',
+          'agent_id': 'agent',
+          'role': 'agent',
+          'content':
+              '{"template":"daily_task","data":{"title":"Take action","task":"Do this","actions":[]}}',
+        });
+        final recoveredPayload = Message.fromJson({
+          'id': 'raw-content-extractor',
+          'agent_id': 'agent',
+          'role': 'agent',
+          'content': {
+            'template': 'plain_text',
+            'presentation': presentation,
+            'data': {
+              'body':
+                  '{"template":"content_extractor","data":{"ideas":[{"title":"Recovered idea","hook":"A useful hook"}]}}',
+            },
+          },
+        });
+
+        expect(actionPayload.template, 'plain_text');
+        expect(actionPayload.isRecoveredRawPayload, isFalse);
+        expect(actionPayload.data['text'], contains('daily_task'));
+
+        expect(recoveredPayload.template, 'content_extractor');
+        expect(recoveredPayload.isRecoveredRawPayload, isTrue);
+        expect(recoveredPayload.isMultipart, isTrue);
+        expect(recoveredPayload.presentation['group_id'], 'raw-output-group');
+      },
+    );
+
+    testWidgets('recovered raw payloads cannot invoke message actions', (
+      tester,
+    ) async {
+      final message = Message.fromJson({
+        'id': 'display-only-recovery',
+        'agent_id': 'agent',
+        'role': 'agent',
+        'content':
+            '{"template":"content_extractor","presentation":{"group_id":"stringified-group","part_index":0,"part_count":2},"data":{"ideas":[{"title":"Recovered idea","hook":"A useful hook"}]}}',
+      });
+      var actionInvoked = false;
+
+      expect(message.isMultipart, isTrue);
+
+      await tester.pumpWidget(
+        templateHost(
+          MessageCard(message: message, onAction: (_) => actionInvoked = true),
+        ),
+      );
+
+      expect(tester.widget<InkWell>(find.byType(InkWell)).onTap, isNull);
+      await tester.tap(find.text('Recovered idea'));
+      await tester.pump();
+
+      expect(actionInvoked, isFalse);
+    });
+
     testWidgets('news JSON embedded in a summary is restored before rendering', (
       tester,
     ) async {

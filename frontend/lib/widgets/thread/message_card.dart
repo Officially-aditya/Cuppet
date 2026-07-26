@@ -228,6 +228,12 @@ class _TemplateRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = message.data;
+    final actionHandler = message.isRecoveredRawPayload ? null : onAction;
+    final messageActionHandler =
+        actionHandler == null
+            ? null
+            : (Map<String, dynamic> actionData) =>
+                actionHandler({...actionData, 'messageId': message.id});
     if (isUser) {
       return PlainTextTemplate(data: data, textColor: SydneyColors.ink);
     }
@@ -240,19 +246,15 @@ class _TemplateRouter extends StatelessWidget {
       'checklist' => ChecklistTemplate(data: data),
       'daily_task' => DailyTaskTemplate(
         data: data,
-        onAction: (actionData) {
-          if (onAction != null) {
-            onAction!({...actionData, 'messageId': message.id});
-          }
-        },
+        onAction: messageActionHandler,
       ),
       'agent_selection' => AgentSelectionTemplate(
         data: data,
-        onAction: onAction,
+        onAction: actionHandler,
       ),
       'action_confirmation' => ActionConfirmationTemplate(
         data: data,
-        onAction: onAction,
+        onAction: actionHandler,
       ),
       'streak_counter' => StreakCounterTemplate(data: data),
       'comparison' => ComparisonTemplate(data: data),
@@ -260,51 +262,33 @@ class _TemplateRouter extends StatelessWidget {
       'news_brief' => NewsBriefTemplate(
         data: data,
         showEmptyState: !message.isMultipart,
-        onAction: (actionData) {
-          if (onAction != null) {
-            onAction!({...actionData, 'messageId': message.id});
-          }
-        },
+        onAction: messageActionHandler,
       ),
       'study_guide' => StudyGuideTemplate(
         data: data,
-        onAction: (actionData) {
-          if (onAction != null) {
-            onAction!({...actionData, 'messageId': message.id});
-          }
-        },
+        onAction: messageActionHandler,
       ),
       'dsa_question' => DsaQuestionTemplate(
         data: data,
-        onAction: (actionData) {
-          if (onAction != null) {
-            onAction!({...actionData, 'messageId': message.id});
-          }
-        },
+        onAction: messageActionHandler,
       ),
       'content_extractor' => ContentExtractorTemplate(
         data: data,
         startIndex: message.itemOffset,
-        onAction: (actionData) {
-          if (onAction != null) {
-            onAction!({...actionData, 'messageId': message.id});
-          }
-        },
+        onAction: messageActionHandler,
       ),
       'portfolio_watch' => PortfolioWatchTemplate(data: data),
       'briefing_card' => BriefingCardTemplate(
         data: data,
         onOpen:
-            data['assistant_context'] == true || !message.isLastPart
+            actionHandler == null ||
+                    data['assistant_context'] == true ||
+                    !message.isLastPart
                 ? null
-                : () {
-                  if (onAction != null) {
-                    onAction!({
-                      'type': 'open_in_assistant',
-                      'messageId': message.id,
-                    });
-                  }
-                },
+                : () => actionHandler({
+                  'type': 'open_in_assistant',
+                  'messageId': message.id,
+                }),
       ),
       _ => const _UnsupportedTemplateCard(),
     };
@@ -334,9 +318,9 @@ class _UnsupportedTemplateCard extends StatelessWidget {
           Expanded(
             child: Text(
               'This message uses a display template supported in newer app versions.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.mutedInk,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
             ),
           ),
         ],
@@ -344,4 +328,3 @@ class _UnsupportedTemplateCard extends StatelessWidget {
     );
   }
 }
-

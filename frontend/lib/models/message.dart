@@ -29,6 +29,8 @@ class Message {
 
   String get template => content['template']?.toString() ?? 'plain_text';
 
+  bool get isRecoveredRawPayload => content['_recovered_raw_payload'] == true;
+
   Map<String, dynamic> get data {
     final raw = content['data'];
     if (raw is Map<String, dynamic>) {
@@ -144,16 +146,12 @@ class Message {
     if (rawContent is Map) {
       parsedContent = Map<String, dynamic>.from(rawContent);
     } else if (rawContent is String && rawContent.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(rawContent.trim());
-        if (decoded is Map) {
-          parsedContent = Map<String, dynamic>.from(decoded);
-        } else {
-          parsedContent = {'template': 'plain_text', 'data': {'text': rawContent}};
-        }
-      } catch (_) {
-        parsedContent = {'template': 'plain_text', 'data': {'text': rawContent}};
-      }
+      parsedContent = {
+        'template': 'plain_text',
+        'data': {'text': rawContent},
+      };
+    } else if (rawContent != null) {
+      parsedContent = _rawContentAsPlainText(rawContent);
     } else {
       parsedContent = <String, dynamic>{'template': 'plain_text', 'data': {}};
     }
@@ -250,4 +248,17 @@ MessageDeliveryState _deliveryStateFromString(String? value) {
     (state) => state.name.toLowerCase() == normalized,
     orElse: () => MessageDeliveryState.sent,
   );
+}
+
+Map<String, dynamic> _rawContentAsPlainText(Object value) {
+  String text;
+  try {
+    text = jsonEncode(value);
+  } catch (_) {
+    text = value.toString();
+  }
+  return {
+    'template': 'plain_text',
+    'data': {'text': text},
+  };
 }

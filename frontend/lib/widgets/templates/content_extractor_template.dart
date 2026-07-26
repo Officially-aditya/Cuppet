@@ -91,14 +91,15 @@ class ContentExtractorTemplate extends StatelessWidget {
                 angle: ideas[i]['angle']?.toString(),
                 audienceValue: ideas[i]['audience_value']?.toString(),
                 evidenceSummary: ideas[i]['evidence_summary']?.toString(),
-                onTap: () {
-                  if (onAction != null) {
-                    onAction!({
-                      'type': 'generate_draft',
-                      'title': ideas[i]['title']?.toString() ?? '',
-                    });
-                  }
-                },
+                onTap:
+                    onAction == null
+                        ? null
+                        : () {
+                          onAction!({
+                            'type': 'generate_draft',
+                            'title': ideas[i]['title']?.toString() ?? '',
+                          });
+                        },
               ),
               if (i < ideas.length - 1)
                 const SizedBox(height: SydneySpacing.sm),
@@ -118,7 +119,7 @@ class _IdeaCard extends StatelessWidget {
     this.angle,
     this.audienceValue,
     this.evidenceSummary,
-    required this.onTap,
+    this.onTap,
   });
 
   final int index;
@@ -127,7 +128,7 @@ class _IdeaCard extends StatelessWidget {
   final String? angle;
   final String? audienceValue;
   final String? evidenceSummary;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

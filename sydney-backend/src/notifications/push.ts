@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { getFirebaseMessaging } from "./firebase.js";
+import { cleanPushNotificationText, getFirebaseMessaging } from "./firebase.js";
 
 export interface PushNotificationPayload {
   title: string;
@@ -32,8 +32,8 @@ export async function sendPushNotification(
 
   const tokens = result.rows.map((row) => row.token);
   
-  const cleanTitle = cleanText(payload.title);
-  const cleanBody = cleanText(payload.body);
+  const cleanTitle = cleanPushNotificationText(payload.title);
+  const cleanBody = cleanPushNotificationText(payload.body);
 
   // Send notification to all devices
   const response = await messaging.sendEachForMulticast({

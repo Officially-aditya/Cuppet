@@ -19,10 +19,11 @@ Map<String, dynamic> recoverMessageContentPayload(
   }
 
   final trimmed = text.trim();
-  final jsonCandidate = trimmed
-      .replaceAll(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
-      .replaceAll(RegExp(r'\s*```$'), '')
-      .trim();
+  final jsonCandidate =
+      trimmed
+          .replaceAll(RegExp(r'^```(?:json)?\s*', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\s*```$'), '')
+          .trim();
 
   if (!jsonCandidate.startsWith('{') || !jsonCandidate.endsWith('}')) {
     return content;
@@ -35,19 +36,22 @@ Map<String, dynamic> recoverMessageContentPayload(
       final template = map['template']?.toString();
       final innerData = map['data'];
 
-      if (template != null && template != 'plain_text' && innerData is Map) {
-        return {
-          'template': template,
-          'data': Map<String, dynamic>.from(innerData),
-        };
+      if (template != null) {
+        if (template == 'plain_text' ||
+            !_recoverableTemplates.contains(template) ||
+            innerData is! Map) {
+          return content;
+        }
+        final payload = Map<String, dynamic>.from(innerData);
+        if (_matchesTemplate(template, payload)) {
+          return _recoveredMessageContent(content, template, payload, map);
+        }
+        return content;
       }
 
       for (final candidateTemplate in _recoverableTemplates) {
         if (_matchesTemplate(candidateTemplate, map)) {
-          return {
-            'template': candidateTemplate,
-            'data': map,
-          };
+          return _recoveredMessageContent(content, candidateTemplate, map, map);
         }
       }
     }
@@ -56,6 +60,27 @@ Map<String, dynamic> recoverMessageContentPayload(
   }
 
   return content;
+}
+
+Map<String, dynamic> _recoveredMessageContent(
+  Map<String, dynamic> content,
+  String template,
+  Map<String, dynamic> data,
+  Map<String, dynamic> recoveredEnvelope,
+) {
+  final embeddedPresentation = recoveredEnvelope['presentation'];
+  // Keep the server envelope (especially multipart presentation metadata), but
+  // mark recovered model output so it can never invoke message actions.
+  return {
+    ...content,
+    if (content['version'] == null && recoveredEnvelope['version'] != null)
+      'version': recoveredEnvelope['version'],
+    if (content['presentation'] is! Map && embeddedPresentation is Map)
+      'presentation': Map<String, dynamic>.from(embeddedPresentation),
+    'template': template,
+    'data': data,
+    '_recovered_raw_payload': true,
+  };
 }
 
 Map<String, dynamic> recoverTemplatePayload(
