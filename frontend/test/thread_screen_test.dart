@@ -193,6 +193,31 @@ void main() {
     expect(find.text(testAgent.name), findsOneWidget);
   });
 
+  testWidgets('composer continuously transitions its Run Now suggestion', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+
+    await tester.pumpWidget(threadHost(loadMessages: () async => []));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Message agent'), findsOneWidget);
+    expect(find.text("Try 'Run Now'"), findsNothing);
+    final originalHintLeft = tester.getTopLeft(find.text('Message agent')).dx;
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text("Try 'Run Now'"), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text("Try 'Run Now'")).dx,
+      closeTo(originalHintLeft, 0.1),
+    );
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Message agent'), findsOneWidget);
+  });
+
   testWidgets('Assistant thread uses the Cuppet Courier avatar', (
     tester,
   ) async {

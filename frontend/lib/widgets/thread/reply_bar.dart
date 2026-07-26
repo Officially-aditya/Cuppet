@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,11 +30,24 @@ class ReplyBar extends ConsumerStatefulWidget {
 
 class _ReplyBarState extends ConsumerState<ReplyBar> {
   final _controller = TextEditingController();
+  Timer? _hintTimer;
+  bool _showRunNowHint = false;
   bool _sending = false;
   final List<ComposerAttachment> _attachments = [];
 
   @override
+  void initState() {
+    super.initState();
+    _hintTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        setState(() => _showRunNowHint = !_showRunNowHint);
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _hintTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -183,6 +198,7 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                       ],
                     ),
                     child: TextField(
+                      key: const ValueKey('message-agent-field'),
                       controller: _controller,
                       minLines: 1,
                       maxLines: 4,
@@ -192,7 +208,34 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                         height: 1.4,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Message agent',
+                        hint: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          layoutBuilder:
+                              (currentChild, previousChildren) => Stack(
+                                alignment: Alignment.centerLeft,
+                                children: [
+                                  ...previousChildren,
+                                  if (currentChild != null) currentChild,
+                                ],
+                              ),
+                          transitionBuilder: (child, animation) {
+                            final slide = Tween<Offset>(
+                              begin: const Offset(0, 0.3),
+                              end: Offset.zero,
+                            ).animate(animation);
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: slide,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Text(
+                            _showRunNowHint ? "Try 'Run Now'" : 'Message agent',
+                            key: ValueKey(_showRunNowHint),
+                          ),
+                        ),
                         hintStyle: const TextStyle(
                           color: CuppetWorkspaceColors.muted,
                         ),
@@ -208,7 +251,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                             size: 22,
                           ),
                           onPressed:
-                              _sending ? null : () => _showAttachmentOptions(context),
+                              _sending
+                                  ? null
+                                  : () => _showAttachmentOptions(context),
                         ),
                         prefixIconConstraints: const BoxConstraints(
                           minWidth: 44,
