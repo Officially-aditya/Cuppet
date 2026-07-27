@@ -516,7 +516,7 @@ function agentChatSystemPrompt(
       "If the user asked for multiple drafts, produce that many — still grounded in the search results.",
       "If search returns nothing useful, say you could not find reliable results and do not fabricate a draft.",
       contentExtractorFormatting(agentPrompt, draftPlatform),
-      "Keep the response practical: short context from search (optional bullets), then the draft.",
+      responseStyleGuidance(responseLimit),
       responseLimitInstruction(responseLimit)
     ]
       .filter(Boolean)

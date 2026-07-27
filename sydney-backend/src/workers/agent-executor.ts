@@ -2206,6 +2206,7 @@ async function renderContentExtractorAgent(context: {
       day: "numeric"
     });
 
+    const responseLimit = parsedIntent.response_limit;
     const promptLayers = buildRecipeExecutionPrompt({
       recipeId: "content_extractor",
       recipeVersion: numberValue(parsedIntent.recipe_version),
@@ -2214,16 +2215,20 @@ async function renderContentExtractorAgent(context: {
       ),
       recipeInputs,
       userPrompt: agent.prompt,
+      responseLimit,
       outputSchema:
         '{"ideas":[{"title":"string","hook":"string","angle":"string","audience_value":"string","evidence_summary":"string"}]}',
       runInstruction: [
         `Today is ${todayStr}. Use bounded web search for fresh and reliable topics.`,
-        "Return exactly three distinct ideas. Optimize for audience fit and angle diversity.",
+        responseLimit === "detailed"
+          ? "Return deep, thorough, and highly detailed content ideas with detailed background evidence, rich hooks, comprehensive audience value analysis, and detailed angles."
+          : responseLimit === "concise"
+            ? "Return extremely brief, concise content ideas with short hooks and punchy angles."
+            : "Return exactly three distinct ideas. Optimize for audience fit and angle diversity.",
         "Avoid recent idea titles. If the configured niche is exhausted, broaden only to an adjacent content pillar and disclose that in the angle.",
         `Recent idea titles to avoid: ${JSON.stringify(recentIdeas)}.`
       ].join(" ")
     });
-    const responseLimit = parsedIntent.response_limit;
     const systemPrompt = [
       promptLayers.system,
       responseLimitInstruction(responseLimit)
