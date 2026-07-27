@@ -1463,6 +1463,24 @@ export function responseLimitInstruction(limit?: string): string {
   return "RESPONSE DENSITY REQUIREMENT: Deliver a balanced summary of information. Provide reasonable context and clear explanations without being overly verbose.";
 }
 
+export function responseStyleGuidance(limit?: string): string {
+  if (limit === "concise") {
+    return "Keep replies concise, extremely brief, and scannable. Use short bullets when listing items.";
+  }
+  if (limit === "detailed") {
+    return "Provide thorough, in-depth, and comprehensive replies with complete background details and detailed step-by-step explanations.";
+  }
+  return "Keep replies practical, balanced, and scannable. Provide clear context without excessive length.";
+}
+
+export function maxTokensForResponseLimit(limit?: string, fallback: number = 900): number {
+  if (limit === "concise") return 512;
+  if (limit === "detailed") return 1200;
+  if (limit === "balanced") return 900;
+  return fallback;
+}
+
+
 export const STOCK_MAPPINGS: Record<string, string> = {
   "ril": "Reliance Industries",
   "reliance": "Reliance Industries",

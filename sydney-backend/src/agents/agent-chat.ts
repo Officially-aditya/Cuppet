@@ -6,7 +6,7 @@ import {
   type LlmMessageResponse,
   type LlmTextMessage
 } from "./llm.js";
-import { responseLimitInstruction, stockSymbols, type ParsedIntent } from "./parser.js";
+import { responseLimitInstruction, responseStyleGuidance, stockSymbols, type ParsedIntent } from "./parser.js";
 import { fetchSourceReferenceDetail } from "../connectors/google-workspace.js";
 import {
   untrustedDataBlock,
@@ -118,12 +118,10 @@ export async function createAgentChatReply(
     );
     const baseMaxTokens =
       responseLimit === "detailed"
-        ? 1500
+        ? 1200
         : responseLimit === "concise"
-          ? 500
-          : mode === "research"
-            ? 1100
-            : 700;
+          ? 512
+          : 900;
 
     let { response, allContent } = await runAgentChatTurn({
       messages,
@@ -536,7 +534,7 @@ function agentChatSystemPrompt(
       "Do not use, summarize, or continue any prior agent report or conversation (none is provided).",
       "Do not invent news, links, papers, or facts that did not appear in the search evidence.",
       "If search returns nothing useful, say you could not find reliable results.",
-      "Keep replies concise, practical, and scannable. Use short bullets when listing items.",
+      responseStyleGuidance(responseLimit),
       "Include source names or links when the search evidence provides them.",
       responseLimitInstruction(responseLimit)
     ]
@@ -565,7 +563,7 @@ function agentChatSystemPrompt(
       ? contentExtractorFormatting(agentPrompt, draftPlatform)
       : "",
     isDsaAgent ? dsaFormatting() : "",
-    "Keep replies concise, practical, and scannable. Use short bullets when listing items.",
+    responseStyleGuidance(responseLimit),
     responseLimitInstruction(responseLimit)
   ]
     .filter(Boolean)

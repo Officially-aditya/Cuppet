@@ -8,7 +8,7 @@ import {
 } from "./llm.js";
 import { renderedPlainText, type RenderedAgentMessage } from "./output.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
-import { responseLimitInstruction } from "./parser.js";
+import { responseLimitInstruction, responseStyleGuidance } from "./parser.js";
 import { buildRecipeExecutionPrompt } from "./runtime/execution-prompt.js";
 
 const maxContinuationTurns = 2;
@@ -39,6 +39,13 @@ export async function renderLlmCustomAgent(input: {
     const textToAnalyze = [input.action, input.prompt].join("\n");
     const useWebSearch = shouldUseWebSearch(textToAnalyze);
 
+    const reportDensityStr =
+      input.responseLimit === "detailed"
+        ? "detailed"
+        : input.responseLimit === "concise"
+          ? "concise"
+          : "balanced";
+
     const layeredPrompt = buildRecipeExecutionPrompt({
       recipeId: "custom_read_agent",
       recipeVersion: input.recipeVersion,
@@ -46,7 +53,7 @@ export async function renderLlmCustomAgent(input: {
       recipeInputs: input.recipeInputs,
       userPrompt: input.prompt,
       outputSchema:
-        "A concise grounded report containing text and data only; never executable actions.",
+        `A ${reportDensityStr} grounded report containing text and data only; never executable actions.`,
       runInstruction:
         "Run the saved bounded report. Use web search only when the saved request requires public current information."
     });
@@ -59,7 +66,7 @@ export async function renderLlmCustomAgent(input: {
         : "Use only the user's saved prompt and action. Do not claim to have checked external services, files, email, web, Slack, calendar, or private data.",
       "If external data is required (like email, Slack, private documents) that cannot be retrieved via web search, state which connector is needed instead of inventing results. Never write conversational notes, summaries, or call-to-actions about automating updates or setting up connectors (e.g. do not say 'To automate these updates...').",
       "Never emit an empty heading, label, bullet, or field. Put a label and its value on the same line, for example: '- **Focus:** Use a hash set to track seen values.'",
-      "Return a detailed, structured, and useful message for this run.",
+      responseStyleGuidance(input.responseLimit),
       responseLimitInstruction(input.responseLimit)
     ].join(" ");
 
@@ -76,7 +83,7 @@ export async function renderLlmCustomAgent(input: {
       }
     ];
 
-    const maxTokens = input.responseLimit === "detailed" ? 1500 : input.responseLimit === "concise" ? 500 : 800;
+    const maxTokens = input.responseLimit === "detailed" ? 1200 : input.responseLimit === "concise" ? 512 : 900;
 
     let response = await createLlmMessage({
       maxTokens,

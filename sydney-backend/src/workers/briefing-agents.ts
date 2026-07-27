@@ -18,6 +18,7 @@ import {
   totalLlmTokens
 } from "../agents/llm.js";
 import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.js";
+import { responseLimitInstruction, maxTokensForResponseLimit } from "../agents/parser.js";
 
 type BriefingIntent =
   | "daily_executive_briefing"
@@ -225,9 +226,12 @@ async function synthesizeBriefingOnce(input: {
       runInstruction:
         "Make one synthesis pass. Deduplicate evidence, identify supported cross-source relationships and conflicts, and rank the few priorities. Use no web search and do not add facts."
     });
+    const responseLimit = typeof parsed.response_limit === "string" ? parsed.response_limit : undefined;
+    const system = [prompt.system, responseLimitInstruction(responseLimit)].filter(Boolean).join("\n");
+    const maxTokens = maxTokensForResponseLimit(responseLimit, 900);
     const response = await createLlmMessage({
-      maxTokens: 900,
-      system: prompt.system,
+      maxTokens,
+      system,
       messages: [{ role: "user", content: prompt.user }]
     });
     const match = extractLlmText(response.content).match(/\{[\s\S]*\}/);

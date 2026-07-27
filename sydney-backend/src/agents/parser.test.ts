@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseIntent, responseLimitInstruction } from "./parser.js";
+import { parseIntent, responseLimitInstruction, responseStyleGuidance, maxTokensForResponseLimit } from "./parser.js";
 
 test("onboarding suggestions create the intended scheduled agents", () => {
   const news = parseIntent(
@@ -168,6 +168,14 @@ test("responseLimitInstruction returns appropriate prompts", () => {
   assert.match(responseLimitInstruction("detailed"), /highly detailed/);
   assert.match(responseLimitInstruction("balanced"), /balanced/);
   assert.match(responseLimitInstruction(undefined), /balanced/);
+
+  assert.match(responseStyleGuidance("concise"), /extremely brief/);
+  assert.match(responseStyleGuidance("detailed"), /comprehensive/);
+  assert.match(responseStyleGuidance("balanced"), /balanced/);
+
+  assert.equal(maxTokensForResponseLimit("concise"), 512);
+  assert.equal(maxTokensForResponseLimit("balanced"), 900);
+  assert.equal(maxTokensForResponseLimit("detailed"), 1200);
 });
 
 test("agent active_until parsing and date format compatibility", () => {

@@ -13,7 +13,7 @@ import {
   createTechNewsBrief
 } from "../agents/tech-news.js";
 import { renderLlmCustomAgent } from "../agents/custom-agent.js";
-import { responseLimitInstruction, stockSymbols } from "../agents/parser.js";
+import { responseLimitInstruction, maxTokensForResponseLimit, stockSymbols } from "../agents/parser.js";
 import {
   renderedDailyTask,
   renderedDsaQuestion,
@@ -1405,7 +1405,7 @@ async function renderStudyGuideAgent(context: {
         agentDebug(`[StudyGuideAgent] Studying chunk ${chunkIdx + 1}/${chunks.length} of ${selectedFile.name}`);
 
         const response = await createLlmMessage({
-          maxTokens: 1200,
+          maxTokens: maxTokensForResponseLimit(parsedIntent.response_limit, 1200),
           system: [
             studyPrompt.system,
             "You run a Sydney custom PDF study and revision agent.",
@@ -1484,7 +1484,7 @@ async function renderStudyGuideAgent(context: {
   // Fallback to standard standard course generator if no Drive PDF is available
   try {
     const response = await createLlmMessage({
-      maxTokens: 1000,
+      maxTokens: maxTokensForResponseLimit(parsedIntent.response_limit, 900),
       system: [
         studyPrompt.system,
         "You run a Sydney custom study guide agent.",
@@ -1586,7 +1586,7 @@ async function generateDynamicDsaQuestion(params: {
       let attempts = 0;
       while (attempts < 3) {
         const response = await createLlmMessage({
-          maxTokens: 1000,
+          maxTokens: maxTokensForResponseLimit(parsedIntent.response_limit, 900),
           system: [
             dsaPrompt.system,
             "You run a Sydney DSA (Data Structures & Algorithms) daily practice agent.",
@@ -1602,7 +1602,8 @@ async function generateDynamicDsaQuestion(params: {
             '  "problem": "Full problem statement.",',
             '  "target": "Specific constraints or algorithmic target like O(n).",',
             '  "hint": "One helpful hint without giving the solution."',
-            "}"
+            "}",
+            responseLimitInstruction(parsedIntent.response_limit)
           ].join(" "),
           messages: [
             {
@@ -1701,7 +1702,7 @@ async function renderDsaQuestionAgent(context: {
     });
 
     const response = await createLlmMessage({
-      maxTokens: 1500,
+      maxTokens: maxTokensForResponseLimit(parsedIntent.response_limit, 1200),
       system: [
         dsaPrompt.system,
         "You run a Sydney DSA (Data Structures & Algorithms) daily practice agent.",
@@ -1731,7 +1732,8 @@ async function renderDsaQuestionAgent(context: {
         '  "references": [',
         '    { "title": "LeetCode: Problem Title", "url": "https://leetcode.com/problems/..." }',
         '  ]',
-        "}"
+        "}",
+        responseLimitInstruction(parsedIntent.response_limit)
       ].join(" "),
       messages: [
         {
@@ -2217,7 +2219,12 @@ async function renderContentExtractorAgent(context: {
         `Recent idea titles to avoid: ${JSON.stringify(recentIdeas)}.`
       ].join(" ")
     });
-    const systemPrompt = promptLayers.system;
+    const responseLimit = parsedIntent.response_limit;
+    const systemPrompt = [
+      promptLayers.system,
+      responseLimitInstruction(responseLimit)
+    ].filter(Boolean).join("\n");
+    const maxTokens = maxTokensForResponseLimit(responseLimit, 1200);
 
     const messages: LlmTextMessage[] = [
       {
@@ -2235,7 +2242,7 @@ async function renderContentExtractorAgent(context: {
     ];
 
     let response = await createLlmMessage({
-      maxTokens: 1200,
+      maxTokens,
       system: systemPrompt,
       messages,
       tools: [
@@ -2255,7 +2262,7 @@ async function renderContentExtractorAgent(context: {
       }
       messages.push({ role: "assistant", content: response.content });
       response = await createLlmMessage({
-        maxTokens: 1200,
+        maxTokens,
         system: systemPrompt,
         messages,
         tools: [
