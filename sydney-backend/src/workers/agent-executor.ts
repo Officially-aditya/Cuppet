@@ -1560,6 +1560,7 @@ async function generateDynamicDsaQuestion(params: {
   agentPrompt: string;
   agentId: string;
   topicsCovered: string[];
+  responseLimit?: string;
   recipeInputs?: Record<string, unknown>;
   recipeVersion?: number;
   promptProfileVersion?: number;
@@ -1586,7 +1587,7 @@ async function generateDynamicDsaQuestion(params: {
       let attempts = 0;
       while (attempts < 3) {
         const response = await createLlmMessage({
-          maxTokens: maxTokensForResponseLimit(parsedIntent.response_limit, 900),
+          maxTokens: maxTokensForResponseLimit(params.responseLimit, 900),
           system: [
             dsaPrompt.system,
             "You run a Sydney DSA (Data Structures & Algorithms) daily practice agent.",
@@ -1603,7 +1604,7 @@ async function generateDynamicDsaQuestion(params: {
             '  "target": "Specific constraints or algorithmic target like O(n).",',
             '  "hint": "One helpful hint without giving the solution."',
             "}",
-            responseLimitInstruction(parsedIntent.response_limit)
+            responseLimitInstruction(params.responseLimit)
           ].join(" "),
           messages: [
             {
@@ -1681,6 +1682,7 @@ async function renderDsaQuestionAgent(context: {
       agentPrompt: agent.prompt,
       agentId: agent.id,
       topicsCovered,
+      responseLimit: parsedIntent.response_limit,
       recipeInputs: recordValue(parsedIntent.recipe_inputs),
       recipeVersion: numberValue(parsedIntent.recipe_version),
       promptProfileVersion: numberValue(
