@@ -28,3 +28,42 @@ test("token allocations match configured verbosity constraints", () => {
   assert.equal(maxTokensForResponseLimit("balanced"), 900);
   assert.equal(maxTokensForResponseLimit("detailed"), 1200);
 });
+
+import { adaptPolicyForResponseLimit, buildRecipeExecutionPrompt } from "./runtime/execution-prompt.js";
+
+test("adaptPolicyForResponseLimit replaces static concise directives when detailed or balanced is requested", () => {
+  const staticPolicy = "Follow the registered output schema, be concise, and distinguish missing evidence.";
+  const detailed = adaptPolicyForResponseLimit(staticPolicy, "detailed");
+  const balanced = adaptPolicyForResponseLimit(staticPolicy, "balanced");
+  const concise = adaptPolicyForResponseLimit(staticPolicy, "concise");
+
+  assert.match(detailed, /be detailed, thorough, and comprehensive/);
+  assert.doesNotMatch(detailed, /\bbe concise\b/);
+
+  assert.match(balanced, /be balanced and practical/);
+  assert.doesNotMatch(balanced, /\bbe concise\b/);
+
+  assert.match(concise, /be extremely concise and brief/);
+});
+
+test("buildRecipeExecutionPrompt dynamically integrates response limit preference into versioned recipe prompts", () => {
+  const detailedPrompt = buildRecipeExecutionPrompt({
+    recipeId: "calendar_agenda",
+    outputSchema: "{}",
+    runInstruction: "run",
+    responseLimit: "detailed"
+  });
+
+  assert.match(detailedPrompt.system, /RESPONSE DENSITY REQUIREMENT: The response must be highly detailed/);
+  assert.doesNotMatch(detailedPrompt.system, /\bbe concise\b/);
+
+  const concisePrompt = buildRecipeExecutionPrompt({
+    recipeId: "calendar_agenda",
+    outputSchema: "{}",
+    runInstruction: "run",
+    responseLimit: "concise"
+  });
+
+  assert.match(concisePrompt.system, /RESPONSE DENSITY REQUIREMENT: The response must be extremely brief/);
+});
+

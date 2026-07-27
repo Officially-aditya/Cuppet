@@ -7,11 +7,49 @@ import {
   getAgentRecipeProfile,
   recipePromptProfile
 } from "./recipe-registry.js";
+import {
+  responseLimitInstruction,
+  responseStyleGuidance
+} from "../parser.js";
 
 export type ExecutionPromptLayers = {
   system: string;
   user: string;
 };
+
+export function adaptPolicyForResponseLimit(
+  policy: string,
+  responseLimit?: string
+): string {
+  if (!responseLimit) return policy;
+
+  if (responseLimit === "detailed") {
+    return policy
+      .replace(/\bbe concise\b/gi, "be detailed, thorough, and comprehensive")
+      .replace(/\bconcise agenda\b/gi, "detailed agenda")
+      .replace(/\bconcise report\b/gi, "detailed report")
+      .replace(/\bconcise digest\b/gi, "detailed digest")
+      .replace(/\bconcise brief\b/gi, "detailed brief")
+      .replace(/\bconcise\b/gi, "detailed and in-depth");
+  }
+
+  if (responseLimit === "balanced") {
+    return policy
+      .replace(/\bbe concise\b/gi, "be balanced and practical")
+      .replace(/\bconcise agenda\b/gi, "balanced agenda")
+      .replace(/\bconcise report\b/gi, "balanced report")
+      .replace(/\bconcise digest\b/gi, "balanced digest")
+      .replace(/\bconcise brief\b/gi, "balanced brief")
+      .replace(/\bconcise\b/gi, "balanced");
+  }
+
+  if (responseLimit === "concise") {
+    return policy
+      .replace(/\bbe concise\b/gi, "be extremely concise and brief");
+  }
+
+  return policy;
+}
 
 /**
  * Builds the only prompt layout used by versioned universal-agent recipes.
@@ -27,6 +65,7 @@ export function buildRecipeExecutionPrompt(input: {
   evidence?: Array<{ source: string; content: string }>;
   outputSchema: string;
   runInstruction: string;
+  responseLimit?: string;
 }): ExecutionPromptLayers {
   const profile = getAgentRecipeProfile(input.recipeId, input.recipeVersion);
   const promptProfile = recipePromptProfile(
@@ -39,14 +78,18 @@ export function buildRecipeExecutionPrompt(input: {
     promptProfile.capability_policy,
     "[VERSIONED RECIPE POLICY]",
     `Recipe ${profile.id}@${profile.version}; prompt profile ${promptProfile.version}.`,
-    promptProfile.recipe_policy,
+    adaptPolicyForResponseLimit(promptProfile.recipe_policy, input.responseLimit),
     promptProfile.evidence_policy,
     promptProfile.ranking_policy,
-    promptProfile.style_policy,
+    adaptPolicyForResponseLimit(promptProfile.style_policy, input.responseLimit),
+    input.responseLimit ? responseStyleGuidance(input.responseLimit) : "",
+    input.responseLimit ? responseLimitInstruction(input.responseLimit) : "",
     "[OUTPUT SCHEMA]",
     "Return only data matching this schema. Text and data are allowed; executable actions are injected only by trusted server code.",
     input.outputSchema
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const user = [
     "[VALIDATED USER INPUTS]",

@@ -53,6 +53,7 @@ export async function synthesizeConnectorDigest(input: {
   recipeVersion?: number;
   promptProfileVersion?: number;
   recipeInputs?: Record<string, unknown>;
+  responseLimit?: string;
 }): Promise<ConnectorSynthesis | null> {
   if (!llmConfigured() || input.records.length === 0) {
     return null;
@@ -71,6 +72,7 @@ export async function synthesizeConnectorDigest(input: {
             promptProfileVersion: input.promptProfileVersion,
             recipeInputs: input.recipeInputs,
             userPrompt: input.userPrompt,
+            responseLimit: input.responseLimit,
             evidence: records.map((record, index) => ({
               source: `${input.connectorName}_${index + 1}`,
               content: record

@@ -1347,6 +1347,7 @@ async function renderStudyGuideAgent(context: {
     ),
     recipeInputs: studyInputs,
     userPrompt: agent.prompt,
+    responseLimit: parsedIntent.response_limit,
     outputSchema:
       '{"topic":"string","definition":"markdown lesson and practice","references":[{"title":"string","url":"https://..."}]}',
     runInstruction: [
@@ -1981,6 +1982,7 @@ async function researchPortfolioEvents(
       promptProfileVersion: numberValue(parsed.prompt_profile_version),
       recipeInputs: recordValue(parsed.recipe_inputs),
       userPrompt: agent.prompt,
+      responseLimit: parsed.response_limit,
       outputSchema:
         '{"material_events":[{"ticker":"string","category":"earnings|regulation|major_news","headline":"string","summary":"string","source":"string","url":"https://...","occurred_at":"string"}],"drivers":["evidence-supported string"]}',
       runInstruction: [

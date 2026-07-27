@@ -23,6 +23,7 @@ type NewsBriefOptions = {
   recipeVersion?: number;
   promptProfileVersion?: number;
   recipeInputs?: Record<string, unknown>;
+  responseLimit?: string;
 };
 
 type SourceRef = {
@@ -222,6 +223,7 @@ function buildNewsSystemPrompt(input: {
     promptProfileVersion: input.options.promptProfileVersion,
     recipeInputs: input.options.recipeInputs,
     userPrompt: input.userPrompt,
+    responseLimit: input.options.responseLimit,
     outputSchema: [
       '{"tldr":["three concise strings"],',
       '"items":[{"headline":"string","summary":"grounded context","category":"string","source":"string","url":"https://..."}]}'
