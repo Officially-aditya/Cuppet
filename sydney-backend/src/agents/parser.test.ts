@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { parseIntent, responseLimitInstruction, responseStyleGuidance, maxTokensForResponseLimit } from "./parser.js";
+import { config } from "../config.js";
 
 test("onboarding suggestions create the intended scheduled agents", () => {
   const news = parseIntent(
@@ -161,6 +162,48 @@ test("reddit draft descriptions parse as content drafting agents", () => {
   assert.notEqual(parsed.intent, "unsupported_connector");
   assert.equal(parsed.unsupported_connector, null);
   assert.equal(parsed.intent, "content_extractor");
+});
+
+test("explicit trusted MCP providers win over overlapping capability keywords", () => {
+  const previousDirectory = config.MCP_TRUSTED_PROVIDER_DIRECTORY;
+  config.MCP_TRUSTED_PROVIDER_DIRECTORY = JSON.stringify([
+    {
+      provider_id: "mcp.canva",
+      name: "Canva",
+      description: "Read approved Canva context",
+      icon_name: "palette",
+      category: "DESIGN",
+      endpoint: "https://mcp.canva.example",
+      capabilities: ["files.read"],
+      allowed_tools: ["list_files"]
+    }
+  ]);
+
+  try {
+    const parsed = parseIntent(
+      "Create a Canva agent that watches my portfolio file"
+    );
+
+    assert.equal(parsed.intent, "custom_read_agent");
+    assert.equal(parsed.name, "Canva");
+    assert.deepEqual(parsed.connector_ids, []);
+    assert.deepEqual(parsed.required_access?.[0], {
+      service: "files",
+      capabilities: ["read"],
+      required: true,
+      preferred_provider_ids: ["mcp.canva"],
+      reason: "Canva read access"
+    });
+  } finally {
+    config.MCP_TRUSTED_PROVIDER_DIRECTORY = previousDirectory;
+  }
+});
+
+test("portfolio keywords still classify as portfolio watch without an explicit provider", () => {
+  const parsed = parseIntent("Create an agent that watches my portfolio file");
+
+  assert.equal(parsed.intent, "portfolio_watch");
+  assert.equal(parsed.name, "Portfolio Watch");
 });
 
 test("responseLimitInstruction returns appropriate prompts", () => {

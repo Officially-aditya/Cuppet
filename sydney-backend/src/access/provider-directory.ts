@@ -25,6 +25,38 @@ const nativeProviders: AccessProvider[] = [
   }
 ];
 
+const builtInTrustedMcpProviders: AccessProvider[] = [
+  {
+    providerId: "mcp.canva",
+    kind: "mcp",
+    displayName: "Canva",
+    description: "Search and read approved Canva designs, assets, and folders",
+    iconName: "Palette",
+    category: "DESIGN & CREATIVE",
+    capabilities: ["canva.read"],
+    authMethods: ["oauth2"],
+    trusted: true,
+    endpoint: "https://mcp.canva.com/mcp",
+    allowedTools: [
+      "get-assets",
+      "get-design",
+      "get-design-content",
+      "get-design-pages",
+      "get-design-thumbnail",
+      "get-export-formats",
+      "get-presenter-notes",
+      "list-brand-kits",
+      "list-comments",
+      "list-folder-items",
+      "list-replies",
+      "resolve-shortlink",
+      "search-brand-templates",
+      "search-designs",
+      "search-folders"
+    ]
+  }
+];
+
 const mcpProviderSchema = {
   provider_id: (value: unknown) => typeof value === "string" && /^[a-z][a-z0-9_.:-]{1,119}$/i.test(value),
   name: (value: unknown) => typeof value === "string" && value.trim().length > 0,
@@ -51,35 +83,42 @@ export function listTrustedMcpProviders(): AccessProvider[] {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return [];
+    parsed = [];
   }
-  if (!Array.isArray(parsed)) return [];
-
-  return parsed.flatMap((value) => {
-    if (!isTrustedMcpProviderConfig(value)) return [];
-    const entry = value as Record<string, unknown>;
-    const scopes = stringArray(entry.oauth_scopes);
-    return [{
-      providerId: String(entry.provider_id),
-      kind: "mcp" as const,
-      displayName: String(entry.name),
-      description: String(entry.description),
-      iconName: String(entry.icon_name),
-      category: String(entry.category),
-      capabilities: stringArray(entry.capabilities),
-      authMethods: ["oauth2"] as AccessAuthMethod[],
-      trusted: true,
-      endpoint: String(entry.endpoint),
-      allowedTools: stringArray(entry.allowed_tools),
-      oauth: {
-        authorizationEndpoint: optionalString(entry.authorization_endpoint),
-        tokenEndpoint: optionalString(entry.token_endpoint),
-        issuer: optionalString(entry.issuer),
-        resource: optionalString(entry.resource),
-        scopes
-      }
-    } satisfies AccessProvider];
-  });
+  const configured = Array.isArray(parsed)
+    ? parsed.flatMap((value) => {
+        if (!isTrustedMcpProviderConfig(value)) return [];
+        const entry = value as Record<string, unknown>;
+        const scopes = stringArray(entry.oauth_scopes);
+        return [{
+          providerId: String(entry.provider_id),
+          kind: "mcp" as const,
+          displayName: String(entry.name),
+          description: String(entry.description),
+          iconName: String(entry.icon_name),
+          category: String(entry.category),
+          capabilities: stringArray(entry.capabilities),
+          authMethods: ["oauth2"] as AccessAuthMethod[],
+          trusted: true,
+          endpoint: String(entry.endpoint),
+          allowedTools: stringArray(entry.allowed_tools),
+          oauth: {
+            authorizationEndpoint: optionalString(entry.authorization_endpoint),
+            tokenEndpoint: optionalString(entry.token_endpoint),
+            issuer: optionalString(entry.issuer),
+            resource: optionalString(entry.resource),
+            scopes
+          }
+        } satisfies AccessProvider];
+      })
+    : [];
+  const configuredIds = new Set(configured.map((provider) => provider.providerId));
+  return [
+    ...configured,
+    ...builtInTrustedMcpProviders.filter(
+      (provider) => !configuredIds.has(provider.providerId)
+    )
+  ];
 }
 
 export function listAccessProviders(): AccessProvider[] {

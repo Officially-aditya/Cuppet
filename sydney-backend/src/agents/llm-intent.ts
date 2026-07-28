@@ -72,6 +72,9 @@ export async function parseIntentHybrid(prompt: string): Promise<ParsedIntent> {
 
 function shouldRefineIntent(prompt: string, parsed: ParsedIntent): boolean {
   const lower = prompt.toLowerCase();
+  if (parsed.required_access?.some((requirement) => requirement.preferred_provider_ids.length > 0)) {
+    return false;
+  }
   if (parsed.connector === "gmail") {
     return false;
   }
