@@ -697,7 +697,9 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
 
   const trustedProvider = trustedProviderForPrompt(lower);
   const capability = classifyCapability(prompt, lower);
-  if (trustedProvider && unsupported) {
+  // An explicit trusted provider name is more specific than a capability
+  // keyword that happens to appear in the rest of the request.
+  if (trustedProvider) {
     return genericProviderIntent(prompt, lower, trustedProvider);
   }
 
@@ -717,9 +719,6 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
 
   if (capability) {
     return capability;
-  }
-  if (trustedProvider) {
-    return genericProviderIntent(prompt, lower, trustedProvider);
   }
 
   if (/\bcompetitors?\b/.test(lower)) {

@@ -390,6 +390,7 @@ IconData _iconData(String? iconName) {
     'Github' => Icons.code_rounded,
     'HardDrive' => Icons.storage_rounded,
     'FolderOpen' => Icons.folder_open_rounded,
+    'Palette' => Icons.palette_outlined,
     'search' || 'Search' => Icons.language_rounded,
     _ => Icons.mail_outline_rounded,
   };
@@ -458,6 +459,11 @@ IconData _iconData(String? iconName) {
       background: SydneyColors.surface,
       foreground: const Color(0xFFCA8A04),
       border: SydneyColors.line,
+    ),
+    'Palette' => (
+      background: const Color(0xFFF3E8FF),
+      foreground: const Color(0xFF9333EA),
+      border: null,
     ),
     _ => (
       background: SydneyColors.primarySoft,

@@ -13,9 +13,14 @@ import {
 } from "./requirements.js";
 import {
   accessCapabilityKey,
+  type AccessProvider,
   providerSupportsRequirement,
-  type AccessProvider
 } from "./types.js";
+import {
+  listAccessProviders,
+  listNativeAccessProviders,
+  listTrustedMcpProviders
+} from "./provider-directory.js";
 
 test("native connector requirements are provider-independent", () => {
   assert.deepEqual(accessRequirementsForConnectorIds(["gmail", "drive", "gmail"]), [
@@ -67,6 +72,23 @@ test("provider capabilities satisfy every requested access capability", () => {
     }),
     false
   );
+});
+
+test("keeps native connectors and exposes the built-in Canva MCP provider", () => {
+  assert.deepEqual(
+    listNativeAccessProviders().map((provider) => provider.connectorId),
+    ["gmail", "drive", "calendar", "github", "slack", "notion", "web_search"]
+  );
+
+  const canva = listTrustedMcpProviders().find(
+    (provider) => provider.providerId === "mcp.canva"
+  );
+  assert.ok(canva);
+  assert.equal(canva.kind, "mcp");
+  assert.equal(canva.endpoint, "https://mcp.canva.com/mcp");
+  assert.deepEqual(canva.capabilities, ["canva.read"]);
+  assert.ok(listAccessProviders().some((provider) => provider.providerId === "native.gmail"));
+  assert.ok(listAccessProviders().some((provider) => provider.providerId === "mcp.canva"));
 });
 
 test("schema version 2 keeps explicit access requirements without accepting extra fields", () => {

@@ -1,16 +1,23 @@
-import { accessProviderByIdOrConnector } from "./provider-directory.js";
+import {
+  accessProviderByIdOrConnector,
+  listTrustedMcpProviders
+} from "./provider-directory.js";
 import { disconnectAccessProvider, listAccessConnections } from "./repository.js";
 
 export async function genericConnectorPayloads(userId: string) {
   const connections = await listAccessConnections(userId);
-  return connections.flatMap((connection) => {
-    if (connection.providerKind !== "mcp") return [];
-    const provider = accessProviderByIdOrConnector(connection.providerId);
-    if (!provider) return [];
-    return [{
+  const connectionsByProvider = new Map(
+    connections
+      .filter((connection) => connection.providerKind === "mcp")
+      .map((connection) => [connection.providerId, connection] as const)
+  );
+
+  return listTrustedMcpProviders().map((provider) => {
+    const connection = connectionsByProvider.get(provider.providerId);
+    return {
       id: provider.providerId,
       provider_id: provider.providerId,
-      connection_id: connection.id,
+      ...(connection ? { connection_id: connection.id } : {}),
       name: provider.displayName,
       description: provider.description,
       icon_name: provider.iconName,
@@ -18,9 +25,11 @@ export async function genericConnectorPayloads(userId: string) {
       required_scopes: provider.oauth?.scopes ?? [],
       auth_configured: true,
       auth_method: "oauth2",
-      status: connection.status,
-      account_label: connection.accountLabel
-    }];
+      status: connection?.status ?? "disconnected",
+      ...(connection?.accountLabel
+        ? { account_label: connection.accountLabel }
+        : {})
+    };
   });
 }
 

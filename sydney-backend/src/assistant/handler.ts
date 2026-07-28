@@ -25,7 +25,8 @@ import type { AgentMessageContent } from "../agents/output.js";
 import { mergeAgentMessageContents } from "../agents/runtime/message-parts.js";
 import {
   agentCreationReadyDetail,
-  agentCreationThreadMessage
+  agentCreationThreadMessage,
+  missingAccessForCreation
 } from "../agents/creation-message.js";
 import { syncAgentScheduleForUser } from "../agents/scheduler.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
@@ -1013,9 +1014,14 @@ async function createAgentFromAssistant(
     });
     const githubConnected = !parsedIntent.connector_ids.includes("github") ||
       await hasUsableGitHubToken(input.userId);
+    const missingAccess = await missingAccessForCreation(
+      input.userId,
+      agent.parsed_intent
+    );
     const created = agentCreationThreadMessage({
       parsedIntent: agent.parsed_intent,
       githubConnected,
+      missingAccess,
       readyDetail: agentCreationReadyDetail(
         agent.parsed_intent,
         describeSchedule
