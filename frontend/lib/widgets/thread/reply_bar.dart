@@ -16,6 +16,7 @@ class ReplyBar extends ConsumerStatefulWidget {
     required this.onSend,
     this.replyToMessage,
     this.onCancelReply,
+    this.showRunNowHint = true,
     super.key,
   });
 
@@ -23,6 +24,7 @@ class ReplyBar extends ConsumerStatefulWidget {
   onSend;
   final Message? replyToMessage;
   final VoidCallback? onCancelReply;
+  final bool showRunNowHint;
 
   @override
   ConsumerState<ReplyBar> createState() => _ReplyBarState();
@@ -38,6 +40,29 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
   @override
   void initState() {
     super.initState();
+    if (widget.showRunNowHint) {
+      _startRunNowHintTimer();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ReplyBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showRunNowHint == oldWidget.showRunNowHint) {
+      return;
+    }
+
+    _hintTimer?.cancel();
+    _hintTimer = null;
+    if (mounted) {
+      setState(() => _showRunNowHint = false);
+    }
+    if (widget.showRunNowHint) {
+      _startRunNowHintTimer();
+    }
+  }
+
+  void _startRunNowHintTimer() {
     _hintTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         setState(() => _showRunNowHint = !_showRunNowHint);
@@ -232,7 +257,9 @@ class _ReplyBarState extends ConsumerState<ReplyBar> {
                             );
                           },
                           child: Text(
-                            _showRunNowHint ? "Try 'Run Now'" : 'Message agent',
+                            widget.showRunNowHint && _showRunNowHint
+                                ? "Try 'Run Now'"
+                                : 'Message agent',
                             key: ValueKey(_showRunNowHint),
                           ),
                         ),

@@ -317,7 +317,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                                     ),
                                   ),
                                 ),
-                                 const SizedBox(width: 6),
+                                const SizedBox(width: 6),
                                 Text(
                                   agent.scheduledTimingLabel,
                                   style: Theme.of(
@@ -548,6 +548,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               onSend: _sendReply,
               replyToMessage: _replyToMessage,
               onCancelReply: () => setState(() => _replyToMessage = null),
+              showRunNowHint: !_activeAgent.isAssistant,
             ),
           ],
         ),

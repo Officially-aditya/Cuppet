@@ -241,6 +241,30 @@ void main() {
     );
   });
 
+  testWidgets('Assistant thread does not show the Run Now suggestion', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final assistant = testAgent.copyWith(
+      id: 'assistant-id',
+      threadId: 'assistant-id',
+      name: 'Assistant',
+      isAssistant: true,
+    );
+
+    await tester.pumpWidget(
+      threadHost(agent: assistant, loadMessages: () async => []),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Message agent'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text("Try 'Run Now'"), findsNothing);
+    expect(find.text('Message agent'), findsOneWidget);
+  });
+
   testWidgets('thread labels today, yesterday, and older calendar days', (
     tester,
   ) async {
