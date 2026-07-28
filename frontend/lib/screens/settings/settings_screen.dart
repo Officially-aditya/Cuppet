@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../config/routes.dart';
 import '../../design/tokens.dart';
@@ -98,7 +99,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final user = authState.asData?.value.user;
     final defaultDisplayName = user?.displayName ?? 'Cuppet User';
     final preferredName = ref.watch(preferredNameProvider);
-    final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
+    final displayName =
+        preferredName.isNotEmpty ? preferredName : defaultDisplayName;
     final email = user?.email ?? '';
     final timeZoneAsync = ref.watch(timezonePreferencesProvider);
     final timeZoneState = timeZoneAsync.value;
@@ -181,98 +183,109 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _SettingsTile(
                     key: const ValueKey('settings-push-card'),
                     title: 'Push notifications',
-                    description: _pushEnabled
-                        ? 'Message and agent status alerts are active.'
-                        : 'Enable message and agent status alerts.',
-                    icon: Icons.notifications_outlined,
+                    description:
+                        _pushEnabled
+                            ? 'Message and agent status alerts are active.'
+                            : 'Enable message and agent status alerts.',
+                    iconPath: 'assets/icons/notification.svg',
                     trailing: ConstrainedBox(
                       constraints: const BoxConstraints(
                         minWidth: 48,
                         minHeight: 48,
                       ),
                       child: Center(
-                        child: _pushLoading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: CuppetWorkspaceColors.primary,
+                        child:
+                            _pushLoading
+                                ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: CuppetWorkspaceColors.primary,
+                                  ),
+                                )
+                                : Switch.adaptive(
+                                  value: _pushEnabled,
+                                  activeTrackColor:
+                                      CuppetWorkspaceColors.primary,
+                                  activeThumbColor: Colors.white,
+                                  onChanged: _togglePush,
                                 ),
-                              )
-                            : Switch.adaptive(
-                                value: _pushEnabled,
-                                activeTrackColor: CuppetWorkspaceColors.primary,
-                                activeThumbColor: Colors.white,
-                                onChanged: _togglePush,
-                              ),
                       ),
                     ),
                   ),
                   _SettingsTile(
                     key: const ValueKey('settings-timezone-card'),
-                    title: followsDevice == false
-                        ? 'Fixed time zone'
-                        : 'Automatic time zone',
+                    title:
+                        followsDevice == false
+                            ? 'Fixed time zone'
+                            : 'Automatic time zone',
                     description: _timeZoneDescription(
                       displayedTimeZone: displayedTimeZone,
                       followsDevice: followsDevice,
                       syncPending: timeZoneState?.syncPending == true,
                     ),
-                    icon: Icons.public_rounded,
+                    iconPath: 'assets/icons/timezone.svg',
                     trailing: ConstrainedBox(
                       constraints: const BoxConstraints(
                         minWidth: 48,
                         minHeight: 48,
                       ),
                       child: Center(
-                        child: timeZoneBusy
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: CuppetWorkspaceColors.primary,
+                        child:
+                            timeZoneBusy
+                                ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: CuppetWorkspaceColors.primary,
+                                  ),
+                                )
+                                : Switch.adaptive(
+                                  key: const ValueKey(
+                                    'automatic-timezone-switch',
+                                  ),
+                                  value: followsDevice ?? true,
+                                  activeTrackColor:
+                                      CuppetWorkspaceColors.primary,
+                                  activeThumbColor: Colors.white,
+                                  onChanged:
+                                      timeZoneState?.preferencesLoaded == true
+                                          ? _toggleAutomaticTimeZone
+                                          : null,
                                 ),
-                              )
-                            : Switch.adaptive(
-                                key: const ValueKey(
-                                  'automatic-timezone-switch',
-                                ),
-                                value: followsDevice ?? true,
-                                activeTrackColor: CuppetWorkspaceColors.primary,
-                                activeThumbColor: Colors.white,
-                                onChanged:
-                                    timeZoneState?.preferencesLoaded == true
-                                        ? _toggleAutomaticTimeZone
-                                        : null,
-                              ),
                       ),
                     ),
                   ),
                   _SettingsTile(
                     key: const ValueKey('settings-memory-card'),
                     title: 'Memory',
-                    description: 'Review confirmed details remembered by Assistant.',
-                    icon: Icons.psychology_alt_outlined,
+                    description:
+                        'Review confirmed details remembered by Assistant.',
+                    iconPath: 'assets/icons/memory.svg',
                     trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
                       size: 20,
                     ),
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.memory),
+                    onTap:
+                        () => Navigator.of(context).pushNamed(AppRoutes.memory),
                   ),
                   _SettingsTile(
                     key: const ValueKey('settings-storage-card'),
                     title: 'Storage',
-                    description: 'Manage 30-day history and Google Drive archives.',
-                    icon: Icons.storage_outlined,
+                    description:
+                        'Manage 30-day history and Google Drive archives.',
+                    iconPath: 'assets/icons/storage.svg',
                     trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
                       size: 20,
                     ),
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.storage),
+                    onTap:
+                        () =>
+                            Navigator.of(context).pushNamed(AppRoutes.storage),
                   ),
                 ],
               ),
@@ -284,13 +297,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     key: const ValueKey('settings-connectors-card'),
                     title: 'Connectors',
                     description: 'Review accounts approved for backend access.',
-                    icon: Icons.hub_outlined,
+                    iconPath: 'assets/icons/connectors.svg',
                     trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
                       size: 20,
                     ),
-                    onTap: () => Navigator.of(context).pushNamed(AppRoutes.connectors),
+                    onTap:
+                        () => Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.connectors),
                   ),
                 ],
               ),
@@ -301,8 +317,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _SettingsTile(
                     key: ValueKey('settings-privacy-card'),
                     title: 'Session storage',
-                    description: 'Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected.',
-                    icon: Icons.shield_outlined,
+                    description:
+                        'Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected.',
+                    iconPath: 'assets/icons/session-storage.svg',
                   ),
                 ],
               ),
@@ -312,9 +329,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onPressed: () async {
                   await ref.read(authControllerProvider.notifier).signOut();
                   if (context.mounted) {
-                    Navigator.of(
-                      context,
-                    ).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      AppRoutes.signIn,
+                      (route) => false,
+                    );
                   }
                 },
                 icon: const Icon(Icons.logout_rounded, size: 18),
@@ -354,26 +372,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _SettingsIcon extends StatelessWidget {
-  const _SettingsIcon({
-    required this.icon,
-  });
+  const _SettingsIcon({required this.assetPath});
 
-  final IconData icon;
+  final String assetPath;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 40,
       height: 40,
-      decoration: BoxDecoration(
-        color: CuppetWorkspaceColors.softSage,
-        borderRadius: BorderRadius.circular(SydneyRadius.md),
-      ),
-      alignment: Alignment.center,
-      child: Icon(
-        icon,
-        size: 19,
-        color: CuppetWorkspaceColors.primaryInk,
+      child: Center(
+        child: SvgPicture.asset(
+          assetPath,
+          width: 24,
+          height: 24,
+          colorFilter: const ColorFilter.mode(
+            CuppetWorkspaceColors.primaryInk,
+            BlendMode.srcIn,
+          ),
+        ),
       ),
     );
   }
@@ -413,10 +430,7 @@ class _SettingsCopy extends StatelessWidget {
 }
 
 class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({
-    required this.title,
-    required this.children,
-  });
+  const _SettingsGroup({required this.title, required this.children});
 
   final String title;
   final List<Widget> children;
@@ -454,7 +468,7 @@ class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
     required this.title,
     required this.description,
-    required this.icon,
+    required this.iconPath,
     this.trailing,
     this.onTap,
     super.key,
@@ -462,7 +476,7 @@ class _SettingsTile extends StatelessWidget {
 
   final String title;
   final String description;
-  final IconData icon;
+  final String iconPath;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -472,15 +486,10 @@ class _SettingsTile extends StatelessWidget {
       padding: const EdgeInsets.all(SydneySpacing.lg),
       child: Row(
         children: [
-          _SettingsIcon(
-            icon: icon,
-          ),
+          _SettingsIcon(assetPath: iconPath),
           const SizedBox(width: SydneySpacing.md),
           Expanded(
-            child: _SettingsCopy(
-              title: title,
-              description: description,
-            ),
+            child: _SettingsCopy(title: title, description: description),
           ),
           if (trailing != null) ...[
             const SizedBox(width: SydneySpacing.sm),
@@ -491,10 +500,7 @@ class _SettingsTile extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        child: tileContent,
-      );
+      return InkWell(onTap: onTap, child: tileContent);
     }
     return tileContent;
   }
