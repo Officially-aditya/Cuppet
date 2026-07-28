@@ -33,6 +33,9 @@ class ThreadScreen extends ConsumerStatefulWidget {
   ConsumerState<ThreadScreen> createState() => _ThreadScreenState();
 }
 
+const _assistantWelcomeMessage =
+    "I'm here for everyday conversation, just like the AI chatbots you already know and love. But stick around for the magic — tell me what you want, and I'll create a contact that messages you, like clockwork, exactly when you need it.";
+
 PopupMenuItem<String> _agentMenuItem(
   BuildContext context, {
   required String value,
@@ -85,6 +88,43 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               ),
           orElse: () => widget.agent,
         );
+  }
+
+  List<Message> _assistantDisplayMessages(Agent agent, List<Message> messages) {
+    if (!agent.isAssistant) {
+      return messages;
+    }
+
+    final firstAgentIndex = messages.indexWhere(
+      (message) => message.sender == MessageSender.agent,
+    );
+    if (firstAgentIndex == -1) {
+      return messages;
+    }
+
+    final original = messages[firstAgentIndex];
+    final updatedContent = Map<String, dynamic>.from(original.content);
+    final rawData = updatedContent['data'];
+    final updatedData =
+        rawData is Map
+            ? Map<String, dynamic>.from(rawData)
+            : <String, dynamic>{};
+    updatedContent['template'] = 'plain_text';
+    updatedData['text'] = _assistantWelcomeMessage;
+    updatedContent['data'] = updatedData;
+
+    final updatedMessages = [...messages];
+    updatedMessages[firstAgentIndex] = Message(
+      id: original.id,
+      threadId: original.threadId,
+      sender: original.sender,
+      createdAt: original.createdAt,
+      content: updatedContent,
+      deliveryState: original.deliveryState,
+      driveBacked: original.driveBacked,
+      readOnly: original.readOnly,
+    );
+    return updatedMessages;
   }
 
   bool _shouldShowHeatmap(Agent agent) {
@@ -420,7 +460,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   }
 
                   // Build the display list: real items + optional pending user message.
-                  final displayItems = [...items];
+                  final displayItems = [
+                    ..._assistantDisplayMessages(agent, items),
+                  ];
                   if (_pendingUserMessage != null) {
                     displayItems.add(_pendingUserMessage!);
                   }

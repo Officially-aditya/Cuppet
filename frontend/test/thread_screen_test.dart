@@ -241,6 +241,38 @@ void main() {
     );
   });
 
+  testWidgets('Assistant thread uses the updated welcome message', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final assistant = testAgent.copyWith(
+      id: 'assistant-id',
+      threadId: 'assistant-id',
+      name: 'Assistant',
+      isAssistant: true,
+    );
+    final oldWelcome = Message.plainText(
+      id: 'assistant-welcome',
+      threadId: assistant.threadId,
+      sender: MessageSender.agent,
+      text: 'Old welcome message',
+      createdAt: _testDate,
+    );
+
+    await tester.pumpWidget(
+      threadHost(agent: assistant, loadMessages: () async => [oldWelcome]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        "I'm here for everyday conversation, just like the AI chatbots you already know and love. But stick around for the magic — tell me what you want, and I'll create a contact that messages you, like clockwork, exactly when you need it.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Old welcome message'), findsNothing);
+  });
+
   testWidgets('Assistant thread does not show the Run Now suggestion', (
     tester,
   ) async {
