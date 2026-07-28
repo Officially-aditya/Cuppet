@@ -50,6 +50,15 @@ class _ConnectorList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final visibleConnectors =
+        connectors
+            .where(
+              (connector) =>
+                  connector.id.toLowerCase() != 'mcp.canva' &&
+                  connector.providerId?.toLowerCase() != 'mcp.canva',
+            )
+            .toList();
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -61,14 +70,14 @@ class _ConnectorList extends ConsumerWidget {
       children: [
         const WorkspaceSectionLabel('AVAILABLE SERVICES'),
         const SizedBox(height: SydneySpacing.lg),
-        if (connectors.isEmpty)
+        if (visibleConnectors.isEmpty)
           const SydneyEmptyState(
             icon: Icons.public_rounded,
             title: 'No connectors available',
             message: 'Connector options will appear here when they load.',
           )
         else
-          for (final connector in connectors) ...[
+          for (final connector in visibleConnectors) ...[
             ConnectorListItem(
               connector: connector,
               onConnectedChanged: (connected) async {

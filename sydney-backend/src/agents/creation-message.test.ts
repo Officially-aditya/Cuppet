@@ -70,6 +70,78 @@ test("introduces a ready agent with capability, timing, access, and controls", (
   assert.match(summary, /ask me to run now/i);
 });
 
+test("asks the user to connect a missing trusted provider", () => {
+  const parsedIntent = {
+    ...parseIntent("Create a custom read-only agent."),
+    name: "Canva",
+    action: "Reads approved context from Canva.",
+    required_access: [
+      {
+        service: "canva",
+        capabilities: ["read"],
+        required: true,
+        preferred_provider_ids: ["mcp.canva"],
+        reason: "Canva read access"
+      }
+    ]
+  };
+  const message = agentCreationThreadMessage({
+    parsedIntent,
+    githubConnected: true,
+    missingAccess: [{ connectorId: "mcp.canva", connectorName: "Canva" }],
+    readyDetail: "It is ready for manual runs."
+  });
+
+  assert.equal(message.content.template, "daily_task");
+  assert.match(
+    message.content.data.context?.toString() ?? "",
+    /authorize Canva/i
+  );
+  assert.deepEqual(message.content.data.actions, [
+    {
+      id: "connect_mcp_canva",
+      type: "connector_connect",
+      connector_id: "mcp.canva",
+      connector_name: "Canva",
+      run_after_connect: true,
+      label: "Connect Canva",
+      style: "primary"
+    }
+  ]);
+});
+
+test("renders one connect action for every missing required connector", () => {
+  const parsedIntent = parseIntent("Create a daily executive briefing.");
+  const message = agentCreationThreadMessage({
+    parsedIntent,
+    githubConnected: true,
+    missingAccess: [
+      { connectorId: "gmail", connectorName: "Gmail" },
+      { connectorId: "calendar", connectorName: "Google Calendar" }
+    ],
+    readyDetail: "It will run daily."
+  });
+
+  assert.equal(message.content.template, "daily_task");
+  assert.match(
+    message.content.data.context?.toString() ?? "",
+    /Gmail and Google Calendar/i
+  );
+  assert.deepEqual(
+    (message.content.data.actions as Array<Record<string, unknown>>).map(
+      (action) => [
+        action.connector_id,
+        action.label,
+        action.run_after_connect
+      ]
+    ),
+    [
+      ["gmail", "Connect Gmail", false],
+      ["calendar", "Connect Google Calendar", false]
+    ]
+  );
+});
+
 test("describes realtime agents without inventing a daily schedule", () => {
   const parsedIntent = parseIntent(
     "Track changes in my GitHub repository and inform me immediately."

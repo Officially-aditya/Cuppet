@@ -30,9 +30,23 @@ const _driveConnector = Connector(
   authConfigured: true,
 );
 
+const _canvaConnector = Connector(
+  id: 'mcp.canva',
+  name: 'Canva',
+  description: 'Search and read approved Canva designs.',
+  status: ConnectorStatus.disconnected,
+  category: 'DESIGN & CREATIVE',
+  iconName: 'Palette',
+  authMethod: 'oauth2',
+  providerId: 'mcp.canva',
+);
+
 class _LoadedConnectorsController extends ConnectorsController {
   @override
-  Future<List<Connector>> build() async => const [_githubConnector];
+  Future<List<Connector>> build() async => const [
+    _githubConnector,
+    _canvaConnector,
+  ];
 }
 
 class _LoadingConnectorsController extends ConnectorsController {
@@ -106,6 +120,14 @@ void main() {
     expect((image.image as AssetImage).assetName, 'assets/logos/github.png');
     expect(image.color, isNull);
     expect(find.byType(ColorFiltered), findsNothing);
+  });
+
+  testWidgets('Canva is hidden from the connector page', (tester) async {
+    await tester.pumpWidget(_screenWith(_LoadedConnectorsController.new));
+    await tester.pumpAndSettle();
+
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(find.text('Canva'), findsNothing);
   });
 
   testWidgets('advanced connector switch keeps the existing callback', (

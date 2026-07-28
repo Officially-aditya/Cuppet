@@ -1,5 +1,12 @@
 import type { ParsedIntent } from "./parser.js";
 import { describeSchedule } from "./schedule-description.js";
+import { resolveAccess } from "../access/resolver.js";
+import { accessRequirementsForConnectorIds } from "../access/requirements.js";
+
+export type MissingCreationAccess = {
+  connectorId: string;
+  connectorName: string;
+};
 
 type AgentCreationThreadMessage = {
   role: "agent";
@@ -13,10 +20,25 @@ type AgentCreationThreadMessage = {
 export function agentCreationThreadMessage(input: {
   parsedIntent: ParsedIntent;
   githubConnected: boolean;
+  missingAccess?: readonly MissingCreationAccess[] | null;
   readyDetail: string;
 }): AgentCreationThreadMessage {
   const needsGitHub = input.parsedIntent.connector_ids.includes("github");
-  if (needsGitHub && !input.githubConnected) {
+  const missingAccess = [...(input.missingAccess ?? [])];
+  if (
+    needsGitHub &&
+    !input.githubConnected &&
+    !missingAccess.some((access) => access.connectorId === "github")
+  ) {
+    missingAccess.unshift({ connectorId: "github", connectorName: "GitHub" });
+  }
+
+  if (
+    needsGitHub &&
+    !input.githubConnected &&
+    missingAccess.length === 1 &&
+    missingAccess[0]?.connectorId === "github"
+  ) {
     return {
       role: "agent",
       content: {
@@ -47,6 +69,40 @@ export function agentCreationThreadMessage(input: {
     };
   }
 
+  if (missingAccess.length > 0) {
+    const accessNames = missingAccess
+      .map((access) => access.connectorName)
+      .join(" and ");
+    return {
+      role: "agent",
+      content: {
+        template: "daily_task",
+        version: "1.0",
+        data: {
+          title: `Finish setting up ${input.parsedIntent.name}`,
+          task: [
+            input.parsedIntent.action,
+            agentVoiceReadyDetail(input.readyDetail)
+          ].join("\n\n"),
+          context:
+            missingAccess.length === 1
+              ? `I’ve been created, but I can’t read ${accessNames} context until you authorize ${accessNames}.`
+              : `I’ve been created, but I need access to ${accessNames} before I can run.`,
+          estimated_minutes: 1,
+          actions: missingAccess.map((access) => ({
+            id: `connect_${access.connectorId.replace(/[^a-z0-9]+/gi, "_")}`,
+            type: "connector_connect",
+            connector_id: access.connectorId,
+            connector_name: access.connectorName,
+            run_after_connect: missingAccess.length === 1,
+            label: `Connect ${access.connectorName}`,
+            style: "primary"
+          }))
+        }
+      }
+    };
+  }
+
   return {
     role: "agent",
     content: {
@@ -63,6 +119,38 @@ export function agentCreationThreadMessage(input: {
       }
     }
   };
+}
+
+export async function missingAccessForCreation(
+  userId: string,
+  parsedIntent: ParsedIntent
+): Promise<MissingCreationAccess[]> {
+  const explicitRequirements = parsedIntent.required_access ?? [];
+  const requirements = (explicitRequirements.length > 0
+    ? explicitRequirements
+    : accessRequirementsForConnectorIds(parsedIntent.connector_ids)
+  ).filter(
+    (requirement) => requirement.required
+  );
+  if (requirements.length === 0) return [];
+
+  try {
+    const resolution = await resolveAccess(userId, requirements);
+    const seen = new Set<string>();
+    return resolution.items.flatMap((item) => {
+      if (item.status !== "needs_connection" || !item.provider) return [];
+      const connectorId = item.provider.connectorId ?? item.provider.providerId;
+      if (seen.has(connectorId)) return [];
+      seen.add(connectorId);
+      return [{
+        connectorId,
+        connectorName: item.provider.displayName
+      }];
+    });
+  } catch {
+    // Agent creation should not fail if access status cannot be checked.
+    return [];
+  }
 }
 
 function agentIntroductionSummary(

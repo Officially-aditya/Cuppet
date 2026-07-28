@@ -24,7 +24,8 @@ import { publishRealtimeEvent } from "../realtime/events.js";
 import { hasUsableGitHubToken } from "../connectors/github.js";
 import {
   agentCreationReadyDetail,
-  agentCreationThreadMessage
+  agentCreationThreadMessage,
+  missingAccessForCreation
 } from "../agents/creation-message.js";
 import {
   hasSecurityValidationIssue,
@@ -1494,9 +1495,11 @@ async function writeAgentCreatedMessage(
 ): Promise<void> {
   const githubConnected = !parsedIntent.connector_ids.includes("github") ||
     await hasUsableGitHubToken(userId);
+  const missingAccess = await missingAccessForCreation(userId, parsedIntent);
   const message = agentCreationThreadMessage({
     parsedIntent,
     githubConnected,
+    missingAccess,
     readyDetail: agentCreationReadyDetail(parsedIntent, describeSchedule)
   });
 
