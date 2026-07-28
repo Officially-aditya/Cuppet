@@ -7,6 +7,7 @@ import '../../config/routes.dart';
 import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/timezone_provider.dart';
+import '../../services/push_service.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/workspace_primitives.dart';
 
@@ -29,15 +30,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _checkPushStatus() async {
     try {
-      final messaging = FirebaseMessaging.instance;
-      final settings = await messaging.getNotificationSettings();
-      final token = await messaging.getToken();
-      final enabled =
-          (settings.authorizationStatus == AuthorizationStatus.authorized ||
-              settings.authorizationStatus ==
-                  AuthorizationStatus.provisional) &&
-          token != null &&
-          token.isNotEmpty;
+      final settings =
+          await FirebaseMessaging.instance.getNotificationSettings();
+      final enabled = pushPermissionIsGranted(settings.authorizationStatus);
       if (mounted) {
         setState(() {
           _pushEnabled = enabled;
@@ -55,10 +50,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() => _pushLoading = true);
     try {
       if (enable) {
-        final result = await ref.read(pushServiceProvider).configure();
+        try {
+          await ref.read(pushServiceProvider).configure();
+        } catch (_) {
+          // Permission is independent of token registration. Re-read it below
+          // so a registration failure does not hide an allowed permission.
+        }
+        final settings =
+            await FirebaseMessaging.instance.getNotificationSettings();
+        final enabled = pushPermissionIsGranted(settings.authorizationStatus);
         if (mounted) {
           setState(() {
-            _pushEnabled = result.isEnabled;
+            _pushEnabled = enabled;
             _pushLoading = false;
           });
         }
@@ -188,6 +191,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ? 'Message and agent status alerts are active.'
                             : 'Enable message and agent status alerts.',
                     iconPath: 'assets/icons/notification.svg',
+                    enabledIconPath: 'assets/icons/notification-enabled.svg',
+                    iconEnabled: _pushEnabled,
                     trailing: ConstrainedBox(
                       constraints: const BoxConstraints(
                         minWidth: 48,
@@ -372,9 +377,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _SettingsIcon extends StatelessWidget {
-  const _SettingsIcon({required this.assetPath});
+  const _SettingsIcon({
+    required this.assetPath,
+    this.enabledAssetPath,
+    this.isEnabled = false,
+  });
 
   final String assetPath;
+  final String? enabledAssetPath;
+  final bool isEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -382,13 +393,34 @@ class _SettingsIcon extends StatelessWidget {
       width: 40,
       height: 40,
       child: Center(
-        child: SvgPicture.asset(
-          assetPath,
-          width: 24,
-          height: 24,
-          colorFilter: const ColorFilter.mode(
-            CuppetWorkspaceColors.primaryInk,
-            BlendMode.srcIn,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 240),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.88, end: 1).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: SvgPicture.asset(
+            isEnabled && enabledAssetPath != null
+                ? enabledAssetPath!
+                : assetPath,
+            key: ValueKey<String>(
+              isEnabled && enabledAssetPath != null
+                  ? enabledAssetPath!
+                  : assetPath,
+            ),
+            width: 24,
+            height: 24,
+            colorFilter: const ColorFilter.mode(
+              CuppetWorkspaceColors.primaryInk,
+              BlendMode.srcIn,
+            ),
           ),
         ),
       ),
@@ -469,6 +501,8 @@ class _SettingsTile extends StatelessWidget {
     required this.title,
     required this.description,
     required this.iconPath,
+    this.enabledIconPath,
+    this.iconEnabled = false,
     this.trailing,
     this.onTap,
     super.key,
@@ -477,6 +511,8 @@ class _SettingsTile extends StatelessWidget {
   final String title;
   final String description;
   final String iconPath;
+  final String? enabledIconPath;
+  final bool iconEnabled;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -486,7 +522,11 @@ class _SettingsTile extends StatelessWidget {
       padding: const EdgeInsets.all(SydneySpacing.lg),
       child: Row(
         children: [
-          _SettingsIcon(assetPath: iconPath),
+          _SettingsIcon(
+            assetPath: iconPath,
+            enabledAssetPath: enabledIconPath,
+            isEnabled: iconEnabled,
+          ),
           const SizedBox(width: SydneySpacing.md),
           Expanded(
             child: _SettingsCopy(title: title, description: description),

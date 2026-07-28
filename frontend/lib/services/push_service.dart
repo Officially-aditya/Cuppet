@@ -22,12 +22,17 @@ class PushSetupException implements Exception {
   String toString() => message;
 }
 
+bool pushPermissionIsGranted(AuthorizationStatus status) {
+  return status == AuthorizationStatus.authorized ||
+      status == AuthorizationStatus.provisional;
+}
+
 class PushService {
   PushService({required this.onTokenRegistered});
 
   final Future<void> Function(String token) onTokenRegistered;
 
-  Future<PushSetupResult> configure() async {
+  Future<PushSetupResult> configure({bool requestPermission = true}) async {
     try {
       if (Firebase.apps.isEmpty) {
         throw const PushSetupException(
@@ -35,8 +40,18 @@ class PushService {
         );
       }
 
-      final settings = await FirebaseMessaging.instance.requestPermission();
-      final token = await FirebaseMessaging.instance.getToken();
+      final messaging = FirebaseMessaging.instance;
+      var settings = await messaging.getNotificationSettings();
+      if (requestPermission &&
+          !pushPermissionIsGranted(settings.authorizationStatus)) {
+        settings = await messaging.requestPermission();
+      }
+
+      if (!pushPermissionIsGranted(settings.authorizationStatus)) {
+        return PushSetupResult(permissionStatus: settings.authorizationStatus);
+      }
+
+      final token = await messaging.getToken();
 
       if (token != null) {
         // Register token with backend

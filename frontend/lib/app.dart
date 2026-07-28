@@ -212,7 +212,9 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
         ref.read(messageActionsProvider).connectLiveUpdates();
         // Initialize push notifications after authentication
         try {
-          final result = await ref.read(pushServiceProvider).configure();
+          final result = await ref
+              .read(pushServiceProvider)
+              .configure(requestPermission: false);
           if (result.isEnabled) {
             debugPrint(
               'Push notifications enabled (token: ${result.token != null})',
