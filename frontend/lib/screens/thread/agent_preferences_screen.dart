@@ -188,6 +188,7 @@ class _AgentPreferencesScreenState
               child: SwitchListTile.adaptive(
                 value: _isPaused,
                 onChanged: (paused) => setState(() => _isPaused = paused),
+                activeThumbColor: Colors.white,
                 activeTrackColor: CuppetWorkspaceColors.primary,
                 title: Text(
                   _isPaused ? 'Resume agent' : 'Pause agent',

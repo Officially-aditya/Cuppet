@@ -59,6 +59,7 @@ import {
   applyAgentStateEvents,
   type AgentStateEvent
 } from "./runtime/state-store.js";
+import { isLlmTokenLimitError, withLlmUser } from "./token-rate-limit.js";
 
 const createAgentSchema = z
   .object({
@@ -243,9 +244,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
 
     let creation: Awaited<ReturnType<typeof resolveAgentCreationRequest>>;
     try {
-      creation = await resolveAgentCreationRequest(body.data);
+      creation = await withLlmUser(userId, () =>
+        resolveAgentCreationRequest(body.data)
+      );
     } catch (error) {
-      if (!body.data.recipe_id) throw error;
+      if (!body.data.recipe_id || isLlmTokenLimitError(error)) throw error;
       return invalidRecipeReply(reply, error);
     }
     const { parsedIntent, prompt } = creation;
@@ -415,7 +418,9 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     let nextPrompt = existing.prompt;
 
     if (description !== undefined) {
-      let reparsed = await parseIntentHybrid(description);
+      let reparsed = await withLlmUser(userId, () =>
+        parseIntentHybrid(description)
+      );
       if (reparsed.unsupported_connector) {
         const platform = reparsed.unsupported_connector.toLowerCase();
         const existingIsDraftAgent =
@@ -423,8 +428,8 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           looksLikeContentDraftPrompt(existing.prompt ?? "") ||
           looksLikeContentDraftPrompt(description);
         if (isDraftOutputPlatformName(platform) && existingIsDraftAgent) {
-          reparsed = await parseIntentHybrid(
-            `Content extractor agent: ${description}`
+          reparsed = await withLlmUser(userId, () =>
+            parseIntentHybrid(`Content extractor agent: ${description}`)
           );
         }
       }
@@ -591,9 +596,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
 
     let creation: Awaited<ReturnType<typeof resolveAgentCreationRequest>>;
     try {
-      creation = await resolveAgentCreationRequest(body.data);
+      creation = await withLlmUser(request.auth!.userId, () =>
+        resolveAgentCreationRequest(body.data)
+      );
     } catch (error) {
-      if (!body.data.recipe_id) throw error;
+      if (!body.data.recipe_id || isLlmTokenLimitError(error)) throw error;
       return invalidRecipeReply(reply, error);
     }
     const { parsedIntent } = creation;

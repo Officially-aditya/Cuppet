@@ -281,6 +281,7 @@ String friendlyErrorMessage(
     return apiExceptionFrom(error, fallback).message;
   }
   if (error is ApiException) {
+    if (error.code == 'LLM_TOKEN_LIMIT_EXCEEDED') return error.message;
     final safe = _safeMessage(error.message);
     return _withRecovery(safe ?? fallback, statusCode: error.statusCode);
   }
@@ -310,6 +311,10 @@ String _messageForResponse({
       ).hasMatch(code);
   if (statusCode == 401 && !credentialError) {
     return 'Your session has ended. Please sign in again.';
+  }
+  if (code == 'LLM_TOKEN_LIMIT_EXCEEDED') {
+    return rawMessage ??
+        'Limit Exhausted. Your Limit will reset after five hours.';
   }
   if (statusCode == 429) {
     return 'Cuppet is handling a lot right now. Please wait a moment and try again.';

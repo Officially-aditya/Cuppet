@@ -26,6 +26,28 @@ void main() {
     expect(exception.message, contains('wait a moment'));
   });
 
+  test('preserves the token limit reset message', () {
+    final exception = apiExceptionFrom(
+      _responseError(429, const {
+        'error': {
+          'code': 'LLM_TOKEN_LIMIT_EXCEEDED',
+          'message':
+              'Limit Exhausted. Your Limit will reset at 2026-07-28T12:34:56.000Z.',
+          'retryable': false,
+          'retry_after_seconds': 18000,
+        },
+      }),
+      'Fallback message',
+    );
+
+    expect(
+      exception.message,
+      'Limit Exhausted. Your Limit will reset at 2026-07-28T12:34:56.000Z.',
+    );
+    expect(exception.retryable, isFalse);
+    expect(exception.retryAfterSeconds, 18000);
+  });
+
   test('supports JSON-string and legacy bare error responses', () {
     final exception = apiExceptionFrom(
       _responseError(404, '{"error":"Message not found"}'),

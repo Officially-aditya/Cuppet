@@ -81,3 +81,31 @@ test("replaces schema-library wording with contextual guidance", () => {
     "We couldn’t complete that message action right now. Check the details and try again."
   );
 });
+
+test("preserves the dynamic LLM token reset message", () => {
+  assert.deepEqual(
+    normalizePublicError(
+      {
+        error: {
+          code: "LLM_TOKEN_LIMIT_EXCEEDED",
+          message:
+            "Limit Exhausted. Your Limit will reset at 2026-07-28T12:34:56.000Z.",
+          retryable: false,
+          reset_at: "2026-07-28T12:34:56.000Z"
+        }
+      },
+      429,
+      18000
+    ),
+    {
+      error: {
+        reset_at: "2026-07-28T12:34:56.000Z",
+        code: "LLM_TOKEN_LIMIT_EXCEEDED",
+        message:
+          "Limit Exhausted. Your Limit will reset at 2026-07-28T12:34:56.000Z.",
+        retryable: false,
+        retry_after_seconds: 18000
+      }
+    }
+  );
+});

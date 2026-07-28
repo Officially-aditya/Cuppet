@@ -8,6 +8,13 @@ import {
   createAnthropicMessage
 } from "./anthropic.js";
 import { createGeminiMessage, geminiConfigured } from "./gemini.js";
+import {
+  currentLlmUserId,
+  markLlmTokenLimitError,
+  releaseLlmTokens,
+  reserveLlmTokens,
+  settleLlmTokens
+} from "./token-rate-limit.js";
 import type {
   LlmContentBlock,
   LlmMessageInput,
@@ -34,9 +41,33 @@ export async function createLlmMessage(
     ...input,
     system: [PROMPT_SECURITY_SYSTEM, input.system.slice(0, 20_000)].join("\n\n")
   };
-  return activeLlmProvider() === "anthropic"
-    ? createAnthropicMessage(securedInput)
-    : createGeminiMessage(securedInput);
+  const userId = currentLlmUserId();
+  let reservation;
+  if (userId) {
+    try {
+      reservation = await reserveLlmTokens(userId, securedInput);
+    } catch (error) {
+      markLlmTokenLimitError(error);
+      throw error;
+    }
+  }
+
+  try {
+    const providerInput = reservation
+      ? { ...securedInput, maxTokens: reservation.outputTokens }
+      : securedInput;
+    const response =
+      activeLlmProvider() === "anthropic"
+        ? await createAnthropicMessage(providerInput)
+        : await createGeminiMessage(providerInput);
+    if (reservation) {
+      await settleLlmTokens(reservation, response.usage);
+    }
+    return response;
+  } catch (error) {
+    if (reservation) await releaseLlmTokens(reservation);
+    throw error;
+  }
 }
 
 export function cleanModelReasoning(text: string): string {

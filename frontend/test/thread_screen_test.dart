@@ -131,7 +131,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TODAY'), findsOneWidget);
-    expect(find.text('ACTIVE'), findsOneWidget);
+    expect(find.text('ON DEMAND'), findsOneWidget);
     expect(find.text('Message agent'), findsOneWidget);
     expect(find.byIcon(Icons.send_rounded), findsOneWidget);
     expect(find.byType(AppBottomNav), findsNothing);
@@ -567,7 +567,7 @@ void main() {
       isFalse,
     );
     expect(
-      tester.getTopLeft(find.text('Agent Description')).dy,
+      tester.getTopLeft(find.text('AGENT DESCRIPTION')).dy,
       lessThan(tester.getTopLeft(find.text('Pause agent')).dy),
     );
 
@@ -600,6 +600,11 @@ void main() {
     await tester.enterText(
       find.byKey(const ValueKey('agent_description_field')),
       'Deliver a focused AI research briefing every weekday.',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Save Preferences'),
+      180,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('Save Preferences'));
     await tester.pumpAndSettle();

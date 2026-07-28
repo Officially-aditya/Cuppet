@@ -447,3 +447,24 @@ CREATE TABLE message_attachments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(message_id, uploaded_file_id)
 );
+
+CREATE TABLE llm_token_usage_windows (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id            TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  window_key         UUID NOT NULL,
+  window_started_at  TIMESTAMPTZ NOT NULL,
+  window_ends_at     TIMESTAMPTZ NOT NULL,
+  input_tokens       BIGINT NOT NULL DEFAULT 0 CHECK (input_tokens >= 0),
+  output_tokens      BIGINT NOT NULL DEFAULT 0 CHECK (output_tokens >= 0),
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE llm_token_reservations (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  window_key    UUID NOT NULL,
+  input_tokens  INTEGER NOT NULL CHECK (input_tokens >= 0),
+  output_tokens INTEGER NOT NULL CHECK (output_tokens >= 0),
+  expires_at    TIMESTAMPTZ NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

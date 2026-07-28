@@ -54,13 +54,40 @@ const knownMessages: Record<string, string> = {
 export function registerPublicErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
     const status = publicStatus(error);
+    const code = errorCodeForStatus(status, error);
     request.log.error(
       { error, status, requestId: request.id },
       "Request failed"
     );
+    if (code === "LLM_TOKEN_LIMIT_EXCEEDED") {
+      const retryAfterSeconds =
+        isRecord(error) && typeof error.retryAfterSeconds === "number"
+          ? error.retryAfterSeconds
+          : undefined;
+      if (retryAfterSeconds && retryAfterSeconds > 0) {
+        reply.header("retry-after", retryAfterSeconds);
+      }
+      return reply.code(status).send({
+        error: {
+          code,
+          message: publicMessage(
+            isRecord(error) ? error.message : undefined,
+            status,
+            code
+          ),
+          retryable: false,
+          ...(retryAfterSeconds
+            ? { retry_after_seconds: retryAfterSeconds }
+            : {}),
+          ...(isRecord(error) && error.resetAt instanceof Date
+            ? { reset_at: error.resetAt.toISOString() }
+            : {})
+        }
+      });
+    }
     return reply.code(status).send({
       error: {
-        code: errorCodeForStatus(status, error),
+        code,
         message: defaultMessage(status),
         retryable: retryableStatus(status)
       }
@@ -130,6 +157,12 @@ export function publicMessage(
   status: number,
   code: string
 ): string {
+  if (code === "LLM_TOKEN_LIMIT_EXCEEDED") {
+    const candidate = typeof raw === "string" ? raw.trim() : "";
+    return /^Limit Exhausted\. Your Limit will reset at .+\.$/.test(candidate)
+      ? candidate
+      : "Limit Exhausted. Your Limit will reset after five hours.";
+  }
   const known = knownMessages[code];
   if (known) return known;
 
@@ -259,6 +292,12 @@ function publicStatus(error: unknown): number {
 }
 
 function errorCodeForStatus(status: number, error: unknown): string {
+  if (
+    isRecord(error) &&
+    error.code === "LLM_TOKEN_LIMIT_EXCEEDED"
+  ) {
+    return "LLM_TOKEN_LIMIT_EXCEEDED";
+  }
   if (
     status === 400 &&
     isRecord(error) &&

@@ -107,6 +107,7 @@ import {
 import { outputNotificationSummary } from "../agents/runtime/output-registry.js";
 import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.js";
 import { splitAgentMessageContent } from "../agents/runtime/message-parts.js";
+import { isLlmTokenLimitError, withLlmUser } from "../agents/token-rate-limit.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -479,11 +480,13 @@ async function executeAgentJob(
     const targetSnoozedId = isSnooze ? job.data.snoozedMessageId : skippedMessageId;
     const targetTrigger = isSnooze || skippedMessageId ? ("snooze" as const) : job.data.trigger;
 
-    const rendered = await renderAgentMessage(
-      agent,
-      targetTrigger,
-      targetSnoozedId,
-      job.data.eventId
+    const rendered = await withLlmUser(agent.user_id, () =>
+      renderAgentMessage(
+        agent,
+        targetTrigger,
+        targetSnoozedId,
+        job.data.eventId
+      )
     );
     const message = await persistRunMessage({
       agent,
@@ -549,6 +552,52 @@ async function executeAgentJob(
 
     return { runId: run.id, messageId: message.id };
   } catch (error) {
+    if (isLlmTokenLimitError(error)) {
+      const rendered = renderedPlainText(error.message);
+      const message = await persistRunMessage({
+        agent,
+        runId: run.id,
+        content: rendered.content,
+        sourceRefs: [],
+        tokensUsed: 0,
+        status: "partial",
+        errorMessage: error.message
+      });
+      if (job.data.trigger === "event" && job.data.eventId) {
+        await markEventDelivery(job.data.eventId, agent.id, "delivered", {
+          runId: run.id,
+          messageId: message.id
+        });
+      }
+      await publishRealtimeEventsSafely(
+        {
+          type: "message.created",
+          user_id: agent.user_id,
+          agent_id: agent.id,
+          message_id: message.id,
+          run_id: run.id,
+          data: {
+            role: "agent",
+            trigger: job.data.trigger,
+            message_ids: message.ids,
+            part_count: message.partCount
+          }
+        },
+        {
+          type: "run.completed",
+          user_id: agent.user_id,
+          agent_id: agent.id,
+          message_id: message.id,
+          run_id: run.id,
+          data: {
+            trigger: job.data.trigger,
+            status: "partial",
+            tokens_used: 0
+          }
+        }
+      );
+      return { runId: run.id, messageId: message.id };
+    }
     if (isConnectorAuthRequiredError(error)) {
       await markConnectorActionRequired(agent.user_id, error.connectorId);
       const rendered = renderConnectorReconnectRequired(agent, {

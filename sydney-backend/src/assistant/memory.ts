@@ -3,6 +3,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { createLlmMessage, extractLlmText, llmConfigured } from "../agents/llm.js";
+import { withLlmUser } from "../agents/token-rate-limit.js";
 
 export type AssistantMemoryType =
   | "preference"
@@ -135,7 +136,9 @@ export async function compactOverCapacityMemories(): Promise<number> {
         "SELECT pg_advisory_xact_lock(hashtext($1), hashtext('assistant_memories'))",
         [row.user_id]
       );
-      await compactMemoriesIfNeeded(client, row.user_id);
+      await withLlmUser(row.user_id, () =>
+        compactMemoriesIfNeeded(client, row.user_id)
+      );
       await client.query("COMMIT");
       compactedUsers += 1;
     } catch (error) {
@@ -178,7 +181,7 @@ async function compactMemoryGroup(
     [userId]
   );
   const existing = compactedMemoryItemsSchema.safeParse(digest.rows[0]?.items ?? []);
-  const incoming = await generateCompactedMemoryItems(selected.rows);
+  const incoming = await generateCompactedMemoryItems(selected.rows, userId);
   const merged = mergeCompactedMemoryItems(
     existing.success ? existing.data : [],
     incoming
@@ -226,12 +229,13 @@ function deterministicCompactedItem(memory: AssistantMemory): CompactedMemoryIte
 }
 
 async function generateCompactedMemoryItems(
-  memories: AssistantMemory[]
+  memories: AssistantMemory[],
+  userId: string
 ): Promise<CompactedMemoryItem[]> {
   const fallback = memories.map(deterministicCompactedItem);
   if (!llmConfigured()) return fallback;
   try {
-    const response = await createLlmMessage({
+    const response = await withLlmUser(userId, () => createLlmMessage({
       maxTokens: 1800,
       system: [
         "Compress memory rows into terse structured summaries.",
@@ -254,7 +258,7 @@ async function generateCompactedMemoryItems(
                 : "pending"
         })))
       }]
-    });
+    }));
     const raw = extractLlmText(response.content)
       .trim()
       .replace(/^```(?:json)?\s*/i, "")

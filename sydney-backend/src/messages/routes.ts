@@ -51,6 +51,7 @@ import {
   messageGroupId
 } from "../agents/runtime/message-parts.js";
 import type { AgentMessageContent } from "../agents/output.js";
+import { withLlmUser } from "../agents/token-rate-limit.js";
 
 const sendMessageSchema = z
   .object({
@@ -274,19 +275,21 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
         }
       };
       let answer: string;
-      try {
-        const userName = request.auth!.user.name || "";
-        const firstName = userName.trim().split(/\s+/)[0] || "";
-        const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+      const userName = request.auth!.user.name || "";
+      const firstName = userName.trim().split(/\s+/)[0] || "";
+      const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
-        answer = await createAssistantChatReply(question, {
-          userName: capitalizedFirstName,
-          briefing: JSON.stringify(source.content),
-          sourceRefs: source.source_refs
-        });
-      } catch {
-        answer = `Here’s “${title}”. Ask about any section and I’ll dig in.`;
-      }
+      answer = await withLlmUser(userId, async () => {
+        try {
+          return await createAssistantChatReply(question, {
+            userName: capitalizedFirstName,
+            briefing: JSON.stringify(source.content),
+            sourceRefs: source.source_refs
+          });
+        } catch {
+          return `Here’s “${title}”. Ask about any section and I’ll dig in.`;
+        }
+      });
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -438,15 +441,17 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     if (agent.is_assistant) {
       const assistantTurnStartedAt = Date.now();
       try {
-        const result = await handleAssistantMessage({
-          userId,
-          userName: request.auth!.user.name ?? undefined,
-          assistantId: agentId,
-          text: body.data.text,
-          attachmentIds: body.data.attachment_ids,
-          action: body.data.action,
-          payload: body.data.payload
-        });
+        const result = await withLlmUser(userId, () =>
+          handleAssistantMessage({
+            userId,
+            userName: request.auth!.user.name ?? undefined,
+            assistantId: agentId,
+            text: body.data.text,
+            attachmentIds: body.data.attachment_ids,
+            action: body.data.action,
+            payload: body.data.payload
+          })
+        );
         request.log.info(
           {
             userId,
@@ -491,11 +496,13 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (!agent.is_assistant && body.data.text) {
-      const result = await handleAgentTextMessage(
-        userId,
-        agent,
-        body.data.text,
-        body.data.source_message_id
+      const result = await withLlmUser(userId, () =>
+        handleAgentTextMessage(
+          userId,
+          agent,
+          body.data.text!,
+          body.data.source_message_id
+        )
       );
       return reply.code(201).send(result);
     }
