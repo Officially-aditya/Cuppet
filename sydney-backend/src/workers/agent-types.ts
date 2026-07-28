@@ -1,4 +1,4 @@
-import type { AgentDefinitionV1 } from "../agents/runtime/definition.js";
+import type { AgentDefinition } from "../agents/runtime/definition.js";
 
 export type AgentRow = {
   id: string;
@@ -12,7 +12,7 @@ export type AgentRow = {
   is_assistant: boolean;
   status: "active" | "paused" | "error";
   safety_level: "read" | "suggest" | "act";
-  definition?: AgentDefinitionV1;
+  definition?: AgentDefinition;
   config_revision?: string;
 };
 

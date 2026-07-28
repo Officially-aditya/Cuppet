@@ -37,6 +37,12 @@ import {
 } from "./notion.js";
 import { callbackSchemeSchema } from "../security/input-validation.js";
 import { markMessageArchiveDisconnected } from "../archive/message-archive.js";
+import {
+  disconnectGenericConnector,
+  genericConnectorPayloads,
+  trustedMcpProviderForConnector
+} from "../access/compat.js";
+import { completeMcpOAuth, startMcpOAuth } from "../access/oauth.js";
 
 type ConnectorDefinition = {
   id: string;
@@ -258,9 +264,16 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       );
     }
 
-    return connectors.map((connector) =>
+    const nativePayloads = connectors.map((connector) =>
       connectorPayload(connector, connectorStatus(connector, statuses))
     );
+    let genericPayloads: Awaited<ReturnType<typeof genericConnectorPayloads>> = [];
+    try {
+      genericPayloads = await genericConnectorPayloads(request.auth!.userId);
+    } catch (error) {
+      request.log.warn({ error }, "Failed to load generic access connections");
+    }
+    return [...nativePayloads, ...genericPayloads];
   });
 
   app.post(
@@ -270,6 +283,43 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       const { connectorId } = request.params as { connectorId: string };
       const connector = connectorById(connectorId);
       if (!connector) {
+        const provider = trustedMcpProviderForConnector(connectorId);
+        if (provider) {
+          const body = connectorStatusSchema.safeParse(request.body);
+          if (!body.success) {
+            return reply.code(400).send({
+              error: {
+                code: "INVALID_CONNECTOR_STATUS",
+                message: body.error.issues[0]?.message ?? "Invalid connector status."
+              }
+            });
+          }
+          if (body.data.connected) {
+            return reply.code(409).send({
+              error: {
+                code: "CONNECTOR_OAUTH_REQUIRED",
+                message: "OAuth authorization is required before this access provider can be connected.",
+                connector_id: provider.providerId
+              }
+            });
+          }
+          await disconnectGenericConnector(request.auth!.userId, provider.providerId);
+          const payload = (await genericConnectorPayloads(request.auth!.userId)).find(
+            (item) => item.provider_id === provider.providerId
+          );
+          return payload ?? {
+            id: provider.providerId,
+            provider_id: provider.providerId,
+            name: provider.displayName,
+            description: provider.description,
+            icon_name: provider.iconName,
+            category: provider.category,
+            required_scopes: provider.oauth?.scopes ?? [],
+            auth_configured: true,
+            auth_method: "oauth2",
+            status: "disconnected"
+          };
+        }
         return connectorNotFound(reply);
       }
 
@@ -363,6 +413,32 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       const { connectorId } = request.params as { connectorId: string };
       const connector = connectorById(connectorId);
       if (!connector) {
+        const provider = trustedMcpProviderForConnector(connectorId);
+        if (provider) {
+          const body = oauthStartSchema.safeParse(request.body ?? {});
+          if (!body.success) {
+            return reply.code(400).send({
+              error: {
+                code: "INVALID_CONNECTOR_OAUTH_REQUEST",
+                message: body.error.issues[0]?.message ?? "Invalid OAuth request."
+              }
+            });
+          }
+          try {
+            return await startMcpOAuth({
+              userId: request.auth!.userId,
+              providerId: provider.providerId,
+              callbackScheme: body.data.callbackScheme
+            });
+          } catch (error) {
+            return reply.code(400).send({
+              error: {
+                code: "MCP_OAUTH_START_FAILED",
+                message: error instanceof Error ? error.message : "Unable to start access authorization."
+              }
+            });
+          }
+        }
         return connectorNotFound(reply);
       }
 
@@ -455,6 +531,36 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       const { connectorId } = request.params as { connectorId: string };
       const connector = connectorById(connectorId);
       if (!connector) {
+        const provider = trustedMcpProviderForConnector(connectorId);
+        if (provider) {
+          const body = oauthCompleteSchema.safeParse(request.body);
+          if (!body.success) {
+            return reply.code(400).send({
+              error: {
+                code: "INVALID_CONNECTOR_OAUTH_CALLBACK",
+                message: body.error.issues[0]?.message ?? "Invalid OAuth callback."
+              }
+            });
+          }
+          try {
+            const connection = await completeMcpOAuth(
+              request.auth!.userId,
+              provider.providerId,
+              body.data.callbackUrl
+            );
+            const payload = (await genericConnectorPayloads(request.auth!.userId)).find(
+              (item) => item.provider_id === provider.providerId && item.connection_id === connection.id
+            );
+            return payload ?? connection;
+          } catch (error) {
+            return reply.code(400).send({
+              error: {
+                code: "MCP_OAUTH_COMPLETE_FAILED",
+                message: error instanceof Error ? error.message : "Unable to complete access authorization."
+              }
+            });
+          }
+        }
         return connectorNotFound(reply);
       }
 

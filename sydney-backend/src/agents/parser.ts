@@ -4,11 +4,13 @@ import {
   UNSUPPORTED_CONNECTORS
 } from "./unsupported-connectors.js";
 import { extractGitHubRepository } from "./github-scope.js";
+import { listTrustedMcpProviders } from "../access/provider-directory.js";
 import {
   getAgentRecipeProfile,
   hasAgentRecipeProfile,
   validateRecipeInputs
 } from "./runtime/recipe-registry.js";
+import type { AccessRequirement } from "../access/types.js";
 
 export {
   isDraftOutputPlatformName,
@@ -36,6 +38,7 @@ export interface ParsedIntent {
   recipe_version?: number;
   prompt_profile_version?: number;
   recipe_inputs?: Record<string, unknown>;
+  required_access?: AccessRequirement[];
   draft_platform?: "twitter" | "linkedin" | "reddit" | "generic";
 }
 
@@ -674,7 +677,10 @@ export function parseIntent(prompt: string): ParsedIntent {
     response_limit: profile.response_limit,
     recipe_version: profile.version,
     prompt_profile_version: profile.prompt_profile_version,
-    recipe_inputs: recipeInputs
+    recipe_inputs: recipeInputs,
+    ...(parsed.required_access
+      ? { required_access: parsed.required_access }
+      : {})
   };
 }
 
@@ -686,8 +692,14 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
     ? undefined
     : (UNSUPPORTED_CONNECTORS.find((connector) => lower.includes(connector)) ??
        (/\bx\b/.test(lower) && !/\bx\s*\(twitter\)/.test(lower)
-         ? "x"
-         : undefined));
+          ? "x"
+          : undefined));
+
+  const trustedProvider = trustedProviderForPrompt(lower);
+  const capability = classifyCapability(prompt, lower);
+  if (trustedProvider && unsupported) {
+    return genericProviderIntent(prompt, lower, trustedProvider);
+  }
 
   if (unsupported) {
     return baseIntent(prompt, {
@@ -703,9 +715,11 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
     });
   }
 
-  const capability = classifyCapability(prompt, lower);
   if (capability) {
     return capability;
+  }
+  if (trustedProvider) {
+    return genericProviderIntent(prompt, lower, trustedProvider);
   }
 
   if (/\bcompetitors?\b/.test(lower)) {
@@ -1223,8 +1237,56 @@ function baseIntent(
     risk_level: "low",
     permissions_needed: overrides.permissions_needed ?? [],
     realtime_enabled: realtimeEnabled,
+    ...(overrides.required_access
+      ? { required_access: overrides.required_access }
+      : {}),
     ...(githubRepository ? { github_repository: githubRepository } : {})
   };
+}
+
+function trustedProviderForPrompt(lowerPrompt: string, unsupported?: string) {
+  return listTrustedMcpProviders().find((provider) =>
+    [provider.providerId, provider.displayName, ...(unsupported ? [unsupported] : [])].some((value) =>
+      lowerPrompt.includes(value.toLowerCase())
+    )
+  );
+}
+
+function genericProviderIntent(
+  prompt: string,
+  lower: string,
+  provider: ReturnType<typeof listTrustedMcpProviders>[number]
+): ParsedIntent {
+  return baseIntent(prompt, {
+    name: provider.displayName,
+    avatar: provider.iconName,
+    intent: "custom_read_agent",
+    connector: null,
+    connector_ids: [],
+    action: `Reads approved context from ${provider.displayName}.`,
+    schedule_cron: parseSchedule(lower),
+    output_template: "plain_text",
+    permissions_needed: [],
+    required_access: providerRequirements(provider)
+  });
+}
+
+function providerRequirements(provider: {
+  providerId: string;
+  displayName: string;
+  capabilities: string[];
+}) {
+  return provider.capabilities.flatMap((capability) => {
+    const [service, action] = capability.split(".", 2);
+    if (!service || !action) return [];
+    return [{
+      service,
+      capabilities: [action],
+      required: true,
+      preferred_provider_ids: [provider.providerId],
+      reason: `${provider.displayName} ${action} access`
+    }];
+  });
 }
 
 const REALTIME_INTENTS = new Set([

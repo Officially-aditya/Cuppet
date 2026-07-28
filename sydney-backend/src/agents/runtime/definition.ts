@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { accessRequirementSchema, type AccessRequirement } from "../../access/types.js";
 
 export const agentSafetyLevelSchema = z.enum(["read", "suggest", "act"]);
 export type AgentSafetyLevel = z.infer<typeof agentSafetyLevelSchema>;
@@ -118,8 +119,78 @@ export type AgentDefinitionV1 = z.infer<typeof agentDefinitionV1Schema>;
 export type AgentDefinitionStep = AgentDefinitionV1["steps"][number];
 export type AgentTrigger = AgentDefinitionV1["trigger"];
 
+export type AgentDefinitionV2 = Omit<AgentDefinitionV1, "schema_version"> & {
+  schema_version: 2;
+  required_access: AccessRequirement[];
+};
+
+export const agentDefinitionV2Schema: z.ZodType<AgentDefinitionV2, z.ZodTypeDef, unknown> = z
+  .unknown()
+  .transform((value, context): AgentDefinitionV2 | typeof z.NEVER => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Agent definition must be an object."
+      });
+      return z.NEVER;
+    }
+    const record = value as Record<string, unknown>;
+    if (record.schema_version !== 2) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["schema_version"],
+        message: "Expected agent definition schema version 2."
+      });
+      return z.NEVER;
+    }
+    const { required_access: _requiredAccess, ...v1Record } = record;
+    const parsed = agentDefinitionV1Schema.safeParse({
+      ...v1Record,
+      schema_version: 1
+    });
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) context.addIssue(issue);
+      return z.NEVER;
+    }
+    const requirements = z.array(accessRequirementSchema).safeParse(record.required_access);
+    if (!requirements.success) {
+      for (const issue of requirements.error.issues) {
+        context.addIssue({ ...issue, path: ["required_access", ...issue.path] });
+      }
+      return z.NEVER;
+    }
+    return {
+      ...parsed.data,
+      schema_version: 2,
+      required_access: requirements.data
+    };
+  });
+
 export function parseAgentDefinitionV1(value: unknown): AgentDefinitionV1 {
   return agentDefinitionV1Schema.parse(value);
+}
+
+export function parseAgentDefinitionV2(value: unknown): AgentDefinitionV2 {
+  return agentDefinitionV2Schema.parse(value);
+}
+
+export const agentDefinitionSchema = z.union([
+  agentDefinitionV1Schema,
+  agentDefinitionV2Schema
+]);
+
+export type AgentDefinition = AgentDefinitionV1 | AgentDefinitionV2;
+
+export function parseAgentDefinition(value: unknown): AgentDefinition {
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>).schema_version === 2
+  ) {
+    return parseAgentDefinitionV2(value);
+  }
+  return parseAgentDefinitionV1(value);
 }
 
 export function safetyLevelRank(level: AgentSafetyLevel): number {

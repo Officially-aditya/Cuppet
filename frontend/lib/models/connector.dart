@@ -17,6 +17,10 @@ class Connector {
     this.iconName,
     this.requiredScopes = const [],
     this.authConfigured = false,
+    this.authMethod,
+    this.providerId,
+    this.connectionId,
+    this.accountLabel,
   });
 
   final String id;
@@ -27,19 +31,24 @@ class Connector {
   final String? iconName;
   final List<String> requiredScopes;
   final bool authConfigured;
+  final String? authMethod;
+  final String? providerId;
+  final String? connectionId;
+  final String? accountLabel;
 
   bool get isConnected => status == ConnectorStatus.connected;
   bool get shouldUseOAuth =>
-      (authConfigured ||
-          const {
-            'gmail',
-            'drive',
-            'calendar',
-            'github',
-            'slack',
-            'notion',
-          }.contains(id)) &&
-      requiredScopes.isNotEmpty;
+      authMethod == 'oauth2' ||
+      ((authConfigured ||
+              const {
+                'gmail',
+                'drive',
+                'calendar',
+                'github',
+                'slack',
+                'notion',
+              }.contains(id)) &&
+          requiredScopes.isNotEmpty);
 
   Connector copyWith({
     String? id,
@@ -50,6 +59,10 @@ class Connector {
     String? iconName,
     List<String>? requiredScopes,
     bool? authConfigured,
+    String? authMethod,
+    String? providerId,
+    String? connectionId,
+    String? accountLabel,
   }) {
     return Connector(
       id: id ?? this.id,
@@ -60,6 +73,10 @@ class Connector {
       iconName: iconName ?? this.iconName,
       requiredScopes: requiredScopes ?? this.requiredScopes,
       authConfigured: authConfigured ?? this.authConfigured,
+      authMethod: authMethod ?? this.authMethod,
+      providerId: providerId ?? this.providerId,
+      connectionId: connectionId ?? this.connectionId,
+      accountLabel: accountLabel ?? this.accountLabel,
     );
   }
 
@@ -76,6 +93,14 @@ class Connector {
       ),
       authConfigured:
           json['authConfigured'] == true || json['auth_configured'] == true,
+      authMethod:
+          json['authMethod']?.toString() ?? json['auth_method']?.toString(),
+      providerId:
+          json['providerId']?.toString() ?? json['provider_id']?.toString(),
+      connectionId:
+          json['connectionId']?.toString() ?? json['connection_id']?.toString(),
+      accountLabel:
+          json['accountLabel']?.toString() ?? json['account_label']?.toString(),
     );
   }
 
@@ -89,6 +114,10 @@ class Connector {
       'iconName': iconName,
       'requiredScopes': requiredScopes,
       'authConfigured': authConfigured,
+      'authMethod': authMethod,
+      'providerId': providerId,
+      'connectionId': connectionId,
+      'accountLabel': accountLabel,
     };
   }
 }

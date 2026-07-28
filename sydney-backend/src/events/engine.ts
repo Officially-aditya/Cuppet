@@ -4,7 +4,7 @@ import {
   githubRepositoryScope
 } from "../agents/github-scope.js";
 import { validateCompiledDefinition } from "../agents/runtime/compiler.js";
-import type { AgentDefinitionV1 } from "../agents/runtime/definition.js";
+import type { AgentDefinition } from "../agents/runtime/definition.js";
 import { getCapabilityDefinition } from "../agents/runtime/capability-registry.js";
 
 export type EventSource =
@@ -218,7 +218,7 @@ export async function ingestAgentEvent(
 }
 
 export function shouldTriggerAgentDefinition(
-  definition: AgentDefinitionV1,
+  definition: AgentDefinition,
   event: Pick<NormalizedAgentEvent, "source" | "eventType" | "payload">
 ): boolean {
   if (

@@ -1,8 +1,11 @@
 import type { ParsedIntent } from "../parser.js";
 import {
+  agentDefinitionV2Schema,
   agentDefinitionV1Schema,
   safetyLevelRank,
-  type AgentDefinitionV1
+  type AgentDefinition,
+  type AgentDefinitionV1,
+  type AgentDefinitionV2
 } from "./definition.js";
 import {
   getCapabilityDefinition,
@@ -112,6 +115,9 @@ export function compileAgentDefinition(
           prompt: prompt.trim(),
           action: profile.action,
           connector_ids: [...profile.required_connectors],
+          ...(parsedIntent.required_access
+            ? { access_refs: parsedIntent.required_access }
+            : {}),
           output_contract: contract,
           ...(parsedIntent.response_limit
             ? { response_limit: parsedIntent.response_limit }
@@ -388,46 +394,49 @@ export function compileAgentRecipe(input: {
 
 export function validateCompiledDefinition(
   value: unknown
-): AgentDefinitionV1 {
-  const definition = agentDefinitionV1Schema.parse(value);
-  getOutputContract(definition.output.contract);
-  for (const step of definition.steps) {
+): AgentDefinition {
+  const definition = isV2Definition(value)
+    ? agentDefinitionV2Schema.parse(value)
+    : agentDefinitionV1Schema.parse(value);
+  const runtime = runtimeDefinition(definition);
+  getOutputContract(runtime.output.contract);
+  for (const step of runtime.steps) {
     validateCapabilityStep({
       step,
-      trigger: definition.trigger,
-      safetyLevel: definition.policy.safety_level
+      trigger: runtime.trigger,
+      safetyLevel: runtime.policy.safety_level
     });
   }
-  const outputStep = definition.steps.find(
-    (step) => step.id === definition.output.from_step
+  const outputStep = runtime.steps.find(
+    (step) => step.id === runtime.output.from_step
   )!;
   const outputCapability = getCapabilityDefinition(outputStep.capability);
   if (
-    definition.metadata.recipe_id &&
-    definition.metadata.recipe_version &&
-    definition.metadata.prompt_profile_version
+    runtime.metadata.recipe_id &&
+    runtime.metadata.recipe_version &&
+    runtime.metadata.prompt_profile_version
   ) {
     const profile = getAgentRecipeProfile(
-      definition.metadata.recipe_id,
-      definition.metadata.recipe_version
+      runtime.metadata.recipe_id,
+      runtime.metadata.recipe_version
     );
     recipePromptProfile(
       profile,
-      definition.metadata.prompt_profile_version
+      runtime.metadata.prompt_profile_version
     );
     if (profile.capability !== outputStep.capability) {
       throw new Error("The recipe cannot change its registered capability.");
     }
-    if (profile.output_contract !== definition.output.contract) {
+    if (profile.output_contract !== runtime.output.contract) {
       throw new Error("The recipe cannot change its output contract.");
     }
     if (
-      safetyLevelRank(definition.policy.safety_level) >
+      safetyLevelRank(runtime.policy.safety_level) >
       safetyLevelRank(profile.safety_level)
     ) {
       throw new Error("The recipe cannot increase its registered safety level.");
     }
-    validateRecipeInputs(profile, definition.metadata.recipe_inputs);
+    validateRecipeInputs(profile, runtime.metadata.recipe_inputs);
   }
   if (
     outputCapability.requiredConnectors(outputStep.config).some(
@@ -449,7 +458,7 @@ export function validateCompiledDefinition(
 }
 
 export function definitionToParsedIntent(
-  definition: AgentDefinitionV1,
+  definition: AgentDefinition,
   input: {
     name: string;
     avatar: string;
@@ -461,6 +470,9 @@ export function definitionToParsedIntent(
   )!;
   const config = step.config;
   const capability = getCapabilityDefinition(step.capability);
+  const requiredAccess = definition.schema_version === 2
+    ? definition.required_access
+    : capability.requiredAccess(config);
   const connectors = Array.isArray(config.connector_ids)
     ? config.connector_ids.filter(
         (connector): connector is string => typeof connector === "string"
@@ -490,6 +502,7 @@ export function definitionToParsedIntent(
           ? "medium"
           : "high",
     permissions_needed: connectorPermissions(connectors),
+    required_access: requiredAccess,
     realtime_enabled: definition.trigger.type === "event",
     response_limit: definition.policy.response_limit,
     ...(definition.policy.active_until
@@ -526,7 +539,7 @@ export function definitionToParsedIntent(
 }
 
 export function agentConfigurationView(
-  definition: AgentDefinitionV1,
+  definition: AgentDefinition,
   input: { name?: string; avatar?: string } = {}
 ): Record<string, unknown> {
   const outputStep = definition.steps.find(
@@ -535,6 +548,9 @@ export function agentConfigurationView(
   const connectors = getCapabilityDefinition(
     outputStep.capability
   ).requiredConnectors(outputStep.config);
+  const requiredAccess = definition.schema_version === 2
+    ? definition.required_access
+    : getCapabilityDefinition(outputStep.capability).requiredAccess(outputStep.config);
   return {
     schema_version: definition.schema_version,
     name: input.name,
@@ -546,7 +562,9 @@ export function agentConfigurationView(
       id: step.capability,
       version: step.capability_version,
       required_connectors:
-        getCapabilityDefinition(step.capability).requiredConnectors(step.config)
+        getCapabilityDefinition(step.capability).requiredConnectors(step.config),
+      required_access:
+        getCapabilityDefinition(step.capability).requiredAccess(step.config)
     })),
     output: definition.output,
     interaction: definition.interaction,
@@ -555,8 +573,24 @@ export function agentConfigurationView(
     recipe_version: definition.metadata.recipe_version,
     prompt_profile_version: definition.metadata.prompt_profile_version,
     recipe_inputs: definition.metadata.recipe_inputs,
-    permissions_needed: connectorPermissions(connectors)
+    permissions_needed: connectorPermissions(connectors),
+    required_access: requiredAccess
   };
+}
+
+function isV2Definition(value: unknown): value is AgentDefinitionV2 {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      (value as Record<string, unknown>).schema_version === 2
+  );
+}
+
+function runtimeDefinition(definition: AgentDefinition): AgentDefinitionV1 {
+  return definition.schema_version === 2
+    ? { ...definition, schema_version: 1 } as AgentDefinitionV1
+    : definition;
 }
 
 function capabilityForRecipe(recipe: string): CapabilityId {

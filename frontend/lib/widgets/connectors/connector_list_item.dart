@@ -225,7 +225,8 @@ class _ConnectorStatusLine extends StatelessWidget {
     final actionRequired = connector.status == ConnectorStatus.actionRequired;
     final linking =
         connector.status == ConnectorStatus.linking ||
-        connector.status == ConnectorStatus.connecting;
+        connector.status == ConnectorStatus.connecting ||
+        connector.status == ConnectorStatus.oauth;
     final label =
         linking
             ? 'CONNECTING'

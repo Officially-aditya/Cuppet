@@ -56,6 +56,14 @@ const envSchema = z.object({
   NOTION_CLIENT_SECRET: z.string().optional(),
   NOTION_AUTHORIZATION_URL: z.string().url().optional(),
   NOTION_API_VERSION: z.string().default("2026-03-11"),
+  CIMD_CLIENT_IDENTITY_URL: z
+    .string()
+    .url()
+    .default("https://api.cuppet.in/.well-known/oauth-client.json"),
+  MCP_OAUTH_CALLBACK_URL: z.string().url().optional(),
+  MCP_TRUSTED_PROVIDER_DIRECTORY: z.string().default("[]"),
+  MCP_ALLOWED_HOSTS: z.string().default(""),
+  MCP_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16_384).max(10_485_760).default(1_048_576),
   FIREBASE_SERVICE_ACCOUNT: z.string().optional(),
   ASSISTANT_MAX_CONFIRMED_MEMORIES: z.coerce.number().int().min(1).max(200).default(200),
   ASSISTANT_MAX_UNCONFIRMED_MEMORIES: z.coerce.number().int().min(1).max(200).default(200),

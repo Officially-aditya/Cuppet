@@ -108,6 +108,10 @@ import { outputNotificationSummary } from "../agents/runtime/output-registry.js"
 import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.js";
 import { splitAgentMessageContent } from "../agents/runtime/message-parts.js";
 import { isLlmTokenLimitError, withLlmUser } from "../agents/token-rate-limit.js";
+import { accessExecutionRouter } from "../access/router.js";
+import { accessProviderByIdOrConnector } from "../access/provider-directory.js";
+import { setAccessProviderStatus } from "../access/repository.js";
+import { accessRequirementSchema, type AccessRequirement } from "../access/types.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -713,6 +717,12 @@ async function markConnectorActionRequired(
   userId: string,
   connectorId: string
 ): Promise<void> {
+  const provider = accessProviderByIdOrConnector(connectorId);
+  if (provider?.kind === "mcp") {
+    await setAccessProviderStatus(userId, provider.providerId, "action_required");
+    return;
+  }
+  if (!provider && connectorId.includes(".")) return;
   await Promise.all([
     pool.query(
       `
@@ -978,6 +988,10 @@ async function renderAgentMessage(
   }
   return (await executeAgentDefinition({
     definition: agent.definition,
+    preflightAccess: (requirements) =>
+      accessExecutionRouter.assertRequirements(agent.user_id, requirements, {
+        agentId: agent.id
+      }),
     invokeAdapter: (capability, step) =>
       invokeCapabilityAdapter({
         capability,
@@ -996,6 +1010,12 @@ async function invokeCapabilityAdapter(input: {
   trigger: AgentExecutorJobData["trigger"];
   eventId?: string;
 }): Promise<CapabilityResult> {
+  const explicitAccess = parseExplicitAccessRequirements(input.step.config);
+  if (explicitAccess.length > 0) {
+    await accessExecutionRouter.assertRequirements(input.agent.user_id, explicitAccess, {
+      agentId: input.agent.id
+    });
+  }
   const recipe = String(input.step.config.recipe_id ?? "");
   let rendered: RenderedAgentMessage;
   switch (input.capability) {
@@ -1062,6 +1082,13 @@ async function invokeCapabilityAdapter(input: {
     additionalTopicsCovered: rendered.additionalTopicsCovered,
     stateEvents: rendered.stateEvents
   };
+}
+
+function parseExplicitAccessRequirements(
+  value: Record<string, unknown>
+): AccessRequirement[] {
+  const parsed = z.array(accessRequirementSchema).safeParse(value.access_refs);
+  return parsed.success ? parsed.data : [];
 }
 
 async function renderConnectorCapability(

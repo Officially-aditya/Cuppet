@@ -7,9 +7,9 @@ import {
 import { readNotionForAssistant } from "../connectors/notion.js";
 import { readSlackForAssistant } from "../connectors/slack.js";
 import {
-  isConnectorAuthRequiredError,
-  type ConnectorAuthRequiredError
+  isConnectorAuthRequiredError
 } from "../connectors/errors.js";
+import { mcpGateway } from "../mcp/gateway.js";
 
 export type AssistantConnectorId =
   | "gmail"
@@ -17,7 +17,8 @@ export type AssistantConnectorId =
   | "drive"
   | "github"
   | "slack"
-  | "notion";
+  | "notion"
+  | (string & {});
 
 export type AssistantConnectorEvidence = {
   connector: AssistantConnectorId;
@@ -111,7 +112,32 @@ async function executeOne(
         query: searchSubject(text, ["notion", "page", "pages", "find", "search", "shared"]),
         limit: 8
       });
+    default:
+      return readMcpForAssistant(userId, text, connector);
   }
+}
+
+async function readMcpForAssistant(
+  userId: string,
+  text: string,
+  providerId: string
+): Promise<{ summary: string; sourceRefs: unknown[] }> {
+  const response = await mcpGateway.callApprovedReadTool({
+    userId,
+    providerId,
+    query: text
+  });
+  const summary = JSON.stringify(response.result).slice(0, 4_000);
+  return {
+    summary: summary || "The connected access provider returned no matching data.",
+    sourceRefs: [{
+      type: "mcp_tool",
+      source: response.providerName,
+      provider_id: response.providerId,
+      connection_id: response.connectionId,
+      tool: response.toolName
+    }]
+  };
 }
 
 export function githubAssistantQuery(text: string): {
@@ -274,12 +300,13 @@ export function connectorActionContent(
 }
 
 function connectorName(connector: AssistantConnectorId): string {
-  return ({
+  const names: Record<string, string> = {
     gmail: "Gmail",
     calendar: "Google Calendar",
     drive: "Google Drive",
     github: "GitHub",
     slack: "Slack",
     notion: "Notion"
-  })[connector];
+  };
+  return names[connector] ?? connector;
 }

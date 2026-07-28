@@ -9,6 +9,13 @@ import {
   githubRepositoryMatches,
   githubRepositoryScope
 } from "../github-scope.js";
+import {
+  accessRequirementsForConfig
+} from "../../access/requirements.js";
+import {
+  accessRequirementSchema,
+  type AccessRequirement
+} from "../../access/types.js";
 
 export type CapabilityId =
   | "briefing.compose"
@@ -45,6 +52,7 @@ export type CapabilityDefinition = {
   configSchema: z.ZodTypeAny;
   resultSchema: z.ZodTypeAny;
   requiredConnectors: (config: Record<string, unknown>) => string[];
+  requiredAccess: (config: Record<string, unknown>) => AccessRequirement[];
   allowedTriggerTypes: Array<AgentTrigger["type"]>;
   maximumSafetyLevel: AgentSafetyLevel;
   allowedRecipeIds: readonly string[] | null;
@@ -73,6 +81,7 @@ const adapterConfigSchema = z
     prompt: z.string().min(1).max(4000),
     action: z.string().min(1).max(4000),
     connector_ids: z.array(z.string()).max(8).default([]),
+    access_refs: z.array(accessRequirementSchema).max(16).default([]),
     output_contract: z.string(),
     response_limit: z.enum(["concise", "balanced", "detailed"]).optional(),
     github_repository: z.string().optional(),
@@ -106,13 +115,22 @@ const capabilityResultSchema = z
   .strict();
 
 function adapterCapability(
-  input: Omit<CapabilityDefinition, "version" | "configSchema" | "resultSchema" | "handler">
+  input: Omit<CapabilityDefinition, "version" | "configSchema" | "resultSchema" | "handler" | "requiredAccess"> & {
+    requiredAccess?: (config: Record<string, unknown>) => AccessRequirement[];
+  }
 ): CapabilityDefinition {
   return {
     ...input,
     version: "1.0",
     configSchema: adapterConfigSchema,
     resultSchema: capabilityResultSchema,
+    requiredAccess:
+      input.requiredAccess ??
+      ((config) =>
+        accessRequirementsForConfig({
+          ...config,
+          connector_ids: input.requiredConnectors(config)
+        })),
     handler: (context) => context.invokeAdapter(input.id)
   };
 }

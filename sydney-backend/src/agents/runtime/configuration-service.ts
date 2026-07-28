@@ -6,13 +6,13 @@ import {
   definitionToParsedIntent,
   validateCompiledDefinition
 } from "./compiler.js";
-import type { AgentDefinitionV1 } from "./definition.js";
+import type { AgentDefinition } from "./definition.js";
 import { getCapabilityDefinition } from "./capability-registry.js";
 
 export type AgentConfigurationRecord = {
   revisionId: string;
   revision: number;
-  definition: AgentDefinitionV1;
+  definition: AgentDefinition;
 };
 
 export type NewConfiguredAgent = {
@@ -38,12 +38,12 @@ export async function insertConfiguredAgent<T extends QueryResultRow = QueryResu
     avatar: input.avatar
   });
   const { rows } = await client.query<T>(
-    `
-      INSERT INTO agents
+      `
+        INSERT INTO agents
         (user_id, name, avatar, prompt, parsed_intent, connector_ids,
-         schedule_cron, is_assistant, status, safety_level, last_message_at)
+          access_refs, schedule_cron, is_assistant, status, safety_level, last_message_at)
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `,
     [
@@ -51,13 +51,14 @@ export async function insertConfiguredAgent<T extends QueryResultRow = QueryResu
       input.name,
       input.avatar,
       input.prompt,
-      JSON.stringify({}),
-      projections.connectorIds,
-      projections.scheduleCron,
-      input.isAssistant ?? false,
-      input.status ?? "active",
-      projections.safetyLevel,
-      input.lastMessageAt ?? new Date()
+       JSON.stringify({}),
+       projections.connectorIds,
+       JSON.stringify(projections.accessRefs),
+       projections.scheduleCron,
+       input.isAssistant ?? false,
+       input.status ?? "active",
+       projections.safetyLevel,
+       input.lastMessageAt ?? new Date()
     ]
   );
   const agent = rows[0]!;
@@ -84,7 +85,7 @@ export async function reviseAgentDefinition(
   input: {
     agentId: string;
     userId: string;
-    definition: AgentDefinitionV1;
+    definition: AgentDefinition;
     name: string;
     avatar: string;
     prompt: string;
@@ -110,14 +111,15 @@ export async function reviseAgentDefinition(
   const revision = (current.rows[0]?.revision ?? 0) + 1;
   const projections = definitionProjections(definition);
   await client.query(
-    `UPDATE agents
-     SET prompt = $3,
-         parsed_intent = $4,
-         connector_ids = $5,
-         schedule_cron = $6,
-         safety_level = $7,
-         status = COALESCE($8, status),
-         name = $9
+      `UPDATE agents
+      SET prompt = $3,
+          parsed_intent = $4,
+          connector_ids = $5,
+          access_refs = $6,
+          schedule_cron = $7,
+          safety_level = $8,
+          status = COALESCE($9, status),
+          name = $10
      WHERE id = $1 AND user_id = $2`,
     [
       input.agentId,
@@ -125,6 +127,7 @@ export async function reviseAgentDefinition(
       input.prompt,
       JSON.stringify({}),
       projections.connectorIds,
+      JSON.stringify(projections.accessRefs),
       projections.scheduleCron,
       projections.safetyLevel,
       input.status ?? null,
@@ -264,16 +267,23 @@ export async function ensureConfiguredAgent(input: {
   }
 }
 
-function definitionProjections(definition: AgentDefinitionV1): {
+function definitionProjections(definition: AgentDefinition): {
   connectorIds: string[];
+  accessRefs: unknown[];
   scheduleCron: string | null;
   safetyLevel: "read" | "suggest" | "act";
 } {
   const connectors = definition.steps.flatMap((step) =>
     getCapabilityDefinition(step.capability).requiredConnectors(step.config)
   );
+  const accessRefs = definition.schema_version === 2
+    ? definition.required_access
+    : definition.steps.flatMap((step) =>
+        getCapabilityDefinition(step.capability).requiredAccess(step.config)
+      );
   return {
     connectorIds: [...new Set(connectors)],
+    accessRefs,
     scheduleCron:
       definition.trigger.type === "schedule" ? definition.trigger.cron : null,
     safetyLevel: definition.policy.safety_level
@@ -284,7 +294,7 @@ async function insertRevision(
   client: PoolClient,
   input: {
     agentId: string;
-    definition: AgentDefinitionV1;
+    definition: AgentDefinition;
     revision: number;
     createdBy: string;
   }

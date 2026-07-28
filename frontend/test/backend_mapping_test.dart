@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
 import 'package:sydney/models/connector.dart';
+import 'package:sydney/models/access_connection.dart';
 import 'package:sydney/services/message_service.dart';
 
 void main() {
@@ -172,4 +173,36 @@ void main() {
       expect(connector.shouldUseOAuth, isTrue);
     },
   );
+
+  test('generic connectors use server-declared OAuth metadata', () {
+    final connector = Connector.fromJson({
+      'id': 'mcp.crm',
+      'provider_id': 'mcp.crm',
+      'name': 'CRM',
+      'description': 'Read CRM records',
+      'status': 'disconnected',
+      'auth_method': 'oauth2',
+      'connection_id': 'connection_1',
+      'required_scopes': const <String>[],
+    });
+
+    expect(connector.shouldUseOAuth, isTrue);
+    expect(connector.providerId, 'mcp.crm');
+    expect(connector.connectionId, 'connection_1');
+  });
+
+  test('generic access connections accept backend snake case fields', () {
+    final connection = AccessConnection.fromJson({
+      'id': 'connection_1',
+      'provider_id': 'mcp.crm',
+      'provider_kind': 'mcp',
+      'status': 'action_required',
+      'account_label': 'Workspace',
+      'capabilities': ['records.read'],
+    });
+
+    expect(connection.providerId, 'mcp.crm');
+    expect(connection.status, AccessConnectionStatus.actionRequired);
+    expect(connection.accountLabel, 'Workspace');
+  });
 }
