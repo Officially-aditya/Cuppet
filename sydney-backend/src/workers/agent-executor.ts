@@ -500,6 +500,8 @@ async function executeAgentJob(
       sourceRefs: rendered.sourceRefs,
       tokensUsed: rendered.tokensUsed,
       status: "success",
+      isProactive:
+        job.data.trigger === "schedule" || job.data.trigger === "event",
       additionalTopicsCovered: rendered.additionalTopicsCovered,
       stateEvents: rendered.stateEvents as AgentStateEvent[] | undefined
     });
@@ -846,6 +848,7 @@ async function persistRunMessage(
     tokensUsed: number;
     status: "success" | "partial" | "failed";
     errorMessage?: string;
+    isProactive?: boolean;
     additionalTopicsCovered?: string[];
     stateEvents?: AgentStateEvent[];
   }
@@ -853,7 +856,23 @@ async function persistRunMessage(
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const contents = splitAgentMessageContent(input.content, input.runId);
+    const contents = splitAgentMessageContent(input.content, input.runId).map(
+      (content) => {
+        if (!input.isProactive) return content;
+        return {
+          ...content,
+          presentation: {
+            group_id: content.presentation?.group_id ?? input.runId,
+            part_index: content.presentation?.part_index ?? 0,
+            part_count: content.presentation?.part_count ?? 1,
+            ...(content.presentation?.item_offset !== undefined
+              ? { item_offset: content.presentation.item_offset }
+              : {}),
+            feedback_eligible: true
+          }
+        };
+      }
+    );
     const messages: Array<{ id: string }> = [];
     const createdAt = Date.now();
     for (let index = 0; index < contents.length; index++) {

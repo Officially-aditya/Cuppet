@@ -89,27 +89,13 @@ class MessageCard extends StatelessWidget {
     }
 
     final isUser = message.sender == MessageSender.user;
-    final resultFeedback =
-        !const {
-          'plain_text',
-          'system',
-          'action_confirmation',
-          'assistant_suggestion',
-          'agent_selection',
-          'daily_task',
-        }.contains(message.template);
-    final feedbackItems = <PopupMenuEntry<String>>[
-      const PopupMenuItem(value: 'useful', child: Text('Useful')),
-      const PopupMenuItem(value: 'not_useful', child: Text('Not useful')),
-    ];
-    if (resultFeedback) {
-      feedbackItems.addAll(const [
-        PopupMenuItem(value: 'too_noisy', child: Text('Too noisy')),
-        PopupMenuItem(value: 'wrong_priority', child: Text('Wrong priority')),
-        PopupMenuItem(value: 'wrong_format', child: Text('Wrong format')),
-        PopupMenuItem(value: 'not_relevant', child: Text('Not relevant')),
-      ]);
-    }
+    final showFeedback =
+        !isUser &&
+        onAction != null &&
+        !message.isRecoveredRawPayload &&
+        message.isFeedbackEligible &&
+        message.isLastPart;
+    final feedbackSubjectKey = message.feedbackSubjectKey;
     final maxWidth = MediaQuery.sizeOf(context).width * 0.84;
     final content = Container(
       key: ValueKey('message-surface-${message.id}'),
@@ -183,35 +169,53 @@ class MessageCard extends StatelessWidget {
               isUser: isUser,
               onAction: onAction,
             ),
-            if (!isUser &&
-                onAction != null &&
-                !message.isRecoveredRawPayload &&
-                message.template != 'assistant_suggestion' &&
-                message.isLastPart) ...[
+            if (showFeedback && feedbackType == null) ...[
               const SizedBox(height: SydneySpacing.xs),
-              Align(
-                alignment: Alignment.centerRight,
-                child: PopupMenuButton<String>(
-                  tooltip: 'Message feedback',
-                  padding: EdgeInsets.zero,
-                  iconSize: 17,
-                  onSelected:
-                      (feedbackType) => onAction!({
-                        'type': 'message_feedback',
-                        'feedback_type': feedbackType,
-                        'messageId': message.id,
-                      }),
-                  itemBuilder: (context) => feedbackItems,
-                  icon: const Icon(Icons.more_horiz_rounded),
-                ),
+              Wrap(
+                spacing: SydneySpacing.xs,
+                runSpacing: SydneySpacing.xs,
+                children: [
+                  OutlinedButton.icon(
+                    key: ValueKey('message-feedback-useful-${message.id}'),
+                    onPressed:
+                        () => onAction!({
+                          'type': 'message_feedback',
+                          'feedback_type': 'useful',
+                          'messageId': message.id,
+                          if (feedbackSubjectKey != null) ...{
+                            'subject_type': 'topic',
+                            'subject_key': feedbackSubjectKey,
+                          },
+                        }),
+                    icon: const Icon(Icons.thumb_up_alt_outlined, size: 15),
+                    label: const Text('Useful'),
+                    style: _feedbackButtonStyle(context),
+                  ),
+                  OutlinedButton.icon(
+                    key: ValueKey('message-feedback-not-useful-${message.id}'),
+                    onPressed:
+                        () => onAction!({
+                          'type': 'message_feedback',
+                          'feedback_type': 'not_useful',
+                          'messageId': message.id,
+                          if (feedbackSubjectKey != null) ...{
+                            'subject_type': 'topic',
+                            'subject_key': feedbackSubjectKey,
+                          },
+                        }),
+                    icon: const Icon(Icons.thumb_down_alt_outlined, size: 15),
+                    label: const Text('Not useful'),
+                    style: _feedbackButtonStyle(context),
+                  ),
+                ],
               ),
             ],
-            if (!isUser && feedbackType != null) ...[
+            if (showFeedback && feedbackType != null) ...[
               const SizedBox(height: SydneySpacing.xs),
               Text(
                 feedbackType == 'useful'
                     ? 'Feedback saved: Useful'
-                    : 'Feedback saved',
+                    : 'Feedback saved: Not useful',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: CuppetWorkspaceColors.primary,
                   fontWeight: FontWeight.w700,
@@ -258,6 +262,23 @@ class MessageCard extends StatelessWidget {
       ),
     );
   }
+}
+
+ButtonStyle _feedbackButtonStyle(BuildContext context) {
+  return OutlinedButton.styleFrom(
+    foregroundColor: CuppetWorkspaceColors.primaryInk,
+    side: const BorderSide(color: CuppetWorkspaceColors.panelBorder),
+    padding: const EdgeInsets.symmetric(
+      horizontal: SydneySpacing.sm,
+      vertical: SydneySpacing.xs,
+    ),
+    minimumSize: Size.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    visualDensity: VisualDensity.compact,
+    textStyle: Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+  );
 }
 
 String _formatMessageTime(DateTime value) {

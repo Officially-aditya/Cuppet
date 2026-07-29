@@ -49,6 +49,23 @@ class Message {
     return const {};
   }
 
+  bool get isFeedbackEligible {
+    if (presentation['feedback_eligible'] == true) return true;
+    return template == 'assistant_suggestion' &&
+        data['suggestion_id'] != null &&
+        data['resolved'] != true;
+  }
+
+  String? get feedbackSubjectKey {
+    if (template != 'news_brief' || data['items'] is! List) return null;
+    for (final item in data['items'] as List) {
+      if (item is! Map) continue;
+      final category = item['category']?.toString().trim();
+      if (category != null && category.isNotEmpty) return category;
+    }
+    return null;
+  }
+
   String? get groupId {
     final value = presentation['group_id']?.toString().trim();
     return value == null || value.isEmpty ? null : value;

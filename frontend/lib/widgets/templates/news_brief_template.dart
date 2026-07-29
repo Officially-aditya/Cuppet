@@ -101,21 +101,6 @@ class NewsBriefTemplate extends StatelessWidget {
                             'subject_type': 'topic',
                             'subject_key': _newsCategory(items[index]),
                           }),
-                  onFeedback:
-                      onAction == null
-                          ? null
-                          : (feedbackType) => onAction!({
-                            'type': 'message_feedback',
-                            'feedback_type': feedbackType,
-                            'subject_type':
-                                feedbackType == 'not_interested_source'
-                                    ? 'source'
-                                    : 'topic',
-                            'subject_key':
-                                feedbackType == 'not_interested_source'
-                                    ? _newsSourceKey(items[index]['source'])
-                                    : _newsCategory(items[index]),
-                          }),
                   onExplore:
                       onAction == null
                           ? null
@@ -305,14 +290,12 @@ class _NewsItemCard extends StatefulWidget {
     required this.item,
     required this.featured,
     this.onActivity,
-    this.onFeedback,
     this.onExplore,
   });
 
   final Map<String, dynamic> item;
   final bool featured;
   final VoidCallback? onActivity;
-  final ValueChanged<String>? onFeedback;
   final VoidCallback? onExplore;
 
   @override
@@ -506,39 +489,6 @@ class _NewsItemCardState extends State<_NewsItemCard> {
                       ),
                     ),
                   ],
-                  if (widget.onFeedback != null) ...[
-                    const SizedBox(height: SydneySpacing.xs),
-                    PopupMenuButton<String>(
-                      tooltip: 'Story feedback',
-                      onSelected: widget.onFeedback,
-                      itemBuilder:
-                          (context) => const [
-                            PopupMenuItem(
-                              value: 'more_like_this',
-                              child: Text('More like this'),
-                            ),
-                            PopupMenuItem(
-                              value: 'less_like_this',
-                              child: Text('Less like this'),
-                            ),
-                            PopupMenuItem(
-                              value: 'not_interested_topic',
-                              child: Text('Not interested in this topic'),
-                            ),
-                            PopupMenuItem(
-                              value: 'not_interested_source',
-                              child: Text('Not interested in this source'),
-                            ),
-                          ],
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: SydneySpacing.sm,
-                          vertical: SydneySpacing.xs,
-                        ),
-                        child: Text('Tune recommendations'),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -619,22 +569,4 @@ String _newsCategory(Map<String, dynamic> item) {
     return 'Technology';
   }
   return 'Update';
-}
-
-String _newsSourceKey(Object? value) {
-  final text = value?.toString().trim() ?? '';
-  if (text.isEmpty) return 'unknown_source';
-  final uri = Uri.tryParse(text);
-  final source = uri?.host.isNotEmpty == true ? uri!.host : text;
-  final normalized = source
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9:_-]+'), '_')
-      .replaceAll(RegExp(r'_+'), '_')
-      .replaceAll(RegExp(r'^_+|_+$'), '');
-  return normalized.isEmpty
-      ? 'unknown_source'
-      : normalized.substring(
-        0,
-        normalized.length > 120 ? 120 : normalized.length,
-      );
 }

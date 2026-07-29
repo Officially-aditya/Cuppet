@@ -334,6 +334,7 @@ export type AgentMessagePresentation = {
   part_index: number;
   part_count: number;
   item_offset?: number;
+  feedback_eligible?: boolean;
 };
 
 export type AgentMessageContent = AgentMessagePayload & {

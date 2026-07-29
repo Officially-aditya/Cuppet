@@ -44,6 +44,63 @@ void main() {
     expect(part.isLastPart, isFalse);
   });
 
+  testWidgets('feedback buttons are limited to unsolicited agent messages', (
+    tester,
+  ) async {
+    final requested = Message.plainText(
+      id: 'requested-agent-message',
+      threadId: 'thread',
+      sender: MessageSender.agent,
+      text: 'Here is the answer you asked for.',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: MessageCard(message: requested, onAction: (_) {})),
+      ),
+    );
+
+    expect(find.text('Useful'), findsNothing);
+    expect(find.text('Not useful'), findsNothing);
+    expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+
+    Map<String, dynamic>? submitted;
+    final proactive = Message.fromJson({
+      'id': 'proactive-agent-message',
+      'agent_id': 'agent',
+      'role': 'agent',
+      'created_at': '2026-07-19T10:00:00Z',
+      'content': {
+        'template': 'plain_text',
+        'presentation': {'feedback_eligible': true},
+        'data': {'body': 'A story matched your interests.'},
+      },
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MessageCard(
+            message: proactive,
+            onAction: (action) => submitted = action,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Useful'), findsOneWidget);
+    expect(find.text('Not useful'), findsOneWidget);
+    await tester.tap(
+      find.byKey(
+        const ValueKey('message-feedback-useful-proactive-agent-message'),
+      ),
+    );
+    expect(submitted?['type'], 'message_feedback');
+    expect(submitted?['feedback_type'], 'useful');
+    expect(submitted?['messageId'], 'proactive-agent-message');
+    expect(submitted?['subject_type'], isNull);
+  });
+
   testWidgets('multipart news overview omits the empty-result warning', (
     tester,
   ) async {
