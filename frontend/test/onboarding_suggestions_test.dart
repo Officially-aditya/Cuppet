@@ -8,13 +8,20 @@ import 'package:sydney/config/routes.dart';
 import 'package:sydney/design/workspace_palette.dart';
 import 'package:sydney/models/agent.dart';
 import 'package:sydney/models/message.dart';
+import 'package:sydney/models/personalization_consent.dart';
+import 'package:sydney/models/personalization_settings.dart';
+import 'package:sydney/models/preference_profile.dart';
 import 'package:sydney/models/thread_launch_request.dart';
+import 'package:sydney/models/user.dart';
 import 'package:sydney/providers/agents_provider.dart';
+import 'package:sydney/providers/auth_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
+import 'package:sydney/providers/personalization_provider.dart';
 import 'package:sydney/screens/inbox/inbox_screen.dart';
 import 'package:sydney/services/agent_service.dart';
 import 'package:sydney/services/api.dart';
 import 'package:sydney/services/message_service.dart';
+import 'package:sydney/services/personalization_service.dart';
 import 'package:sydney/widgets/workspace_primitives.dart';
 
 final _assistant = Agent(
@@ -90,21 +97,81 @@ class _FailingAgentService extends AgentService {
   }
 }
 
+class _OnboardingAuthController extends AuthController {
+  @override
+  Future<AuthState> build() async => const AuthState(
+    user: User(
+      id: 'onboarding-user',
+      email: 'onboarding@cuppet.app',
+      displayName: 'Onboarding user',
+    ),
+    sessionToken: 'onboarding-session',
+  );
+}
+
+class _RecordingPersonalizationService extends PersonalizationService {
+  _RecordingPersonalizationService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  final List<String> grantedPurposes = [];
+  PersonalizationSettings? updatedSettings;
+
+  @override
+  Future<PreferenceProfile> loadProfile() async => const PreferenceProfile(
+    settings: PersonalizationSettings.defaults(),
+    consents: [],
+    items: [],
+  );
+
+  @override
+  Future<PersonalizationConsent> grantConsent(
+    String purpose, {
+    String source = 'settings',
+  }) async {
+    grantedPurposes.add('$purpose:$source');
+    return PersonalizationConsent(
+      id: purpose,
+      purpose: purpose,
+      status: 'granted',
+      policyVersion: 'test',
+      createdAt: DateTime(2026, 7, 29),
+      grantedAt: DateTime(2026, 7, 29),
+      source: source,
+    );
+  }
+
+  @override
+  Future<PersonalizationSettings> updateSettings(
+    PersonalizationSettings settings,
+  ) async {
+    updatedSettings = settings;
+    return settings;
+  }
+}
+
 Widget _host({
   required List<Agent> agents,
   List<Message> briefings = const [],
   MessageService? messageService,
   AgentService? agentService,
+  PersonalizationService? personalizationService,
+  bool authenticated = false,
   ValueChanged<Object?>? onRoute,
 }) {
   return ProviderScope(
     overrides: [
       agentsProvider.overrideWith(() => _OnboardingAgentsController(agents)),
       briefingsProvider.overrideWith((ref) async => briefings),
+      if (authenticated)
+        authControllerProvider.overrideWith(_OnboardingAuthController.new),
       if (messageService != null)
         messageServiceProvider.overrideWithValue(messageService),
       if (agentService != null)
         agentServiceProvider.overrideWithValue(agentService),
+      if (personalizationService != null)
+        personalizationServiceProvider.overrideWithValue(
+          personalizationService,
+        ),
     ],
     child: MaterialApp(
       home: const InboxScreen(),
@@ -129,6 +196,46 @@ Widget _host({
 }
 
 void main() {
+  testWidgets('asks for personalization permission during onboarding', (
+    tester,
+  ) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final personalization = _RecordingPersonalizationService();
+
+    await tester.pumpWidget(
+      _host(
+        agents: [_assistant],
+        authenticated: true,
+        personalizationService: personalization,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('personalization-onboarding-dialog')),
+      findsOneWidget,
+    );
+    expect(find.text('Allow suggestions'), findsOneWidget);
+    expect(find.text('Not now'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('personalization-onboarding-allow')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      personalization.grantedPurposes,
+      containsAll(<String>[
+        'cuppet_activity:onboarding',
+        'explicit_feedback:onboarding',
+      ]),
+    );
+    expect(personalization.updatedSettings?.enabled, isTrue);
+    expect(personalization.updatedSettings?.inChat, isTrue);
+    expect(personalization.updatedSettings?.proactive, isFalse);
+    expect(personalization.updatedSettings?.push, isFalse);
+  });
+
   testWidgets('onboarding card opens Assistant with a creation request', (
     tester,
   ) async {

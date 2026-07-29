@@ -91,14 +91,17 @@ class PersonalizationService {
     }
   }
 
-  Future<PersonalizationConsent> grantConsent(String purpose) async {
+  Future<PersonalizationConsent> grantConsent(
+    String purpose, {
+    String source = 'settings',
+  }) async {
     if (Env.useMockData) {
       return _mockConsent(purpose, granted: true);
     }
     try {
       final response = await _api.post<Map<String, dynamic>>(
         '/users/me/personalization/consents',
-        data: {'purpose': purpose, 'source': 'settings'},
+        data: {'purpose': purpose, 'source': source},
       );
       final data = response.data?['consent'];
       if (data is! Map) throw const ApiException('Consent was not returned.');

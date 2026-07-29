@@ -8,12 +8,13 @@ import '../../models/agent.dart';
 import '../../models/message.dart';
 import '../../models/thread_launch_request.dart';
 import '../../providers/agents_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/messages_provider.dart';
+import '../../providers/personalization_provider.dart';
 import '../../services/api.dart';
 import '../../widgets/inbox/agent_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/templates/briefing_card_template.dart';
-import '../../providers/auth_provider.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class InboxScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,7 @@ class InboxScreen extends ConsumerStatefulWidget {
 class _InboxScreenState extends ConsumerState<InboxScreen> {
   bool _isExpanded = true;
   Timer? _timer;
+  String? _personalizationPromptForUser;
 
   @override
   void initState() {
@@ -58,20 +60,32 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     final user = authState.asData?.value.user;
     final defaultDisplayName = user?.displayName ?? '';
     final preferredName = ref.watch(preferredNameProvider);
-    final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
+    final displayName =
+        preferredName.isNotEmpty ? preferredName : defaultDisplayName;
+
+    final loadedAgents = agents.value;
+    if (user != null && loadedAgents != null) {
+      final hasCreatedAgent = loadedAgents.any((agent) => !agent.isAssistant);
+      final hasAssistant = loadedAgents.any((agent) => agent.isAssistant);
+      if (!hasCreatedAgent && hasAssistant) {
+        _schedulePersonalizationPrompt(user.id);
+      }
+    }
 
     final String eyebrowText;
     if (displayName.isEmpty || displayName == 'Cuppet User') {
       eyebrowText = 'Your workspace';
     } else {
       final displayNameParts = displayName.trim().split(RegExp(r'\s+'));
-      final firstName = displayNameParts.isNotEmpty && displayNameParts.first.isNotEmpty
-          ? displayNameParts.first
-          : '';
+      final firstName =
+          displayNameParts.isNotEmpty && displayNameParts.first.isNotEmpty
+              ? displayNameParts.first
+              : '';
       if (firstName.isEmpty) {
         eyebrowText = 'Your workspace';
       } else {
-        final capitalizedFirstName = '${firstName[0].toUpperCase()}${firstName.substring(1)}';
+        final capitalizedFirstName =
+            '${firstName[0].toUpperCase()}${firstName.substring(1)}';
         eyebrowText = "$capitalizedFirstName's Workspace";
       }
     }
@@ -175,6 +189,80 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     );
   }
 
+  void _schedulePersonalizationPrompt(String userId) {
+    if (_personalizationPromptForUser == userId) return;
+    _personalizationPromptForUser = userId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_showPersonalizationPrompt(userId));
+    });
+  }
+
+  Future<void> _showPersonalizationPrompt(String userId) async {
+    final storage = ref.read(secureStorageProvider);
+    final storageKey = 'sydney.personalization_onboarding_prompted.$userId';
+    if (await storage.read(key: storageKey) == 'true' || !mounted) return;
+
+    final service = ref.read(personalizationServiceProvider);
+    try {
+      final profile = await service.loadProfile();
+      if (!mounted) return;
+      final hasSuggestionConsent =
+          profile.consents
+              .where(
+                (item) =>
+                    item.isGranted &&
+                    (item.purpose == 'cuppet_activity' ||
+                        item.purpose == 'explicit_feedback'),
+              )
+              .length ==
+          2;
+      if (profile.settings.enabled || hasSuggestionConsent) {
+        await storage.write(key: storageKey, value: 'true');
+        return;
+      }
+    } catch (_) {
+      // Do not block onboarding when personalization status cannot be loaded.
+      _personalizationPromptForUser = null;
+      return;
+    }
+
+    final allow = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _PersonalizationOnboardingDialog(),
+    );
+    if (!mounted || allow == null) return;
+
+    if (!allow) {
+      await storage.write(key: storageKey, value: 'true');
+      return;
+    }
+
+    try {
+      final profile = await service.loadProfile();
+      await service.grantConsent('cuppet_activity', source: 'onboarding');
+      await service.grantConsent('explicit_feedback', source: 'onboarding');
+      await service.updateSettings(
+        profile.settings.copyWith(enabled: true, inChat: true),
+      );
+      await storage.write(key: storageKey, value: 'true');
+      ref.invalidate(personalizationProvider);
+    } catch (error) {
+      _personalizationPromptForUser = null;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            friendlyErrorMessage(
+              error,
+              fallback: 'Personalized suggestions could not be enabled.',
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _openBriefing(Message briefing) async {
     final messageKey = _briefingMessageKey(briefing);
     final dismissed = ref.read(dismissedBriefingIdsProvider);
@@ -223,6 +311,47 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         ),
       );
     }
+  }
+}
+
+class _PersonalizationOnboardingDialog extends StatelessWidget {
+  const _PersonalizationOnboardingDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const ValueKey('personalization-onboarding-dialog'),
+      title: const Text('Make suggestions more useful'),
+      content: const SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'With your permission, Cuppet can learn from repeated Assistant activity and feedback you give it. It can then suggest useful automations and follow-ups.',
+            ),
+            SizedBox(height: SydneySpacing.md),
+            WorkspacePrivacyPanel(
+              title: 'You stay in control',
+              message:
+                  'This enables in-chat suggestions using Cuppet activity and direct feedback. Connected accounts, browser activity, proactive suggestions, and push notifications stay off until you enable them later in Settings.',
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const ValueKey('personalization-onboarding-not-now'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Not now'),
+        ),
+        FilledButton(
+          key: const ValueKey('personalization-onboarding-allow'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Allow suggestions'),
+        ),
+      ],
+    );
   }
 }
 
