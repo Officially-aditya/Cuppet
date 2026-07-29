@@ -12,11 +12,10 @@ import 'package:sydney/models/personalization_consent.dart';
 import 'package:sydney/models/personalization_settings.dart';
 import 'package:sydney/models/preference_profile.dart';
 import 'package:sydney/models/thread_launch_request.dart';
-import 'package:sydney/models/user.dart';
 import 'package:sydney/providers/agents_provider.dart';
-import 'package:sydney/providers/auth_provider.dart';
 import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/providers/personalization_provider.dart';
+import 'package:sydney/screens/auth/personalization_onboarding_screen.dart';
 import 'package:sydney/screens/inbox/inbox_screen.dart';
 import 'package:sydney/services/agent_service.dart';
 import 'package:sydney/services/api.dart';
@@ -97,18 +96,6 @@ class _FailingAgentService extends AgentService {
   }
 }
 
-class _OnboardingAuthController extends AuthController {
-  @override
-  Future<AuthState> build() async => const AuthState(
-    user: User(
-      id: 'onboarding-user',
-      email: 'onboarding@cuppet.app',
-      displayName: 'Onboarding user',
-    ),
-    sessionToken: 'onboarding-session',
-  );
-}
-
 class _RecordingPersonalizationService extends PersonalizationService {
   _RecordingPersonalizationService()
     : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
@@ -154,24 +141,16 @@ Widget _host({
   List<Message> briefings = const [],
   MessageService? messageService,
   AgentService? agentService,
-  PersonalizationService? personalizationService,
-  bool authenticated = false,
   ValueChanged<Object?>? onRoute,
 }) {
   return ProviderScope(
     overrides: [
       agentsProvider.overrideWith(() => _OnboardingAgentsController(agents)),
       briefingsProvider.overrideWith((ref) async => briefings),
-      if (authenticated)
-        authControllerProvider.overrideWith(_OnboardingAuthController.new),
       if (messageService != null)
         messageServiceProvider.overrideWithValue(messageService),
       if (agentService != null)
         agentServiceProvider.overrideWithValue(agentService),
-      if (personalizationService != null)
-        personalizationServiceProvider.overrideWithValue(
-          personalizationService,
-        ),
     ],
     child: MaterialApp(
       home: const InboxScreen(),
@@ -196,24 +175,32 @@ Widget _host({
 }
 
 void main() {
-  testWidgets('asks for personalization permission during onboarding', (
+  testWidgets('asks for personalization permission during account setup', (
     tester,
   ) async {
-    FlutterSecureStorage.setMockInitialValues({});
     final personalization = _RecordingPersonalizationService();
 
     await tester.pumpWidget(
-      _host(
-        agents: [_assistant],
-        authenticated: true,
-        personalizationService: personalization,
+      ProviderScope(
+        overrides: [
+          personalizationServiceProvider.overrideWithValue(personalization),
+        ],
+        child: MaterialApp(
+          home: const PersonalizationOnboardingScreen(),
+          onGenerateRoute:
+              (settings) => MaterialPageRoute<void>(
+                settings: settings,
+                builder: (_) => const Scaffold(body: Text('Inbox opened')),
+              ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('personalization-onboarding-dialog')),
-      findsOneWidget,
+    expect(find.byType(PersonalizationOnboardingScreen), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('personalization-onboarding-allow')),
+      200,
     );
     expect(find.text('Allow suggestions'), findsOneWidget);
     expect(find.text('Not now'), findsOneWidget);
@@ -234,6 +221,7 @@ void main() {
     expect(personalization.updatedSettings?.inChat, isTrue);
     expect(personalization.updatedSettings?.proactive, isFalse);
     expect(personalization.updatedSettings?.push, isFalse);
+    expect(find.text('Inbox opened'), findsOneWidget);
   });
 
   testWidgets('onboarding card opens Assistant with a creation request', (

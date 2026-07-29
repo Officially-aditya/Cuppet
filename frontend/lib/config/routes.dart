@@ -4,6 +4,7 @@ class AppRoutes {
   static const signIn = '/sign-in';
   static const signInWithEmail = '/sign-in/email';
   static const signUp = '/sign-up';
+  static const personalizationOnboarding = '/onboarding/personalization';
   static const inbox = '/inbox';
   static const thread = '/thread';
   static const create = '/create';

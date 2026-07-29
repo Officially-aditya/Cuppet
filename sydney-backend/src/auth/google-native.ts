@@ -32,6 +32,7 @@ type SessionRow = {
 
 export type NativeGoogleSession = {
   token: string;
+  isNewUser: boolean;
   user: {
     id: string;
     email: string;
@@ -66,7 +67,8 @@ export async function createNativeGoogleSession(input: {
   try {
     await client.query("BEGIN");
 
-    const user = await upsertGoogleUser(client, profile, input.idToken);
+    const upserted = await upsertGoogleUser(client, profile, input.idToken);
+    const user = upserted.user;
     const session = await createSession(client, {
       userId: user.id,
       ipAddress: input.ipAddress,
@@ -79,6 +81,7 @@ export async function createNativeGoogleSession(input: {
 
     return {
       token: session.token,
+      isNewUser: upserted.isNewUser,
       user: {
         id: user.id,
         email: user.email,
@@ -159,7 +162,7 @@ async function upsertGoogleUser(
   client: PoolClient,
   profile: GoogleProfile,
   idToken: string
-): Promise<UserRow> {
+): Promise<{ user: UserRow; isNewUser: boolean }> {
   const accountUser = await client.query<UserRow>(
     `
       SELECT u.id, u.email, u.name, u.image
@@ -191,9 +194,8 @@ async function upsertGoogleUser(
     throw new Error("Failed to create Google user.");
   }
 
-  const user =
-    existingUser ??
-    insertedUser;
+  const isNewUser = existingUser == null;
+  const user = existingUser ?? insertedUser;
 
   const updatedUser = await updateUserProfile(client, {
     userId: user.id,
@@ -215,7 +217,7 @@ async function upsertGoogleUser(
     [updatedUser.id, profile.sub, idToken]
   );
 
-  return updatedUser;
+  return { user: updatedUser, isNewUser };
 }
 
 async function findUserByEmail(

@@ -6,130 +6,139 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/auth/auth_widgets.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/workspace_primitives.dart';
+
 class SignInScreen extends ConsumerStatefulWidget {
-const SignInScreen({super.key});
-@override
-ConsumerState<SignInScreen> createState() => _SignInScreenState();
+  const SignInScreen({super.key});
+  @override
+  ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
+
 class _SignInScreenState extends ConsumerState<SignInScreen> {
-// NOTE: The email sign-in form is now navigated to a separate screen (AppRoutes.signInWithEmail).
-// The state variables and methods related to the inline email form have been removed.
-@override
-Widget build(BuildContext context) {
-final auth = ref.watch(authControllerProvider);
-final loading = auth.isLoading;
-return Scaffold(
-backgroundColor: CuppetWorkspaceColors.background,
-body: SafeArea(
-child: Center(
-child: ConstrainedBox(
-constraints: const BoxConstraints(maxWidth: 420),
-child: ListView(
-padding: const EdgeInsets.fromLTRB(
-SydneySpacing.page,
-SydneySpacing.xxl,
-SydneySpacing.page,
-SydneySpacing.xl,
-),
-children: [
-const SizedBox(height: SydneySpacing.xl),
-const AuthLogo(),
-const SizedBox(height: SydneySpacing.lg),
-Text(
-'Welcome back',
-textAlign: TextAlign.center,
-style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-fontSize: 28,
-fontWeight: FontWeight.w800,
-color: CuppetWorkspaceColors.ink,
-height: 1.05,
-letterSpacing: -0.7,
-),
-),
-const SizedBox(height: SydneySpacing.sm),
-Text(
-'Delegate work through conversations with agents you trust.',
-textAlign: TextAlign.center,
-style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-color: CuppetWorkspaceColors.muted,
-height: 1.35,
-),
-),
-const SizedBox(height: SydneySpacing.xxl),
-const WorkspaceSectionLabel('Sign in'),
-const SizedBox(height: SydneySpacing.sm),
-if (auth.hasError) ...[
-SydneyNotice(
-text: readableAuthError(auth.error!),
-icon: Icons.error_outline_rounded,
-iconColor: SydneyColors.danger,
-backgroundColor: SydneyColors.dangerSoft,
-borderColor: SydneyColors.dangerSoft,
-textColor: SydneyColors.danger,
-),
-const SizedBox(height: SydneySpacing.md),
-],
-LoginOptionCard(
-title: loading ? 'Signing in...' : 'Sign in with Google',
-subtitle: 'Access your account with your Google account.',
-leadingWidget: const GoogleMark(),
-onTap: loading ? null : _continueWithGoogle,
-),
-const SizedBox(height: SydneySpacing.sm),
-LoginOptionCard(
-title: 'Sign in with Email',
-subtitle: 'Access your account with your email and password.',
-icon: Icons.mail_outline_rounded,
-onTap: loading
-? null
-: () =>
-Navigator.of(context).pushNamed(AppRoutes.signInWithEmail),
-),
-const SizedBox(height: SydneySpacing.xxl),
-const AuthDividerLabel(),
-const SizedBox(height: SydneySpacing.lg),
-Wrap(
-alignment: WrapAlignment.center,
-crossAxisAlignment: WrapCrossAlignment.center,
-children: [
-Text(
-"Don't have an account?",
-style: Theme.of(context).textTheme.bodySmall?.copyWith(
-color: CuppetWorkspaceColors.muted,
-),
-),
-TextButton(
-onPressed:
-loading
-? null
-: () => Navigator.of(
-context,
-).pushNamed(AppRoutes.signUp),
-style: TextButton.styleFrom(
-foregroundColor: CuppetWorkspaceColors.primary,
-textStyle: const TextStyle(fontWeight: FontWeight.w800),
-),
-child: const Text('Create one'),
-),
-],
-),
-],
-),
-),
-),
-),
-);
-}
-Future<void> _continueWithGoogle() async {
-await ref.read(authControllerProvider.notifier).continueWithGoogle();
-if (!mounted) {
-return;
-}
-final state = ref.read(authControllerProvider).asData?.value;
-if (state?.isAuthenticated == true) {
-Navigator.of(
-context,
-).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
-}
-}
+  // NOTE: The email sign-in form is now navigated to a separate screen (AppRoutes.signInWithEmail).
+  // The state variables and methods related to the inline email form have been removed.
+  @override
+  Widget build(BuildContext context) {
+    final auth = ref.watch(authControllerProvider);
+    final loading = auth.isLoading;
+    return Scaffold(
+      backgroundColor: CuppetWorkspaceColors.background,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                SydneySpacing.page,
+                SydneySpacing.xxl,
+                SydneySpacing.page,
+                SydneySpacing.xl,
+              ),
+              children: [
+                const SizedBox(height: SydneySpacing.xl),
+                const AuthLogo(),
+                const SizedBox(height: SydneySpacing.lg),
+                Text(
+                  'Welcome back',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: CuppetWorkspaceColors.ink,
+                    height: 1.05,
+                    letterSpacing: -0.7,
+                  ),
+                ),
+                const SizedBox(height: SydneySpacing.sm),
+                Text(
+                  'Delegate work through conversations with agents you trust.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: CuppetWorkspaceColors.muted,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: SydneySpacing.xxl),
+                const WorkspaceSectionLabel('Sign in'),
+                const SizedBox(height: SydneySpacing.sm),
+                if (auth.hasError) ...[
+                  SydneyNotice(
+                    text: readableAuthError(auth.error!),
+                    icon: Icons.error_outline_rounded,
+                    iconColor: SydneyColors.danger,
+                    backgroundColor: SydneyColors.dangerSoft,
+                    borderColor: SydneyColors.dangerSoft,
+                    textColor: SydneyColors.danger,
+                  ),
+                  const SizedBox(height: SydneySpacing.md),
+                ],
+                LoginOptionCard(
+                  title: loading ? 'Signing in...' : 'Sign in with Google',
+                  subtitle: 'Access your account with your Google account.',
+                  leadingWidget: const GoogleMark(),
+                  onTap: loading ? null : _continueWithGoogle,
+                ),
+                const SizedBox(height: SydneySpacing.sm),
+                LoginOptionCard(
+                  title: 'Sign in with Email',
+                  subtitle: 'Access your account with your email and password.',
+                  icon: Icons.mail_outline_rounded,
+                  onTap:
+                      loading
+                          ? null
+                          : () => Navigator.of(
+                            context,
+                          ).pushNamed(AppRoutes.signInWithEmail),
+                ),
+                const SizedBox(height: SydneySpacing.xxl),
+                const AuthDividerLabel(),
+                const SizedBox(height: SydneySpacing.lg),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account?",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: CuppetWorkspaceColors.muted,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed:
+                          loading
+                              ? null
+                              : () => Navigator.of(
+                                context,
+                              ).pushNamed(AppRoutes.signUp),
+                      style: TextButton.styleFrom(
+                        foregroundColor: CuppetWorkspaceColors.primary,
+                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      child: const Text('Create one'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _continueWithGoogle() async {
+    await ref.read(authControllerProvider.notifier).continueWithGoogle();
+    if (!mounted) {
+      return;
+    }
+    final state = ref.read(authControllerProvider).asData?.value;
+    if (state?.isAuthenticated == true) {
+      final destination =
+          state!.isNewUser
+              ? AppRoutes.personalizationOnboarding
+              : AppRoutes.inbox;
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(destination, (route) => false);
+    }
+  }
 }

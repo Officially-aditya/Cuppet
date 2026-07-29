@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/auth/auth_widgets.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/workspace_primitives.dart';
+
 class EmailSignInScreen extends ConsumerStatefulWidget {
   const EmailSignInScreen({super.key});
 
@@ -30,7 +31,9 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    await ref.read(authControllerProvider.notifier).signIn(
+    await ref
+        .read(authControllerProvider.notifier)
+        .signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
@@ -39,9 +42,13 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
     }
     final state = ref.read(authControllerProvider).asData?.value;
     if (state?.isAuthenticated == true) {
+      final destination =
+          state!.isNewUser
+              ? AppRoutes.personalizationOnboarding
+              : AppRoutes.inbox;
       Navigator.of(
         context,
-      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+      ).pushNamedAndRemoveUntil(destination, (route) => false);
     }
   }
 
@@ -80,21 +87,21 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                   'Welcome back',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: CuppetWorkspaceColors.ink,
-                        height: 1.05,
-                        letterSpacing: -0.7,
-                      ),
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: CuppetWorkspaceColors.ink,
+                    height: 1.05,
+                    letterSpacing: -0.7,
+                  ),
                 ),
                 const SizedBox(height: SydneySpacing.sm),
                 Text(
                   'Sign in to your account with your email and password.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: CuppetWorkspaceColors.muted,
-                        height: 1.35,
-                      ),
+                    color: CuppetWorkspaceColors.muted,
+                    height: 1.35,
+                  ),
                 ),
                 const SizedBox(height: SydneySpacing.xxl),
                 const WorkspaceSectionLabel('Email sign in'),
@@ -112,10 +119,11 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                           icon: Icons.mail_outline_rounded,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
-                          validator: (value) =>
-                              value == null || value.trim().isEmpty
-                                  ? 'Enter your email.'
-                                  : null,
+                          validator:
+                              (value) =>
+                                  value == null || value.trim().isEmpty
+                                      ? 'Enter your email.'
+                                      : null,
                         ),
                         const SizedBox(height: 14),
                         AuthField(
@@ -125,12 +133,14 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                           obscureText: !_showPassword,
                           textInputAction: TextInputAction.done,
                           suffix: IconButton(
-                            tooltip: _showPassword
-                                ? 'Hide password'
-                                : 'Show password',
-                            onPressed: () => setState(
-                              () => _showPassword = !_showPassword,
-                            ),
+                            tooltip:
+                                _showPassword
+                                    ? 'Hide password'
+                                    : 'Show password',
+                            onPressed:
+                                () => setState(
+                                  () => _showPassword = !_showPassword,
+                                ),
                             icon: Icon(
                               _showPassword
                                   ? Icons.visibility_off_outlined
@@ -139,10 +149,11 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                               color: CuppetWorkspaceColors.muted,
                             ),
                           ),
-                          validator: (value) =>
-                              value == null || value.isEmpty
-                                  ? 'Enter your password.'
-                                  : null,
+                          validator:
+                              (value) =>
+                                  value == null || value.isEmpty
+                                      ? 'Enter your password.'
+                                      : null,
                           onFieldSubmitted: (_) => _submit(),
                         ),
                         Align(
@@ -185,13 +196,14 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                     Text(
                       "Don't have an account?",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: CuppetWorkspaceColors.muted,
-                          ),
+                        color: CuppetWorkspaceColors.muted,
+                      ),
                     ),
                     TextButton(
-                      onPressed: loading
-                          ? null
-                          : () => Navigator.of(
+                      onPressed:
+                          loading
+                              ? null
+                              : () => Navigator.of(
                                 context,
                               ).pushNamed(AppRoutes.signUp),
                       style: TextButton.styleFrom(

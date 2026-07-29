@@ -50,12 +50,20 @@ final authControllerProvider = AsyncNotifierProvider<AuthController, AuthState>(
 );
 
 class AuthState {
-  const AuthState({required this.user, required this.sessionToken});
+  const AuthState({
+    required this.user,
+    required this.sessionToken,
+    this.isNewUser = false,
+  });
 
-  const AuthState.signedOut() : user = null, sessionToken = null;
+  const AuthState.signedOut()
+    : user = null,
+      sessionToken = null,
+      isNewUser = false;
 
   final User? user;
   final String? sessionToken;
+  final bool isNewUser;
 
   bool get isAuthenticated => user != null && sessionToken != null;
 }
@@ -102,15 +110,25 @@ class AuthController extends AsyncNotifier<AuthState> {
       final session = await ref
           .read(authServiceProvider)
           .signUp(displayName: displayName, email: email, password: password);
-      return AuthState(user: session.user, sessionToken: session.token);
+      return AuthState(
+        user: session.user,
+        sessionToken: session.token,
+        isNewUser: session.isNewUser,
+      );
     });
   }
 
-  Future<void> continueWithGoogle() async {
+  Future<void> continueWithGoogle({bool isAccountCreation = false}) async {
     state = const AsyncValue<AuthState>.loading();
     state = await AsyncValue.guard(() async {
-      final session = await ref.read(authServiceProvider).continueWithGoogle();
-      return AuthState(user: session.user, sessionToken: session.token);
+      final session = await ref
+          .read(authServiceProvider)
+          .continueWithGoogle(isAccountCreation: isAccountCreation);
+      return AuthState(
+        user: session.user,
+        sessionToken: session.token,
+        isNewUser: session.isNewUser,
+      );
     });
   }
 
@@ -162,9 +180,10 @@ class PreferredNameNotifier extends Notifier<String> {
   }
 }
 
-final preferredAvatarProvider = NotifierProvider<PreferredAvatarNotifier, String>(
-  PreferredAvatarNotifier.new,
-);
+final preferredAvatarProvider =
+    NotifierProvider<PreferredAvatarNotifier, String>(
+      PreferredAvatarNotifier.new,
+    );
 
 class PreferredAvatarNotifier extends Notifier<String> {
   @override

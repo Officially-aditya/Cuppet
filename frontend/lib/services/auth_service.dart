@@ -7,10 +7,15 @@ import '../models/user.dart';
 import 'api.dart';
 
 class AuthSession {
-  const AuthSession({required this.user, required this.token});
+  const AuthSession({
+    required this.user,
+    required this.token,
+    this.isNewUser = false,
+  });
 
   final User user;
   final String token;
+  final bool isNewUser;
 }
 
 class AuthService {
@@ -99,7 +104,7 @@ class AuthService {
         displayName: displayName.trim(),
       );
       await _api.writeSessionToken(token);
-      return AuthSession(user: user, token: token);
+      return AuthSession(user: user, token: token, isNewUser: true);
     }
 
     try {
@@ -108,7 +113,7 @@ class AuthService {
         data: {'name': displayName, 'email': email, 'password': password},
         options: authRouteOptions(),
       );
-      return await _sessionFromResponse(response);
+      return await _sessionFromResponse(response, isNewUser: true);
     } catch (error) {
       throw apiExceptionFrom(
         error,
@@ -117,13 +122,19 @@ class AuthService {
     }
   }
 
-  Future<AuthSession> continueWithGoogle() async {
+  Future<AuthSession> continueWithGoogle({
+    bool isAccountCreation = false,
+  }) async {
     if (Env.useMockData) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       final token = 'mock-session-${DateTime.now().millisecondsSinceEpoch}';
       final user = _mockUser(email: 'alex@gmail.com');
       await _api.writeSessionToken(token);
-      return AuthSession(user: user, token: token);
+      return AuthSession(
+        user: user,
+        token: token,
+        isNewUser: isAccountCreation,
+      );
     }
 
     try {
@@ -157,6 +168,7 @@ class AuthService {
       return AuthSession(
         user: User.fromJson(Map<String, dynamic>.from(userData)),
         token: token,
+        isNewUser: data?['isNewUser'] == true,
       );
     } on GoogleSignInException catch (error) {
       throw ApiException(_googleSignInExceptionMessage(error));
@@ -194,8 +206,9 @@ class AuthService {
   }
 
   Future<AuthSession> _sessionFromResponse(
-    Response<Map<String, dynamic>> response,
-  ) async {
+    Response<Map<String, dynamic>> response, {
+    bool isNewUser = false,
+  }) async {
     final data = response.data;
     final cookie = _sessionCookieFromHeaders(response.headers);
     final token =
@@ -208,6 +221,7 @@ class AuthService {
     return AuthSession(
       user: User.fromJson(Map<String, dynamic>.from(userData)),
       token: token,
+      isNewUser: isNewUser,
     );
   }
 

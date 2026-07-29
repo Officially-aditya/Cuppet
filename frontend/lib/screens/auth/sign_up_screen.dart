@@ -211,12 +211,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       onPressed:
                           loading
                               ? null
-                              : () => Navigator.of(
-                                context,
-                              ).pushNamedAndRemoveUntil(
-                                AppRoutes.signIn,
-                                (route) => false,
-                              ),
+                              : () =>
+                                  Navigator.of(context).pushNamedAndRemoveUntil(
+                                    AppRoutes.signIn,
+                                    (route) => false,
+                                  ),
                       style: TextButton.styleFrom(
                         foregroundColor: CuppetWorkspaceColors.primary,
                         textStyle: const TextStyle(fontWeight: FontWeight.w800),
@@ -249,22 +248,28 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     }
     final state = ref.read(authControllerProvider).asData?.value;
     if (state?.isAuthenticated == true) {
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+      _continueAfterAuthentication(state!);
     }
   }
 
   Future<void> _continueWithGoogle() async {
-    await ref.read(authControllerProvider.notifier).continueWithGoogle();
+    await ref
+        .read(authControllerProvider.notifier)
+        .continueWithGoogle(isAccountCreation: true);
     if (!mounted) {
       return;
     }
     final state = ref.read(authControllerProvider).asData?.value;
     if (state?.isAuthenticated == true) {
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil(AppRoutes.inbox, (route) => false);
+      _continueAfterAuthentication(state!);
     }
+  }
+
+  void _continueAfterAuthentication(AuthState state) {
+    final destination =
+        state.isNewUser ? AppRoutes.personalizationOnboarding : AppRoutes.inbox;
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(destination, (route) => false);
   }
 }
