@@ -26,6 +26,7 @@ import 'screens/main_shell.dart';
 import 'screens/settings/memory_screen.dart';
 import 'screens/settings/storage_screen.dart';
 import 'screens/settings/profile_screen.dart';
+import 'screens/settings/personalization_screen.dart';
 import 'screens/thread/agent_preferences_screen.dart';
 import 'screens/thread/thread_screen.dart';
 
@@ -62,6 +63,10 @@ class SydneyApp extends ConsumerWidget {
       AppRoutes.settings => _route(settings, const MainShell(initialIndex: 2)),
       AppRoutes.storage => _route(settings, const StorageScreen()),
       AppRoutes.memory => _route(settings, const MemoryScreen()),
+      AppRoutes.personalization => _route(
+        settings,
+        const PersonalizationScreen(),
+      ),
       AppRoutes.profile => _route(settings, const ProfileScreen()),
       AppRoutes.thread => _threadRoute(settings),
       AppRoutes.confirmCreate => _confirmCreateRoute(settings),

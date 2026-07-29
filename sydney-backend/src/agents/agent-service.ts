@@ -23,6 +23,7 @@ import {
   reviseAgentDefinition
 } from "./runtime/configuration-service.js";
 import { definitionToParsedIntent } from "./runtime/compiler.js";
+import { recordCuppetActivitySignal } from "../personalization/activity-events.js";
 
 export type ManagedAgent = {
   id: string;
@@ -273,6 +274,15 @@ export async function runManagedAgent(userId: string, agentId: string) {
   });
   await recordManagedAgentAudit(userId, agent.id, "run", "queued", {
     job_id: job.id
+  });
+  void recordCuppetActivitySignal({
+    userId,
+    eventType: "agent_retained",
+    subjectType: "agent_type",
+    subjectKey: `agent_${agent.id}`,
+    agentId: agent.id
+  }).catch((error) => {
+    console.error("Agent retention preference recording failed:", error);
   });
   return { agent, job };
 }

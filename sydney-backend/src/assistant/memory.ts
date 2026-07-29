@@ -575,6 +575,9 @@ export async function forgetMemoryById(
     `DELETE FROM assistant_memories WHERE id = $1 AND user_id = $2`,
     [memoryId, userId]
   );
+  if ((result.rowCount ?? 0) > 0) {
+    await removeConfirmedMemoryPreference(userId, memoryId);
+  }
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -590,6 +593,13 @@ export async function forgetMemoriesMatching(
     await client.query(
       "SELECT pg_advisory_xact_lock(hashtext($1), hashtext('assistant_memories'))",
       [userId]
+    );
+    const removedConfirmed = await client.query<{ id: string }>(
+      `SELECT id FROM assistant_memories
+       WHERE user_id = $1 AND status = 'confirmed'
+         AND (replace(canonical_key, '_', ' ') ILIKE $2 OR value->>'text' ILIKE $2)
+       FOR UPDATE`,
+      [userId, `%${normalized}%`]
     );
     const result = await client.query(
       `DELETE FROM assistant_memories
@@ -613,6 +623,9 @@ export async function forgetMemoriesMatching(
       await writeCompactedDigest(client, userId, remaining);
     }
     await client.query("COMMIT");
+    for (const memory of removedConfirmed.rows) {
+      await removeConfirmedMemoryPreference(userId, memory.id);
+    }
     return (result.rowCount ?? 0) + removedFromDigest;
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
@@ -624,6 +637,7 @@ export async function forgetMemoriesMatching(
 
 export async function deleteAllMemories(userId: string): Promise<number> {
   const client = await pool.connect();
+  let deleted = 0;
   try {
     await client.query("BEGIN");
     await client.query(
@@ -638,14 +652,33 @@ export async function deleteAllMemories(userId: string): Promise<number> {
       `DELETE FROM assistant_memory_digests WHERE user_id = $1 RETURNING item_count`,
       [userId]
     );
+    deleted = (result.rowCount ?? 0) + (digest.rows[0]?.item_count ?? 0);
     await client.query("COMMIT");
-    return (result.rowCount ?? 0) + (digest.rows[0]?.item_count ?? 0);
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;
   } finally {
     client.release();
   }
+  await removeAllConfirmedMemoryPreferences(userId);
+  return deleted;
+}
+
+async function removeConfirmedMemoryPreference(
+  userId: string,
+  memoryId: string
+): Promise<void> {
+  const { removePreferenceEventsByProvenance } = await import(
+    "../personalization/event-writer.js"
+  );
+  await removePreferenceEventsByProvenance(userId, "confirmed_memory", memoryId);
+}
+
+async function removeAllConfirmedMemoryPreferences(userId: string): Promise<void> {
+  const { removePreferenceEventsByProvenanceType } = await import(
+    "../personalization/event-writer.js"
+  );
+  await removePreferenceEventsByProvenanceType(userId, "confirmed_memory");
 }
 
 export async function setMemoryStatus(

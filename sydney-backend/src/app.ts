@@ -59,7 +59,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(cors, {
     origin(origin, callback) {
-      if (!origin || config.TRUSTED_ORIGINS.includes(origin)) {
+      const browserExtensionOrigin =
+        origin && /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
+      if (!origin || config.TRUSTED_ORIGINS.includes(origin) || browserExtensionOrigin) {
         callback(null, true);
         return;
       }
@@ -71,7 +73,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       "Content-Type",
       "Authorization",
       "X-Requested-With",
-      "X-Cuppet-Expected-User"
+      "X-Cuppet-Expected-User",
+      "X-Cuppet-Browser-Token"
     ],
     credentials: true,
     maxAge: 86400

@@ -8,6 +8,7 @@ import {
   getCompactedMemoryDigest,
   listConfirmedMemories
 } from "./memory.js";
+import { removePreferenceEventsByProvenance, removePreferenceEventsByProvenanceType } from "../personalization/event-writer.js";
 
 export async function assistantMemoryRoutes(app: FastifyInstance): Promise<void> {
   app.get(
@@ -51,6 +52,11 @@ export async function assistantMemoryRoutes(app: FastifyInstance): Promise<void>
           error: { code: "MEMORY_NOT_FOUND", message: "Memory not found." }
         });
       }
+      await removePreferenceEventsByProvenance(
+        request.auth!.userId,
+        "confirmed_memory",
+        memoryId
+      );
       return reply.code(204).send();
     }
   );
@@ -58,6 +64,13 @@ export async function assistantMemoryRoutes(app: FastifyInstance): Promise<void>
   app.delete(
     "/users/me/assistant-memories",
     { preHandler: requireAuth },
-    async (request) => ({ deleted: await deleteAllMemories(request.auth!.userId) })
+    async (request) => {
+      const deleted = await deleteAllMemories(request.auth!.userId);
+      await removePreferenceEventsByProvenanceType(
+        request.auth!.userId,
+        "confirmed_memory"
+      );
+      return { deleted };
+    }
   );
 }

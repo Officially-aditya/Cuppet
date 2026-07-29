@@ -278,6 +278,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         () => Navigator.of(context).pushNamed(AppRoutes.memory),
                   ),
                   _SettingsTile(
+                    key: const ValueKey('settings-personalization-card'),
+                    title: 'Personalization',
+                    description:
+                        'Choose what Cuppet may learn to make fewer, more useful suggestions.',
+                    iconPath: 'assets/icons/memory.svg',
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: CuppetWorkspaceColors.primaryInk,
+                      size: 20,
+                    ),
+                    onTap:
+                        () => Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.personalization),
+                  ),
+                  _SettingsTile(
                     key: const ValueKey('settings-storage-card'),
                     title: 'Storage',
                     description:

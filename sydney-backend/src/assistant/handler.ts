@@ -71,6 +71,10 @@ import {
 } from "./agent-selection.js";
 import { routeAssistantMessage, type AssistantRoute } from "./router.js";
 import { insertConfiguredAgent } from "../agents/runtime/configuration-service.js";
+import { evaluateAndDeliverContextualSuggestion } from "../suggestions/delivery-service.js";
+import { bridgeConfirmedMemory } from "../personalization/memory-bridge.js";
+import { recordConnectedContentSignals } from "../personalization/connected-content.js";
+import { recordCuppetActivitySignal } from "../personalization/activity-events.js";
 
 export type AssistantMessageRow = {
   id: string;
@@ -120,6 +124,7 @@ export async function handleAssistantMessage(input: {
   attachmentIds?: string[];
   action?: string;
   payload?: Record<string, unknown>;
+  reuseSourceMessageId?: string;
 }): Promise<AssistantHandleResult> {
   const text = input.text?.trim() ?? "";
   const currentInstruction = text || "Please analyze the attached files.";
@@ -153,14 +158,20 @@ export async function handleAssistantMessage(input: {
     input.userId,
     input.attachmentIds ?? []
   );
-  const written = await writeUserTurn({
-    userId: input.userId,
-    assistantId: input.assistantId,
-    text,
-    action: input.action,
-    payload: input.payload,
-    attachments
-  });
+  const written = input.reuseSourceMessageId
+    ? await loadExistingUserTurn({
+        userId: input.userId,
+        assistantId: input.assistantId,
+        messageId: input.reuseSourceMessageId
+      })
+    : await writeUserTurn({
+        userId: input.userId,
+        assistantId: input.assistantId,
+        text,
+        action: input.action,
+        payload: input.payload,
+        attachments
+      });
 
   let outcome: AssistantOutcome;
   if (route.kind === "confirm") {
@@ -209,6 +220,9 @@ export async function handleAssistantMessage(input: {
       pendingAction: publicPendingAction(pending)
     };
   } else if (written.memoryResult?.memory?.status === "confirmed") {
+    void bridgeConfirmedMemory(input.userId, written.memoryResult.memory).catch((error) => {
+      console.error("Failed to bridge directly confirmed memory to preferences:", error);
+    });
     outcome = {
       content: plainText(`I’ll remember: ${written.memoryResult.memory.value.text}.`)
     };
@@ -234,6 +248,38 @@ export async function handleAssistantMessage(input: {
     sourceRefs: outcome.sourceRefs ?? []
   });
   await publishMessageEvents(input.userId, [written.userMessage, assistantMessage]);
+  if (outcome.sourceRefs?.length) {
+    void recordConnectedContentSignals({
+      userId: input.userId,
+      sourceRefs: outcome.sourceRefs,
+      agentId: input.assistantId,
+      messageId: assistantMessage.id
+    }).catch((error) => {
+      console.error("Connected-content preference recording failed:", error);
+    });
+  }
+  if (text) {
+    // Suggestion evaluation is deliberately detached from the normal response.
+    void evaluateAndDeliverContextualSuggestion({
+      userId: input.userId,
+      assistantId: input.assistantId,
+      sourceMessageId: written.userMessage.id,
+      currentText: text,
+      responseContent: outcome.content,
+      sourceRefs: outcome.sourceRefs ?? []
+    }).catch((error) => {
+      console.error("Contextual suggestion evaluation failed:", error);
+    });
+    if (text.includes("?")) {
+      void recordFollowUpActivity({
+        userId: input.userId,
+        assistantId: input.assistantId,
+        sourceMessageId: written.userMessage.id
+      }).catch((error) => {
+        console.error("Follow-up preference recording failed:", error);
+      });
+    }
+  }
   return {
     message: written.userMessage,
     agent_message: assistantMessage,
@@ -1072,6 +1118,7 @@ async function handlePendingDecision(input: {
   }
   const client = await pool.connect();
   let pending: PendingAction | null = null;
+  let confirmedMemory: Awaited<ReturnType<typeof setMemoryStatus>> = null;
   try {
     await client.query("BEGIN");
     const { rows } = await client.query<PendingAction>(
@@ -1092,7 +1139,7 @@ async function handlePendingDecision(input: {
     if (pending?.action_type === "confirm_memory") {
       const memoryId = pending.payload.memory_id?.toString();
       if (memoryId) {
-        await setMemoryStatus(
+        confirmedMemory = await setMemoryStatus(
           client,
           input.userId,
           memoryId,
@@ -1115,6 +1162,11 @@ async function handlePendingDecision(input: {
     throw error;
   } finally {
     client.release();
+  }
+  if (confirmedMemory?.status === "confirmed") {
+    void bridgeConfirmedMemory(input.userId, confirmedMemory).catch((error) => {
+      console.error("Failed to bridge confirmed memory to preferences:", error);
+    });
   }
   if (!pending) {
     return { content: plainText("That confirmation expired or was already used.") };
@@ -1332,6 +1384,31 @@ async function loadAndAnalyzeAttachments(
   }
 }
 
+async function recordFollowUpActivity(input: {
+  userId: string;
+  assistantId: string;
+  sourceMessageId: string;
+}): Promise<void> {
+  const { rows } = await pool.query(
+    `SELECT 1
+     FROM agent_messages
+     WHERE user_id = $1 AND agent_id = $2 AND role = 'agent'
+       AND created_at < (SELECT created_at FROM agent_messages WHERE id = $3)
+     LIMIT 1`,
+    [input.userId, input.assistantId, input.sourceMessageId]
+  );
+  if (!rows[0]) return;
+  await recordCuppetActivitySignal({
+    userId: input.userId,
+    eventType: "follow_up_question",
+    subjectType: "agent_type",
+    subjectKey: `agent_${input.assistantId}`,
+    provenanceId: input.sourceMessageId,
+    messageId: input.sourceMessageId,
+    agentId: input.assistantId
+  });
+}
+
 async function writeUserTurn(input: {
   userId: string;
   assistantId: string;
@@ -1395,6 +1472,27 @@ async function writeUserTurn(input: {
   } finally {
     client.release();
   }
+}
+
+async function loadExistingUserTurn(input: {
+  userId: string;
+  assistantId: string;
+  messageId: string;
+}): Promise<{
+  userMessage: AssistantMessageRow;
+  memoryResult: MemoryRecordResult | null;
+}> {
+  const { rows } = await pool.query<AssistantMessageRow>(
+    `SELECT id, agent_id, user_id, role, content,
+            COALESCE(source_refs, '[]'::jsonb) AS source_refs,
+            read_at, created_at
+     FROM agent_messages
+     WHERE id = $1 AND agent_id = $2 AND user_id = $3 AND role = 'user'
+     LIMIT 1`,
+    [input.messageId, input.assistantId, input.userId]
+  );
+  if (!rows[0]) throw new Error("The original Assistant request is no longer available.");
+  return { userMessage: rows[0], memoryResult: null };
 }
 
 async function writeAssistantReply(input: {

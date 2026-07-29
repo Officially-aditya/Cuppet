@@ -13,6 +13,8 @@ import { userRoutes } from "../users/routes.js";
 import { assistantMemoryRoutes } from "../assistant/memory-routes.js";
 import { messageArchiveRoutes } from "../archive/routes.js";
 import { accessRoutes } from "../access/routes.js";
+import { personalizationRoutes } from "../personalization/routes.js";
+import { suggestionRoutes } from "../suggestions/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
@@ -20,6 +22,8 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(assistantMemoryRoutes);
   await app.register(messageArchiveRoutes);
   await app.register(accessRoutes);
+  await app.register(personalizationRoutes);
+  await app.register(suggestionRoutes);
   await app.register(agentRoutes);
   await app.register(connectorRoutes);
   await app.register(messageRoutes);

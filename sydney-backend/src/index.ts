@@ -12,8 +12,14 @@ import {
 } from "./connectors/google-workspace.js";
 import { cleanAssistantRetention } from "./assistant/retention.js";
 import { compactOverCapacityMemories } from "./assistant/memory.js";
+import { cleanPersonalizationRetention } from "./personalization/retention.js";
 import { coordinateMessageArchives } from "./archive/message-archive.js";
 import { createMessageArchiveWorker } from "./workers/message-archive-worker.js";
+import {
+  createPersonalizationWorker,
+  enqueuePendingPersonalizationOutbox,
+  runScheduledProactiveSuggestions
+} from "./workers/personalization-worker.js";
 
 // Initialize Firebase on startup
 initializeFirebase();
@@ -21,6 +27,9 @@ initializeFirebase();
 const app = await buildApp();
 const embeddedWorker = createAgentExecutorWorker();
 const embeddedArchiveWorker = createMessageArchiveWorker();
+const embeddedPersonalizationWorker = createPersonalizationWorker();
+let personalizationRecoveryTimer: NodeJS.Timeout | undefined;
+let proactiveSuggestionTimer: NodeJS.Timeout | undefined;
 
 setAgentWorkerRuntimeStatus("starting");
 embeddedWorker.on("ready", () => {
@@ -53,12 +62,20 @@ async function cleanExpiredUploads(): Promise<void> {
 
 async function runAssistantRetentionCleanup(): Promise<void> {
   try {
-    const [counts, compactedUsers] = await Promise.all([
+    const [counts, compactedUsers, personalization] = await Promise.all([
       cleanAssistantRetention(),
-      compactOverCapacityMemories()
+      compactOverCapacityMemories(),
+      cleanPersonalizationRetention()
     ]);
-    if (Object.values(counts).some((count) => count > 0) || compactedUsers > 0) {
-      app.log.info({ counts, compacted_users: compactedUsers }, "Applied storage retention and memory compaction");
+    if (
+      Object.values(counts).some((count) => count > 0) ||
+      compactedUsers > 0 ||
+      Object.values(personalization).some((count) => count > 0)
+    ) {
+      app.log.info(
+        { counts, compacted_users: compactedUsers, personalization },
+        "Applied storage retention and memory compaction"
+      );
     }
   } catch (error) {
     app.log.error(error, "Failed to apply Assistant storage retention");
@@ -70,6 +87,21 @@ try {
   setAgentWorkerRuntimeStatus("ready");
   await waitForWorkerReady(embeddedArchiveWorker.waitUntilReady(), 15_000);
   app.log.info("Embedded message archive worker is ready");
+  await waitForWorkerReady(embeddedPersonalizationWorker.waitUntilReady(), 15_000);
+  app.log.info("Embedded personalization worker is ready");
+  await enqueuePendingPersonalizationOutbox();
+  personalizationRecoveryTimer = setInterval(() => {
+    void enqueuePendingPersonalizationOutbox().catch((error) =>
+      app.log.error({ error }, "Personalization outbox recovery failed")
+    );
+  }, 60_000);
+  personalizationRecoveryTimer.unref();
+  proactiveSuggestionTimer = setInterval(() => {
+    void runScheduledProactiveSuggestions().then((result) => {
+      if (result.delivered > 0) app.log.info(result, "Delivered scheduled suggestions");
+    }).catch((error) => app.log.error({ error }, "Scheduled suggestion evaluation failed"));
+  }, 15 * 60_000);
+  proactiveSuggestionTimer.unref();
   await syncActiveAgentSchedules(app.log);
   
   // Prune temporary binaries and Assistant records immediately and hourly.
@@ -131,6 +163,9 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   await embeddedWorker.close();
   setAgentWorkerRuntimeStatus("closed");
   await embeddedArchiveWorker.close();
+  await embeddedPersonalizationWorker.close();
+  if (personalizationRecoveryTimer) clearInterval(personalizationRecoveryTimer);
+  if (proactiveSuggestionTimer) clearInterval(proactiveSuggestionTimer);
   await closeQueue();
   await closeDatabase();
   process.exit(0);

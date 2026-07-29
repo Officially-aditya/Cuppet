@@ -27,13 +27,16 @@ class IntegratedMediaAttachmentPanel extends StatefulWidget {
     super.key,
   });
 
-  final Function(List<PickedAttachmentItem> files, bool storeInDrive) onFilesPicked;
+  final Function(List<PickedAttachmentItem> files, bool storeInDrive)
+  onFilesPicked;
 
   @override
-  State<IntegratedMediaAttachmentPanel> createState() => _IntegratedMediaAttachmentPanelState();
+  State<IntegratedMediaAttachmentPanel> createState() =>
+      _IntegratedMediaAttachmentPanelState();
 }
 
-class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachmentPanel> {
+class _IntegratedMediaAttachmentPanelState
+    extends State<IntegratedMediaAttachmentPanel> {
   AttachmentTab _activeTab = AttachmentTab.gallery;
   bool _saveToDrive = false;
 
@@ -41,7 +44,6 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
   bool _cameraInitialized = false;
 
   List<AssetEntity> _galleryAssets = [];
-  bool _loadingGallery = true;
   bool _hasGalleryAccess = true;
 
   final ImagePicker _imagePicker = ImagePicker();
@@ -84,14 +86,11 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
           type: RequestType.image,
         );
         if (paths.isNotEmpty) {
-          final List<AssetEntity> entities = await paths.first.getAssetListRange(
-            start: 0,
-            end: 45,
-          );
+          final List<AssetEntity> entities = await paths.first
+              .getAssetListRange(start: 0, end: 45);
           if (mounted) {
             setState(() {
               _galleryAssets = entities;
-              _loadingGallery = false;
               _hasGalleryAccess = true;
             });
             return;
@@ -101,7 +100,6 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
         if (mounted) {
           setState(() {
             _hasGalleryAccess = false;
-            _loadingGallery = false;
           });
         }
         return;
@@ -109,7 +107,6 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
     } catch (_) {}
     if (mounted) {
       setState(() {
-        _loadingGallery = false;
         _hasGalleryAccess = _galleryAssets.isNotEmpty;
       });
     }
@@ -136,17 +133,18 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
         source: ImageSource.camera,
         imageQuality: 85,
       );
-      if (xfile != null && mounted) {
+      if (xfile != null) {
         final bytes = await xfile.readAsBytes();
+        if (!mounted) return;
         final size = bytes.length;
-        final name = xfile.name.isNotEmpty
-            ? xfile.name
-            : 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final name =
+            xfile.name.isNotEmpty
+                ? xfile.name
+                : 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
         Navigator.pop(context);
-        widget.onFilesPicked(
-          [PickedAttachmentItem(bytes: bytes, name: name, size: size)],
-          _saveToDrive,
-        );
+        widget.onFilesPicked([
+          PickedAttachmentItem(bytes: bytes, name: name, size: size),
+        ], _saveToDrive);
       }
     } catch (e) {
       if (mounted) {
@@ -160,21 +158,22 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
   Future<void> _selectAsset(AssetEntity asset) async {
     try {
       final file = await asset.file;
-      if (file != null && mounted) {
+      if (file != null) {
         final bytes = await file.readAsBytes();
+        if (!mounted) return;
         final size = bytes.length;
-        final name = asset.title ?? 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final name =
+            asset.title ?? 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
         Navigator.pop(context);
-        widget.onFilesPicked(
-          [PickedAttachmentItem(bytes: bytes, name: name, size: size)],
-          _saveToDrive,
-        );
+        widget.onFilesPicked([
+          PickedAttachmentItem(bytes: bytes, name: name, size: size),
+        ], _saveToDrive);
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read photo.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not read photo.')));
       }
     }
   }
@@ -182,20 +181,22 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
   Future<void> _pickFromGallery() async {
     try {
       final images = await _imagePicker.pickMultiImage(imageQuality: 85);
-      if (images.isNotEmpty && mounted) {
+      if (images.isNotEmpty) {
         final items = <PickedAttachmentItem>[];
         for (final img in images) {
           final bytes = await img.readAsBytes();
           items.add(
             PickedAttachmentItem(
               bytes: bytes,
-              name: img.name.isNotEmpty
-                  ? img.name
-                  : 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
+              name:
+                  img.name.isNotEmpty
+                      ? img.name
+                      : 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
               size: bytes.length,
             ),
           );
         }
+        if (!mounted) return;
         Navigator.pop(context);
         widget.onFilesPicked(items, _saveToDrive);
       }
@@ -232,17 +233,13 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
         for (final f in result.files) {
           if (f.bytes != null) {
             items.add(
-              PickedAttachmentItem(
-                bytes: f.bytes!,
-                name: f.name,
-                size: f.size,
-              ),
+              PickedAttachmentItem(bytes: f.bytes!, name: f.name, size: f.size),
             );
           }
         }
         if (items.isNotEmpty) {
-        if (!mounted) return;
-        Navigator.pop(context);
+          if (!mounted) return;
+          Navigator.pop(context);
           widget.onFilesPicked(items, _saveToDrive);
         }
       }
@@ -264,9 +261,7 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
       height: sheetHeight,
       decoration: const BoxDecoration(
         color: CuppetWorkspaceColors.card,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -327,9 +322,10 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
-              child: _activeTab == AttachmentTab.gallery
-                  ? _buildGalleryTab(context)
-                  : _buildFileTab(context),
+              child:
+                  _activeTab == AttachmentTab.gallery
+                      ? _buildGalleryTab(context)
+                      : _buildFileTab(context),
             ),
           ),
 
@@ -343,7 +339,8 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
   Widget _buildGalleryTab(BuildContext context) {
     // Grid: 1st tile is Live Camera, optional 2nd tile if gallery permission needed, followed by photos + fallback tile
     final showPermissionTile = !_hasGalleryAccess && _galleryAssets.isEmpty;
-    final totalCount = 1 + (showPermissionTile ? 1 : 0) + _galleryAssets.length + 1;
+    final totalCount =
+        1 + (showPermissionTile ? 1 : 0) + _galleryAssets.length + 1;
 
     return Padding(
       key: const ValueKey('tab-gallery'),
@@ -375,17 +372,14 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: FutureBuilder<Uint8List?>(
-                  future: asset.thumbnailDataWithSize(const ThumbnailSize(300, 300)),
+                  future: asset.thumbnailDataWithSize(
+                    const ThumbnailSize(300, 300),
+                  ),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data != null) {
-                      return Image.memory(
-                        snapshot.data!,
-                        fit: BoxFit.cover,
-                      );
+                      return Image.memory(snapshot.data!, fit: BoxFit.cover);
                     }
-                    return Container(
-                      color: CuppetWorkspaceColors.softSage,
-                    );
+                    return Container(color: CuppetWorkspaceColors.softSage);
                   },
                 ),
               ),
@@ -495,7 +489,6 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
                 ),
               ),
 
-
             // Center capture icon indicator
             Center(
               child: Container(
@@ -504,7 +497,10 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.35),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    width: 1.5,
+                  ),
                 ),
                 child: const Icon(
                   Icons.camera_rounded,
@@ -571,7 +567,11 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: CuppetWorkspaceColors.border),
               ),
-              child: Icon(icon, color: CuppetWorkspaceColors.primaryInk, size: 24),
+              child: Icon(
+                icon,
+                color: CuppetWorkspaceColors.primaryInk,
+                size: 24,
+              ),
             ),
             const SizedBox(width: SydneySpacing.md),
             Expanded(
@@ -656,15 +656,16 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
         decoration: BoxDecoration(
           color: isSelected ? CuppetWorkspaceColors.card : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
-          boxShadow: isSelected
-              ? const [
-                  BoxShadow(
-                    color: Color(0x0F000000),
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ]
-              : null,
+          boxShadow:
+              isSelected
+                  ? const [
+                    BoxShadow(
+                      color: Color(0x0F000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ]
+                  : null,
         ),
         child: Center(
           child: Text(
@@ -672,9 +673,10 @@ class _IntegratedMediaAttachmentPanelState extends State<IntegratedMediaAttachme
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected
-                  ? CuppetWorkspaceColors.ink
-                  : CuppetWorkspaceColors.muted,
+              color:
+                  isSelected
+                      ? CuppetWorkspaceColors.ink
+                      : CuppetWorkspaceColors.muted,
             ),
           ),
         ),

@@ -13,6 +13,7 @@ import '../../providers/agents_provider.dart';
 import '../../providers/connectors_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../providers/message_archive_provider.dart';
+import '../../providers/personalization_provider.dart';
 import '../../config/routes.dart';
 import '../../widgets/thread/message_card.dart';
 import '../../widgets/thread/sydney_heatmap.dart';
@@ -62,6 +63,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   int _lastRenderedMessageCount = -1;
   AgentAvailability? _lastAvailability;
   String? _lastReadSyncedMessageId;
+  final Map<String, String> _feedbackByMessage = {};
 
   /// Optimistic UI: the message the user just sent, shown immediately.
   Message? _pendingUserMessage;
@@ -554,6 +556,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             child: MessageCard(
                               message: message,
                               onAction: _handleMessageAction,
+                              feedbackType: _feedbackByMessage[message.id],
                               useWorkspacePalette: true,
                             ),
                           ),
@@ -784,6 +787,80 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final actionId = action['id']?.toString() ?? '';
     final connectorId = _connectorIdFromAction(action);
 
+    if (actionType == 'suggestion_decision') {
+      await _handleSuggestionDecision(action);
+      return;
+    }
+
+    if (actionType == 'message_feedback') {
+      final messageId = action['messageId']?.toString();
+      final feedbackType = action['feedback_type']?.toString();
+      if (messageId == null || feedbackType == null) return;
+      if (mounted) setState(() => _feedbackByMessage[messageId] = feedbackType);
+      try {
+        final stored = await ref
+            .read(personalizationServiceProvider)
+            .submitFeedback(
+              messageId: messageId,
+              feedbackType: feedbackType,
+              subjectType: action['subject_type']?.toString(),
+              subjectKey: action['subject_key']?.toString(),
+            );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              stored
+                  ? 'Feedback saved.'
+                  : 'Turn on Direct feedback in Personalization to save this signal.',
+            ),
+          ),
+        );
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                friendlyErrorMessage(
+                  error,
+                  fallback: 'Feedback could not be saved.',
+                ),
+              ),
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    if (actionType == 'message_activity') {
+      final messageId = action['messageId']?.toString();
+      final activityType = action['activity_type']?.toString();
+      final subjectType = action['subject_type']?.toString();
+      final subjectKey = action['subject_key']?.toString();
+      if (messageId == null ||
+          activityType == null ||
+          subjectType == null ||
+          subjectKey == null ||
+          subjectKey.trim().isEmpty) {
+        return;
+      }
+      try {
+        await ref
+            .read(personalizationServiceProvider)
+            .recordActivity(
+              messageId: messageId,
+              activityType: activityType,
+              subjectType: subjectType,
+              subjectKey: subjectKey,
+            );
+      } catch (error) {
+        // Reading should not be interrupted by a best-effort activity signal.
+        debugPrint('Activity signal failed: $error');
+      }
+      return;
+    }
+
     if (actionType == 'explore_news') {
       final rawHeadline = action['headline']?.toString() ?? '';
       final normalizedHeadline =
@@ -956,8 +1033,16 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       ref.invalidate(connectorsProvider);
 
       final runAfterConnect = action['run_after_connect'] != false;
+      final resumeSuggestionId =
+          action['resume_suggestion_id']?.toString().trim();
       if (runAfterConnect) {
-        await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
+        if (resumeSuggestionId != null && resumeSuggestionId.isNotEmpty) {
+          await ref
+              .read(suggestionServiceProvider)
+              .continueSuggestion(resumeSuggestionId);
+        } else {
+          await ref.read(agentServiceProvider).runAgent(_activeAgent.id);
+        }
         ref.invalidate(messagesProvider(_activeAgent.threadId));
         ref.invalidate(agentsProvider);
         _scheduleRunRefreshes();
@@ -970,7 +1055,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         SnackBar(
           content: Text(
             runAfterConnect
-                ? '$connectorName connected. Run queued.'
+                ? resumeSuggestionId != null && resumeSuggestionId.isNotEmpty
+                    ? '$connectorName connected. Original request resumed.'
+                    : '$connectorName connected. Run queued.'
                 : '$connectorName connected.',
           ),
         ),
@@ -989,6 +1076,147 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _handleSuggestionDecision(Map<String, dynamic> action) async {
+    final suggestionId = action['suggestion_id']?.toString().trim();
+    final decision = action['decision']?.toString().trim();
+    if (suggestionId == null ||
+        suggestionId.isEmpty ||
+        decision == null ||
+        decision.isEmpty) {
+      return;
+    }
+
+    if (decision == 'explain') {
+      try {
+        final explanation = await ref
+            .read(suggestionServiceProvider)
+            .explain(suggestionId);
+        if (!mounted) return;
+        final used =
+            explanation['data_categories'] is List
+                ? (explanation['data_categories'] as List)
+                    .map((item) => item.toString())
+                    .toList(growable: false)
+                : const <String>[];
+        final notUsed =
+            explanation['data_categories_not_used'] is List
+                ? (explanation['data_categories_not_used'] as List)
+                    .map((item) => item.toString())
+                    .toList(growable: false)
+                : const <String>[];
+        final signals =
+            explanation['signals'] is List
+                ? (explanation['signals'] as List)
+                    .map((item) => item.toString())
+                    .toList(growable: false)
+                : const <String>[];
+        await showDialog<void>(
+          context: context,
+          builder:
+              (dialogContext) => AlertDialog(
+                title: const Text('Why this appeared'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        explanation['summary']?.toString() ??
+                            'It matched a recent Assistant interaction.',
+                      ),
+                      if (used.isNotEmpty) ...[
+                        const SizedBox(height: SydneySpacing.md),
+                        const Text(
+                          'Used data',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        for (final item in used) Text('• $item'),
+                      ],
+                      if (notUsed.isNotEmpty) ...[
+                        const SizedBox(height: SydneySpacing.md),
+                        const Text(
+                          'Not used',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        for (final item in notUsed) Text('• $item'),
+                      ],
+                      if (signals.isNotEmpty) ...[
+                        const SizedBox(height: SydneySpacing.md),
+                        const Text(
+                          'Signals',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        for (final item in signals) Text('• $item'),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+        );
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                friendlyErrorMessage(
+                  error,
+                  fallback: 'The suggestion explanation is unavailable.',
+                ),
+              ),
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _awaitingResponse = true);
+    }
+    try {
+      await ref
+          .read(suggestionServiceProvider)
+          .decide(suggestionId: suggestionId, decision: decision);
+      ref.invalidate(messagesProvider(_activeAgent.threadId));
+      await ref.read(messagesProvider(_activeAgent.threadId).future);
+      ref.invalidate(agentsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(switch (decision) {
+              'accept' => 'Prepared a confirmation. Nothing was created yet.',
+              'not_now' => 'Okay. I will keep this quiet for now.',
+              'dismiss' => 'I will not repeat this suggestion.',
+              'less_like_this' => 'I will show fewer suggestions like this.',
+              _ => 'Suggestion updated.',
+            }),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                error,
+                fallback: 'That suggestion could not be updated.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _awaitingResponse = false);
     }
   }
 

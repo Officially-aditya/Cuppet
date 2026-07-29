@@ -112,6 +112,7 @@ import { accessExecutionRouter } from "../access/router.js";
 import { accessProviderByIdOrConnector } from "../access/provider-directory.js";
 import { setAccessProviderStatus } from "../access/repository.js";
 import { accessRequirementSchema, type AccessRequirement } from "../access/types.js";
+import { recordConnectedContentSignals } from "../personalization/connected-content.js";
 
 const studyGuideResponseSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -502,6 +503,16 @@ async function executeAgentJob(
       additionalTopicsCovered: rendered.additionalTopicsCovered,
       stateEvents: rendered.stateEvents as AgentStateEvent[] | undefined
     });
+    if (rendered.sourceRefs.length > 0) {
+      await recordConnectedContentSignals({
+        userId: agent.user_id,
+        sourceRefs: rendered.sourceRefs,
+        agentId: agent.id,
+        messageId: message.id
+      }).catch((error) => {
+        console.error("Connected-content preference recording failed:", error);
+      });
+    }
     if (job.data.trigger === "event" && job.data.eventId) {
       await markEventDelivery(job.data.eventId, agent.id, "delivered", {
         runId: run.id,

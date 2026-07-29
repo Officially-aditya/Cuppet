@@ -61,6 +61,7 @@ import {
   type AgentStateEvent
 } from "./runtime/state-store.js";
 import { isLlmTokenLimitError, withLlmUser } from "./token-rate-limit.js";
+import { recordCuppetActivitySignal } from "../personalization/activity-events.js";
 
 const createAgentSchema = z
   .object({
@@ -459,6 +460,13 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const nextName = body.data.name ?? existing.name;
+    const existingNotificationsMuted =
+      existing.parsed_intent && typeof existing.parsed_intent === "object"
+        ? (existing.parsed_intent as Record<string, unknown>).notifications_muted === true
+        : false;
+    const notificationMuteChanged =
+      body.data.notifications_muted !== undefined &&
+      body.data.notifications_muted !== existingNotificationsMuted;
     let nextSchedule =
       body.data.schedule_cron === undefined
         ? description === undefined
@@ -550,6 +558,17 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         schedule_cron: updatedAgent.schedule_cron
       }
     });
+    if (notificationMuteChanged && body.data.notifications_muted === true) {
+      void recordCuppetActivitySignal({
+        userId,
+        eventType: "notification_muted",
+        subjectType: "agent_type",
+        subjectKey: `agent_${agentId}`,
+        agentId
+      }).catch((error) => {
+        console.error("Notification mute preference recording failed:", error);
+      });
+    }
 
     return { agent: updatedAgent };
   });

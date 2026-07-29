@@ -84,6 +84,22 @@ npm run dev:api
 - `POST /agents/:id/messages`
 - `PATCH /agents/:id/messages/:msgId`
 
+Preference Intelligence routes are opt-in and remain independent from Assistant
+memory:
+
+- `GET|PATCH /users/me/personalization`
+- `POST|DELETE /users/me/personalization/consents` and `.../:purpose`
+- `GET|PATCH|DELETE /users/me/preference-profile` and `.../:itemId`
+- `GET /users/me/preference-profile/export`
+- `POST|DELETE /messages/:messageId/feedback`
+- `POST /assistant/suggestions/:suggestionId/decision`
+- `GET /assistant/suggestions/:suggestionId/explanation`
+- `POST /assistant/suggestions/:suggestionId/continue`
+
+Personalization events are data-minimized, consent-bound, and processed through
+the transactional outbox. No raw connector, browser, or conversation content is
+written to the preference event store.
+
 Better Auth Fastify integration follows the official catch-all handler pattern.
 
 Protected routes accept both Better Auth session cookies and `Authorization: Bearer <jwt>` tokens.

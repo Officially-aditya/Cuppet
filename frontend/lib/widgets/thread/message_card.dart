@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../../models/message.dart';
+import '../templates/assistant_suggestion_template.dart';
 import '../templates/checklist_template.dart';
 import '../templates/comparison_template.dart';
 import '../templates/data_summary_template.dart';
@@ -24,12 +25,14 @@ class MessageCard extends StatelessWidget {
   const MessageCard({
     required this.message,
     this.onAction,
+    this.feedbackType,
     this.useWorkspacePalette = false,
     super.key,
   });
 
   final Message message;
   final ValueChanged<Map<String, dynamic>>? onAction;
+  final String? feedbackType;
   final bool useWorkspacePalette;
 
   @override
@@ -86,6 +89,27 @@ class MessageCard extends StatelessWidget {
     }
 
     final isUser = message.sender == MessageSender.user;
+    final resultFeedback =
+        !const {
+          'plain_text',
+          'system',
+          'action_confirmation',
+          'assistant_suggestion',
+          'agent_selection',
+          'daily_task',
+        }.contains(message.template);
+    final feedbackItems = <PopupMenuEntry<String>>[
+      const PopupMenuItem(value: 'useful', child: Text('Useful')),
+      const PopupMenuItem(value: 'not_useful', child: Text('Not useful')),
+    ];
+    if (resultFeedback) {
+      feedbackItems.addAll(const [
+        PopupMenuItem(value: 'too_noisy', child: Text('Too noisy')),
+        PopupMenuItem(value: 'wrong_priority', child: Text('Wrong priority')),
+        PopupMenuItem(value: 'wrong_format', child: Text('Wrong format')),
+        PopupMenuItem(value: 'not_relevant', child: Text('Not relevant')),
+      ]);
+    }
     final maxWidth = MediaQuery.sizeOf(context).width * 0.84;
     final content = Container(
       key: ValueKey('message-surface-${message.id}'),
@@ -159,6 +183,41 @@ class MessageCard extends StatelessWidget {
               isUser: isUser,
               onAction: onAction,
             ),
+            if (!isUser &&
+                onAction != null &&
+                !message.isRecoveredRawPayload &&
+                message.template != 'assistant_suggestion' &&
+                message.isLastPart) ...[
+              const SizedBox(height: SydneySpacing.xs),
+              Align(
+                alignment: Alignment.centerRight,
+                child: PopupMenuButton<String>(
+                  tooltip: 'Message feedback',
+                  padding: EdgeInsets.zero,
+                  iconSize: 17,
+                  onSelected:
+                      (feedbackType) => onAction!({
+                        'type': 'message_feedback',
+                        'feedback_type': feedbackType,
+                        'messageId': message.id,
+                      }),
+                  itemBuilder: (context) => feedbackItems,
+                  icon: const Icon(Icons.more_horiz_rounded),
+                ),
+              ),
+            ],
+            if (!isUser && feedbackType != null) ...[
+              const SizedBox(height: SydneySpacing.xs),
+              Text(
+                feedbackType == 'useful'
+                    ? 'Feedback saved: Useful'
+                    : 'Feedback saved',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: CuppetWorkspaceColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
             if (message.isLastPart) ...[
               const SizedBox(height: SydneySpacing.sm),
               Align(
@@ -255,6 +314,10 @@ class _TemplateRouter extends StatelessWidget {
       'action_confirmation' => ActionConfirmationTemplate(
         data: data,
         onAction: actionHandler,
+      ),
+      'assistant_suggestion' => AssistantSuggestionTemplate(
+        data: data,
+        onAction: messageActionHandler,
       ),
       'streak_counter' => StreakCounterTemplate(data: data),
       'comparison' => ComparisonTemplate(data: data),

@@ -12,8 +12,11 @@ export const agentExecutorQueueName = "agent-executor";
 export const agentExecutorJobName = "agent.execute";
 export const messageArchiveQueueName = "message-archive";
 export const messageArchiveJobName = "message-archive.export-user";
+export const personalizationQueueName = "personalization";
+export const personalizationJobName = "personalization.process-outbox";
 
 export type MessageArchiveJobData = { userId: string };
+export type PersonalizationJobData = { outboxId: string };
 
 export type AgentRunTrigger = "manual" | "schedule" | "snooze" | "event";
 
@@ -52,6 +55,11 @@ export const messageArchiveQueue = new Queue<MessageArchiveJobData>(
   { connection: producerRedisConnection }
 );
 
+export const personalizationQueue = new Queue<PersonalizationJobData>(
+  personalizationQueueName,
+  { connection: producerRedisConnection }
+);
+
 export async function enqueueMessageArchive(userId: string) {
   const hour = new Date().toISOString().slice(0, 13).replace(/[-T]/g, "");
   const userKey = createHash("sha256").update(userId).digest("hex").slice(0, 20);
@@ -62,6 +70,25 @@ export async function enqueueMessageArchive(userId: string) {
       jobId: `message-archive-${userKey}-${hour}`,
       attempts: 6,
       backoff: { type: "exponential", delay: 60_000 },
+      removeOnComplete: true,
+      removeOnFail: { count: 1000 }
+    }
+  );
+}
+
+export async function enqueuePersonalizationOutbox(
+  outboxId: string,
+  options: { retry?: boolean } = {}
+) {
+  return personalizationQueue.add(
+    personalizationJobName,
+    { outboxId },
+    {
+      jobId: options.retry
+        ? `personalization-${outboxId}-retry-${Date.now()}`
+        : `personalization-${outboxId}`,
+      attempts: 6,
+      backoff: { type: "exponential", delay: 5000 },
       removeOnComplete: true,
       removeOnFail: { count: 1000 }
     }
@@ -145,5 +172,9 @@ function agentSchedulerId(agentId: string): string {
 }
 
 export async function closeQueue(): Promise<void> {
-  await Promise.all([agentExecutorQueue.close(), messageArchiveQueue.close()]);
+  await Promise.all([
+    agentExecutorQueue.close(),
+    messageArchiveQueue.close(),
+    personalizationQueue.close()
+  ]);
 }

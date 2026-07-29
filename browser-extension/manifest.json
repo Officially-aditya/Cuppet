@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Cuppet Preference Signals",
+  "description": "An opt-in, domain-only bridge for Cuppet personalization.",
+  "version": "0.1.0",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://api.cuppet.in/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Cuppet Preference Signals"
+  },
+  "options_page": "src/options.html"
+}
