@@ -370,6 +370,7 @@ export async function renderGitHubAgent(
     return renderGitHubInboundEvent(agent, event, options);
   }
 
+  const intent = String(agent.parsed_intent.intent ?? "");
   const accessToken = await githubAccessToken(agent.user_id);
   if (!accessToken) return null;
 

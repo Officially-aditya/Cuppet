@@ -14,6 +14,8 @@ export type AgentRow = {
   safety_level: "read" | "suggest" | "act";
   definition?: AgentDefinition;
   config_revision?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export function parseAgentIntent(

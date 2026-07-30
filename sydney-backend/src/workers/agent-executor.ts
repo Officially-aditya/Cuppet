@@ -842,7 +842,9 @@ async function loadAgent(agentId: string): Promise<AgentRow | null> {
         schedule_cron,
         is_assistant,
         status,
-        safety_level
+        safety_level,
+        created_at,
+        updated_at
       FROM agents
       WHERE id = $1
     `,

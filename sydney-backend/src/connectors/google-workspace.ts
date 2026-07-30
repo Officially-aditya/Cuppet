@@ -1018,6 +1018,7 @@ async function renderCalendarAgent(
   options: WorkspaceRenderOptions,
   timeZone: string
 ): Promise<RenderedAgentMessage> {
+  const intent = String(agent.parsed_intent.intent ?? "");
   const now = new Date();
   const days = calendarWindowInDays(agent.prompt, actionText(agent));
   const through = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
