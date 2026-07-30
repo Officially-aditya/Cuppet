@@ -124,8 +124,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                           context,
                                         ).pushNamed(AppRoutes.signInWithEmail),
                               ),
-                              const SizedBox(height: SydneySpacing.xl),
-                              const _AuthSecurityBadge(),
                             ],
                           ),
                         ),
@@ -211,45 +209,5 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         context,
       ).pushNamedAndRemoveUntil(destination, (route) => false);
     }
-  }
-}
-
-class _AuthSecurityBadge extends StatelessWidget {
-  const _AuthSecurityBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: SydneySpacing.md,
-        vertical: SydneySpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: CuppetWorkspaceColors.softSage.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(SydneyRadius.md),
-        border: Border.all(
-          color: CuppetWorkspaceColors.panelBorder.withValues(alpha: 0.6),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.shield_outlined,
-            size: 15,
-            color: CuppetWorkspaceColors.primaryInk,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Encrypted session & private agent execution',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: CuppetWorkspaceColors.primaryInk,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
