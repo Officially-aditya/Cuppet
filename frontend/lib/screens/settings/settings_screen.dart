@@ -282,7 +282,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: 'Personalization',
                     description:
                         'Choose what Cuppet may learn to make fewer, more useful suggestions.',
-                    iconPath: 'assets/icons/memory.svg',
+                    iconPath: 'assets/icons/personalization.svg',
                     trailing: const Icon(
                       Icons.chevron_right_rounded,
                       color: CuppetWorkspaceColors.primaryInk,
