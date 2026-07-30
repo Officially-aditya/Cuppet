@@ -157,9 +157,12 @@ test("all fourteen scheduled output contracts validate through one registry", ()
       title: "Briefing",
       summary: "All clear",
       sections: []
+    },
+    all_clear: {
+      message: "Nothing in your inbox needs your attention right now."
     }
   };
-  assert.equal(scheduledOutputContractIds.length, 14);
+  assert.equal(scheduledOutputContractIds.length, 15);
   for (const contract of scheduledOutputContractIds) {
     const content = normalizeAndValidateOutput({
       template: contract,

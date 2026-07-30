@@ -3,10 +3,12 @@ import { renderGitHubAgent } from "../connectors/github.js";
 import { renderNotionAgent } from "../connectors/notion.js";
 import { renderSlackAgent } from "../connectors/slack.js";
 import {
+  renderedAllClear,
   renderedBriefingCard,
   type BriefingCardMessageContent,
   type RenderedAgentMessage
 } from "../agents/output.js";
+import { resolveOutcomeCopy } from "../agents/runtime/outcome-copy.js";
 import type { AgentRunTrigger } from "../queue/index.js";
 import type { AgentRow } from "./agent-types.js";
 import { scheduledIntro, scheduledTitle } from "./schedule-labels.js";
@@ -161,6 +163,19 @@ export async function renderBriefingAgent(
   });
 
   const highlightCount = sections.reduce((sum, section) => sum + section.items.length, 0);
+  if (highlightCount === 0) {
+    return renderedAllClear(
+      resolveOutcomeCopy(intent, "no_relevant_items"),
+      {
+        sourceRefs,
+        tokensUsed,
+        details: {
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
+    );
+  }
   const mechanicalSummary = sections.length === 0
     ? "Connect the suggested services to build this briefing."
     : `${sections.length} connected sources checked · ${highlightCount} highlights surfaced`;

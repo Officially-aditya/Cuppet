@@ -3,12 +3,14 @@ import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import {
   digestSection,
+  renderedAllClear,
   renderedChecklist,
   renderedDataSummary,
   renderedPlainText,
   renderedUrgencyList,
   type RenderedAgentMessage
 } from "../agents/output.js";
+import { resolveOutcomeCopy } from "../agents/runtime/outcome-copy.js";
 import {
   connectorRecipeContext,
   synthesizeConnectorDigest
@@ -796,18 +798,16 @@ async function renderGmailAgent(
   const sourceRefs = messages.map(gmailMessageSourceRef);
 
   if (messages.length === 0) {
-    return renderedDataSummary(
+    return renderedAllClear(
+      resolveOutcomeCopy(intent, "no_relevant_items"),
       {
-        title,
-        text: options.scheduledIntro(agent, gmailOutputLabel(intent)),
-        summary: "No matching Gmail messages were found for this run.",
-        metrics: [
-          { label: "Messages", value: "0" },
-          { label: "Source", value: "Gmail" }
-        ],
-        footer: "No email content was invented."
-      },
-      { sourceRefs }
+        sourceRefs,
+        details: {
+          source: "Gmail",
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
     );
   }
 
@@ -920,18 +920,16 @@ async function renderDriveAgent(
   }));
 
   if (files.length === 0) {
-    return renderedDataSummary(
+    return renderedAllClear(
+      resolveOutcomeCopy(intent, "no_relevant_items"),
       {
-        title,
-        text: options.scheduledIntro(agent, driveOutputLabel(intent)),
-        summary: "No matching Google Drive files were found for this run.",
-        metrics: [
-          { label: "Files", value: "0" },
-          { label: "Source", value: "Drive" }
-        ],
-        footer: "No document content was invented."
-      },
-      { sourceRefs }
+        sourceRefs,
+        details: {
+          source: "Google Drive",
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
     );
   }
 
@@ -1037,23 +1035,16 @@ async function renderCalendarAgent(
   }));
 
   if (events.length === 0) {
-    let timeframe = `next ${days} days`;
-    if (days === 1) timeframe = "today";
-    else if (days === 2) timeframe = "today and tomorrow";
-
-    return renderedDataSummary(
+    return renderedAllClear(
+      resolveOutcomeCopy(intent, "no_relevant_items"),
       {
-        title: options.scheduledTitle(agent, "calendar agenda"),
-        text: options.scheduledIntro(agent, "calendar agenda"),
-        summary: `No upcoming events were found on your selected calendars for ${timeframe}.`,
-        metrics: [
-          { label: "Events", value: "0" },
-          { label: "Window", value: days === 1 ? "1 day" : `${days} days` },
-          { label: "Source", value: "Calendar" }
-        ],
-        footer: "Read from Google Calendar. No events were created or changed."
-      },
-      { sourceRefs }
+        sourceRefs,
+        details: {
+          source: "Google Calendar",
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
     );
   }
 
@@ -1353,7 +1344,7 @@ export async function readGmailForAssistant(
   );
   return {
     summary: messages.length === 0
-      ? "No matching Gmail messages were found."
+      ? resolveOutcomeCopy("inbox_attention", "no_relevant_items")
       : messages.map((message) =>
           `- ${subjectOrFallback(message)} — ${header(message, "From") ?? "Unknown sender"}${message.snippet ? `: ${message.snippet.slice(0, 240)}` : ""}`
         ).join("\n"),
@@ -1425,7 +1416,7 @@ export async function readDriveForAssistant(
   );
   return {
     summary: files.length === 0
-      ? "No matching Google Drive files were found."
+      ? resolveOutcomeCopy("google_drive_watch", "no_relevant_items")
       : files.map((file, index) =>
           `- ${file.name}${file.modifiedTime ? ` (updated ${file.modifiedTime})` : ""}${excerpts[index] ? `\n  Excerpt: ${excerpts[index]}` : ""}`
         ).join("\n"),

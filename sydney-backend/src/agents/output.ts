@@ -313,6 +313,22 @@ export type BriefingCardMessageContent = {
   };
 };
 
+export type AllClearMessageContent = {
+  template: "all_clear";
+  version: "1.0";
+  data: {
+    message: string;
+    checkedAt?: string;
+    sourceSummary?: string;
+    details?: {
+      source?: string;
+      itemsChecked?: number;
+      readOnly?: boolean;
+      executionTime?: string;
+    };
+  };
+};
+
 type AgentMessagePayload =
   | PlainTextMessageContent
   | DataSummaryMessageContent
@@ -327,7 +343,8 @@ type AgentMessagePayload =
   | DsaQuestionMessageContent
   | ContentExtractorMessageContent
   | PortfolioWatchMessageContent
-  | BriefingCardMessageContent;
+  | BriefingCardMessageContent
+  | AllClearMessageContent;
 
 export type AgentMessagePresentation = {
   group_id: string;
@@ -352,6 +369,37 @@ export type RenderedAgentMessage = {
     value?: unknown;
   }>;
 };
+
+export function renderedAllClear(
+  message: string,
+  meta: {
+    checkedAt?: string;
+    sourceSummary?: string;
+    details?: {
+      source?: string;
+      itemsChecked?: number;
+      readOnly?: boolean;
+      executionTime?: string;
+    };
+    sourceRefs?: unknown[];
+    tokensUsed?: number;
+  } = {}
+): RenderedAgentMessage {
+  return {
+    content: {
+      template: "all_clear",
+      version: "1.0",
+      data: {
+        message,
+        ...(meta.checkedAt ? { checkedAt: meta.checkedAt } : {}),
+        ...(meta.sourceSummary ? { sourceSummary: meta.sourceSummary } : {}),
+        ...(meta.details ? { details: meta.details } : {})
+      }
+    },
+    sourceRefs: meta.sourceRefs ?? [],
+    tokensUsed: meta.tokensUsed ?? 0
+  };
+}
 
 export function renderedPlainText(
   body: string,

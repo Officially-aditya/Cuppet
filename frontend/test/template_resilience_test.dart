@@ -800,7 +800,7 @@ void main() {
       );
 
       expect(
-        find.text('No matching Gmail messages were found for this run.'),
+        find.text('There’s nothing to show for this update.'),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -869,5 +869,37 @@ void main() {
         );
       },
     );
+
+    testWidgets('AllClearTemplate renders reassuring outcome message and expandable details', (tester) async {
+      await tester.pumpWidget(
+        templateHost(
+          MessageCard(
+            message: Message(
+              id: 'all-clear-1',
+              threadId: 'thread-1',
+              sender: MessageSender.agent,
+              createdAt: DateTime.now(),
+              content: {
+                'template': 'all_clear',
+                'data': {
+                  'message': 'Nothing in your inbox needs your attention right now.',
+                  'details': {
+                    'source': 'Gmail',
+                    'itemsChecked': 0,
+                    'readOnly': true,
+                  },
+                },
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.text('Nothing in your inbox needs your attention right now.'),
+        findsOneWidget,
+      );
+      expect(find.text('Sources and access'), findsOneWidget);
+    });
   });
 }

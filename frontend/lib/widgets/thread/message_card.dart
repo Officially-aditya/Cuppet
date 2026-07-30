@@ -20,6 +20,7 @@ import '../templates/portfolio_watch_template.dart';
 import '../templates/briefing_card_template.dart';
 import '../templates/agent_selection_template.dart';
 import '../templates/action_confirmation_template.dart';
+import '../templates/all_clear_template.dart';
 
 class MessageCard extends StatelessWidget {
   const MessageCard({
@@ -335,6 +336,7 @@ class _TemplateRouter extends StatelessWidget {
     }
 
     return switch (message.template) {
+      'all_clear' => AllClearTemplate(data: data),
       'plain_text' => PlainTextTemplate(data: data),
       'progress_tracker' => ProgressTrackerTemplate(data: data),
       'urgency_list' => UrgencyListTemplate(data: data),

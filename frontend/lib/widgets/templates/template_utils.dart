@@ -18,3 +18,11 @@ List<String> templateStrings(Object? value) {
   }
   return value.map((item) => item.toString()).toList();
 }
+
+/// Coerces a dynamic JSON object into a string-keyed map.
+Map<String, dynamic> templateMap(Object? value) {
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+  return const {};
+}

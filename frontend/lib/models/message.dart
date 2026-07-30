@@ -49,12 +49,7 @@ class Message {
     return const {};
   }
 
-  bool get isFeedbackEligible {
-    if (presentation['feedback_eligible'] == true) return true;
-    return template == 'assistant_suggestion' &&
-        data['suggestion_id'] != null &&
-        data['resolved'] != true;
-  }
+  bool get isFeedbackEligible => presentation['feedback_eligible'] == true;
 
   String? get feedbackSubjectKey {
     if (template != 'news_brief' || data['items'] is! List) return null;

@@ -13,6 +13,12 @@ import {
   createTechNewsBrief
 } from "../agents/tech-news.js";
 import { renderLlmCustomAgent } from "../agents/custom-agent.js";
+import {
+  recordFeedbackRequest,
+  shouldRequestFeedback,
+  type AgentResultType,
+  type FeedbackRequestReason
+} from "../personalization/feedback-sampling.js";
 import { responseLimitInstruction, maxTokensForResponseLimit, stockSymbols } from "../agents/parser.js";
 import {
   renderedDailyTask,
@@ -493,6 +499,27 @@ async function executeAgentJob(
         job.data.eventId
       )
     );
+
+    const template = (rendered.content as { template?: string }).template;
+    const resultType: AgentResultType =
+      template === "all_clear"
+        ? "all_clear"
+        : template === "system"
+        ? "system"
+        : "substantive";
+
+    const isFirstSuccessful = await isFirstSuccessfulAgentRun(agent.id);
+    const agentRecentlyChanged = agentWasRecentlyEdited(agent);
+
+    const samplingDecision = await shouldRequestFeedback({
+      userId: agent.user_id,
+      agentId: agent.id,
+      messageId: run.id,
+      resultType,
+      isFirstSuccessfulResult: isFirstSuccessful,
+      agentRecentlyChanged
+    });
+
     const message = await persistRunMessage({
       agent,
       runId: run.id,
@@ -502,9 +529,22 @@ async function executeAgentJob(
       status: "success",
       isProactive:
         job.data.trigger === "schedule" || job.data.trigger === "event",
+      feedbackEligible: samplingDecision.requestFeedback,
+      feedbackReason: samplingDecision.reason,
       additionalTopicsCovered: rendered.additionalTopicsCovered,
       stateEvents: rendered.stateEvents as AgentStateEvent[] | undefined
     });
+
+    if (samplingDecision.requestFeedback && samplingDecision.reason) {
+      await recordFeedbackRequest({
+        messageId: message.id,
+        userId: agent.user_id,
+        agentId: agent.id,
+        reason: samplingDecision.reason
+      }).catch((error) => {
+        console.error("Recording feedback request failed:", error);
+      });
+    }
     if (rendered.sourceRefs.length > 0) {
       await recordConnectedContentSignals({
         userId: agent.user_id,
@@ -812,6 +852,21 @@ async function loadAgent(agentId: string): Promise<AgentRow | null> {
   return rows[0] ?? null;
 }
 
+async function isFirstSuccessfulAgentRun(agentId: string): Promise<boolean> {
+  const { rows } = await pool.query<{ count: string }>(
+    `SELECT COUNT(*) AS count FROM agent_runs WHERE agent_id = $1 AND status = 'completed'`,
+    [agentId]
+  );
+  return parseInt(rows[0]?.count ?? "0", 10) === 0;
+}
+
+function agentWasRecentlyEdited(agent: AgentRow): boolean {
+  if (!agent.updated_at || !agent.created_at) return false;
+  const updated = new Date(agent.updated_at).getTime();
+  const created = new Date(agent.created_at).getTime();
+  return updated - created > 60_000 && Date.now() - updated < 7 * 86_400_000;
+}
+
 async function createRun(
   agentId: string,
   executionKey: string | null,
@@ -849,6 +904,8 @@ async function persistRunMessage(
     status: "success" | "partial" | "failed";
     errorMessage?: string;
     isProactive?: boolean;
+    feedbackEligible?: boolean;
+    feedbackReason?: FeedbackRequestReason;
     additionalTopicsCovered?: string[];
     stateEvents?: AgentStateEvent[];
   }
@@ -857,18 +914,22 @@ async function persistRunMessage(
   try {
     await client.query("BEGIN");
     const contents = splitAgentMessageContent(input.content, input.runId).map(
-      (content) => {
-        if (!input.isProactive) return content;
+      (content, index, array) => {
+        const isFinalPart = index === array.length - 1;
+        const eligible = isFinalPart && input.feedbackEligible === true;
         return {
           ...content,
           presentation: {
             group_id: content.presentation?.group_id ?? input.runId,
-            part_index: content.presentation?.part_index ?? 0,
-            part_count: content.presentation?.part_count ?? 1,
+            part_index: content.presentation?.part_index ?? index,
+            part_count: content.presentation?.part_count ?? array.length,
             ...(content.presentation?.item_offset !== undefined
               ? { item_offset: content.presentation.item_offset }
               : {}),
-            feedback_eligible: true
+            feedback_eligible: eligible,
+            ...(eligible && input.feedbackReason
+              ? { feedback_reason: input.feedbackReason }
+              : {})
           }
         };
       }
@@ -2152,11 +2213,9 @@ function renderConnectorPending(
   config: ConnectorPendingConfig
 ): RenderedAgentMessage {
   const title = `${config.connectorName} required`;
-  const summary = [
-    `${agent.name} needs ${config.connectorName} before it can produce a real ${config.outputName}.`,
-    "I did not generate fake data for this run.",
-    `Once ${config.connectorName} OAuth and data collection are wired, this agent will ${config.expectedAction}.`
-  ].join(" ");
+  const summary =
+    `${agent.name} needs access to ${config.connectorName} to complete this task. ` +
+    `Connect ${config.connectorName} to allow ${agent.name} to ${config.expectedAction}.`;
 
   return renderedDailyTask({
     title,

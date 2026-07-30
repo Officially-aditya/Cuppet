@@ -12,6 +12,7 @@ import {
   setConsent,
   updatePersonalizationSettings
 } from "./consent-service.js";
+import { updateFeedbackRequestResponse } from "./feedback-sampling.js";
 import {
   deletePersonalizationData,
   deletePreferenceProfileItem,
@@ -549,6 +550,10 @@ export async function personalizationRoutes(app: FastifyInstance): Promise<void>
        RETURNING id`,
       [userId, messageId, parsed.data.feedback_type, subjectType, subjectKey]
     );
+    await updateFeedbackRequestResponse({
+      messageId,
+      feedbackType: parsed.data.feedback_type
+    }).catch(() => undefined);
     const negative = new Set([
       "not_useful",
       "less_like_this",

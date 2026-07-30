@@ -1,9 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import {
   digestSection,
+  renderedAllClear,
   renderedDataSummary,
   type RenderedAgentMessage
 } from "../agents/output.js";
+import { resolveOutcomeCopy } from "../agents/runtime/outcome-copy.js";
 import {
   connectorRecipeContext,
   synthesizeConnectorDigest
@@ -281,6 +283,20 @@ export async function renderSlackAgent(
     selected.slice(0, 15).map(activityLine)
   );
 
+  if (selected.length === 0) {
+    return renderedAllClear(
+      resolveOutcomeCopy("slack_attention", "no_relevant_items"),
+      {
+        sourceRefs: [],
+        details: {
+          source: "Slack",
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
+    );
+  }
+
   return renderedDataSummary(
     {
       title: options.scheduledTitle(agent, label),
@@ -288,9 +304,7 @@ export async function renderSlackAgent(
       summary:
         synthesized?.summary ||
         fallback ||
-        (intent === "slack_urgent_watcher"
-          ? "No urgent Slack messages were found in the channels Cuppet can access."
-          : "No recent Slack messages were found in the channels Cuppet can access."),
+        resolveOutcomeCopy("slack_attention", "no_relevant_items"),
       metrics: [
         { label: "Messages", value: String(selected.length) },
         { label: "Channels", value: String(channels.size) },
@@ -383,7 +397,7 @@ export async function readSlackForAssistant(
     .slice(0, Math.min(input.limit ?? 12, 20));
   return {
     summary: activity.length === 0
-      ? "No matching recent Slack activity was found."
+      ? resolveOutcomeCopy("slack_attention", "no_relevant_items")
       : activity.map((item) =>
           `- #${item.channelName} · ${item.authorName}: ${(item.message.text ?? "").slice(0, 360)}`
         ).join("\n"),

@@ -90,7 +90,9 @@ class GmailDigestTemplate extends StatelessWidget {
               const SizedBox(height: SydneySpacing.md),
               if (messages.isEmpty)
                 Text(
-                  'No matching Gmail messages were found for this run.',
+                  data['summary']?.toString() ??
+                      data['message']?.toString() ??
+                      'There’s nothing to show for this update.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: SydneyColors.onSurfaceVariant,
                     height: 1.35,

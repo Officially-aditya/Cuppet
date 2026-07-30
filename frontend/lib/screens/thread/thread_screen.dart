@@ -814,17 +814,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
             );
         if (stored) {
           ref.invalidate(personalizationProvider);
-        }
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              stored
-                  ? 'Feedback saved.'
-                  : 'Turn on Direct feedback in Personalization to save this signal.',
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Feedback saved.'),
             ),
-          ),
-        );
+          );
+        }
       } catch (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

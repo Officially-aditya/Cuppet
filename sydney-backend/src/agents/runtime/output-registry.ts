@@ -15,7 +15,8 @@ export const scheduledOutputContractIds = [
   "dsa_question",
   "content_extractor",
   "portfolio_watch",
-  "briefing_card"
+  "briefing_card",
+  "all_clear"
 ] as const;
 
 export type ScheduledOutputContractId =
@@ -393,6 +394,22 @@ const briefingCardDataSchema = z
   })
   .strict();
 
+const allClearDataSchema = z
+  .object({
+    message: z.string().min(1),
+    checkedAt: z.string().optional(),
+    sourceSummary: z.string().optional(),
+    details: z
+      .object({
+        source: z.string().optional(),
+        itemsChecked: z.number().optional(),
+        readOnly: z.boolean().optional(),
+        executionTime: z.string().optional()
+      })
+      .optional()
+  })
+  .strict();
+
 type OutputRegistryEntry = {
   id: ScheduledOutputContractId;
   version: "1.0";
@@ -410,6 +427,10 @@ type OutputRegistryEntry = {
 };
 
 const entries: OutputRegistryEntry[] = [
+  outputEntry("all_clear", allClearDataSchema, {
+    textualize: (data) => data.message,
+    preview: (data) => data.message
+  }),
   outputEntry("plain_text", plainTextDataSchema, {
     textualize: (data) => data.body,
     preview: (data) => firstLine(data.body) || "New message"
@@ -821,6 +842,9 @@ function notificationSummary(
   data: Record<string, any>,
   fallback: string
 ): string {
+  if (id === "all_clear") {
+    return String(data.message ?? fallback).trim();
+  }
   if (id === "plain_text") {
     const lines = String(data.body ?? "")
       .split("\n")

@@ -1,9 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import {
   digestSection,
+  renderedAllClear,
   renderedDataSummary,
   type RenderedAgentMessage
 } from "../agents/output.js";
+import { resolveOutcomeCopy } from "../agents/runtime/outcome-copy.js";
 import {
   connectorRecipeContext,
   synthesizeConnectorDigest
@@ -540,6 +542,20 @@ export async function renderGitHubAgent(
     ...commitSourceRefs
   ];
 
+  if (records.length === 0) {
+    return renderedAllClear(
+      resolveOutcomeCopy(intent, "no_relevant_items"),
+      {
+        sourceRefs: [],
+        details: {
+          source: "GitHub",
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
+    );
+  }
+
   return renderedDataSummary(
     {
       title: options.scheduledTitle(agent, "GitHub activity"),
@@ -547,7 +563,7 @@ export async function renderGitHubAgent(
       summary:
         synthesized?.summary ||
         fallbackSummary ||
-        "No recent GitHub activity was found for this run.",
+        resolveOutcomeCopy(intent, "no_relevant_items"),
       metrics: [
         { label: "Repositories", value: String(recentRepositories.length) },
         { label: "Open issues", value: String(issues.length) },
@@ -1181,7 +1197,7 @@ export async function readGitHubForAssistant(
   if (input.latestCommit) {
     if (repos.length === 0) {
       return {
-        summary: "No matching GitHub repositories were found.",
+        summary: resolveOutcomeCopy("github_digest", "no_relevant_items"),
         sourceRefs: []
       };
     }
@@ -1248,7 +1264,7 @@ export async function readGitHubForAssistant(
   );
   return {
     summary: repos.length === 0
-      ? "No matching GitHub repositories were found."
+      ? resolveOutcomeCopy("github_digest", "no_relevant_items")
       : repos.map((repo, index) => {
           const recent = (commits[index] ?? []).slice(0, 3)
             .map((commit) => commit.commit.message.split("\n")[0])

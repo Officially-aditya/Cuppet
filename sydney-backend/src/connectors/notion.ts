@@ -1,9 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import {
   digestSection,
+  renderedAllClear,
   renderedDataSummary,
   type RenderedAgentMessage
 } from "../agents/output.js";
+import { resolveOutcomeCopy } from "../agents/runtime/outcome-copy.js";
 import {
   connectorRecipeContext,
   synthesizeConnectorDigest
@@ -271,14 +273,28 @@ export async function renderNotionAgent(
     )
   );
 
+  if (pages.length === 0) {
+    return renderedAllClear(
+      resolveOutcomeCopy("notion_digest", "no_relevant_items"),
+      {
+        sourceRefs: [],
+        details: {
+          source: "Notion",
+          itemsChecked: 0,
+          readOnly: true
+        }
+      }
+    );
+  }
+
   return renderedDataSummary(
     {
       title: options.scheduledTitle(agent, "Notion workspace"),
-      text: options.scheduledIntro(agent, "Notion workspace",),
+      text: options.scheduledIntro(agent, "Notion workspace"),
       summary:
         synthesized?.summary ||
         fallbackSummary ||
-        "No shared Notion pages were found. Share pages with the Cuppet connection and run the agent again.",
+        resolveOutcomeCopy("notion_digest", "no_relevant_items"),
       metrics: [
         { label: "Shared pages", value: String(pages.length) },
         { label: "Edited this week", value: String(recentlyEdited) },
@@ -346,7 +362,7 @@ export async function readNotionForAssistant(
   );
   return {
     summary: pages.length === 0
-      ? "No matching shared Notion pages were found."
+      ? resolveOutcomeCopy("notion_digest", "no_relevant_items")
       : pages.map((page, index) =>
           `- ${notionPageTitle(page)}${excerpts[index] ? `: ${excerpts[index]!.replace(/\s+/g, " ").slice(0, 1200)}` : ""}`
         ).join("\n"),
