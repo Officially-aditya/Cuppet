@@ -43,8 +43,16 @@ describe("Feedback Sampling Logic", () => {
     const hash1 = isDeterministicPeriodicSample("agent-123", "msg-456", 6);
     const hash2 = isDeterministicPeriodicSample("agent-123", "msg-456", 6);
     assert.equal(hash1, hash2);
-
-    // Hash should be boolean
     assert.equal(typeof hash1, "boolean");
+
+    // Test across 60 message IDs: exactly 1 in 6 should sample deterministically
+    let positiveCount = 0;
+    for (let i = 0; i < 60; i++) {
+      if (isDeterministicPeriodicSample("agent-123", `msg-${i}`, 6)) {
+        positiveCount++;
+      }
+    }
+    // Rate should be bounded around ~10 out of 60 (between 5 and 15)
+    assert.ok(positiveCount >= 5 && positiveCount <= 15);
   });
 });
