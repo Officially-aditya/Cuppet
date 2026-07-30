@@ -25,3 +25,25 @@ final personalizationProvider = FutureProvider<PreferenceProfile>((ref) {
   }
   return ref.watch(personalizationServiceProvider).loadProfile();
 });
+
+final messageFeedbackProvider =
+    NotifierProvider<MessageFeedbackController, Map<String, String>>(
+      MessageFeedbackController.new,
+    );
+
+class MessageFeedbackController extends Notifier<Map<String, String>> {
+  @override
+  Map<String, String> build() {
+    ref.watch(authControllerProvider);
+    final profile = ref.watch(personalizationProvider).asData?.value;
+    if (profile != null && profile.feedback.isNotEmpty) {
+      return {...profile.feedback};
+    }
+    return <String, String>{};
+  }
+
+  void setFeedback(String messageId, String feedbackType) {
+    state = {...state, messageId: feedbackType};
+  }
+}
+

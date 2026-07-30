@@ -115,7 +115,7 @@ const exclusionSchema = z
 export async function personalizationRoutes(app: FastifyInstance): Promise<void> {
   app.get("/users/me/personalization", { preHandler: requireAuth }, async (request) => {
     const userId = request.auth!.userId;
-    const [settings, consents, profile, browserConnected, recentSuggestions] = await Promise.all([
+    const [settings, consents, profile, browserConnected, recentSuggestions, feedback] = await Promise.all([
       getPersonalizationSettings(userId),
       listLatestConsents(userId),
       listPreferenceProfile(userId),
@@ -129,6 +129,10 @@ export async function personalizationRoutes(app: FastifyInstance): Promise<void>
          ORDER BY s.delivered_at DESC
          LIMIT 20`,
         [userId]
+      ),
+      pool.query(
+        `SELECT message_id, feedback_type FROM message_feedback WHERE user_id = $1`,
+        [userId]
       )
     ]);
     return {
@@ -136,6 +140,7 @@ export async function personalizationRoutes(app: FastifyInstance): Promise<void>
       consents,
       browser_connected: browserConnected,
       recent_suggestions: recentSuggestions.rows,
+      feedback: feedback.rows,
       profile_count: profile.length
     };
   });

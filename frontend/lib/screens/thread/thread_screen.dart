@@ -208,6 +208,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     );
     final messages = ref.watch(messagesProvider(agent.threadId));
     final archiveState = ref.watch(messageArchiveProvider).asData?.value;
+    final feedbackState = ref.watch(messageFeedbackProvider);
 
     return Scaffold(
       key: const ValueKey('thread-scaffold'),
@@ -556,7 +557,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             child: MessageCard(
                               message: message,
                               onAction: _handleMessageAction,
-                              feedbackType: _feedbackByMessage[message.id],
+                              feedbackType:
+                                  feedbackState[message.id] ??
+                                  _feedbackByMessage[message.id],
                               useWorkspacePalette: true,
                             ),
                           ),
@@ -796,6 +799,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       final messageId = action['messageId']?.toString();
       final feedbackType = action['feedback_type']?.toString();
       if (messageId == null || feedbackType == null) return;
+      ref
+          .read(messageFeedbackProvider.notifier)
+          .setFeedback(messageId, feedbackType);
       if (mounted) setState(() => _feedbackByMessage[messageId] = feedbackType);
       try {
         final stored = await ref

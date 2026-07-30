@@ -10,6 +10,7 @@ class PreferenceProfile {
     required this.items,
     this.browserConnected = false,
     this.recentSuggestions = const [],
+    this.feedback = const {},
   });
 
   final PersonalizationSettings settings;
@@ -17,6 +18,7 @@ class PreferenceProfile {
   final List<PreferenceProfileItem> items;
   final bool browserConnected;
   final List<AssistantSuggestion> recentSuggestions;
+  final Map<String, String> feedback;
 
   factory PreferenceProfile.fromJson(Map<String, dynamic> json) {
     final rawSettings = json['settings'];
@@ -54,6 +56,24 @@ class PreferenceProfile {
                 AssistantSuggestion.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(growable: false),
+      feedback: () {
+        final rawFeedback = json['feedback'];
+        if (rawFeedback is! List) return const <String, String>{};
+        final map = <String, String>{};
+        for (final item in rawFeedback) {
+          if (item is Map) {
+            final msgId = item['message_id']?.toString();
+            final fType = item['feedback_type']?.toString();
+            if (msgId != null &&
+                msgId.isNotEmpty &&
+                fType != null &&
+                fType.isNotEmpty) {
+              map[msgId] = fType;
+            }
+          }
+        }
+        return Map<String, String>.unmodifiable(map);
+      }(),
     );
   }
 
