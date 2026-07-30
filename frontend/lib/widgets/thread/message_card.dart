@@ -170,9 +170,9 @@ class MessageCard extends StatelessWidget {
               onAction: onAction,
             ),
             if (showFeedback && feedbackType == null) ...[
-              const SizedBox(height: SydneySpacing.xs),
+              const SizedBox(height: SydneySpacing.md),
               Wrap(
-                spacing: SydneySpacing.xs,
+                spacing: SydneySpacing.sm,
                 runSpacing: SydneySpacing.xs,
                 children: [
                   OutlinedButton.icon(
@@ -187,9 +187,12 @@ class MessageCard extends StatelessWidget {
                             'subject_key': feedbackSubjectKey,
                           },
                         }),
-                    icon: const Icon(Icons.thumb_up_alt_outlined, size: 15),
+                    icon: const Icon(Icons.thumb_up_alt_outlined, size: 16),
                     label: const Text('Useful'),
-                    style: _feedbackButtonStyle(context),
+                    style: _feedbackButtonStyle(
+                      context,
+                      useWorkspacePalette: useWorkspacePalette,
+                    ),
                   ),
                   OutlinedButton.icon(
                     key: ValueKey('message-feedback-not-useful-${message.id}'),
@@ -203,23 +206,14 @@ class MessageCard extends StatelessWidget {
                             'subject_key': feedbackSubjectKey,
                           },
                         }),
-                    icon: const Icon(Icons.thumb_down_alt_outlined, size: 15),
+                    icon: const Icon(Icons.thumb_down_alt_outlined, size: 16),
                     label: const Text('Not useful'),
-                    style: _feedbackButtonStyle(context),
+                    style: _feedbackButtonStyle(
+                      context,
+                      useWorkspacePalette: useWorkspacePalette,
+                    ),
                   ),
                 ],
-              ),
-            ],
-            if (showFeedback && feedbackType != null) ...[
-              const SizedBox(height: SydneySpacing.xs),
-              Text(
-                feedbackType == 'useful'
-                    ? 'Feedback saved: Useful'
-                    : 'Feedback saved: Not useful',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: CuppetWorkspaceColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
             ],
             if (message.isLastPart) ...[
@@ -264,20 +258,42 @@ class MessageCard extends StatelessWidget {
   }
 }
 
-ButtonStyle _feedbackButtonStyle(BuildContext context) {
+ButtonStyle _feedbackButtonStyle(
+  BuildContext context, {
+  bool useWorkspacePalette = false,
+}) {
+  final primaryColor =
+      useWorkspacePalette
+          ? CuppetWorkspaceColors.primaryInk
+          : SydneyColors.primary;
+  final borderColor =
+      useWorkspacePalette
+          ? CuppetWorkspaceColors.panelBorder
+          : SydneyColors.line;
+  final bgTint =
+      useWorkspacePalette
+          ? CuppetWorkspaceColors.softSage.withValues(alpha: 0.35)
+          : SydneyColors.primarySoft.withValues(alpha: 0.4);
+
   return OutlinedButton.styleFrom(
-    foregroundColor: CuppetWorkspaceColors.primaryInk,
-    side: const BorderSide(color: CuppetWorkspaceColors.panelBorder),
+    foregroundColor: primaryColor,
+    backgroundColor: bgTint,
+    side: BorderSide(color: borderColor),
     padding: const EdgeInsets.symmetric(
-      horizontal: SydneySpacing.sm,
-      vertical: SydneySpacing.xs,
+      horizontal: SydneySpacing.md,
+      vertical: SydneySpacing.sm,
     ),
-    minimumSize: Size.zero,
-    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    visualDensity: VisualDensity.compact,
-    textStyle: Theme.of(
-      context,
-    ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+    minimumSize: const Size(0, 36),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    visualDensity: VisualDensity.standard,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(SydneyRadius.full),
+    ),
+    textStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.1,
+    ),
   );
 }
 
