@@ -44,9 +44,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         // --- TOP BRAND & HEADER ---
                         Column(
                           children: [
-                            const SizedBox(height: SydneySpacing.xl),
+                            const SizedBox(height: SydneySpacing.lg),
                             const AuthLogo(),
-                            const SizedBox(height: SydneySpacing.xl),
+                            const SizedBox(height: 48.0),
                             Text(
                               'Welcome back',
                               textAlign: TextAlign.center,
@@ -77,6 +77,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16.0),
                           ],
                         ),
 

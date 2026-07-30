@@ -93,7 +93,7 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                           children: [
                             const SizedBox(height: SydneySpacing.md),
                             const AuthLogo(),
-                            const SizedBox(height: SydneySpacing.xl),
+                            const SizedBox(height: 48.0),
                             Text(
                               'Welcome back',
                               textAlign: TextAlign.center,
@@ -124,6 +124,7 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 16.0),
                           ],
                         ),
 
