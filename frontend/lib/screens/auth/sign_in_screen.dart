@@ -41,92 +41,94 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // --- TOP BRAND & HEADER ---
-                        Column(
-                          children: [
-                            const SizedBox(height: SydneySpacing.lg),
-                            const AuthLogo(),
-                            const SizedBox(height: 48.0),
-                            Text(
-                              'Welcome back',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.headlineSmall?.copyWith(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                                color: CuppetWorkspaceColors.ink,
-                                height: 1.1,
-                                letterSpacing: -0.8,
-                              ),
-                            ),
-                            const SizedBox(height: SydneySpacing.sm + 2),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 28.0,
-                              ),
-                              child: Text(
-                                'Delegate work through conversations with agents you trust.',
+                        // --- 1. TOP BRAND (Cuppet) ---
+                        const Padding(
+                          padding: EdgeInsets.only(top: SydneySpacing.sm),
+                          child: AuthLogo(),
+                        ),
+
+                        // --- 2. WELCOME BACK HEADER (Centered between Cuppet & Sign in) ---
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: SydneySpacing.md,
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Welcome back',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(
                                   context,
-                                ).textTheme.bodyMedium?.copyWith(
-                                  color: CuppetWorkspaceColors.muted,
-                                  fontSize: 14.5,
-                                  height: 1.45,
+                                ).textTheme.headlineSmall?.copyWith(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w800,
+                                  color: CuppetWorkspaceColors.ink,
+                                  height: 1.1,
+                                  letterSpacing: -0.8,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16.0),
-                          ],
-                        ),
-
-                        // --- MIDDLE SIGN IN OPTIONS ---
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: SydneySpacing.xl,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const WorkspaceSectionLabel('Sign in'),
-                              const SizedBox(height: SydneySpacing.md),
-                              if (auth.hasError) ...[
-                                SydneyNotice(
-                                  text: readableAuthError(auth.error!),
-                                  icon: Icons.error_outline_rounded,
-                                  iconColor: SydneyColors.danger,
-                                  backgroundColor: SydneyColors.dangerSoft,
-                                  borderColor: SydneyColors.dangerSoft,
-                                  textColor: SydneyColors.danger,
+                              const SizedBox(height: SydneySpacing.sm + 2),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 28.0,
                                 ),
-                                const SizedBox(height: SydneySpacing.md),
-                              ],
-                              LoginOptionCard(
-                                title:
-                                    loading
-                                        ? 'Signing in...'
-                                        : 'Sign in with Google',
-                                subtitle:
-                                    'Access your account with your Google account.',
-                                leadingWidget: const GoogleMark(),
-                                onTap: loading ? null : _continueWithGoogle,
-                              ),
-                              const SizedBox(height: SydneySpacing.md),
-                              LoginOptionCard(
-                                title: 'Sign in with Email',
-                                subtitle:
-                                    'Access your account with your email and password.',
-                                icon: Icons.mail_outline_rounded,
-                                onTap:
-                                    loading
-                                        ? null
-                                        : () => Navigator.of(
-                                          context,
-                                        ).pushNamed(AppRoutes.signInWithEmail),
+                                child: Text(
+                                  'Delegate work through conversations with agents you trust.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: CuppetWorkspaceColors.muted,
+                                    fontSize: 14.5,
+                                    height: 1.45,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
+                        ),
+
+                        // --- 3. MIDDLE SIGN IN OPTIONS ---
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const WorkspaceSectionLabel('Sign in'),
+                            const SizedBox(height: SydneySpacing.md),
+                            if (auth.hasError) ...[
+                              SydneyNotice(
+                                text: readableAuthError(auth.error!),
+                                icon: Icons.error_outline_rounded,
+                                iconColor: SydneyColors.danger,
+                                backgroundColor: SydneyColors.dangerSoft,
+                                borderColor: SydneyColors.dangerSoft,
+                                textColor: SydneyColors.danger,
+                              ),
+                              const SizedBox(height: SydneySpacing.md),
+                            ],
+                            LoginOptionCard(
+                              title:
+                                  loading
+                                      ? 'Signing in...'
+                                      : 'Sign in with Google',
+                              subtitle:
+                                  'Access your account with your Google account.',
+                              leadingWidget: const GoogleMark(),
+                              onTap: loading ? null : _continueWithGoogle,
+                            ),
+                            const SizedBox(height: SydneySpacing.md),
+                            LoginOptionCard(
+                              title: 'Sign in with Email',
+                              subtitle:
+                                  'Access your account with your email and password.',
+                              icon: Icons.mail_outline_rounded,
+                              onTap:
+                                  loading
+                                      ? null
+                                      : () => Navigator.of(
+                                        context,
+                                      ).pushNamed(AppRoutes.signInWithEmail),
+                            ),
+                          ],
                         ),
 
                         // --- BOTTOM FOOTER & NAVIGATION ---

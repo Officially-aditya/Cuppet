@@ -88,54 +88,57 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // --- TOP BRAND & HEADER ---
-                        Column(
-                          children: [
-                            const SizedBox(height: SydneySpacing.md),
-                            const AuthLogo(),
-                            const SizedBox(height: 48.0),
-                            Text(
-                              'Welcome back',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.headlineSmall?.copyWith(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                                color: CuppetWorkspaceColors.ink,
-                                height: 1.1,
-                                letterSpacing: -0.8,
-                              ),
-                            ),
-                            const SizedBox(height: SydneySpacing.sm + 2),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 28.0,
-                              ),
-                              child: Text(
-                                'Sign in to your account with your email and password.',
+                        // --- 1. TOP BRAND (Cuppet) ---
+                        const Padding(
+                          padding: EdgeInsets.only(top: SydneySpacing.sm),
+                          child: AuthLogo(),
+                        ),
+
+                        // --- 2. WELCOME BACK HEADER (Centered between Cuppet & Form) ---
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: SydneySpacing.md,
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Welcome back',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(
                                   context,
-                                ).textTheme.bodyMedium?.copyWith(
-                                  color: CuppetWorkspaceColors.muted,
-                                  fontSize: 14.5,
-                                  height: 1.45,
+                                ).textTheme.headlineSmall?.copyWith(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w800,
+                                  color: CuppetWorkspaceColors.ink,
+                                  height: 1.1,
+                                  letterSpacing: -0.8,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16.0),
-                          ],
+                              const SizedBox(height: SydneySpacing.sm + 2),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 28.0,
+                                ),
+                                child: Text(
+                                  'Sign in to your account with your email and password.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    color: CuppetWorkspaceColors.muted,
+                                    fontSize: 14.5,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
 
-                        // --- MIDDLE FORM SECTION ---
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: SydneySpacing.xl,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
+                        // --- 3. MIDDLE FORM SECTION ---
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                               const WorkspaceSectionLabel('Email sign in'),
                               const SizedBox(height: SydneySpacing.md),
                               WorkspaceCard(
@@ -234,7 +237,6 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                               ),
                             ],
                           ),
-                        ),
 
                         // --- BOTTOM FOOTER & NAVIGATION ---
                         Column(
