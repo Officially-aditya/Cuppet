@@ -32,18 +32,21 @@ final messageFeedbackProvider =
     );
 
 class MessageFeedbackController extends Notifier<Map<String, String>> {
+  final Map<String, String> _localFeedback = {};
+
   @override
   Map<String, String> build() {
     ref.watch(authControllerProvider);
     final profile = ref.watch(personalizationProvider).asData?.value;
     if (profile != null && profile.feedback.isNotEmpty) {
-      return {...profile.feedback};
+      _localFeedback.addAll(profile.feedback);
     }
-    return <String, String>{};
+    return Map<String, String>.from(_localFeedback);
   }
 
   void setFeedback(String messageId, String feedbackType) {
-    state = {...state, messageId: feedbackType};
+    _localFeedback[messageId] = feedbackType;
+    state = Map<String, String>.from(_localFeedback);
   }
 }
 

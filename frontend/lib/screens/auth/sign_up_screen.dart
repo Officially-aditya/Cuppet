@@ -66,12 +66,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                 ),
                 const SizedBox(height: SydneySpacing.sm),
-                Text(
-                  'Delegate work through conversations with agents you trust.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: CuppetWorkspaceColors.muted,
-                    height: 1.35,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                  child: Text(
+                    'Delegate work through conversations with agents you trust.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: CuppetWorkspaceColors.muted,
+                      height: 1.35,
+                    ),
                   ),
                 ),
                 const SizedBox(height: SydneySpacing.xl),

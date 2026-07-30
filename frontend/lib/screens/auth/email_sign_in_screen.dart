@@ -70,153 +70,216 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                SydneySpacing.page,
-                SydneySpacing.sm,
-                SydneySpacing.page,
-                SydneySpacing.xl,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: SydneySpacing.page,
+                vertical: SydneySpacing.md,
               ),
-              children: [
-                const AuthLogo(),
-                const SizedBox(height: SydneySpacing.lg),
-                Text(
-                  'Welcome back',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: CuppetWorkspaceColors.ink,
-                    height: 1.05,
-                    letterSpacing: -0.7,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 420,
+                    minHeight: constraints.maxHeight - (SydneySpacing.md * 2),
                   ),
-                ),
-                const SizedBox(height: SydneySpacing.sm),
-                Text(
-                  'Sign in to your account with your email and password.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: CuppetWorkspaceColors.muted,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: SydneySpacing.xxl),
-                const WorkspaceSectionLabel('Email sign in'),
-                const SizedBox(height: SydneySpacing.sm),
-                WorkspaceCard(
-                  padding: const EdgeInsets.all(SydneySpacing.lg),
-                  child: Form(
-                    key: _formKey,
+                  child: IntrinsicHeight(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        AuthField(
-                          label: 'Email Address',
-                          controller: _emailController,
-                          icon: Icons.mail_outline_rounded,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          validator:
-                              (value) =>
-                                  value == null || value.trim().isEmpty
-                                      ? 'Enter your email.'
-                                      : null,
-                        ),
-                        const SizedBox(height: 14),
-                        AuthField(
-                          label: 'Password',
-                          controller: _passwordController,
-                          icon: Icons.lock_outline_rounded,
-                          obscureText: !_showPassword,
-                          textInputAction: TextInputAction.done,
-                          suffix: IconButton(
-                            tooltip:
-                                _showPassword
-                                    ? 'Hide password'
-                                    : 'Show password',
-                            onPressed:
-                                () => setState(
-                                  () => _showPassword = !_showPassword,
-                                ),
-                            icon: Icon(
-                              _showPassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              size: 18,
-                              color: CuppetWorkspaceColors.muted,
-                            ),
-                          ),
-                          validator:
-                              (value) =>
-                                  value == null || value.isEmpty
-                                      ? 'Enter your password.'
-                                      : null,
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: loading ? null : () {},
-                            style: TextButton.styleFrom(
-                              foregroundColor: CuppetWorkspaceColors.primary,
-                              textStyle: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                        // --- TOP BRAND & HEADER ---
+                        Column(
+                          children: [
+                            const SizedBox(height: SydneySpacing.md),
+                            const AuthLogo(),
+                            const SizedBox(height: SydneySpacing.xl),
+                            Text(
+                              'Welcome back',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.headlineSmall?.copyWith(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: CuppetWorkspaceColors.ink,
+                                height: 1.1,
+                                letterSpacing: -0.8,
                               ),
                             ),
-                            child: const Text('Forgot Password?'),
+                            const SizedBox(height: SydneySpacing.sm + 2),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28.0,
+                              ),
+                              child: Text(
+                                'Sign in to your account with your email and password.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(
+                                  color: CuppetWorkspaceColors.muted,
+                                  fontSize: 14.5,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // --- MIDDLE FORM SECTION ---
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: SydneySpacing.xl,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const WorkspaceSectionLabel('Email sign in'),
+                              const SizedBox(height: SydneySpacing.md),
+                              WorkspaceCard(
+                                padding: const EdgeInsets.all(
+                                  SydneySpacing.lg,
+                                ),
+                                child: Form(
+                                  key: _formKey,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      AuthField(
+                                        label: 'Email Address',
+                                        controller: _emailController,
+                                        icon: Icons.mail_outline_rounded,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        textInputAction: TextInputAction.next,
+                                        validator:
+                                            (value) =>
+                                                value == null ||
+                                                        value.trim().isEmpty
+                                                    ? 'Enter your email.'
+                                                    : null,
+                                      ),
+                                      const SizedBox(height: 14),
+                                      AuthField(
+                                        label: 'Password',
+                                        controller: _passwordController,
+                                        icon: Icons.lock_outline_rounded,
+                                        obscureText: !_showPassword,
+                                        textInputAction: TextInputAction.done,
+                                        suffix: IconButton(
+                                          tooltip:
+                                              _showPassword
+                                                  ? 'Hide password'
+                                                  : 'Show password',
+                                          onPressed:
+                                              () => setState(
+                                                () =>
+                                                    _showPassword =
+                                                        !_showPassword,
+                                              ),
+                                          icon: Icon(
+                                            _showPassword
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            size: 18,
+                                            color: CuppetWorkspaceColors.muted,
+                                          ),
+                                        ),
+                                        validator:
+                                            (value) =>
+                                                value == null || value.isEmpty
+                                                    ? 'Enter your password.'
+                                                    : null,
+                                        onFieldSubmitted: (_) => _submit(),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: loading ? null : () {},
+                                          style: TextButton.styleFrom(
+                                            foregroundColor:
+                                                CuppetWorkspaceColors.primary,
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          child: const Text('Forgot Password?'),
+                                        ),
+                                      ),
+                                      if (auth.hasError) ...[
+                                        SydneyNotice(
+                                          text: readableAuthError(auth.error!),
+                                          icon: Icons.error_outline_rounded,
+                                          iconColor: SydneyColors.danger,
+                                          backgroundColor:
+                                              SydneyColors.dangerSoft,
+                                          borderColor: SydneyColors.dangerSoft,
+                                          textColor: SydneyColors.danger,
+                                        ),
+                                        const SizedBox(height: SydneySpacing.md),
+                                      ],
+                                      AuthPrimaryButton(
+                                        label:
+                                            loading
+                                                ? 'Signing in...'
+                                                : 'Sign In',
+                                        onPressed: loading ? null : _submit,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        if (auth.hasError) ...[
-                          SydneyNotice(
-                            text: readableAuthError(auth.error!),
-                            icon: Icons.error_outline_rounded,
-                            iconColor: SydneyColors.danger,
-                            backgroundColor: SydneyColors.dangerSoft,
-                            borderColor: SydneyColors.dangerSoft,
-                            textColor: SydneyColors.danger,
-                          ),
-                          const SizedBox(height: SydneySpacing.md),
-                        ],
-                        AuthPrimaryButton(
-                          label: loading ? 'Signing in...' : 'Sign In',
-                          onPressed: loading ? null : _submit,
+
+                        // --- BOTTOM FOOTER & NAVIGATION ---
+                        Column(
+                          children: [
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  "Don't have an account?",
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                    color: CuppetWorkspaceColors.muted,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed:
+                                      loading
+                                          ? null
+                                          : () => Navigator.of(
+                                            context,
+                                          ).pushNamed(AppRoutes.signUp),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor:
+                                        CuppetWorkspaceColors.primary,
+                                    textStyle: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13.5,
+                                    ),
+                                  ),
+                                  child: const Text('Create one'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: SydneySpacing.md),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: SydneySpacing.xxl),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      "Don't have an account?",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: CuppetWorkspaceColors.muted,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed:
-                          loading
-                              ? null
-                              : () => Navigator.of(
-                                context,
-                              ).pushNamed(AppRoutes.signUp),
-                      style: TextButton.styleFrom(
-                        foregroundColor: CuppetWorkspaceColors.primary,
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      child: const Text('Create one'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

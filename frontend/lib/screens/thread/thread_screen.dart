@@ -812,6 +812,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               subjectType: action['subject_type']?.toString(),
               subjectKey: action['subject_key']?.toString(),
             );
+        if (stored) {
+          ref.invalidate(personalizationProvider);
+        }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -23,103 +23,174 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                SydneySpacing.page,
-                SydneySpacing.xxl,
-                SydneySpacing.page,
-                SydneySpacing.xl,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: SydneySpacing.page,
+                vertical: SydneySpacing.md,
               ),
-              children: [
-                const SizedBox(height: SydneySpacing.xl),
-                const AuthLogo(),
-                const SizedBox(height: SydneySpacing.lg),
-                Text(
-                  'Welcome back',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: CuppetWorkspaceColors.ink,
-                    height: 1.05,
-                    letterSpacing: -0.7,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 420,
+                    minHeight: constraints.maxHeight - (SydneySpacing.md * 2),
                   ),
-                ),
-                const SizedBox(height: SydneySpacing.sm),
-                Text(
-                  'Delegate work through conversations with agents you trust.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: CuppetWorkspaceColors.muted,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: SydneySpacing.xxl),
-                const WorkspaceSectionLabel('Sign in'),
-                const SizedBox(height: SydneySpacing.sm),
-                if (auth.hasError) ...[
-                  SydneyNotice(
-                    text: readableAuthError(auth.error!),
-                    icon: Icons.error_outline_rounded,
-                    iconColor: SydneyColors.danger,
-                    backgroundColor: SydneyColors.dangerSoft,
-                    borderColor: SydneyColors.dangerSoft,
-                    textColor: SydneyColors.danger,
-                  ),
-                  const SizedBox(height: SydneySpacing.md),
-                ],
-                LoginOptionCard(
-                  title: loading ? 'Signing in...' : 'Sign in with Google',
-                  subtitle: 'Access your account with your Google account.',
-                  leadingWidget: const GoogleMark(),
-                  onTap: loading ? null : _continueWithGoogle,
-                ),
-                const SizedBox(height: SydneySpacing.sm),
-                LoginOptionCard(
-                  title: 'Sign in with Email',
-                  subtitle: 'Access your account with your email and password.',
-                  icon: Icons.mail_outline_rounded,
-                  onTap:
-                      loading
-                          ? null
-                          : () => Navigator.of(
-                            context,
-                          ).pushNamed(AppRoutes.signInWithEmail),
-                ),
-                const SizedBox(height: SydneySpacing.xxl),
-                const AuthDividerLabel(),
-                const SizedBox(height: SydneySpacing.lg),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      "Don't have an account?",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: CuppetWorkspaceColors.muted,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed:
-                          loading
-                              ? null
-                              : () => Navigator.of(
+                  child: IntrinsicHeight(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // --- TOP BRAND & HEADER ---
+                        Column(
+                          children: [
+                            const SizedBox(height: SydneySpacing.xl),
+                            const AuthLogo(),
+                            const SizedBox(height: SydneySpacing.xl),
+                            Text(
+                              'Welcome back',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(
                                 context,
-                              ).pushNamed(AppRoutes.signUp),
-                      style: TextButton.styleFrom(
-                        foregroundColor: CuppetWorkspaceColors.primary,
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      child: const Text('Create one'),
+                              ).textTheme.headlineSmall?.copyWith(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: CuppetWorkspaceColors.ink,
+                                height: 1.1,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                            const SizedBox(height: SydneySpacing.sm + 2),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28.0,
+                              ),
+                              child: Text(
+                                'Delegate work through conversations with agents you trust.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(
+                                  color: CuppetWorkspaceColors.muted,
+                                  fontSize: 14.5,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // --- MIDDLE SIGN IN OPTIONS ---
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: SydneySpacing.xl,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const WorkspaceSectionLabel('Sign in'),
+                              const SizedBox(height: SydneySpacing.md),
+                              if (auth.hasError) ...[
+                                SydneyNotice(
+                                  text: readableAuthError(auth.error!),
+                                  icon: Icons.error_outline_rounded,
+                                  iconColor: SydneyColors.danger,
+                                  backgroundColor: SydneyColors.dangerSoft,
+                                  borderColor: SydneyColors.dangerSoft,
+                                  textColor: SydneyColors.danger,
+                                ),
+                                const SizedBox(height: SydneySpacing.md),
+                              ],
+                              LoginOptionCard(
+                                title:
+                                    loading
+                                        ? 'Signing in...'
+                                        : 'Sign in with Google',
+                                subtitle:
+                                    'Access your account with your Google account.',
+                                leadingWidget: const GoogleMark(),
+                                onTap: loading ? null : _continueWithGoogle,
+                              ),
+                              const SizedBox(height: SydneySpacing.md),
+                              LoginOptionCard(
+                                title: 'Sign in with Email',
+                                subtitle:
+                                    'Access your account with your email and password.',
+                                icon: Icons.mail_outline_rounded,
+                                onTap:
+                                    loading
+                                        ? null
+                                        : () => Navigator.of(
+                                          context,
+                                        ).pushNamed(AppRoutes.signInWithEmail),
+                              ),
+                              const SizedBox(height: SydneySpacing.xl),
+                              const _AuthSecurityBadge(),
+                            ],
+                          ),
+                        ),
+
+                        // --- BOTTOM FOOTER & NAVIGATION ---
+                        Column(
+                          children: [
+                            const AuthDividerLabel(),
+                            const SizedBox(height: SydneySpacing.md),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  "Don't have an account?",
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                    color: CuppetWorkspaceColors.muted,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed:
+                                      loading
+                                          ? null
+                                          : () => Navigator.of(
+                                            context,
+                                          ).pushNamed(AppRoutes.signUp),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor:
+                                        CuppetWorkspaceColors.primary,
+                                    textStyle: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13.5,
+                                    ),
+                                  ),
+                                  child: const Text('Create one'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: SydneySpacing.xs),
+                            Text(
+                              'By continuing, you agree to Cuppet\'s Terms & Privacy Policy.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelSmall?.copyWith(
+                                color: CuppetWorkspaceColors.muted.withValues(
+                                  alpha: 0.7,
+                                ),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: SydneySpacing.md),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -140,5 +211,45 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         context,
       ).pushNamedAndRemoveUntil(destination, (route) => false);
     }
+  }
+}
+
+class _AuthSecurityBadge extends StatelessWidget {
+  const _AuthSecurityBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: SydneySpacing.md,
+        vertical: SydneySpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: CuppetWorkspaceColors.softSage.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(SydneyRadius.md),
+        border: Border.all(
+          color: CuppetWorkspaceColors.panelBorder.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.shield_outlined,
+            size: 15,
+            color: CuppetWorkspaceColors.primaryInk,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Encrypted session & private agent execution',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: CuppetWorkspaceColors.primaryInk,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
