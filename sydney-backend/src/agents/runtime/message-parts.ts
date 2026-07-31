@@ -299,7 +299,7 @@ function splitDataSummary(
     })) as AgentMessageContent[];
   }
 
-  if (size <= STRUCTURED_SPLIT_THRESHOLD && list.length <= 4) {
+  if (list.length <= 3 || (size <= STRUCTURED_SPLIT_THRESHOLD && list.length <= 4)) {
     return [content];
   }
   const count =
