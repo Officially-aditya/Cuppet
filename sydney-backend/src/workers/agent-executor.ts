@@ -1474,6 +1474,7 @@ async function renderCustomAgent(
     prompt: agent.prompt,
     action: actionText(agent),
     heading: scheduledIntro(agent, "update", trigger),
+    connectorIds: agent.connector_ids,
     responseLimit: parsedIntent.response_limit,
     recipeVersion: numberValue(parsedIntent.recipe_version),
     promptProfileVersion: numberValue(
