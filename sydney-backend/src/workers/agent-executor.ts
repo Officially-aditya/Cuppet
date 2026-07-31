@@ -2374,6 +2374,9 @@ async function renderContentExtractorAgent(context: {
       day: "numeric"
     });
 
+    const platform = String(recipeInputs.platform ?? "generic");
+    const niche = String(recipeInputs.niche ?? "technology");
+
     const responseLimit = parsedIntent.response_limit;
     const promptLayers = buildRecipeExecutionPrompt({
       recipeId: "content_extractor",
@@ -2387,7 +2390,7 @@ async function renderContentExtractorAgent(context: {
       outputSchema:
         '{"ideas":[{"title":"string","hook":"string","angle":"string","audience_value":"string","evidence_summary":"string"}]}',
       runInstruction: [
-        `Today is ${todayStr}. Use bounded web search for fresh and reliable topics.`,
+        `Today is ${todayStr}. Target platform: ${platform}. Target niche: ${niche}. Use bounded web search for fresh topics tailored for ${platform}.`,
         responseLimit === "detailed"
           ? "Return deep, thorough, and highly detailed content ideas with detailed background evidence, rich hooks, comprehensive audience value analysis, and detailed angles."
           : responseLimit === "concise"
@@ -2413,7 +2416,7 @@ async function renderContentExtractorAgent(context: {
             JSON.stringify(recentIdeas),
             6000
           ),
-          "Search the web for the latest trending topics in my niche and return exactly 3 ideas in JSON format."
+          `Search the web for the latest trending topics in the ${niche} niche for ${platform} posts and return exactly 3 ideas in JSON format.`
         ].join("\n")
       }
     ];

@@ -453,7 +453,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           : {}),
         ...preservedAgentState(existingParsedIntent),
         ...(reparsed.intent === existingParsedIntent.intent
-          ? preservedRecipeConfiguration(existingParsedIntent)
+          ? preservedRecipeConfiguration(existingParsedIntent, reparsed as unknown as Record<string, unknown>)
           : {})
       };
       nextPrompt = description;
@@ -798,24 +798,23 @@ function preservedAgentState(
 }
 
 function preservedRecipeConfiguration(
-  intent: Record<string, unknown>
+  previousIntent: Record<string, unknown>,
+  reparsedIntent?: Record<string, unknown>
 ): Record<string, unknown> {
+  const previousInputs = (previousIntent.recipe_inputs ?? {}) as Record<string, unknown>;
+  const newInputs = (reparsedIntent?.recipe_inputs ?? {}) as Record<string, unknown>;
+
   return {
-    ...(typeof intent.recipe_version === "number"
-      ? { recipe_version: intent.recipe_version }
+    ...(typeof previousIntent.recipe_version === "number"
+      ? { recipe_version: previousIntent.recipe_version }
       : {}),
-    ...(typeof intent.prompt_profile_version === "number"
-      ? { prompt_profile_version: intent.prompt_profile_version }
+    ...(typeof previousIntent.prompt_profile_version === "number"
+      ? { prompt_profile_version: previousIntent.prompt_profile_version }
       : {}),
-    ...(intent.recipe_inputs &&
-    typeof intent.recipe_inputs === "object" &&
-    !Array.isArray(intent.recipe_inputs)
-      ? {
-          recipe_inputs: {
-            ...(intent.recipe_inputs as Record<string, unknown>)
-          }
-        }
-      : {})
+    recipe_inputs: {
+      ...previousInputs,
+      ...newInputs
+    }
   };
 }
 

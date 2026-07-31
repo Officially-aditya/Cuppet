@@ -193,7 +193,7 @@ export async function updateManagedAgentDescription(
       : {}),
     ...preservedAgentState(previous),
     ...(reparsed.intent === previous.intent
-      ? preservedRecipeConfiguration(previous)
+      ? preservedRecipeConfiguration(previous, reparsed as unknown as Record<string, unknown>)
       : {})
   };
   const client = await pool.connect();
@@ -364,18 +364,24 @@ function preservedAgentState(intent: Record<string, unknown>) {
   return preserved;
 }
 
-function preservedRecipeConfiguration(intent: Record<string, unknown>) {
-  const inputs = intent.recipe_inputs;
+function preservedRecipeConfiguration(
+  previousIntent: Record<string, unknown>,
+  reparsedIntent?: Record<string, unknown>
+) {
+  const previousInputs = (previousIntent.recipe_inputs ?? {}) as Record<string, unknown>;
+  const newInputs = (reparsedIntent?.recipe_inputs ?? {}) as Record<string, unknown>;
+
   return {
-    ...(typeof intent.recipe_version === "number"
-      ? { recipe_version: intent.recipe_version }
+    ...(typeof previousIntent.recipe_version === "number"
+      ? { recipe_version: previousIntent.recipe_version }
       : {}),
-    ...(typeof intent.prompt_profile_version === "number"
-      ? { prompt_profile_version: intent.prompt_profile_version }
+    ...(typeof previousIntent.prompt_profile_version === "number"
+      ? { prompt_profile_version: previousIntent.prompt_profile_version }
       : {}),
-    ...(inputs && typeof inputs === "object" && !Array.isArray(inputs)
-      ? { recipe_inputs: { ...(inputs as Record<string, unknown>) } }
-      : {})
+    recipe_inputs: {
+      ...previousInputs,
+      ...newInputs
+    }
   };
 }
 

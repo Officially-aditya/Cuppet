@@ -652,13 +652,20 @@ export function parseIntent(prompt: string): ParsedIntent {
     }
   }
   if (profile.id === "content_extractor") {
-    recipeInputs.platform = /\b(?:twitter|tweet|x post)\b/i.test(prompt)
-      ? "twitter"
-      : /\blinkedin\b/i.test(prompt)
-        ? "linkedin"
-        : /\b(?:reddit|subreddit|r\/[a-z0-9_]+)\b/i.test(prompt)
-          ? "reddit"
-          : recipeInputs.platform;
+    if (/\b(?:reddit|subreddit|r\/[a-z0-9_]+)\b/i.test(prompt)) {
+      recipeInputs.platform = "reddit";
+    } else if (/\blinkedin\b/i.test(prompt)) {
+      recipeInputs.platform = "linkedin";
+    } else if (/\b(?:twitter|tweet|x post|x\.com)\b/i.test(prompt)) {
+      recipeInputs.platform = "twitter";
+    } else if (/\b(?:blog|article|newsletter|generic)\b/i.test(prompt)) {
+      recipeInputs.platform = "generic";
+    }
+
+    const extractedNiche = extractNicheFromPrompt(prompt);
+    if (extractedNiche) {
+      recipeInputs.niche = extractedNiche;
+    }
   }
   return {
     ...parsed,
@@ -1609,4 +1616,24 @@ export function stockSymbols(prompt: string): string[] {
   }
 
   return [...new Set(searchQueries)].slice(0, 6);
+}
+
+export function extractNicheFromPrompt(prompt: string): string | null {
+  const subredditMatch = prompt.match(/\br\/([a-z0-9_]+)\b/i);
+  if (subredditMatch?.[1]) {
+    return subredditMatch[1].toLowerCase();
+  }
+
+  const topicMatch =
+    prompt.match(/(?:for|about|in|on)\s+([a-z0-9_\s/-]+?)\s+(?:topics|niche|content|posts?|drafts?|news)/i) ??
+    prompt.match(/(?:search the web for|find|extract|generate|get)\s+([a-z0-9_\s/-]+?)\s+(?:topics|niche|content|posts?|drafts?|news)/i);
+
+  if (topicMatch?.[1]) {
+    const raw = topicMatch[1].replace(/\b(?:reddit|linkedin|twitter|x post|x\.com)\b/gi, "").trim();
+    if (raw.length >= 2 && raw.length <= 50) {
+      return raw;
+    }
+  }
+
+  return null;
 }
