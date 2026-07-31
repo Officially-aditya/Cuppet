@@ -267,7 +267,7 @@ test("splits briefing sections and reconstructs cross-source synthesis", () => {
   assert.deepEqual(mergeAgentMessageContents(parts), content);
 });
 
-test("keeps GitHub activity with few repository updates in a single unsplit message card", () => {
+test("keeps GitHub activity with up to 5 repository updates in a single unsplit message card", () => {
   const content: AgentMessageContent = {
     template: "data_summary",
     version: "1.0",
@@ -276,13 +276,14 @@ test("keeps GitHub activity with few repository updates in a single unsplit mess
       kind: "github_activity",
       summary: "Detailed synthesis narrative ".repeat(100),
       metrics: [
-        { label: "Repositories", value: "2" },
+        { label: "Repositories", value: "5" },
         { label: "Open issues", value: "0" }
       ],
-      timeline: [
-        { title: "Commit pushed", repository: "user/repo-1", timestamp: "2026-07-31T10:00:00Z" },
-        { title: "Issue closed", repository: "user/repo-2", timestamp: "2026-07-31T11:00:00Z" }
-      ]
+      timeline: Array.from({ length: 5 }, (_, index) => ({
+        title: `Commit pushed ${index + 1}`,
+        repository: `user/repo-${index + 1}`,
+        timestamp: "2026-07-31T10:00:00Z"
+      }))
     }
   };
 
