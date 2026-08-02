@@ -93,6 +93,10 @@ export function compileAgentDefinition(
     profile,
     parsedIntent.recipe_inputs ?? inferredRecipeInputs(profile, parsedIntent)
   );
+  const configuredDraftPlatform = draftPlatformForRecipe(
+    profile.id,
+    recipeInputs
+  );
   const contract = profile.output_contract;
   const capability = profile.capability;
   const stepId = "deliver";
@@ -125,8 +129,8 @@ export function compileAgentDefinition(
           ...(parsedIntent.github_repository
             ? { github_repository: parsedIntent.github_repository }
             : {}),
-          ...(draftPlatform(prompt, parsedIntent.intent)
-            ? { platform: draftPlatform(prompt, parsedIntent.intent) }
+          ...(configuredDraftPlatform
+            ? { platform: configuredDraftPlatform }
             : {})
         }
       }
@@ -139,8 +143,8 @@ export function compileAgentDefinition(
     },
     interaction: {
       follow_up_mode: "grounded",
-      ...(draftPlatform(prompt, parsedIntent.intent)
-        ? { draft_platform: draftPlatform(prompt, parsedIntent.intent) }
+      ...(configuredDraftPlatform
+        ? { draft_platform: configuredDraftPlatform }
         : {}),
       allowed_message_actions: allowedActions(contract)
     },
@@ -686,15 +690,18 @@ function allowedActions(
   return [];
 }
 
-function draftPlatform(
-  prompt: string,
-  recipe: string
+function draftPlatformForRecipe(
+  recipe: string,
+  recipeInputs: Record<string, unknown>
 ): "twitter" | "linkedin" | "reddit" | "generic" | undefined {
   if (recipe !== "content_extractor") return undefined;
-  if (/\b(?:twitter|tweet|x post)\b/i.test(prompt)) return "twitter";
-  if (/\blinkedin\b/i.test(prompt)) return "linkedin";
-  if (/\breddit\b/i.test(prompt)) return "reddit";
-  return "generic";
+  const platform = recipeInputs.platform;
+  return platform === "twitter" ||
+    platform === "linkedin" ||
+    platform === "reddit" ||
+    platform === "generic"
+    ? platform
+    : undefined;
 }
 
 function connectorPermissions(connectors: string[]): string[] {

@@ -652,15 +652,8 @@ export function parseIntent(prompt: string): ParsedIntent {
     }
   }
   if (profile.id === "content_extractor") {
-    if (/\b(?:reddit|subreddit|r\/[a-z0-9_]+)\b/i.test(prompt)) {
-      recipeInputs.platform = "reddit";
-    } else if (/\blinkedin\b/i.test(prompt)) {
-      recipeInputs.platform = "linkedin";
-    } else if (/\b(?:twitter|tweet|x post|x\.com)\b/i.test(prompt)) {
-      recipeInputs.platform = "twitter";
-    } else if (/\b(?:blog|article|newsletter|generic)\b/i.test(prompt)) {
-      recipeInputs.platform = "generic";
-    }
+    const extractedPlatform = extractContentPlatformFromPrompt(prompt);
+    if (extractedPlatform) recipeInputs.platform = extractedPlatform;
 
     const extractedNiche = extractNicheFromPrompt(prompt);
     if (extractedNiche) {
@@ -1626,7 +1619,10 @@ export function extractNicheFromPrompt(prompt: string): string | null {
 
   const topicMatch =
     prompt.match(/(?:for|about|in|on)\s+([a-z0-9_\s/-]+?)\s+(?:topics|niche|content|posts?|drafts?|news)/i) ??
-    prompt.match(/(?:search the web for|find|extract|generate|get)\s+([a-z0-9_\s/-]+?)\s+(?:topics|niche|content|posts?|drafts?|news)/i);
+    prompt.match(/(?:search the web for|find|extract|generate|get)\s+([a-z0-9_\s/-]+?)\s+(?:topics|niche|content|posts?|drafts?|news)/i) ??
+    prompt.match(
+      /(?:posts?|drafts?|content)\s+(?:for|about|on)\s+([a-z0-9_\s/-]+?)(?=\s+(?:every|daily|weekly|each|at)\b|[.!?]|$)/i
+    );
 
   if (topicMatch?.[1]) {
     const raw = topicMatch[1].replace(/\b(?:reddit|linkedin|twitter|x post|x\.com)\b/gi, "").trim();
@@ -1636,4 +1632,42 @@ export function extractNicheFromPrompt(prompt: string): string | null {
   }
 
   return null;
+}
+
+export type ContentPlatform = "twitter" | "linkedin" | "reddit" | "generic";
+
+/**
+ * Returns a platform only when the prompt names one. Callers can therefore
+ * distinguish an omitted platform from an explicit request for the default.
+ */
+export function extractContentPlatformFromPrompt(
+  prompt: string
+): ContentPlatform | null {
+  const verbMatches = [
+    ...prompt.matchAll(/\b(?:write|draft|create|generate|compose|make)\b/gi)
+  ];
+  const targetText = verbMatches.length > 0
+    ? prompt.slice(verbMatches.at(-1)!.index)
+    : prompt;
+  const targeted = platformMentions(targetText);
+  if (targeted.size === 1) return [...targeted][0]!;
+  if (targeted.size > 1) return "generic";
+
+  if (/\b(?:blog|article|newsletter|generic)\b/i.test(prompt)) {
+    return "generic";
+  }
+
+  return null;
+}
+
+function platformMentions(text: string): Set<Exclude<ContentPlatform, "generic">> {
+  const platforms = new Set<Exclude<ContentPlatform, "generic">>();
+  if (/\b(?:reddit|subreddit|r\/[a-z0-9_]+)\b/i.test(text)) {
+    platforms.add("reddit");
+  }
+  if (/\blinkedin\b/i.test(text)) platforms.add("linkedin");
+  if (/\b(?:twitter|tweet|x post|x\.com)\b/i.test(text)) {
+    platforms.add("twitter");
+  }
+  return platforms;
 }

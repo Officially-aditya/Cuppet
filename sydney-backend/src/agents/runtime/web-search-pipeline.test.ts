@@ -12,6 +12,8 @@ describe("Web Search Pipeline Rules", () => {
     assert.equal(hasPrivateConnectors(["slack"]), true);
     assert.equal(hasPrivateConnectors(["github"]), true);
     assert.equal(hasPrivateConnectors(["notion"]), true);
+    assert.equal(hasPrivateConnectors(["drive"]), true);
+    assert.equal(hasPrivateConnectors(["calendar"]), true);
     assert.equal(hasPrivateConnectors(["google_drive"]), true);
     assert.equal(hasPrivateConnectors(["google_calendar"]), true);
 
@@ -48,7 +50,15 @@ describe("Web Search Pipeline Rules", () => {
     assert.equal(
       shouldPerformWebSearch({
         prompt: "Summarize my unread emails and calendar events",
-        connectorIds: ["gmail", "google_calendar"]
+        connectorIds: ["gmail", "calendar"]
+      }),
+      false
+    );
+
+    assert.equal(
+      shouldPerformWebSearch({
+        prompt: "Summarize the project files in my Drive",
+        connectorIds: ["drive"]
       }),
       false
     );

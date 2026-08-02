@@ -24,6 +24,7 @@ import {
 } from "./runtime/configuration-service.js";
 import { definitionToParsedIntent } from "./runtime/compiler.js";
 import { recordCuppetActivitySignal } from "../personalization/activity-events.js";
+import { mergeRecipeInputsForDescriptionUpdate } from "./recipe-input-updates.js";
 
 export type ManagedAgent = {
   id: string;
@@ -193,7 +194,11 @@ export async function updateManagedAgentDescription(
       : {}),
     ...preservedAgentState(previous),
     ...(reparsed.intent === previous.intent
-      ? preservedRecipeConfiguration(previous, reparsed as unknown as Record<string, unknown>)
+      ? preservedRecipeConfiguration(
+          previous,
+          reparsed as unknown as Record<string, unknown>,
+          clean
+        )
       : {})
   };
   const client = await pool.connect();
@@ -366,11 +371,9 @@ function preservedAgentState(intent: Record<string, unknown>) {
 
 function preservedRecipeConfiguration(
   previousIntent: Record<string, unknown>,
-  reparsedIntent?: Record<string, unknown>
+  reparsedIntent: Record<string, unknown>,
+  description: string
 ) {
-  const previousInputs = (previousIntent.recipe_inputs ?? {}) as Record<string, unknown>;
-  const newInputs = (reparsedIntent?.recipe_inputs ?? {}) as Record<string, unknown>;
-
   return {
     ...(typeof previousIntent.recipe_version === "number"
       ? { recipe_version: previousIntent.recipe_version }
@@ -378,10 +381,11 @@ function preservedRecipeConfiguration(
     ...(typeof previousIntent.prompt_profile_version === "number"
       ? { prompt_profile_version: previousIntent.prompt_profile_version }
       : {}),
-    recipe_inputs: {
-      ...previousInputs,
-      ...newInputs
-    }
+    recipe_inputs: mergeRecipeInputsForDescriptionUpdate({
+      previousIntent,
+      reparsedIntent,
+      description
+    })
   };
 }
 

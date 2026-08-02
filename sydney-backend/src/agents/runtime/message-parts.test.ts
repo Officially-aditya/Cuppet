@@ -290,3 +290,26 @@ test("keeps GitHub activity with up to 5 repository updates in a single unsplit 
   const parts = splitAgentMessageContent(content, "run-github");
   assert.equal(parts.length, 1);
 });
+
+test("still splits oversized five-item non-GitHub data summaries", () => {
+  const content: AgentMessageContent = {
+    template: "data_summary",
+    version: "1.0",
+    data: {
+      title: "Mailbox priorities",
+      kind: "gmail_digest",
+      summary: "Detailed synthesis narrative ".repeat(300),
+      messages: Array.from({ length: 5 }, (_, index) => ({
+        id: `message-${index + 1}`,
+        subject: `Subject ${index + 1}`,
+        sender: "sender@example.com",
+        preview: "Relevant message context ".repeat(150),
+        category: "update" as const
+      }))
+    }
+  };
+
+  const parts = splitAgentMessageContent(content, "run-gmail");
+  assert.ok(parts.length > 1);
+  assert.deepEqual(mergeAgentMessageContents(parts), content);
+});

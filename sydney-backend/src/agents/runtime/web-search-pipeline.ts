@@ -8,7 +8,9 @@ import {
 const PRIVATE_CONNECTOR_IDS = new Set([
   "gmail",
   "google_workspace",
+  "drive",
   "google_drive",
+  "calendar",
   "google_calendar",
   "slack",
   "github",

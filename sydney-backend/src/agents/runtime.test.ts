@@ -47,6 +47,21 @@ test("recipes compile to finite capabilities and compatibility is derived", () =
   }
 });
 
+test("subreddit prompts persist the same draft platform used at runtime", () => {
+  const prompt =
+    "Create content drafts for r/gaming about gaming topics every morning.";
+  const parsed = parseIntent(prompt);
+  const definition = compileAgentDefinition(parsed, prompt);
+  const compatibility = definitionToParsedIntent(definition, {
+    name: parsed.name,
+    avatar: parsed.avatar
+  });
+
+  assert.equal(parsed.recipe_inputs?.platform, "reddit");
+  assert.equal(definition.interaction.draft_platform, "reddit");
+  assert.equal(compatibility.draft_platform, "reddit");
+});
+
 test("registered capability safety cannot be raised by a definition", () => {
   const prompt = "Send me tech news every day at 7am";
   const definition = compileAgentDefinition(parseIntent(prompt), prompt);

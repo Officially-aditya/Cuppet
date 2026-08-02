@@ -299,7 +299,10 @@ function splitDataSummary(
     })) as AgentMessageContent[];
   }
 
-  if (list.length <= 5 || size <= STRUCTURED_SPLIT_THRESHOLD) {
+  if (
+    (data.kind === "github_activity" && list.length <= 5) ||
+    size <= STRUCTURED_SPLIT_THRESHOLD
+  ) {
     return [content];
   }
   const count =

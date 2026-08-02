@@ -62,6 +62,7 @@ import {
 } from "./runtime/state-store.js";
 import { isLlmTokenLimitError, withLlmUser } from "./token-rate-limit.js";
 import { recordCuppetActivitySignal } from "../personalization/activity-events.js";
+import { mergeRecipeInputsForDescriptionUpdate } from "./recipe-input-updates.js";
 
 const createAgentSchema = z
   .object({
@@ -453,7 +454,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
           : {}),
         ...preservedAgentState(existingParsedIntent),
         ...(reparsed.intent === existingParsedIntent.intent
-          ? preservedRecipeConfiguration(existingParsedIntent, reparsed as unknown as Record<string, unknown>)
+          ? preservedRecipeConfiguration(
+              existingParsedIntent,
+              reparsed as unknown as Record<string, unknown>,
+              description
+            )
           : {})
       };
       nextPrompt = description;
@@ -799,11 +804,9 @@ function preservedAgentState(
 
 function preservedRecipeConfiguration(
   previousIntent: Record<string, unknown>,
-  reparsedIntent?: Record<string, unknown>
+  reparsedIntent: Record<string, unknown>,
+  description: string
 ): Record<string, unknown> {
-  const previousInputs = (previousIntent.recipe_inputs ?? {}) as Record<string, unknown>;
-  const newInputs = (reparsedIntent?.recipe_inputs ?? {}) as Record<string, unknown>;
-
   return {
     ...(typeof previousIntent.recipe_version === "number"
       ? { recipe_version: previousIntent.recipe_version }
@@ -811,10 +814,11 @@ function preservedRecipeConfiguration(
     ...(typeof previousIntent.prompt_profile_version === "number"
       ? { prompt_profile_version: previousIntent.prompt_profile_version }
       : {}),
-    recipe_inputs: {
-      ...previousInputs,
-      ...newInputs
-    }
+    recipe_inputs: mergeRecipeInputsForDescriptionUpdate({
+      previousIntent,
+      reparsedIntent,
+      description
+    })
   };
 }
 
