@@ -57,13 +57,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleSpacing: 0,
-        leading: IconButton(
-          key: const ValueKey('feedback-back-button'),
-          tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        titleSpacing: SydneySpacing.page,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -176,6 +170,7 @@ class _Form extends StatelessWidget {
                       key: ValueKey('feedback-topic-$topic'),
                       label: Text(topic),
                       selected: selectedTopic == topic,
+                      showCheckmark: false,
                       onSelected: (_) => onTopicSelected(topic),
                       selectedColor: CuppetWorkspaceColors.softSage,
                       backgroundColor: CuppetWorkspaceColors.background,
@@ -194,14 +189,6 @@ class _Form extends StatelessWidget {
                                 : CuppetWorkspaceColors.muted,
                         fontWeight: FontWeight.w700,
                       ),
-                      avatar:
-                          selectedTopic == topic
-                              ? const Icon(
-                                Icons.check_rounded,
-                                size: 15,
-                                color: CuppetWorkspaceColors.primaryInk,
-                              )
-                              : null,
                     ),
                 ],
               ),

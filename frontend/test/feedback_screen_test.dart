@@ -13,6 +13,8 @@ void main() {
     );
 
     expect(find.text('Help shape Cuppet'), findsOneWidget);
+    expect(find.byKey(const ValueKey('feedback-back-button')), findsNothing);
+    expect(find.byIcon(Icons.check_rounded), findsNothing);
     expect(
       find.byKey(const ValueKey('feedback-message-field')),
       findsOneWidget,
@@ -29,6 +31,7 @@ void main() {
     await tester.tap(
       find.byKey(const ValueKey('feedback-topic-General feedback')),
     );
+    expect(find.byIcon(Icons.check_rounded), findsNothing);
     await tester.enterText(
       find.byKey(const ValueKey('feedback-message-field')),
       'The inbox is easy to scan.',
@@ -76,5 +79,6 @@ void main() {
 
     expect(tapped, isTrue);
     expect(find.text('Feedback'), findsOneWidget);
+    expect(find.byIcon(Icons.rate_review_outlined), findsNothing);
   });
 }

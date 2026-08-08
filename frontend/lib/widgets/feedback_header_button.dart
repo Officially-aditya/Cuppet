@@ -52,25 +52,14 @@ class FeedbackHeaderButton extends StatelessWidget {
                   borderRadius: borderRadius,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.rate_review_outlined,
-                          size: 17,
-                          color: CuppetWorkspaceColors.primaryInk,
-                        ),
-                        SizedBox(width: SydneySpacing.xs),
-                        Text(
-                          'Feedback',
-                          style: TextStyle(
-                            color: CuppetWorkspaceColors.primaryInk,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.1,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Feedback',
+                      style: TextStyle(
+                        color: CuppetWorkspaceColors.primaryInk,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.1,
+                      ),
                     ),
                   ),
                 ),
