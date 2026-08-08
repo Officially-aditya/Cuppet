@@ -9,6 +9,7 @@ test("onboarding suggestions create the intended scheduled agents", () => {
   );
   assert.equal(news.intent, "tech_news_brief");
   assert.equal(news.schedule_cron, "0 8 * * *");
+  assert.equal(news.output_template, "news_brief");
   assert.equal(news.realtime_enabled, false);
 
   const coding = parseIntent(
@@ -17,6 +18,15 @@ test("onboarding suggestions create the intended scheduled agents", () => {
   assert.equal(coding.intent, "dsa_question");
   assert.equal(coding.schedule_cron, "0 19 * * *");
   assert.equal(coding.realtime_enabled, false);
+});
+
+test("general news parsing selects the structured news brief contract", () => {
+  const news = parseIntent(
+    "Send me current world news every morning at 7 AM."
+  );
+
+  assert.equal(news.intent, "news_brief");
+  assert.equal(news.output_template, "news_brief");
 });
 
 test("classifies the four multi-connector briefing agents", () => {

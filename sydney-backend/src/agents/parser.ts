@@ -226,7 +226,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     connector: "web_search",
     action: "Searches and summarizes technology news.",
     defaultSchedule: "0 7 * * *",
-    outputTemplate: "plain_text",
+    outputTemplate: "news_brief",
     permissionsNeeded: ["Web search (no login needed)"],
     priority: 60,
     match: {
@@ -240,7 +240,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     connector: "web_search",
     action: "Searches and summarizes current news.",
     defaultSchedule: "0 7 * * *",
-    outputTemplate: "plain_text",
+    outputTemplate: "news_brief",
     permissionsNeeded: ["Web search (no login needed)"],
     priority: 24,
     match: {
@@ -771,7 +771,7 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
       connector: "web_search",
       action: "Searches and summarizes technology news.",
       schedule_cron: parseSchedule(lower) ?? "0 7 * * *",
-      output_template: "plain_text",
+      output_template: "news_brief",
       permissions_needed: ["Web search (no login needed)"]
     });
   }
@@ -788,7 +788,7 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
       connector: "web_search",
       action: "Searches and summarizes current news.",
       schedule_cron: parseSchedule(lower) ?? "0 7 * * *",
-      output_template: "plain_text",
+      output_template: "news_brief",
       permissions_needed: ["Web search (no login needed)"]
     });
   }
