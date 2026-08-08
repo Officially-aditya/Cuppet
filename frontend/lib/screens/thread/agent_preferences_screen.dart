@@ -94,6 +94,7 @@ class _AgentPreferencesScreenState
     return Scaffold(
       backgroundColor: CuppetWorkspaceColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: CuppetWorkspaceColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,

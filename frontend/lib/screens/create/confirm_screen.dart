@@ -121,10 +121,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     return Scaffold(
       key: const ValueKey('confirm-agent-screen'),
       backgroundColor: CuppetWorkspaceColors.background,
-      appBar: CreationBackAppBar(
-        backButtonKey: const ValueKey('confirm-agent-back'),
-        onBack: _creating ? null : () => Navigator.of(context).maybePop(),
-      ),
+      appBar: const CreationAppBar(),
       body: SafeArea(
         bottom: false,
         child:

@@ -32,11 +32,7 @@ class _AddConnectorScreenState extends ConsumerState<AddConnectorScreen> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(110),
         child: AppBar(
-          leading: IconButton(
-            tooltip: 'Back',
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-          ),
+          automaticallyImplyLeading: false,
           title: const Text('Add Connector'),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(54),

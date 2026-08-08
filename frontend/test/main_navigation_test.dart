@@ -143,19 +143,7 @@ void main() {
     expect(find.text('What should cuppet call you'), findsOneWidget);
     expect(find.byKey(const ValueKey('settings-delete-account-card')), findsOneWidget);
 
-    // Tap back button to return to Settings Screen
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Inbox'), findsOneWidget);
-    expect(find.text('Connectors'), findsWidgets);
-    expect(find.text('Settings'), findsWidgets);
-
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('settings-privacy-card')),
-      180,
-    );
-    expect(find.byKey(const ValueKey('settings-privacy-card')), findsOneWidget);
+    expect(find.byTooltip('Back'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

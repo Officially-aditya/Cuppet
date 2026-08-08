@@ -65,10 +65,7 @@ class _CreateScreenState extends State<CreateScreen> {
     return Scaffold(
       key: const ValueKey('create-agent-screen'),
       backgroundColor: CuppetWorkspaceColors.background,
-      appBar: CreationBackAppBar(
-        backButtonKey: const ValueKey('create-agent-back'),
-        onBack: () => Navigator.of(context).maybePop(),
-      ),
+      appBar: const CreationAppBar(),
       body: SafeArea(
         bottom: false,
         child: ListView(

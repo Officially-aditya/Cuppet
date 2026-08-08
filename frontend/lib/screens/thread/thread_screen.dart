@@ -221,6 +221,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 backgroundColor: CuppetWorkspaceColors.background,
                 foregroundColor: CuppetWorkspaceColors.ink,
                 surfaceTintColor: Colors.transparent,
+                automaticallyImplyLeading: false,
                 bottom: const PreferredSize(
                   preferredSize: Size.fromHeight(1),
                   child: Divider(
@@ -283,17 +284,13 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 backgroundColor: CuppetWorkspaceColors.background,
                 foregroundColor: CuppetWorkspaceColors.ink,
                 surfaceTintColor: Colors.transparent,
+                automaticallyImplyLeading: false,
                 bottom: const PreferredSize(
                   preferredSize: Size.fromHeight(1),
                   child: Divider(
                     height: 1,
                     color: CuppetWorkspaceColors.panelBorder,
                   ),
-                ),
-                leading: IconButton(
-                  tooltip: 'Back',
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
                 ),
                 title: GestureDetector(
                   behavior: HitTestBehavior.opaque,

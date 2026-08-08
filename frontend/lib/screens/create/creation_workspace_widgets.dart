@@ -2,16 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 
-class CreationBackAppBar extends StatelessWidget
-    implements PreferredSizeWidget {
-  const CreationBackAppBar({
-    required this.onBack,
-    required this.backButtonKey,
-    super.key,
-  });
-
-  final VoidCallback? onBack;
-  final Key backButtonKey;
+class CreationAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const CreationAppBar({super.key});
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -26,28 +18,6 @@ class CreationBackAppBar extends StatelessWidget
       scrolledUnderElevation: 0,
       elevation: 0,
       toolbarHeight: preferredSize.height,
-      leadingWidth: 64,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: SydneySpacing.page),
-        child: Center(
-          child: IconButton.filledTonal(
-            key: backButtonKey,
-            padding: EdgeInsets.zero,
-            tooltip: 'Back',
-            style: IconButton.styleFrom(
-              backgroundColor: CuppetWorkspaceColors.card,
-              foregroundColor: CuppetWorkspaceColors.ink,
-              disabledBackgroundColor: CuppetWorkspaceColors.border,
-              disabledForegroundColor: CuppetWorkspaceColors.muted,
-              side: const BorderSide(color: CuppetWorkspaceColors.border),
-              minimumSize: const Size.square(40),
-              maximumSize: const Size.square(40),
-            ),
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded, size: 19),
-          ),
-        ),
-      ),
     );
   }
 }
