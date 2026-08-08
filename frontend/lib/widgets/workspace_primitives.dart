@@ -9,6 +9,7 @@ class WorkspaceAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     required this.subtitle,
     this.showBrandMark = false,
+    this.trailing,
     super.key,
   });
 
@@ -16,6 +17,7 @@ class WorkspaceAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final String subtitle;
   final bool showBrandMark;
+  final Widget? trailing;
 
   @override
   Size get preferredSize => const Size.fromHeight(116);
@@ -31,6 +33,15 @@ class WorkspaceAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       toolbarHeight: preferredSize.height,
       titleSpacing: SydneySpacing.page,
+      actions:
+          trailing == null
+              ? null
+              : [
+                Padding(
+                  padding: const EdgeInsets.only(right: SydneySpacing.page),
+                  child: trailing!,
+                ),
+              ],
       title: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

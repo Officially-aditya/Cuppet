@@ -22,6 +22,7 @@ import 'screens/auth/sign_up_screen.dart';
 import 'screens/connectors/add_connector_screen.dart';
 import 'screens/create/confirm_screen.dart';
 import 'screens/create/create_screen.dart';
+import 'screens/feedback/feedback_screen.dart';
 import 'screens/launch/cuppet_launch_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/settings/memory_screen.dart';
@@ -55,6 +56,7 @@ class SydneyApp extends ConsumerWidget {
         const PersonalizationOnboardingScreen(),
       ),
       AppRoutes.inbox => _route(settings, const AuthGate()),
+      AppRoutes.feedback => _route(settings, const FeedbackScreen()),
       AppRoutes.create => _route(settings, const CreateScreen()),
       AppRoutes.connectors => _route(
         settings,

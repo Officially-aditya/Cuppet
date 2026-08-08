@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../services/api.dart';
 import '../../widgets/inbox/agent_list_item.dart';
+import '../../widgets/feedback_header_button.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/templates/briefing_card_template.dart';
 import '../../widgets/workspace_primitives.dart';
@@ -86,6 +87,10 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         title: 'Cuppet',
         subtitle: 'Your delegation agents',
         showBrandMark: true,
+        trailing: FeedbackHeaderButton(
+          key: const ValueKey('inbox-feedback-button'),
+          onPressed: () => Navigator.of(context).pushNamed(AppRoutes.feedback),
+        ),
       ),
       body: SafeArea(
         bottom: false,

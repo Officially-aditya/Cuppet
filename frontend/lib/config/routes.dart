@@ -6,6 +6,7 @@ class AppRoutes {
   static const signUp = '/sign-up';
   static const personalizationOnboarding = '/onboarding/personalization';
   static const inbox = '/inbox';
+  static const feedback = '/feedback';
   static const thread = '/thread';
   static const create = '/create';
   static const confirmCreate = '/create/confirm';
