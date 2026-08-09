@@ -58,20 +58,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: SydneySpacing.page,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CuppetMark(size: 28),
-            const SizedBox(width: SydneySpacing.sm),
-            Text(
-              'Feedback',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: CuppetWorkspaceColors.ink,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
+        title: const CuppetMark(size: 28),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -139,7 +126,7 @@ class _Form extends StatelessWidget {
             letterSpacing: -0.6,
           ),
         ),
-        const SizedBox(height: SydneySpacing.sm),
+        const SizedBox(height: SydneySpacing.md),
         Text(
           'Tell us what is working, what is not, or what you would love to see next.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
