@@ -80,6 +80,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                       onTopicSelected: (topic) {
                         setState(() => _selectedTopic = topic);
                       },
+                      onBack: _goBack,
                       onSubmit: _submit,
                     ),
           ),
@@ -99,6 +100,7 @@ class _Form extends StatelessWidget {
     required this.topics,
     required this.messageController,
     required this.onTopicSelected,
+    required this.onBack,
     required this.onSubmit,
   });
 
@@ -106,6 +108,7 @@ class _Form extends StatelessWidget {
   final List<String> topics;
   final TextEditingController messageController;
   final ValueChanged<String> onTopicSelected;
+  final VoidCallback onBack;
   final VoidCallback onSubmit;
 
   @override
@@ -220,21 +223,30 @@ class _Form extends StatelessWidget {
               const SizedBox(height: SydneySpacing.lg),
               SizedBox(
                 height: 50,
-                child: FilledButton.icon(
-                  key: const ValueKey('feedback-submit-button'),
-                  onPressed: canSubmit ? onSubmit : null,
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('Send feedback'),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('feedback-back-button'),
+                        onPressed: onBack,
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: const Text('Back'),
+                      ),
+                    ),
+                    const SizedBox(width: SydneySpacing.sm),
+                    Expanded(
+                      child: FilledButton.icon(
+                        key: const ValueKey('feedback-submit-button'),
+                        onPressed: canSubmit ? onSubmit : null,
+                        icon: const Icon(Icons.send_rounded, size: 18),
+                        label: const Text('Send feedback'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: SydneySpacing.lg),
-        const WorkspacePrivacyPanel(
-          title: 'A thoughtful note goes a long way',
-          message:
-              'We use feedback to make Cuppet clearer, calmer and more useful. Thanks for helping us build it with care.',
         ),
       ],
     );

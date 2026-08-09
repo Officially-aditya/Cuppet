@@ -14,7 +14,8 @@ void main() {
 
     expect(find.text('Help shape Cuppet'), findsOneWidget);
     expect(find.text('Feedback'), findsNothing);
-    expect(find.byKey(const ValueKey('feedback-back-button')), findsNothing);
+    expect(find.text('A thoughtful note goes a long way'), findsNothing);
+    expect(find.byKey(const ValueKey('feedback-back-button')), findsOneWidget);
     expect(find.byIcon(Icons.check_rounded), findsNothing);
     expect(
       find.byKey(const ValueKey('feedback-message-field')),
