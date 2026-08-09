@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Brand Gradients for Origami Bird -->
+    <linearGradient id="og-coral" x1="37" y1="13" x2="76" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9A7F"/>
+      <stop offset="1" stop-color="#C94F66"/>
+    </linearGradient>
+    <linearGradient id="og-indigo" x1="38" y1="52" x2="109" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5D579D"/>
+      <stop offset="1" stop-color="#29264F"/>
+    </linearGradient>
+    <linearGradient id="og-teal" x1="30" y1="110" x2="75" y2="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B625B"/>
+      <stop offset="1" stop-color="#2BA898"/>
+    </linearGradient>
+    <linearGradient id="og-amber" x1="78" y1="38" x2="112" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4C66D"/>
+      <stop offset="1" stop-color="#DB8833"/>
+    </linearGradient>
+
+    <!-- Subtle Card Shadow / Glow -->
+    <filter id="card-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="objectBoundingBox">
+      <feDropShadow dx="0" dy="12" stdDeviation="24" flood-color="#173C2A" flood-opacity="0.06"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Base (Warm Paper) -->
+  <rect width="1200" height="630" fill="#F5F3EE" />
+
+  <!-- Background Decorative Grid Lines (Quiet restraint) -->
+  <line x1="80" y1="0" x2="80" y2="630" stroke="#171A17" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="1120" y1="0" x2="1120" y2="630" stroke="#171A17" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="0" y1="80" x2="1200" y2="80" stroke="#171A17" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="0" y1="550" x2="1200" y2="550" stroke="#171A17" stroke-opacity="0.04" stroke-width="1"/>
+
+  <!-- Main Content Card Container -->
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="#F5F3EE" stroke="#173C2A" stroke-opacity="0.12" stroke-width="1.5" filter="url(#card-shadow)" />
+
+  <!-- Soft Accent Washes inside card -->
+  <circle cx="960" cy="280" r="220" fill="#E0E9DF" opacity="0.45" />
+
+  <!-- Content Group Left -->
+  <g transform="translate(140, 150)">
+    <!-- Category / Status Tag -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="0" width="180" height="32" rx="16" fill="#E0E9DF" stroke="#24583B" stroke-opacity="0.2" stroke-width="1" />
+      <circle cx="16" cy="16" r="4" fill="#43855B" />
+      <text x="30" y="21" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#173C2A" letter-spacing="0.5">PERSISTENT AI AGENTS</text>
+    </g>
+
+    <!-- Main Title -->
+    <text x="0" y="102" font-family="Instrument Serif, Georgia, serif" font-size="76" font-weight="400" fill="#173C2A" letter-spacing="-1">Cuppet</text>
+
+    <!-- Description -->
+    <text x="0" y="152" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#171A17" fill-opacity="0.82">
+      <tspan x="0" dy="0">Create scheduled agents in one sentence.</tspan>
+      <tspan x="0" dy="32">Works across your accounts and delivers to chat.</tspan>
+    </text>
+
+    <!-- Integration Badges Row -->
+    <g transform="translate(0, 240)">
+      <text x="0" y="-12" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#171A17" fill-opacity="0.45" letter-spacing="1">CONNECTED APPS</text>
+      
+      <!-- Badge 1: Gmail -->
+      <g transform="translate(0, 4)">
+        <rect x="0" y="0" width="82" height="34" rx="8" fill="#EBE9E2" stroke="#171A17" stroke-opacity="0.08" stroke-width="1" />
+        <text x="41" y="22" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#171A17" text-anchor="middle">Gmail</text>
+      </g>
+
+      <!-- Badge 2: Calendar -->
+      <g transform="translate(92, 4)">
+        <rect x="0" y="0" width="102" height="34" rx="8" fill="#EBE9E2" stroke="#171A17" stroke-opacity="0.08" stroke-width="1" />
+        <text x="51" y="22" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#171A17" text-anchor="middle">Calendar</text>
+      </g>
+
+      <!-- Badge 3: Drive -->
+      <g transform="translate(204, 4)">
+        <rect x="0" y="0" width="80" height="34" rx="8" fill="#EBE9E2" stroke="#171A17" stroke-opacity="0.08" stroke-width="1" />
+        <text x="40" y="22" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#171A17" text-anchor="middle">Drive</text>
+      </g>
+
+      <!-- Badge 4: GitHub -->
+      <g transform="translate(294, 4)">
+        <rect x="0" y="0" width="90" height="34" rx="8" fill="#EBE9E2" stroke="#171A17" stroke-opacity="0.08" stroke-width="1" />
+        <text x="45" y="22" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#171A17" text-anchor="middle">GitHub</text>
+      </g>
+
+      <!-- Badge 5: Notion -->
+      <g transform="translate(394, 4)">
+        <rect x="0" y="0" width="84" height="34" rx="8" fill="#EBE9E2" stroke="#171A17" stroke-opacity="0.08" stroke-width="1" />
+        <text x="42" y="22" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#171A17" text-anchor="middle">Notion</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Right Graphic: Origami Messenger Bird Mark -->
+  <g transform="translate(730, 160) scale(2.65)">
+    <g stroke-linejoin="round">
+      <path d="m13 47 35 9-7 16-28-8 17-7Z" fill="#55508F"/>
+      <path d="m13 88 28-16 8 8-26 21 7-18Z" fill="#E56B61"/>
+      <path d="m47 57-10-44 42 26Z" fill="url(#og-coral)"/>
+      <path d="m41 71-12 43 44-31Z" fill="url(#og-teal)"/>
+      <path d="m45 56 34-18 31 24-38 22-31-13Z" fill="url(#og-indigo)"/>
+      <path d="m45 56 34-18-7 46-31-13Z" fill="#F5F3EE"/>
+      <path d="m79 38 25 9 9 14-5 7-18-9Z" fill="url(#og-amber)"/>
+      <path d="m108 55 17 7-18 6Z" fill="#F58A73"/>
+      <path d="m72 84 18-25 18 9Z" fill="#3F356D" opacity=".65"/>
+    </g>
+    <circle cx="101" cy="53" r="3" fill="#17201C"/>
+  </g>
+
+  <!-- Domain Branding Footer -->
+  <text x="1060" y="514" font-family="DM Sans, system-ui, -apple-system, sans-serif" font-size="15" font-weight="500" fill="#173C2A" fill-opacity="0.7" text-anchor="end">cuppet-app.shatslabs.chatgpt.site</text>
+</svg>
