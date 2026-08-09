@@ -226,20 +226,25 @@ class _Form extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
+                      flex: 3,
+                      child: OutlinedButton(
                         key: const ValueKey('feedback-back-button'),
                         onPressed: onBack,
-                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                        label: const Text('Back'),
+                        child: const Text('Back'),
                       ),
                     ),
                     const SizedBox(width: SydneySpacing.sm),
                     Expanded(
-                      child: FilledButton.icon(
+                      flex: 7,
+                      child: FilledButton(
                         key: const ValueKey('feedback-submit-button'),
                         onPressed: canSubmit ? onSubmit : null,
-                        icon: const Icon(Icons.send_rounded, size: 18),
-                        label: const Text('Send feedback'),
+                        child: const Center(
+                          child: Text(
+                            'Send feedback',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       ),
                     ),
                   ],
