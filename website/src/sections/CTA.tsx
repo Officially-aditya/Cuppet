@@ -30,7 +30,9 @@ export default function CTA() {
       })
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => null)
+        const payload = (await response.json().catch(() => null)) as {
+          error?: { message?: string }
+        } | null
         throw new Error(payload?.error?.message || 'Waitlist submission failed.')
       }
 
