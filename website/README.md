@@ -18,3 +18,8 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run start` serves the production build.
 - `npm run lint` runs ESLint.
 - `npm run typecheck` runs TypeScript without emitting files.
+
+The waitlist form submits through `/api/waitlist`, which proxies to the
+backend's `POST /waitlist` endpoint. Set `WAITLIST_API_BASE_URL` in the website
+deployment environment when the backend is not available at
+`https://sydney-production.up.railway.app`.

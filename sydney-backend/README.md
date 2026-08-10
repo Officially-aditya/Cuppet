@@ -69,6 +69,7 @@ npm run dev:api
 ## Initial Routes
 
 - `GET /health`
+- `POST /waitlist` accepts a public email signup for the website private beta
 - `GET|POST /auth/*` handled by Better Auth at base path `/auth`
 - `POST /auth/sign-up/email`
 - `POST /auth/sign-in/email`

@@ -1,14 +1,50 @@
 'use client'
 
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 
 export default function CTA() {
   const [email, setEmail] = useState('')
   const [done, setDone] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
-  const submit = () => {
-    if (/^\S+@\S+\.\S+$/.test(email)) setDone(true)
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setError('Enter a valid email address.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.error?.message || 'Waitlist submission failed.')
+      }
+
+      setDone(true)
+      setEmail('')
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : 'We could not save your email right now. Please try again.',
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -36,23 +72,34 @@ export default function CTA() {
             {"You're on the list — we'll message you. Naturally."}
           </div>
         ) : (
-          <div className="mx-auto mt-9 flex w-full max-w-md flex-col gap-2 rounded-2xl border border-[rgba(245,243,238,0.15)] bg-[rgba(245,243,238,0.05)] p-1.5 sm:flex-row sm:rounded-full">
+          <form
+            onSubmit={submit}
+            className="mx-auto mt-9 flex w-full max-w-md flex-col gap-2 rounded-2xl border border-[rgba(245,243,238,0.15)] bg-[rgba(245,243,238,0.05)] p-1.5 sm:flex-row sm:rounded-full"
+          >
             <input
+              aria-label="Email address"
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
               placeholder="you@example.com"
               className="w-full min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-[var(--paper)] outline-none placeholder:text-[rgba(245,243,238,0.65)] sm:px-5"
             />
             <button
-              onClick={submit}
+              type="submit"
+              disabled={submitting}
               className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--paper)] px-5 py-3 text-sm font-semibold text-[var(--forest)] transition-opacity duration-200 hover:opacity-90 sm:w-auto"
             >
-              Get early access
+              {submitting ? 'Joining…' : 'Get early access'}
               <ArrowRight className="h-4 w-4" />
             </button>
-          </div>
+          </form>
+        )}
+
+        {error && (
+          <p role="alert" className="mx-auto mt-3 max-w-md text-xs text-[#f5b5a8]">
+            {error}
+          </p>
         )}
 
         <p className="mt-5 px-2 text-[10px] leading-4 text-[rgba(245,243,238,0.65)]">
