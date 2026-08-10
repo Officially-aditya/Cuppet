@@ -322,16 +322,6 @@ export type PreparedGitHubWebhookActivity = {
 const githubInitialLookbackMs = 24 * 60 * 60 * 1000;
 const githubMaximumLookbackMs = 7 * githubInitialLookbackMs;
 
-function checkWantsCommits(prompt: string, action: string): boolean {
-  const lower = [prompt, action].join("\n").toLowerCase();
-  return (
-    /\b(commit|commits|push|pushes|code change|code changes)\b/.test(lower) ||
-    /\b(?:repo|repository|github)\b[^.!?]{0,80}\b(?:change|changes|activity|update|updates)\b/.test(
-      lower
-    )
-  );
-}
-
 async function fetchCommits(
   accessToken: string,
   userId: string,
@@ -418,59 +408,54 @@ export async function renderGitHubAgent(
     )
   );
 
-  const promptAction = String(agent.parsed_intent.action ?? agent.prompt).trim();
-  const wantsCommits = checkWantsCommits(agent.prompt, promptAction);
   const includeLatestCommitHistory = options.trigger === "manual";
 
   const commitRecords: string[] = [];
   const commitSourceRefs: any[] = [];
   const timeline: GitHubTimelineItem[] = [];
-  if (wantsCommits) {
-    const commitsLists = await Promise.all(
-      repositories.slice(0, 5).map((repo) =>
-        includeLatestCommitHistory
-          ? fetchLatestCommits(accessToken, agent.user_id, repo.full_name, 5)
-          : fetchCommits(
-              accessToken,
-              agent.user_id,
-              repo.full_name,
-              window.since.toISOString(),
-              window.until.toISOString()
-            )
-      )
-    );
-    const deliveredShas = new Set<string>();
-    for (let i = 0; i < commitsLists.length; i++) {
-      const repoCommits = commitsLists[i]!;
-      const repoName = repositories[i]!.full_name;
-      for (const c of repoCommits) {
-        const timestamp = githubCommitTimestamp(c);
-        if (
-          deliveredShas.has(c.sha) ||
-          (!includeLatestCommitHistory &&
-            !githubTimestampInWindow(timestamp, window))
-        ) {
-          continue;
-        }
-        deliveredShas.add(c.sha);
-        commitRecords.push(
-          `Commit: ${repoName} | Message: ${c.commit.message} | Author: ${c.commit.author.name} | Date: ${timestamp}`
-        );
-        commitSourceRefs.push({
-          type: "github_commit",
-          source: "GitHub",
-          id: c.sha,
-          name: c.commit.message,
-          url: c.html_url
-        });
-        timeline.push({
-          title: c.commit.message.split("\n")[0]?.trim() || "Commit pushed",
-          repository: repoName,
-          timestamp,
-          url: c.html_url,
-          type: "commit"
-        });
+  const commitsLists = await Promise.all(
+    repositories.slice(0, 5).map((repo) =>
+      includeLatestCommitHistory
+        ? fetchLatestCommits(accessToken, agent.user_id, repo.full_name, 5)
+        : fetchCommits(
+            accessToken,
+            agent.user_id,
+            repo.full_name,
+            window.since.toISOString(),
+            window.until.toISOString()
+          )
+    )
+  );
+  const deliveredShas = new Set<string>();
+  for (let i = 0; i < commitsLists.length; i++) {
+    const repoCommits = commitsLists[i]!;
+    const repoName = repositories[i]!.full_name;
+    for (const c of repoCommits) {
+      const timestamp = githubCommitTimestamp(c);
+      if (
+        deliveredShas.has(c.sha) ||
+        (!includeLatestCommitHistory && !githubTimestampInWindow(timestamp, window))
+      ) {
+        continue;
       }
+      deliveredShas.add(c.sha);
+      commitRecords.push(
+        `Commit: ${repoName} | Message: ${c.commit.message} | Author: ${c.commit.author.name} | Date: ${timestamp}`
+      );
+      commitSourceRefs.push({
+        type: "github_commit",
+        source: "GitHub",
+        id: c.sha,
+        name: c.commit.message,
+        url: c.html_url
+      });
+      timeline.push({
+        title: c.commit.message.split("\n")[0]?.trim() || "Commit pushed",
+        repository: repoName,
+        timestamp,
+        url: c.html_url,
+        type: "commit"
+      });
     }
   }
 
@@ -488,13 +473,6 @@ export async function renderGitHubAgent(
       timestamp: issue.updated_at,
       url: issue.html_url,
       type: "issue" as const
-    })),
-    ...recentRepositories.slice(0, 3).map((repository) => ({
-      title: repository.description?.trim() || "Repository updated",
-      repository: repository.full_name,
-      timestamp: repository.pushed_at || repository.updated_at,
-      url: repository.html_url,
-      type: "repository" as const
     }))
   );
   timeline.sort((left, right) =>
@@ -502,10 +480,10 @@ export async function renderGitHubAgent(
   );
 
   const records = [
-    ...recentRepositories.map(repositoryRecord),
+    ...commitRecords,
     ...issues.map((issue) => issueRecord(issue, "Issue")),
     ...pullRequests.map((issue) => issueRecord(issue, "Pull request")),
-    ...commitRecords
+    ...recentRepositories.map(repositoryRecord)
   ];
   const synthesized =
     records.length > 0
@@ -518,13 +496,12 @@ export async function renderGitHubAgent(
         })
       : null;
   const fallbackSummary = [
-    digestSection(
-      "Recently updated repositories",
-      recentRepositories.map(repositoryLine)
-    ),
-    wantsCommits && commitRecords.length > 0
+    commitRecords.length > 0
       ? digestSection("Recent commits", commitRecords.map((r) => r.replace(/^Commit:\s*/i, "")))
-      : null,
+      : digestSection(
+          "Recently updated repositories",
+          recentRepositories.map(repositoryLine)
+        ),
     digestSection("Open issues involving you", issues.map(issueLine)),
     digestSection("Open pull requests involving you", pullRequests.map(issueLine))
   ]
@@ -572,7 +549,7 @@ export async function renderGitHubAgent(
           label: "Open PRs",
           value: String(pullRequests.length)
         },
-        ...(wantsCommits ? [{ label: "Commits", value: String(commitSourceRefs.length) }] : [])
+        { label: "Commits", value: String(commitSourceRefs.length) }
       ],
       footer: window.resumedFromPreviousRun
         ? "Read-only activity since this agent's previous successful run."
@@ -1377,7 +1354,6 @@ function repositoryRecord(repository: GitHubRepository): string {
     `Repository: ${repository.full_name}`,
     `Visibility: ${repository.private ? "private" : "public"}`,
     repository.language ? `Language: ${repository.language}` : null,
-    repository.description ? `Description: ${repository.description}` : null,
     repository.updated_at ? `Updated: ${repository.updated_at}` : null,
     `Open issues count: ${repository.open_issues_count ?? 0}`
   ]

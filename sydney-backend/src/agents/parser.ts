@@ -120,7 +120,7 @@ const CAPABILITIES: CapabilityDefinition[] = [
     intent: "github_activity_digest",
     connector: "github",
     connectorIds: ["github"],
-    action: "Summarizes recently updated repositories, open issues, and pull requests.",
+    action: "Summarizes recently updated repositories using commit messages from the lookback window, along with open issues and pull requests.",
     defaultSchedule: "0 9 * * *",
     outputTemplate: "data_summary",
     permissionsNeeded: ["GitHub profile and repository read access"],

@@ -286,7 +286,7 @@ const connectorPendingConfigs: Record<string, ConnectorPendingConfig> = {
   github_activity_digest: {
     connectorName: "GitHub",
     outputName: "GitHub activity digest",
-    expectedAction: "summarize recently updated repositories, open issues, and pull requests"
+    expectedAction: "summarize recently updated repositories using commit messages from the lookback window, along with open issues and pull requests"
   },
   notion_workspace_digest: {
     connectorName: "Notion",

@@ -380,14 +380,14 @@ const seeds: RecipeSeed[] = [
   {
     id: "github_activity_digest",
     name: "GitHub agent",
-    description: "Ranks repository, issue, and pull-request activity involving you.",
+    description: "Ranks commit messages, repository, issue, and pull-request activity involving you.",
     icon: "github",
     category: "work",
     connectors: ["github"],
     schedule: "0 9 * * *",
     capability: "connector.digest",
     output: "data_summary",
-    action: "Summarizes recently updated repositories, issues, and pull requests.",
+    action: "Summarizes recently updated repositories using commit messages from the lookback window, along with issues and pull requests.",
     visible: true,
     sort: 40,
     fields: [
@@ -397,7 +397,7 @@ const seeds: RecipeSeed[] = [
       list("repository_filters", "Repositories", [], false, "Optional owner/repository filters."),
       scheduleField("0 9 * * *")
     ],
-    ranking: "Rank requested repositories first, then review requests, assignments, mentions, authored work, and general activity. Preserve repository names and URLs."
+    ranking: "Lead with commit messages from the requested lookback window, then rank review requests, assignments, mentions, authored work, and general activity. Do not use repository descriptions as activity. Preserve repository names and URLs."
   },
   {
     id: "scheduled_reminder",
