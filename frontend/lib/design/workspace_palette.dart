@@ -13,7 +13,7 @@ class CuppetWorkspaceColors {
   /// Soft green wash for chips, selected pills, and quiet surfaces.
   static const softSage = Color(0xFFE4F3EC);
 
-  /// Global brand green — matches [SydneyColors.primary].
+  /// Global brand green - matches [SydneyColors.primary].
   static const primary = Color(0xFF006046);
 
   /// Secondary green for supporting accents.

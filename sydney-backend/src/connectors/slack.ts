@@ -680,7 +680,7 @@ function activityRecord(item: SlackActivityItem): string {
 }
 
 function activityLine(item: SlackActivityItem): string {
-  return `#${item.channelName} — ${item.authorName}: ${truncate(item.message.text ?? "", 220)}`;
+  return `#${item.channelName} - ${item.authorName}: ${truncate(item.message.text ?? "", 220)}`;
 }
 
 function truncate(value: string, maxLength: number): string {

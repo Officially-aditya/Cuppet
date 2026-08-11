@@ -232,7 +232,7 @@ function splitNewsBrief(content: AgentMessageContent): AgentMessageContent[] {
       template: "news_brief",
       version: "1.0",
       data: {
-        title: `${data.title} — Detailed coverage`,
+        title: `${data.title} - Detailed coverage`,
         items: data.items,
         ...(data.initialItemCount
           ? { initialItemCount: data.initialItemCount }
@@ -245,7 +245,7 @@ function splitNewsBrief(content: AgentMessageContent): AgentMessageContent[] {
       template: "news_brief",
       version: "1.0",
       data: {
-        title: `${data.title} — Context and timeline`,
+        title: `${data.title} - Context and timeline`,
         items: [],
         ...(data.why_it_matters
           ? { why_it_matters: data.why_it_matters }

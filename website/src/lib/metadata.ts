@@ -24,7 +24,7 @@ export function createMetadata({
   noIndex = false,
   image = DEFAULT_OG_IMAGE,
 }: MetadataOptions): Metadata {
-  const fullTitle = title === SITE_NAME ? title : `${title} — ${SITE_NAME}`
+  const fullTitle = title === SITE_NAME ? title : `${title} - ${SITE_NAME}`
   const ogImages = [
     {
       url: image,

@@ -203,7 +203,7 @@ List<String> _briefingLines(Object? value, {required String objectTitle}) {
           final map = Map<String, dynamic>.from(item);
           final title = map[objectTitle]?.toString().trim() ?? '';
           final detail = map['detail']?.toString().trim() ?? '';
-          return [title, detail].where((part) => part.isNotEmpty).join(' — ');
+          return [title, detail].where((part) => part.isNotEmpty).join(' - ');
         }
         return item.toString().trim();
       })

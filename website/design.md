@@ -8,9 +8,9 @@ Persistent AI agents that work across connected accounts, keep a schedule, and d
 
 ## Audience · Use · Tone
 
-- **Audience** — Busy professionals who already live in Gmail, Calendar, Drive, GitHub, Notion.
-- **Use** — Join private beta; understand “one sentence → scheduled agent → inbox result.”
-- **Tone** — Quiet utility. Editorial restraint with product specificity. Not hype, not neon AI.
+- **Audience** - Busy professionals who already live in Gmail, Calendar, Drive, GitHub, Notion.
+- **Use** - Join private beta; understand “one sentence → scheduled agent → inbox result.”
+- **Tone** - Quiet utility. Editorial restraint with product specificity. Not hype, not neon AI.
 
 ## Genre
 
@@ -20,7 +20,7 @@ Keep warm paper and forest green. Refuse purple/pink AI gradients, glassmorphism
 
 ## Macrostructure
 
-**Product-led letter** — Hero (copy + live chat surface) · Integrations strip · How it works · Product features · Security · Examples · CTA · Footer.
+**Product-led letter** - Hero (copy + live chat surface) · Integrations strip · How it works · Product features · Security · Examples · CTA · Footer.
 
 ## Color
 
@@ -38,15 +38,15 @@ Keep warm paper and forest green. Refuse purple/pink AI gradients, glassmorphism
 | `--leaf` | `#43855B` | Status / success accents |
 | `--rule` | `rgba(23, 26, 23, 0.10)` | Hairlines |
 
-No mid-render hex improvisation in new work — use tokens or Tailwind `brand` scale.
+No mid-render hex improvisation in new work - use tokens or Tailwind `brand` scale.
 
 ## Typography
 
 | Role | Face | Notes |
 | --- | --- | --- |
-| Display | Instrument Serif | Roman only. No italic headers, with one sanctioned exception: the Hero subhead ("You get a message.") — do not add more. |
+| Display | Instrument Serif | Roman only. No italic headers, with one sanctioned exception: the Hero subhead ("You get a message.") - do not add more. |
 | Body | DM Sans | 400–600 for UI |
-| Mono meta | `ui-monospace` | Optional, rare — prefer plain captions |
+| Mono meta | `ui-monospace` | Optional, rare - prefer plain captions |
 
 Scale (approx): display `clamp(2.75rem, 6vw, 5.25rem)` · section `clamp(2.25rem, 4vw, 3.5rem)` · body 15–17px · meta 10–12px uppercase tracking.
 
@@ -60,12 +60,12 @@ Scale (approx): display `clamp(2.75rem, 6vw, 5.25rem)` · section `clamp(2.25rem
 
 ## Components
 
-- **Primary CTA** — filled forest, pill (`rounded-full`), light text, hover darken
-- **Secondary** — text link or ghost, no competing fill
-- **Nav** — floating pill (blur + border) when scrolled
-- **Section label** — short uppercase caption + hairline; **no** `01 · CHAPTER` stamps unless content is truly ordinal
-- **Cards** — paper on paper-2, 1px rule, radius ~1–1.5rem
-- **Focus** — visible ring, forest, instant (no animate-in)
+- **Primary CTA** - filled forest, pill (`rounded-full`), light text, hover darken
+- **Secondary** - text link or ghost, no competing fill
+- **Nav** - floating pill (blur + border) when scrolled
+- **Section label** - short uppercase caption + hairline; **no** `01 · CHAPTER` stamps unless content is truly ordinal
+- **Cards** - paper on paper-2, 1px rule, radius ~1–1.5rem
+- **Focus** - visible ring, forest, instant (no animate-in)
 
 ## Motion
 

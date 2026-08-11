@@ -1,4 +1,4 @@
-# Sydney — Examples
+# Sydney - Examples
 ### Internal alias: Sydney | Version 1.0
 ### A living document. Add new examples as they are discovered.
 ### Every example is something a real user could type today and get working.
@@ -18,7 +18,7 @@ These are the easiest agents to build and the easiest to demo.
 
 ---
 
-## Category 1 — Information Delivery
+## Category 1 - Information Delivery
 
 *Agents that find, summarize, and deliver information on a schedule.
 No user action required. Just receive.*
@@ -99,7 +99,7 @@ Template:   plain_text
 Schedule:   on-demand (triggered when user shares a file)
 ```
 User shares a PDF to Drive, agent detects it, reads it, sends a
-summary as a message. Research papers, contracts, reports — summarized
+summary as a message. Research papers, contracts, reports - summarized
 before you have to read them.
 
 ---
@@ -124,7 +124,7 @@ Connector:  web search (no OAuth)
 Template:   plain_text
 Schedule:   daily 8am
 ```
-Targeted news on any topic — not just tech. Sports, finance, politics,
+Targeted news on any topic - not just tech. Sports, finance, politics,
 a specific company, a specific industry. User defines the topic in
 plain language. Agent delivers it daily.
 
@@ -156,7 +156,7 @@ Bloomberg Terminal for $9.99/month.
 
 ---
 
-## Category 2 — Study and Learning
+## Category 2 - Study and Learning
 
 *Agents that teach, track, and build knowledge over time.
 No connector required for any of these. Works from day one.*
@@ -165,7 +165,7 @@ No connector required for any of these. Works from day one.*
 
 ### 2.1 JEE / NEET Study Plan Agent
 ```
-User says:  "create a study plan for my JEE exam on November 15th —
+User says:  "create a study plan for my JEE exam on November 15th -
              Physics, Chemistry, Maths"
 Connector:  none
 Template:   progress_tracker
@@ -173,7 +173,7 @@ Schedule:   daily 8am
 ```
 Generates a day-by-day study plan across all subjects. Messages the
 user every morning with today's topic and estimated time. Tracks
-completion via replies. Implements spaced repetition automatically —
+completion via replies. Implements spaced repetition automatically -
 topics revisited at 7, 25, and 55 days after first study. Shifts to
 full revision mode 14 days before the exam. Sends a checklist on exam eve.
 
@@ -203,7 +203,7 @@ adjusts difficulty and vocabulary range over time. Streak counter builds
 habit. Milestone messages at day 7, 21, and 66 (research-backed habit
 formation points).
 
-Works for any language. Works for any vocabulary domain — legal terms,
+Works for any language. Works for any vocabulary domain - legal terms,
 medical terms, business English, technical vocabulary.
 
 ---
@@ -215,9 +215,9 @@ Connector:  none
 Template:   plain_text
 Schedule:   daily 8am
 ```
-Delivers one concrete, actionable coding tip. Not a tutorial — a single
+Delivers one concrete, actionable coding tip. Not a tutorial - a single
 technique, pattern, or built-in the user may not know. Example:
-"Today: Python's `collections.defaultdict` — here's when to use it
+"Today: Python's `collections.defaultdict` - here's when to use it
 instead of a regular dict and why it's faster."
 
 Works for any language or framework: Python, JavaScript, TypeScript,
@@ -264,7 +264,7 @@ Schedule:   daily 7am
 ```
 Daily nudge at a set time. User taps Done when they've meditated.
 Streak builds. Milestone messages at day 7, 21, 66. If streak breaks,
-no shame — just a warm restart message. No guilt. No judgment. Just the
+no shame - just a warm restart message. No guilt. No judgment. Just the
 next chance to build the habit.
 
 Works for any habit: exercise, reading, journaling, cold shower,
@@ -272,7 +272,7 @@ gratitude practice, no-phone mornings.
 
 ---
 
-## Category 3 — Productivity and Work
+## Category 3 - Productivity and Work
 
 *Agents that track, report, and manage work-related information.*
 
@@ -372,7 +372,7 @@ the week ahead. No project management tool required.
 
 ---
 
-## Category 4 — Personal Life
+## Category 4 - Personal Life
 
 *Agents for life outside work. No connector required for most.*
 
@@ -387,15 +387,15 @@ Template:   daily_task
 Schedule:   daily 9am
 ```
 The anti-procrastination agent. Breaks any large, overwhelming project
-into minimum viable daily sessions — small enough that "I don't have
+into minimum viable daily sessions - small enough that "I don't have
 time" or "I'm not in the mood" has no valid answer.
 
 How it works:
 - Day 1: analyses the project, creates 8–15 sessions, sends session 1
-- Every day: delivers one session — specific, time-boxed, unambiguous
+- Every day: delivers one session - specific, time-boxed, unambiguous
 - User replies Done / Need more time / Too hard
 - Agent adapts: more time = same task tomorrow, too hard = breaks it smaller
-- No shame for missing days — just the next session waiting
+- No shame for missing days - just the next session waiting
 
 The magic: starting feels trivial because the task is trivially small.
 The momentum builds itself.
@@ -463,11 +463,11 @@ Schedule:   weekly same day each week
 ```
 Delivers age-appropriate developmental milestone information weekly.
 What to watch for this week, what's normal, what's worth mentioning
-to a doctor. Not medical advice — evidence-based developmental guidance
+to a doctor. Not medical advice - evidence-based developmental guidance
 that makes every parent feel more informed and confident.
 
 Works from birth through early childhood. One of the most personal
-agents Sydney can create — and one that requires nothing but a name
+agents Sydney can create - and one that requires nothing but a name
 and a birth date.
 
 ---
@@ -498,7 +498,7 @@ Schedule:   daily 9pm
 Sends a gentle evening prompt. Tracks the streak. After 21 days sends
 a milestone message. Research-backed: gratitude journaling for 21 days
 shows measurable improvement in wellbeing. The agent makes the practice
-effortless — the prompt arrives, you reply with three things, done.
+effortless - the prompt arrives, you reply with three things, done.
 
 ---
 
@@ -509,14 +509,14 @@ Connector:  web search (no OAuth)
 Template:   plain_text
 Schedule:   weekly Monday 8am
 ```
-Searches for relevant job postings matching the user's criteria —
+Searches for relevant job postings matching the user's criteria -
 role, location, seniority, company type. Delivers a curated list.
-Passive job seekers — most employed professionals — get market visibility
+Passive job seekers - most employed professionals - get market visibility
 without actively looking. When the right role appears, they see it.
 
 ---
 
-## Category 5 — Study Agent Full Lifecycle
+## Category 5 - Study Agent Full Lifecycle
 
 *This section documents the complete study agent experience in detail,
 because it is one of Sydney's highest-impact use cases.*
@@ -525,7 +525,7 @@ because it is one of Sydney's highest-impact use cases.*
 
 ### The study agent, day by day
 
-**Day 1 — Plan creation**
+**Day 1 - Plan creation**
 ```
 📚 Study Agent                    just now
 
@@ -539,7 +539,7 @@ Nov 1–10:   Full revision + mock tests
 Nov 11–14:  Light revision only
 Nov 15:     Exam day 🎯
 
-Starting tomorrow: Mechanics — Kinematics
+Starting tomorrow: Mechanics - Kinematics
 
 I'll message you every morning at 8am.
 ```
@@ -550,7 +550,7 @@ I'll message you every morning at 8am.
 
 Day 12 of 183 · Physics          🔥 11 day streak
 
-Today: Kinematics — Equations of Motion
+Today: Kinematics - Equations of Motion
 ~45 min · builds on yesterday's displacement session
 
 Physics     ████░░░░░░  38%  on track
@@ -576,10 +576,10 @@ Take one more day. No rush.
 If it's confusing, tell me which part
 and I'll find a different way to explain it.
 
-[Done ✓]   [It's confusing — help]
+[Done ✓]   [It's confusing - help]
 ```
 
-**When user taps "It's confusing — help"**
+**When user taps "It's confusing - help"**
 ```
 📚 Study Agent                    8:02am
 
@@ -614,7 +614,7 @@ You studied Newton's Laws 7 days ago.
 Research shows revisiting after 7 days
 locks it into long-term memory.
 
-Quick check — can you write Newton's
+Quick check - can you write Newton's
 Second Law in two different forms?
 
 Think first, then tap below.
@@ -632,12 +632,12 @@ Switching to full revision mode.
 No new topics. Your brain needs consolidation now.
 
 This week:
-Mon: Physics — all mechanics
-Tue: Physics — waves and optics
-Wed: Chemistry — organic reactions
-Thu: Chemistry — physical chemistry
-Fri: Maths — calculus
-Sat: Maths — algebra and vectors
+Mon: Physics - all mechanics
+Tue: Physics - waves and optics
+Wed: Chemistry - organic reactions
+Thu: Chemistry - physical chemistry
+Fri: Maths - calculus
+Sat: Maths - algebra and vectors
 Sun: Full mock test
 
 Sleep 8 hours. Eat well.
@@ -673,15 +673,15 @@ You've got this. 🎯
 
 ---
 
-## Category 6 — Procrastination Breaker Full Lifecycle
+## Category 6 - Procrastination Breaker Full Lifecycle
 
 *The complete experience of the anti-procrastination agent.*
 
 ---
 
-### Portfolio website — broken down
+### Portfolio website - broken down
 
-**Day 1 — Project intake**
+**Day 1 - Project intake**
 ```
 🎯 Portfolio Project              just now
 
@@ -721,7 +721,7 @@ That's the whole task.
 [Done ✓]
 ```
 
-**Day 2 — Building momentum**
+**Day 2 - Building momentum**
 ```
 🎯 Portfolio Project              9:00am
 
@@ -739,7 +739,7 @@ Don't analyse them yet. Just collect.
 [Done ✓]   [Need more time]   [Too hard]
 ```
 
-**Day 5 — Checking in after progress**
+**Day 5 - Checking in after progress**
 ```
 🎯 Portfolio Project              9:00am
 
@@ -757,7 +757,7 @@ best piece of work. One sentence.
 [Done ✓]   [Need more time]   [Too hard]
 ```
 
-**User goes dark for 3 days — day 8**
+**User goes dark for 3 days - day 8**
 ```
 🎯 Portfolio Project              9:00am
 
@@ -775,7 +775,7 @@ Write one case study headline.
 [Done ✓]   [Need more time]   [Too hard]
 ```
 
-**Day 12 — Final session**
+**Day 12 - Final session**
 ```
 🎯 Portfolio Project              9:00am
 
@@ -813,7 +813,7 @@ Want to tackle your next project?
 
 ---
 
-## Category 7 — Future Agents (Phase 3+)
+## Category 7 - Future Agents (Phase 3+)
 
 *Agents that require write permissions or advanced connectors.
 Not available at launch. Documented here for future reference.*
@@ -875,11 +875,11 @@ Phase:      5 (physical AI)
 As physical AI devices (robots, smart home) adopt MCP, Sydney becomes
 the command interface for the physical world using the same agent model,
 same inbox, same message format. The user doesn't learn a new app for
-each device — all of them become agent contacts in Sydney.
+each device - all of them become agent contacts in Sydney.
 
 ---
 
-## Quick Reference — Agents by Connector
+## Quick Reference - Agents by Connector
 
 ### No connector required (works from day one)
 - Tech News Brief
@@ -929,7 +929,7 @@ each device — all of them become agent contacts in Sydney.
 
 ---
 
-## Quick Reference — Agents by Template
+## Quick Reference - Agents by Template
 
 ### plain_text
 Tech News, Niche News, PDF Summary, Meeting Recap, Weekly Progress,
@@ -968,7 +968,7 @@ Competitor Watcher (detailed), market analysis agents
 Every agent in this document can be created with one sentence.
 That's the standard. If it takes more than one sentence to describe
 what you want, the agent creation flow needs to handle the clarification
-in the confirmation card — not burden the user with a form.
+in the confirmation card - not burden the user with a form.
 
 If a use case can't be initiated in one sentence, it's not a Sydney agent.
 It's a feature request for the intent parser.

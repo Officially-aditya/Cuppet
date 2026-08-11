@@ -1248,7 +1248,7 @@ async function renderScheduledReminder(
           ? `A gentle reminder: ${withPeriod(task)}`
           : tone === "playful"
             ? `Tiny nudge: ${withPeriod(task)}`
-            : `You’ve got this — ${withPeriod(task)}`;
+            : `You’ve got this - ${withPeriod(task)}`;
     const tinyStep =
       reminderInputs.include_tiny_step === true
         ? reminderTinyStep(task)

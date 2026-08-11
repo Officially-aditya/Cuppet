@@ -233,7 +233,7 @@ class _RealtimeBridgeState extends ConsumerState<RealtimeBridge> {
             debugPrint('Push notifications declined by user');
           }
         } on PushSetupException catch (e) {
-          // Firebase not configured or platform not supported — non-fatal
+          // Firebase not configured or platform not supported - non-fatal
           debugPrint('Push notification setup skipped: $e');
         }
 

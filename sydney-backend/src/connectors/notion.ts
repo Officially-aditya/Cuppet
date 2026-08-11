@@ -268,7 +268,7 @@ export async function renderNotionAgent(
     pages.map(
       (page) =>
         `${notionPageTitle(page)}${
-          page.last_edited_time ? ` — edited ${formatDate(page.last_edited_time)}` : ""
+          page.last_edited_time ? ` - edited ${formatDate(page.last_edited_time)}` : ""
         }`
     )
   );

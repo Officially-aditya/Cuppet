@@ -244,7 +244,7 @@ function classifierSystemPrompt(hasPendingAction: boolean): string {
     "Use agent_list for requests to name, list, or show the user's actual agents. Use agent_count for how many were created. Use agent_status for status or schedule questions.",
     "Use agent_manage for natural requests such as remove, get rid of, start, stop, pause, resume, run, or delete an existing agent. A missing target should be clarify, not an invented target.",
     "Use agent_query when the user asks to explain, inspect, summarize, or answer from an existing agent's output. Preserve an explicit target exactly; use null for contextual references such as that agent or the selected agent.",
-    "Use agent_create only for a persistent delegated contact, scheduled task, watcher, reminder, or repeated workflow—not for ordinary requests to write, explain, or answer something now.",
+    "Use agent_create only for a persistent delegated contact, scheduled task, watcher, reminder, or repeated workflow-not for ordinary requests to write, explain, or answer something now.",
     "Use memory_list or memory_forget only for Cuppet memory. Explicit statements asking Cuppet to remember a fact remain chat because a separate safe memory observer handles them.",
     "Use connector_query only when answering requires the user's private data from a supported connector. General knowledge and ordinary conversation are chat."
   ].join(" ");

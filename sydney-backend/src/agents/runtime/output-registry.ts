@@ -487,7 +487,7 @@ const entries: OutputRegistryEntry[] = [
   outputEntry("streak_counter", streakCounterDataSchema, {
     textualize: (data) =>
       data.word
-        ? `${data.label}: ${data.word} — ${data.definition ?? ""}`
+        ? `${data.label}: ${data.word} - ${data.definition ?? ""}`
         : `${data.label}: ${data.count} ${data.unit}`,
     preview: (data) =>
       data.word
@@ -575,7 +575,7 @@ const entries: OutputRegistryEntry[] = [
           typeof priority === "string"
             ? `Priority: ${priority}`
             : `Priority: ${priority.title}${
-                priority.detail ? ` — ${priority.detail}` : ""
+                priority.detail ? ` - ${priority.detail}` : ""
               }`
         ),
         ...data.sections.flatMap((section: any) => [
@@ -591,7 +591,7 @@ const entries: OutputRegistryEntry[] = [
         ...(data.conflicts ?? []).map((conflict: any) =>
           typeof conflict === "string"
             ? `Conflict: ${conflict}`
-            : `Conflict: ${conflict.topic} — ${conflict.detail}`
+            : `Conflict: ${conflict.topic} - ${conflict.detail}`
         )
       ].join("\n"),
     preview: (data) =>

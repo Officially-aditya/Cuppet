@@ -356,7 +356,7 @@ List<Message> _mockThread(String threadId) {
         'template': 'plain_text',
         'data': {
           'text':
-              "I'm here for everyday conversation, just like the AI chatbots you already know and love. But stick around for the magic — tell me what you want, and I'll create a contact that messages you, like clockwork, exactly when you need it.",
+              "I'm here for everyday conversation, just like the AI chatbots you already know and love. But stick around for the magic - tell me what you want, and I'll create a contact that messages you, like clockwork, exactly when you need it.",
         },
       },
     ),

@@ -1347,7 +1347,7 @@ export async function readGmailForAssistant(
     summary: messages.length === 0
       ? resolveOutcomeCopy("inbox_attention", "no_relevant_items")
       : messages.map((message) =>
-          `- ${subjectOrFallback(message)} — ${header(message, "From") ?? "Unknown sender"}${message.snippet ? `: ${message.snippet.slice(0, 240)}` : ""}`
+          `- ${subjectOrFallback(message)} - ${header(message, "From") ?? "Unknown sender"}${message.snippet ? `: ${message.snippet.slice(0, 240)}` : ""}`
         ).join("\n"),
     sourceRefs: messages.map((message) => ({
       ...gmailMessageSourceRef(message),
@@ -1836,7 +1836,7 @@ function calendarEventLine(event: CalendarEvent, timeZone: string): string {
   const location = event.location?.trim();
   return [start, calendarEventTitle(event), location ? `at ${location}` : null]
     .filter(Boolean)
-    .join(" — ");
+    .join(" - ");
 }
 
 function calendarEventStart(event: CalendarEvent, timeZone: string): string {

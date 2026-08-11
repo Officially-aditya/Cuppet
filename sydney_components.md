@@ -1,4 +1,4 @@
-# Sydney — Component Breakdown
+# Sydney - Component Breakdown
 ### Internal alias: Sydney | Version 1.0
 ### This document expands each of Sydney's three buildable components in detail.
 ### Every design decision is explained. Use this as your primary build reference.
@@ -42,17 +42,17 @@ are purely interfaces.
 
 ---
 
-## Component 1 — Node.js Backend
+## Component 1 - Node.js Backend
 
 ### What it is
 The entire brain of Sydney. Every piece of intelligence, every agent
-execution, every token, every message — lives here. The Flutter app
+execution, every token, every message - lives here. The Flutter app
 and website are dumb clients. They display what the backend tells them.
 
 ### Why it is built first
 Nothing else works without it. The Flutter app has no data to show.
 The website has nothing to link to. Auth, agents, messages, scheduling
-— all of it lives in the backend. Build this first, test it with curl
+- all of it lives in the backend. Build this first, test it with curl
 and Postman before writing a single line of Flutter.
 
 ### Why Node.js
@@ -140,7 +140,7 @@ sydney-backend/
 └── tsconfig.json
 ```
 
-**Design decision — two entry points:**
+**Design decision - two entry points:**
 `src/index.ts` starts the API server. `worker.ts` starts BullMQ workers.
 Same codebase, different processes. On Railway they deploy as separate
 services from the same repo using different start commands. This means
@@ -149,11 +149,11 @@ scale workers without touching the API server.
 
 ---
 
-### 1.2 Database — PostgreSQL
+### 1.2 Database - PostgreSQL
 
-**Design decision — no ORM, no Supabase:**
+**Design decision - no ORM, no Supabase:**
 ORMs (Prisma, TypeORM) add abstraction that costs performance and hides
-what SQL is actually being executed. At Sydney's scale this matters — agent
+what SQL is actually being executed. At Sydney's scale this matters - agent
 queries run thousands of times per day. Direct `pg` queries are explicit,
 fast, and debuggable. Every query is visible. No magic.
 
@@ -265,7 +265,7 @@ CREATE INDEX idx_agents_last_message ON agents(user_id, last_message_at DESC);
 -- Design decision: last_message_at indexed with user_id.
 -- The inbox query is: "give me all agents for this user,
 -- sorted by most recent message." This composite index
--- makes that query a single index scan — fast at any scale.
+-- makes that query a single index scan - fast at any scale.
 
 -- ================================================================
 -- AGENT MESSAGES
@@ -286,14 +286,14 @@ CREATE INDEX idx_messages_user_unread ON agent_messages(user_id, read_at)
   WHERE read_at IS NULL;
 
 -- Design decision: JSONB content not TEXT.
--- Messages are not plain text — they are typed template payloads.
+-- Messages are not plain text - they are typed template payloads.
 -- A progress_tracker message contains day_current, progress_bars,
 -- actions. Storing as JSONB means the backend can query into message
 -- content if needed (e.g. find all messages where agent completed today).
 -- Flutter receives this JSONB and renders the right widget.
 
 -- Design decision: single agent_messages table for everything.
--- Agent outputs, user replies, system messages, assistant chat —
+-- Agent outputs, user replies, system messages, assistant chat -
 -- all stored here with role distinguishing them.
 -- This means one query retrieves a full conversation thread.
 -- No joins across multiple tables to render a chat thread.
@@ -330,10 +330,10 @@ CREATE INDEX idx_runs_agent_id ON agent_runs(agent_id, created_at DESC);
 
 ---
 
-### 1.3 Authentication — Better Auth
+### 1.3 Authentication - Better Auth
 
-**Design decision — Better Auth over Supabase Auth, Auth0, Clerk:**
-All managed auth providers charge per monthly active user — typically
+**Design decision - Better Auth over Supabase Auth, Auth0, Clerk:**
+All managed auth providers charge per monthly active user - typically
 $0.02–0.05/MAU. At 10,000 users that's $200–500/month just for auth.
 Better Auth is open source, self-hosted as a library inside the backend,
 zero per-user cost, TypeScript-native, and ships with the exact plugins
@@ -384,7 +384,7 @@ export const auth = betterAuth({
 });
 ```
 
-**JWT middleware — applied to every protected route:**
+**JWT middleware - applied to every protected route:**
 
 ```typescript
 // src/auth/middleware.ts
@@ -409,7 +409,7 @@ export async function requireAuth(
 
 ### 1.4 Token vault
 
-**Design decision — custom AES-256-GCM over Composio, HashiCorp Vault,
+**Design decision - custom AES-256-GCM over Composio, HashiCorp Vault,
 AWS Secrets Manager:**
 All managed secret stores add latency (network call per token read),
 cost ($0.05 per 10,000 API calls at AWS), and vendor dependency.
@@ -417,7 +417,7 @@ The vault is simple enough to build in-house: one encrypt function,
 one decrypt function, one getValidToken function. Built once, runs forever,
 costs nothing.
 
-AES-256-GCM is authenticated encryption — it guarantees both confidentiality
+AES-256-GCM is authenticated encryption - it guarantees both confidentiality
 (nobody can read the token) and integrity (nobody can tamper with it
 without detection). The authentication tag (16 bytes) is stored alongside
 the ciphertext and checked on every decryption. Tampered ciphertext throws
@@ -453,7 +453,7 @@ function decrypt(stored: string): string {
   const encrypted = buf.subarray(28);
   const decipher  = createDecipheriv('aes-256-gcm', KEY, iv);
   decipher.setAuthTag(tag);
-  // Throws if tag doesn't match — tampering detected
+  // Throws if tag doesn't match - tampering detected
   return Buffer.concat([
     decipher.update(encrypted),
     decipher.final()
@@ -501,7 +501,7 @@ export const vault = {
     const needsRefresh = Date.now() > expiresAt - 5 * 60 * 1000; // 5min buffer
 
     if (!needsRefresh) {
-      // Token is valid — decrypt and return
+      // Token is valid - decrypt and return
       // Decrypted token is in memory only for the duration of this call
       return decrypt(row.access_token_enc);
     }
@@ -578,7 +578,7 @@ export const vault = {
 When a user types "deliver tech news at 7am daily", this function turns
 that into a structured agent definition.
 
-**Design decision — Haiku not Sonnet for intent parsing:**
+**Design decision - Haiku not Sonnet for intent parsing:**
 Intent parsing is a classification task, not a reasoning task. The input
 is a short user prompt. The output is a small JSON object. Haiku handles
 this at ~100ms for a fraction of Sonnet's cost. The structured output
@@ -662,7 +662,7 @@ export async function parseIntent(prompt: string): Promise<ParsedIntent> {
 
 ### 1.6 BullMQ scheduler
 
-**Design decision — BullMQ over cron jobs, node-cron, Agenda:**
+**Design decision - BullMQ over cron jobs, node-cron, Agenda:**
 BullMQ is backed by Redis and is battle-tested at high scale.
 It gives native cron-style repeatable jobs, retry with exponential
 backoff, job history, dead letter queue, concurrency limits, and
@@ -682,10 +682,10 @@ const connection = new Redis(process.env.REDIS_URL!, {
 
 export const agentQueue = new Queue('agent-executor', { connection });
 
-// Schedule jitter — prevents thundering herd at popular times
+// Schedule jitter - prevents thundering herd at popular times
 // e.g. 5,000 users with 7am agents firing simultaneously
 function addJitter(cronExpr: string): number {
-  // Returns delay in ms — up to 10 minutes random offset
+  // Returns delay in ms - up to 10 minutes random offset
   return Math.floor(Math.random() * 10 * 60 * 1000);
 }
 
@@ -698,7 +698,7 @@ export async function scheduleAgent(agentId: string, cronExpr: string) {
     { agentId },
     {
       repeat: { pattern: cronExpr },
-      jobId: agentId, // idempotent — same agent = same job
+      jobId: agentId, // idempotent - same agent = same job
       attempts: 3,
       backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: 100, // keep last 100 completed jobs
@@ -856,7 +856,7 @@ async function fetchDataViaMCP(
     return { raw: 'No data source configured', sourceRefs: [] };
 
   } finally {
-    // Always close — token is released from memory
+    // Always close - token is released from memory
     await client?.close();
   }
 }
@@ -981,17 +981,17 @@ via `tsx watch`. One command, full environment, consistent across machines.
 
 ---
 
-## Component 2 — Flutter App
+## Component 2 - Flutter App
 
 ### What it is
 The Android (and later iOS) mobile app. The face of Sydney.
-It is purely an interface — it displays data from the backend,
+It is purely an interface - it displays data from the backend,
 sends user actions to the backend, and receives push notifications.
 It has no business logic. It does not touch tokens. It does not
 run agents.
 
 ### Why Flutter
-**Design decision — Flutter over React Native, native Android, PWA:**
+**Design decision - Flutter over React Native, native Android, PWA:**
 
 React Native: JavaScript bridge to native components adds latency.
 Animations that need to be butter-smooth (message bubbles, thread opens)
@@ -1005,7 +1005,7 @@ twice the bugs, twice the time.
 PWA: Cannot access FCM properly on iOS. Cannot get the native feel of
 a messaging app. Dismissed immediately.
 
-Flutter: Dart compiles to native ARM code — no bridge, no JavaScript runtime.
+Flutter: Dart compiles to native ARM code - no bridge, no JavaScript runtime.
 Animations run at 60/120fps natively. Single codebase for Android, iOS,
 and web. Material 3 design system built in. FCM supported natively.
 Flutter is the only cross-platform option that delivers native-quality
@@ -1016,7 +1016,7 @@ performance for a messaging app.
 Google Play review is same-day. Apple App Store review takes 1–7 days
 and can reject for minor issues, wasting days at a critical launch moment.
 Apple Developer account costs $99/year. Android developer account costs
-$25 one-time. Google OAuth verification is the same process regardless —
+$25 one-time. Google OAuth verification is the same process regardless -
 no advantage to iOS first. Build Android, validate product, add iOS on
 the same Flutter codebase with one config change.
 
@@ -1127,7 +1127,7 @@ dependencies:
   # flutter_web_auth_2 opens a secure in-app browser (Chrome Custom Tab
   # on Android, SFSafariViewController on iOS), waits for the redirect
   # URI to be called, captures the auth code, and returns it to the app.
-  # url_launcher just opens the browser — the app loses control of the flow.
+  # url_launcher just opens the browser - the app loses control of the flow.
 
   # Push notifications
   firebase_core: ^3.0.0
@@ -1195,7 +1195,7 @@ class AuthService {
       await _storage.write(key: 'access_token', value: newToken);
       return newToken;
     } catch (_) {
-      // Refresh failed — session expired, need to sign in again
+      // Refresh failed - session expired, need to sign in again
       await signOut();
       return null;
     }
@@ -1203,12 +1203,12 @@ class AuthService {
 
   Future<void> signOut() async {
     await _storage.deleteAll();
-    // Navigate to sign-in — handled by auth state notifier
+    // Navigate to sign-in - handled by auth state notifier
   }
 }
 ```
 
-**Dio interceptor — auto-attach JWT to every request:**
+**Dio interceptor - auto-attach JWT to every request:**
 
 ```dart
 // lib/services/api.dart
@@ -1225,7 +1225,7 @@ Dio createApiClient(AuthService auth) {
     },
     onError: (error, handler) async {
       if (error.response?.statusCode == 401) {
-        // Token genuinely invalid — sign out
+        // Token genuinely invalid - sign out
         await auth.signOut();
       }
       handler.next(error);
@@ -1240,7 +1240,7 @@ Dio createApiClient(AuthService auth) {
 
 ### 2.4 Connector OAuth flow
 
-**Design decision — OAuth happens in-app, token exchange on backend:**
+**Design decision - OAuth happens in-app, token exchange on backend:**
 The Flutter app never sees the access token or refresh token.
 It only sees the auth code (a short-lived one-time string).
 The backend exchanges the code for tokens. This means if the app
@@ -1312,7 +1312,7 @@ class MessageBubble extends StatelessWidget {
 ### 2.6 Push notification routing
 
 When a notification arrives, tapping it should open the correct
-agent thread directly — not just the app home screen.
+agent thread directly - not just the app home screen.
 
 ```dart
 // lib/services/push_service.dart
@@ -1330,7 +1330,7 @@ Future<void> setupPushNotifications(GoRouter router) async {
     _handleNotificationTap(message.data, router);
   });
 
-  // App in foreground — show in-app banner instead of system notification
+  // App in foreground - show in-app banner instead of system notification
   FirebaseMessaging.onMessage.listen((message) {
     _showInAppBanner(message);
   });
@@ -1355,7 +1355,7 @@ void _handleNotificationTap(
 ### 2.7 Screen navigation
 
 ```dart
-// lib/app.dart — go_router config
+// lib/app.dart - go_router config
 final router = GoRouter(
   initialLocation: '/inbox',
   redirect: (context, state) async {
@@ -1465,7 +1465,7 @@ class SydneyAnimations {
 
 ---
 
-## Component 3 — Website
+## Component 3 - Website
 
 ### What it is
 The public-facing website. Not the web app (that is Flutter Web, built
@@ -1480,7 +1480,7 @@ Build it last, ship it right before launch.
 
 ### Why Next.js
 
-**Design decision — Next.js over Webflow, Framer, plain HTML:**
+**Design decision - Next.js over Webflow, Framer, plain HTML:**
 
 Webflow and Framer are excellent for designers building pages without
 code. Sydney's website needs dynamic elements: a real waitlist form that
@@ -1540,27 +1540,27 @@ The landing page has one job: convert visitors into waitlist signups
 or app downloads. Every section earns its place or gets cut.
 
 ```
-Section 1 — Hero
+Section 1 - Hero
   Headline: "AI agents that message you."
   Subline: "Create agents in one sentence. They work while you sleep.
             You just receive."
   CTA: [Download for Android] [Join waitlist]
   Visual: animated phone showing inbox with agents messaging
 
-Section 2 — The feeling
+Section 2 - The feeling
   "Like your morning newspaper. But it knows you."
   Three columns:
   → Morning: Tech News agent message arrives at 7am
   → Evening: Email Digest agent message arrives at 6pm
   → Always: Slack Watcher alerts you instantly
 
-Section 3 — How it works
+Section 3 - How it works
   Three steps, minimal:
   1. Tell Sydney what you want (one sentence)
   2. Sydney creates an agent and connects your apps
   3. Agent messages you when it has something for you
 
-Section 4 — Agent examples
+Section 4 - Agent examples
   Grid of 6 agent cards:
   📰 Tech News Brief
   📧 Email Digest
@@ -1569,19 +1569,19 @@ Section 4 — Agent examples
   📈 Portfolio Tracker
   🌍 Competitor Watch
 
-Section 5 — vs Gemini Spark
+Section 5 - vs Gemini Spark
   Clean comparison table
   Price: $9.99 vs $100
   Global: ✓ vs US only
   Custom agents: ✓ vs roadmap
   Messaging UI: ✓ vs task dashboard
 
-Section 6 — Pricing
+Section 6 - Pricing
   Two cards, minimal
   Free: 3 agents, daily schedule
   Pro: $9.99, unlimited agents, hourly schedule
 
-Section 7 — Waitlist CTA
+Section 7 - Waitlist CTA
   Large text: "The app is coming."
   Email input
   "Be first to know when Sydney launches."
@@ -1627,7 +1627,7 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-**Design decision — waitlist hits Sydney's own backend Postgres:**
+**Design decision - waitlist hits Sydney's own backend Postgres:**
 No third-party mailing list service (Mailchimp, Beehiiv) at launch.
 Emails go directly into a `waitlist` table in the same Postgres database.
 Export to CSV when needed. No vendor cost, no setup, no API keys.
@@ -1654,7 +1654,7 @@ Flutter → Google Play Store
           production track at launch
 ```
 
-**Design decision — separate domains for website and API:**
+**Design decision - separate domains for website and API:**
 `getsydney.app` serves the Next.js website.
 `api.getsydney.app` serves the Node.js backend.
 The Flutter app points to `api.getsydney.app`.
@@ -1667,14 +1667,14 @@ The API can be updated without redeploying the website.
 ## Build Order Summary
 
 ```
-Week 1 — Backend foundation
+Week 1 - Backend foundation
   □ docker-compose up (Postgres + Redis + Node.js)
   □ Run migrations (all tables created)
   □ Better Auth working (sign-up, sign-in, JWT)
   □ /auth/* routes tested with curl
   □ Protected route middleware working
 
-Week 2 — Flutter scaffold + UI
+Week 2 - Flutter scaffold + UI
   □ Flutter project created, pubspec.yaml dependencies installed
   □ Design tokens defined (tokens.dart)
   □ Inbox screen (static, hardcoded data)
@@ -1683,7 +1683,7 @@ Week 2 — Flutter scaffold + UI
   □ Auth screens (sign-in, sign-up)
   □ Dio client connected to backend, auth working end to end
 
-Week 3 — First agent end to end
+Week 3 - First agent end to end
   □ BullMQ + Redis queue setup
   □ Anthropic web search enabled in Claude Console
   □ Intent parser (Haiku) working for news intent
@@ -1696,7 +1696,7 @@ Week 3 — First agent end to end
   Firebase project, backend domains, and environment split are stable. Week 3
   realtime is being closed with an authenticated backend event stream first.
 
-Week 4 — Gmail connector
+Week 4 - Gmail connector
   □ Google Cloud Console: OAuth app created
   □ Gmail OAuth flow end to end (auth URL → browser → callback)
   □ Token vault: encrypt/decrypt/refresh working
@@ -1704,7 +1704,7 @@ Week 4 — Gmail connector
   □ Email Digest agent end to end
   □ SUBMIT GOOGLE OAUTH VERIFICATION ← do not skip
 
-Week 5+ — More connectors + polish
+Week 5+ - More connectors + polish
   □ Slack connector
   □ Drive connector
   □ progress_tracker template (study agent)

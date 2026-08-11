@@ -23,7 +23,7 @@ export const UNSUPPORTED_CHAT_CONNECTORS = [
 ] as const;
 
 /**
- * Named as post formats / audiences for drafting agents — not OAuth connectors.
+ * Named as post formats / audiences for drafting agents - not OAuth connectors.
  * Mentioning these must not block content-extractor create/update flows.
  */
 export const DRAFT_OUTPUT_PLATFORMS = new Set([

@@ -1,6 +1,6 @@
 # Cuppet
 
-Mobile-first AI delegation app. Create persistent AI agents with one plain-language sentence — they run on schedules, use your connected accounts, and message you like WhatsApp contacts.
+Mobile-first AI delegation app. Create persistent AI agents with one plain-language sentence - they run on schedules, use your connected accounts, and message you like WhatsApp contacts.
 
 > **Your agents message you. You just read.**
 
@@ -14,7 +14,7 @@ Cuppet is a **messaging interface for AI agents**, not a dashboard or chatbot:
 | **Connected chat** | Pre-installed **Assistant** answers using live Gmail / Drive / Calendar / GitHub data |
 | **General chat** | Same Assistant for normal AI conversation |
 
-Connectors are **read-first**. OAuth tokens stay in a backend vault — the Flutter app never stores them.
+Connectors are **read-first**. OAuth tokens stay in a backend vault - the Flutter app never stores them.
 
 ### Example prompts
 
@@ -70,7 +70,7 @@ Connectors are **read-first**. OAuth tokens stay in a backend vault — the Flut
 - **PostgreSQL** 16 and **Redis** 7  
   Or Docker (recommended for backend)
 
-## Quick start — backend
+## Quick start - backend
 
 ### With Docker
 
@@ -107,7 +107,7 @@ API health: `GET http://localhost:3000/health`
 
 More detail: [sydney-backend/README.md](./sydney-backend/README.md)
 
-## Quick start — frontend
+## Quick start - frontend
 
 ```bash
 cd frontend

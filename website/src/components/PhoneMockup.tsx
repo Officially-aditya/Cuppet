@@ -27,7 +27,7 @@ const SCRIPT: { delay: number; msg: Msg }[] = [
     delay: 900,
     msg: {
       kind: 'in',
-      text: 'Good morning. Your 7:00 AM tech digest is ready — 3 stories worth your attention today.',
+      text: 'Good morning. Your 7:00 AM tech digest is ready - 3 stories worth your attention today.',
       time: '7:00 AM',
     },
   },
@@ -46,7 +46,7 @@ const SCRIPT: { delay: number; msg: Msg }[] = [
     delay: 1700,
     msg: {
       kind: 'in',
-      text: 'Done. Your digest now includes a startups section — starting tomorrow, 7:00 AM sharp.',
+      text: 'Done. Your digest now includes a startups section - starting tomorrow, 7:00 AM sharp.',
       time: '7:12 AM',
     },
   },

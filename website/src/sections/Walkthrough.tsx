@@ -37,7 +37,7 @@ export default function Walkthrough() {
           <SectionHeading
             eyebrow="The product"
             title="Inside an agent, start to finish."
-            sub="One phone, one thread — the same screens the app actually shows you."
+            sub="One phone, one thread - the same screens the app actually shows you."
             align="left"
           />
 

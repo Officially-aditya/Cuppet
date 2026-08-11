@@ -71,7 +71,7 @@ export default function CTA() {
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#92bf9d]">
               <Check className="h-3 w-3 text-[var(--forest)]" strokeWidth={3} />
             </span>
-            {"You're on the list — we'll message you. Naturally."}
+            {"You're on the list - we'll message you. Naturally."}
           </div>
         ) : (
           <form

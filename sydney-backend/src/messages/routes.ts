@@ -262,7 +262,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
       const question = `Open “${title}” as context. Give me a short orientation, then help me explore any part of the report in detail.`;
       const sourceData = source.content.data;
-      // Copy into Assistant for thread context only — never reappear on the home surface.
+      // Copy into Assistant for thread context only - never reappear on the home surface.
       const assistantBriefingContent = {
         ...source.content,
         data: {

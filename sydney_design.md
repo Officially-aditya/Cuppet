@@ -1,4 +1,4 @@
-# Sydney — Design Document
+# Sydney - Design Document
 ### Internal alias: Sydney | Version 1.0
 ### Reference this when designing or building UI. Contains screens, design tokens, template system, and MVP plan.
 
@@ -9,7 +9,7 @@
 ### 7.1 Design direction
 Sydney should feel like a messaging app, not a productivity tool.
 
-Reference: WhatsApp, iMessage, Telegram — calm, fast, familiar, trustworthy.
+Reference: WhatsApp, iMessage, Telegram - calm, fast, familiar, trustworthy.
 Not: Notion, Linear, Zapier, or any dashboard-first product.
 
 The user manages contacts, not automations.
@@ -21,7 +21,7 @@ The user manages contacts, not automations.
 - large readable typography,
 - unread indicators like a messaging app,
 - minimal chrome, maximum content,
-- restrained color palette — color used only for status signals.
+- restrained color palette - color used only for status signals.
 
 ### 7.3 Primary screens
 
@@ -58,7 +58,7 @@ The Assistant contact is pre-installed at sign-up. It sends a welcome message im
 Hey! I'm Sydney.
 
 I can chat with you like Claude or
-ChatGPT — just ask me anything.
+ChatGPT - just ask me anything.
 
 But the real magic is agents. Try:
 
@@ -122,7 +122,7 @@ Tapping any agent opens its chat thread. Agent messages on the left, user replie
 ```
 
 #### Agent creation flow
-Tapping "+ New" opens a prompt bar. User types what they want. Sydney parses intent and shows a lightweight confirmation card. Templates pre-fill the prompt bar — same flow from there.
+Tapping "+ New" opens a prompt bar. User types what they want. Sydney parses intent and shows a lightweight confirmation card. Templates pre-fill the prompt bar - same flow from there.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -168,14 +168,14 @@ Split-pane layout identical to desktop messaging apps:
 │  Sydney   + New  │  📧 Email Digest                    ⚙️   │
 ├──────────────────┤                                          │
 │ 🤖 Assistant     │  ┌──────────────────────────────────┐    │
-│ Ask me anything  │  │ Tuesday 13 May — 6pm Report     │    │
+│ Ask me anything  │  │ Tuesday 13 May - 6pm Report     │    │
 │                  │  │ 47 emails · 6 need attention    │    │
 │ 📧 Email Digest  │  │ → Alice: Q3 budget review       │    │
 │ 47 emails · 6pm  │  │ → Team standup notes            │    │
 │                  │  └──────────────────────────────────┘    │
 │ 📰 Tech News     │                                          │
 │ 8 stories · 7am  │  ┌──────────────────────────────────┐    │
-│                  │  │ Monday 12 May — 6pm Report      │    │
+│                  │  │ Monday 12 May - 6pm Report      │    │
 │ 💬 Slack         │  │ 31 emails · newsletters filtered │    │
 │ 2 urgent · now   │  └──────────────────────────────────┘    │
 │                  │                                          │
@@ -222,7 +222,7 @@ Identical to receiving and replying to a WhatsApp message. The familiarity is th
 
 ---
 
-## 7.6 Design system — tokens and constants
+## 7.6 Design system - tokens and constants
 
 Every UI element in Sydney uses a shared design token system. Define once, inherit everywhere. New templates, new screens, new components all pull from the same source of truth.
 
@@ -292,22 +292,22 @@ class SydneyRadius {
 ### Animation constants
 ```dart
 class SydneyAnimations {
-  // thread open — slide up + fade
+  // thread open - slide up + fade
   static const threadOpen = Duration(milliseconds: 280);
   static const threadOpenCurve = Curves.easeOutCubic;
 
-  // new message arrival — fade + slide from bottom
+  // new message arrival - fade + slide from bottom
   static const messageArrive = Duration(milliseconds: 220);
   static const messageArriveCurve = Curves.easeOutQuart;
 
-  // agent typing indicator — pulse
+  // agent typing indicator - pulse
   static const typingPulse = Duration(milliseconds: 600);
 
-  // progress bar fill — animated on first render
+  // progress bar fill - animated on first render
   static const progressFill = Duration(milliseconds: 800);
   static const progressFillCurve = Curves.easeOutCubic;
 
-  // confirmation card appear — scale + fade
+  // confirmation card appear - scale + fade
   static const cardAppear = Duration(milliseconds: 240);
   static const cardAppearCurve = Curves.easeOutBack;
 }
@@ -318,17 +318,17 @@ Every new screen is evaluated against one question before shipping:
 
 > Does a non-technical person understand what to do within 10 seconds, without reading any instructions?
 
-If the answer is no, the screen is redesigned. Not simplified — redesigned. Every screen has one primary action. Every screen has one clear hierarchy. No competing calls to action anywhere.
+If the answer is no, the screen is redesigned. Not simplified - redesigned. Every screen has one primary action. Every screen has one clear hierarchy. No competing calls to action anywhere.
 
 ---
 
 ## 7.7 Output template system
 
-This is one of Sydney's core differentiators. Every agent message is rendered using a purpose-built template widget — not a generic text blob. The LLM returns structured JSON. Flutter renders the right widget automatically.
+This is one of Sydney's core differentiators. Every agent message is rendered using a purpose-built template widget - not a generic text blob. The LLM returns structured JSON. Flutter renders the right widget automatically.
 
 ### How it works end to end
 
-**Step 1 — Intent parser assigns a template**
+**Step 1 - Intent parser assigns a template**
 
 When an agent is created, the intent parser returns a template type alongside the agent definition:
 
@@ -349,7 +349,7 @@ When an agent is created, the intent parser returns a template type alongside th
 }
 ```
 
-**Step 2 — Agent runtime returns structured JSON**
+**Step 2 - Agent runtime returns structured JSON**
 
 Every agent execution returns a typed JSON payload, not raw text:
 
@@ -362,7 +362,7 @@ Every agent execution returns a typed JSON payload, not raw text:
 }
 ```
 
-**Step 3 — Flutter renders the right widget**
+**Step 3 - Flutter renders the right widget**
 
 ```dart
 // lib/widgets/agent_message_widget.dart
@@ -399,7 +399,7 @@ class AgentMessageWidget extends StatelessWidget {
 }
 ```
 
-**Step 4 — Interactive elements send replies**
+**Step 4 - Interactive elements send replies**
 
 Action buttons inside templates are tappable. Tapping sends a structured reply back to the agent:
 
@@ -415,11 +415,11 @@ ActionButton(
 )
 ```
 
-The backend receives the reply, updates agent state, adjusts next run accordingly. No separate settings screen needed — the message IS the interface.
+The backend receives the reply, updates agent state, adjusts next run accordingly. No separate settings screen needed - the message IS the interface.
 
 ---
 
-### Template 1 — plain_text
+### Template 1 - plain_text
 
 **Used for:** tech news agent, general summaries, assistant chat responses, any agent without structured data.
 
@@ -460,7 +460,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 2 — progress_tracker
+### Template 2 - progress_tracker
 
 **Used for:** study plan agent, fitness agent, habit agent, project milestone agent, any agent tracking progress toward a goal over time.
 
@@ -500,7 +500,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 ┌──────────────────────────────────────┐
 │ Day 67 of 183           116 days 🎯  │
 ├──────────────────────────────────────┤
-│ Today — Physics                      │
+│ Today - Physics                      │
 │ Newton's Laws of Motion              │
 │ ~45 min · builds on Kinematics       │
 ├──────────────────────────────────────┤
@@ -526,7 +526,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 3 — urgency_list
+### Template 3 - urgency_list
 
 **Used for:** Slack watcher, Gmail monitor, keyword alert agent, any agent that surfaces time-sensitive items requiring attention.
 
@@ -581,7 +581,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 4 — data_summary
+### Template 4 - data_summary
 
 **Used for:** email digest, portfolio agent, subscription auditor, analytics agent, any agent that summarizes quantitative or categorical data.
 
@@ -628,7 +628,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 5 — checklist
+### Template 5 - checklist
 
 **Used for:** travel agent, pre-exam checklist, weekly review agent, any agent that delivers actionable items the user should complete.
 
@@ -668,13 +668,13 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 └──────────────────────────────────────┘
 ```
 
-Checklist items are tappable — checking one sends a reply to the agent which stores completion state.
+Checklist items are tappable - checking one sends a reply to the agent which stores completion state.
 
 **Build order:** V1.3
 
 ---
 
-### Template 6 — streak_counter
+### Template 6 - streak_counter
 
 **Used for:** habit agent, learning agent, fitness agent, any agent built around daily consistency and streaks.
 
@@ -723,7 +723,7 @@ Checklist items are tappable — checking one sends a reply to the agent which s
 
 ---
 
-### Template 7 — comparison
+### Template 7 - comparison
 
 **Used for:** competitor watcher, market research agent, portfolio comparison agent, any agent that surfaces side-by-side data over time.
 
@@ -756,9 +756,9 @@ Checklist items are tappable — checking one sends a reply to the agent which s
 
 ---
 
-### Template 8 — system
+### Template 8 - system
 
-**Used for:** error messages, token reconnection prompts, agent paused notifications, onboarding messages. Not agent output — internal Sydney communication.
+**Used for:** error messages, token reconnection prompts, agent paused notifications, onboarding messages. Not agent output - internal Sydney communication.
 
 ```json
 {
@@ -783,7 +783,7 @@ Checklist items are tappable — checking one sends a reply to the agent which s
 └──────────────────────────────────────┘
 ```
 
-System messages use a subtly different visual style — slightly muted background, no agent avatar — so the user immediately knows this is from Sydney itself, not from agent output.
+System messages use a subtly different visual style - slightly muted background, no agent avatar - so the user immediately knows this is from Sydney itself, not from agent output.
 
 **Build order:** Week 3 (needed from day one for error handling)
 
@@ -812,25 +812,25 @@ V1.4
   timeline        → project agents, roadmap agents
 ```
 
-### Adding new templates — developer guide
+### Adding new templates - developer guide
 
 Adding a new template requires changes in exactly three places:
 
-**1. Backend — add to intent parser prompt**
+**1. Backend - add to intent parser prompt**
 ```typescript
 // src/agents/intent-parser.ts
 // Add new template to the allowed output_template values
 // and describe when to use it in the system prompt
 ```
 
-**2. Backend — add agent runtime output schema**
+**2. Backend - add agent runtime output schema**
 ```typescript
 // src/agents/templates/{template_name}.schema.ts
 // Define the JSON schema for the template's data payload
 // Haiku is prompted to return this exact structure
 ```
 
-**3. Flutter — add widget**
+**3. Flutter - add widget**
 ```dart
 // lib/widgets/templates/{template_name}_template.dart
 // Implement the StatelessWidget that renders the template
@@ -839,13 +839,13 @@ Adding a new template requires changes in exactly three places:
 // Must be testable with mock data
 ```
 
-That's it. No other files change. The routing in `AgentMessageWidget` uses a switch on the template string — new case added, done.
+That's it. No other files change. The routing in `AgentMessageWidget` uses a switch on the template string - new case added, done.
 
 ---
 
 ## 7.8 UI quality standard
 
-Sydney's UI is held to the standard of the apps users compare it to unconsciously — WhatsApp, ChatGPT, Claude, Gmail. These apps were designed by world-class teams over years. Sydney must match their *feel*, not their feature set.
+Sydney's UI is held to the standard of the apps users compare it to unconsciously - WhatsApp, ChatGPT, Claude, Gmail. These apps were designed by world-class teams over years. Sydney must match their *feel*, not their feature set.
 
 ### The non-negotiables before any public release
 
@@ -875,11 +875,11 @@ Every new screen is shown to a non-technical person. If they don't immediately u
 ## 9. MVP Plan
 
 ### 9.1 Best MVP wedge
-Read-first recurring agents — agents that message the user on a schedule with useful summaries. Zero risk of unwanted actions.
+Read-first recurring agents - agents that message the user on a schedule with useful summaries. Zero risk of unwanted actions.
 
 Starting agents:
-- Tech News Brief (web search, no OAuth — build first),
-- Daily Email Digest (Gmail OAuth — validates full auth stack),
+- Tech News Brief (web search, no OAuth - build first),
+- Daily Email Digest (Gmail OAuth - validates full auth stack),
 - Slack Digest,
 - PDF Summarizer,
 - EOD Task Report.
@@ -898,7 +898,7 @@ Starting agents:
 - graceful unsupported connector response.
 
 ### 9.3 First connectors
-- Web search (Anthropic server-side web search, no OAuth — day one),
+- Web search (Anthropic server-side web search, no OAuth - day one),
 - Gmail,
 - Google Drive,
 - Slack.

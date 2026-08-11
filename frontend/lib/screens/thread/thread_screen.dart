@@ -35,7 +35,7 @@ class ThreadScreen extends ConsumerStatefulWidget {
 }
 
 const _assistantWelcomeMessage =
-    "I'm here for everyday conversation, just like the AI chatbots you already know and love. But stick around for the magic — tell me what you want, and I'll create a contact that messages you, like clockwork, exactly when you need it.";
+    "I'm here for everyday conversation, just like the AI chatbots you already know and love. But stick around for the magic - tell me what you want, and I'll create a contact that messages you, like clockwork, exactly when you need it.";
 
 PopupMenuItem<String> _agentMenuItem(
   BuildContext context, {
@@ -676,7 +676,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     });
     _scrollToBottomSoon();
 
-    // Fire the API call in the background — don't block the ReplyBar.
+    // Fire the API call in the background - don't block the ReplyBar.
     unawaited(
       _sendReplyAsync(
         finalReplyText,
@@ -703,7 +703,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       // A text reply can request an asynchronous run (for example, "run now").
       // Keep polling as a fallback when a realtime event is delayed or missed.
       _scheduleRunRefreshes();
-      // API succeeded — the real message is now in the server list.
+      // API succeeded - the real message is now in the server list.
       // Clear the optimistic duplicate; typing indicator will continue
       // showing via agent.availability == thinking until the agent responds.
       if (mounted) {

@@ -171,8 +171,8 @@ export async function createAgentChatReply(
 }
 
 /**
- * Mode A (grounded): default — answer from last agent output; no web search.
- * Mode B (research): strong external-lookup intent without prior-thread referents —
+ * Mode A (grounded): default - answer from last agent output; no web search.
+ * Mode B (research): strong external-lookup intent without prior-thread referents -
  * no previous output/thread; web search required.
  */
 export function classifyAgentChatMode(
@@ -404,8 +404,8 @@ function buildMessages(
       userInstructionBlock(
         "chat_mode",
         manualSearchEvidence
-          ? "fresh_web_research — do not use any prior thread output; answer only from the supplied external search evidence for the current question."
-          : "fresh_web_research — do not use any prior thread output; answer only from web_search tool results for the current question.",
+          ? "fresh_web_research - do not use any prior thread output; answer only from the supplied external search evidence for the current question."
+          : "fresh_web_research - do not use any prior thread output; answer only from web_search tool results for the current question.",
         500
       )
     );
@@ -429,7 +429,7 @@ function buildMessages(
     return messages;
   }
 
-  // Mode A — grounded on last agent output + short prior user turns.
+  // Mode A - grounded on last agent output + short prior user turns.
   if (context.latestAgentOutput) {
     agentContext.push(
       untrustedDataBlock(
@@ -513,7 +513,7 @@ function agentChatSystemPrompt(
       "Do not invent companies, product news, or stats that did not appear in the search evidence.",
       "Do NOT invent three random trending content ideas unless the user explicitly asks for multiple ideas or a list of topics.",
       "Default output: one complete post draft for the platform in the agent configuration (Twitter/X, LinkedIn, or Reddit).",
-      "If the user asked for multiple drafts, produce that many — still grounded in the search results.",
+      "If the user asked for multiple drafts, produce that many - still grounded in the search results.",
       "If search returns nothing useful, say you could not find reliable results and do not fabricate a draft.",
       contentExtractorFormatting(agentPrompt, draftPlatform),
       responseStyleGuidance(responseLimit),
@@ -549,13 +549,13 @@ function agentChatSystemPrompt(
     "MODE: grounded follow-up on your most recent agent output.",
     "The user is asking about data you already delivered. Your job:",
     "1. Answer questions about the data you delivered.",
-    "2. Filter/skim — extract specific items the user asks for (e.g. \"show only urgent ones\").",
-    "3. Find/open — when the user says \"open\", \"find\", or \"give me the link\", return the relevant URL or reference from the source references below.",
-    "4. Summarize subsets — condense parts of the output on request.",
+    "2. Filter/skim - extract specific items the user asks for (e.g. \"show only urgent ones\").",
+    "3. Find/open - when the user says \"open\", \"find\", or \"give me the link\", return the relevant URL or reference from the source references below.",
+    "4. Summarize subsets - condense parts of the output on request.",
     "5. Re-format, re-style, or modify the presentation of the output when requested (e.g., rewrite in a different tone, convert to bullet points, translate language, or rewrite code examples in another programming language).",
     isContentExtractor
-      ? "6. When rewriting a prior idea into a full post draft, ground the draft only in the provided latest agent output — do not invent a new trending-topics list. If the user asks to research a new topic, tell them to say \"search for <topic> and draft…\" so a web research turn can run."
-      : "6. Stay grounded — ONLY reference data that actually appears in your output or the fetched reference contents below. Do not browse the web. If the user asks for new external research, say they can ask you to search for a specific topic (for example \"search for …\") as a separate request.",
+      ? "6. When rewriting a prior idea into a full post draft, ground the draft only in the provided latest agent output - do not invent a new trending-topics list. If the user asks to research a new topic, tell them to say \"search for <topic> and draft…\" so a web research turn can run."
+      : "6. Stay grounded - ONLY reference data that actually appears in your output or the fetched reference contents below. Do not browse the web. If the user asks for new external research, say they can ask you to search for a specific topic (for example \"search for …\") as a separate request.",
     "",
     liveStockContext || "",
     "",
@@ -602,7 +602,7 @@ function contentExtractorFormatting(
     return [
       ...common,
       "REDDIT rules:",
-      "- Write as if a real person typed this in one sitting—not an AI, marketer, or copywriter.",
+      "- Write as if a real person typed this in one sitting-not an AI, marketer, or copywriter.",
       "- Match the writing style, tone, vocabulary, formatting, and average length of the target subreddit when one is named in the agent prompt.",
       "- Prioritize authenticity over polish. Imperfect writing is better than polished writing.",
       "- Use contractions naturally. Vary sentence lengths.",
@@ -622,7 +622,7 @@ function contentExtractorFormatting(
   return [
     ...common,
     "TWITTER/X rules:",
-    "- Sound like a real person tweeting—not an AI, copywriter, marketer, or growth account.",
+    "- Sound like a real person tweeting-not an AI, copywriter, marketer, or growth account.",
     "- Keep the entire tweet under 280 characters.",
     "- Prioritize authenticity over polish. Write naturally and conversationally.",
     "- Avoid inspirational, motivational, or \"thought leader\" style.",
@@ -660,7 +660,7 @@ export function hasWebSearchEvidence(
   for (const block of content) {
     if (block.type === "web_search_tool_result") {
       if (Array.isArray(block.content) && block.content.length > 0) return true;
-      // Tool ran even if results are empty — counts as attempted search evidence
+      // Tool ran even if results are empty - counts as attempted search evidence
       // for gating; empty results still fail usefulness, but we allow text handling.
       return true;
     }

@@ -430,7 +430,7 @@ function normalizeInstruction(
 
 /**
  * Returns an unsupported connector name only when the user is asking to connect
- * or access a service we don't support — not when naming a post style/platform.
+ * or access a service we don't support - not when naming a post style/platform.
  */
 export function findBlockedUnsupportedConnectorMention(
   agent: AgentMessageRouterContext,

@@ -36,7 +36,7 @@ const QUESTIONS = [
     n: '06',
     question: "Do I need my company's approval to use this?",
     answer:
-      "No. Cuppet connects to your own accounts individually — there's nothing for an IT team to configure or approve. If it's useful, bringing it to your team is a separate conversation for later, not a requirement to start.",
+      "No. Cuppet connects to your own accounts individually - there's nothing for an IT team to configure or approve. If it's useful, bringing it to your team is a separate conversation for later, not a requirement to start.",
   },
 ]
 

@@ -199,7 +199,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: 'Trust grows from small, observable promises',
         paragraphs: [
-          'A broad promise such as “manage my inbox” is difficult to evaluate and risky to grant. A smaller promise—“at 5 PM, show me messages from clients that still need a response”—has clear inputs, timing, and success criteria. The result can be compared with the source. If it is too broad, the instruction can be refined. If it misses something, the user can explain why that message mattered. Each correction improves a bounded routine rather than changing an opaque autonomous system.',
+          'A broad promise such as “manage my inbox” is difficult to evaluate and risky to grant. A smaller promise-“at 5 PM, show me messages from clients that still need a response”-has clear inputs, timing, and success criteria. The result can be compared with the source. If it is too broad, the instruction can be refined. If it misses something, the user can explain why that message mattered. Each correction improves a bounded routine rather than changing an opaque autonomous system.',
           'Repeated reliability creates a stronger form of trust than a dramatic demo. The assistant runs when expected, cites the items it used, distinguishes fact from inference, and reports uncertainty when context is missing. The user learns where it performs well and where judgment still belongs to them. Trust becomes calibrated: neither blind confidence nor permanent suspicion, but an accurate sense of what the system can safely handle.',
         ],
       },

@@ -1247,7 +1247,7 @@ export async function readGitHubForAssistant(
           const recent = (commits[index] ?? []).slice(0, 3)
             .map((commit) => commit.commit.message.split("\n")[0])
             .join("; ");
-          return `- ${repo.full_name}${repo.description ? ` — ${repo.description}` : ""}${recent ? `\n  Recent commits: ${recent}` : ""}`;
+          return `- ${repo.full_name}${repo.description ? ` - ${repo.description}` : ""}${recent ? `\n  Recent commits: ${recent}` : ""}`;
         }).join("\n"),
     sourceRefs: repos.map((repo) => ({
       type: "github_repository",
@@ -1346,7 +1346,7 @@ function repositoryLine(repository: GitHubRepository): string {
     repository.private ? "private" : "public",
     repository.updated_at ? `updated ${formatDate(repository.updated_at)}` : null
   ].filter(Boolean);
-  return `${repository.full_name}${details.length > 0 ? ` — ${details.join(", ")}` : ""}`;
+  return `${repository.full_name}${details.length > 0 ? ` - ${details.join(", ")}` : ""}`;
 }
 
 function repositoryRecord(repository: GitHubRepository): string {
@@ -1362,7 +1362,7 @@ function repositoryRecord(repository: GitHubRepository): string {
 }
 
 function issueLine(issue: GitHubIssue): string {
-  return `${repositoryName(issue)}#${issue.number} — ${issue.title}`;
+  return `${repositoryName(issue)}#${issue.number} - ${issue.title}`;
 }
 
 function issueRecord(issue: GitHubIssue, label: string): string {

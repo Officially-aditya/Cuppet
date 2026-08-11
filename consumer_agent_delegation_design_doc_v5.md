@@ -1,4 +1,4 @@
-# Sydney — Design Doc
+# Sydney - Design Doc
 ### Internal alias: Sydney | Version 5
 
 ---
@@ -6,14 +6,14 @@
 ## 1. Product Idea
 
 ### Working concept
-A mobile-first app that lets anyone create persistent AI agents by describing what they want in plain language — one sentence, no setup, no technical knowledge required.
+A mobile-first app that lets anyone create persistent AI agents by describing what they want in plain language - one sentence, no setup, no technical knowledge required.
 
-The interface model is a **messaging platform**, not a dashboard. Every agent is a contact. Every agent output is a message. The app feels like WhatsApp — except instead of friends sending you messages, your agents are sending you reports, summaries, alerts, and digests. You reply to refine them, just like replying to a contact.
+The interface model is a **messaging platform**, not a dashboard. Every agent is a contact. Every agent output is a message. The app feels like WhatsApp - except instead of friends sending you messages, your agents are sending you reports, summaries, alerts, and digests. You reply to refine them, just like replying to a contact.
 
 The core promise:
 **"Your agents message you. You just read."**
 
-The product is not an automation builder. It is not a chat interface. It is a **delegation layer** — a set of always-on contacts that work for you and report back.
+The product is not an automation builder. It is not a chat interface. It is a **delegation layer** - a set of always-on contacts that work for you and report back.
 
 ### What the user says
 - "Deliver me tech news every morning at 7am."
@@ -42,19 +42,19 @@ It then creates a new agent contact in the inbox that:
 ### Product layers
 Three layers of capability, all inside the same messaging interface:
 
-**Layer 1 — Custom agents (core product)**
+**Layer 1 - Custom agents (core product)**
 User describes what they want in one sentence. Sydney creates a dedicated agent contact that runs on a schedule and messages results. Every user's agent list is unique to them. This is the primary product.
 
-**Layer 2 — Connected chat (via Assistant contact)**
+**Layer 2 - Connected chat (via Assistant contact)**
 The pre-installed Assistant contact answers on-demand questions using live data from connected services. "What emails did I miss today?" pulls from Gmail via MCP and answers in real time. Like Perplexity but for the user's own data.
 
-**Layer 3 — General chat (via Assistant contact)**
-The same Assistant contact handles plain AI conversation — drafting, thinking, answering questions — powered by Claude Haiku. No recurring schedule, just chat.
+**Layer 3 - General chat (via Assistant contact)**
+The same Assistant contact handles plain AI conversation - drafting, thinking, answering questions - powered by Claude Haiku. No recurring schedule, just chat.
 
 All three layers live in the same inbox. All feel like conversations with contacts.
 
 ### Product category
-Sydney sits between messaging platforms, personal AI assistants, recurring reporting tools, and consumer automation — but belongs to none of them. It is a new category: a **personal delegation layer** delivered as a messaging app.
+Sydney sits between messaging platforms, personal AI assistants, recurring reporting tools, and consumer automation - but belongs to none of them. It is a new category: a **personal delegation layer** delivered as a messaging app.
 
 It is not a power-user workflow app.
 It is not a developer tool.
@@ -122,7 +122,7 @@ People with:
 - recurring reporting needs,
 - frequent document review tasks,
 - repetitive information monitoring,
-- exam preparation or daily learning goals — students are a high-value early adopter segment with strong word-of-mouth in peer groups.
+- exam preparation or daily learning goals - students are a high-value early adopter segment with strong word-of-mouth in peer groups.
 
 ---
 
@@ -139,7 +139,7 @@ Users create agents by describing what they want. Any combination of connector +
 - "remind me to follow up with leads every Monday morning"
 - "give me a coding tip every morning"
 - "summarize my calendar for the week every Sunday night"
-- "create a study plan for my JEE exam on November 15th — Physics, Chemistry, Maths"
+- "create a study plan for my JEE exam on November 15th - Physics, Chemistry, Maths"
 - "send me a Spanish word every morning and track my streak"
 - "watch my competitors and tell me what they shipped every week"
 - "audit my subscriptions every month and flag ones I haven't used"
@@ -155,7 +155,7 @@ If a user requests a connector Sydney doesn't support yet, the intent parser res
 User: "monitor my Instagram DMs"
 
 Sydney: I can't access Instagram yet.
-        I can monitor your Gmail or Slack instead —
+        I can monitor your Gmail or Slack instead -
         want me to set one of those up?
 ```
 
@@ -208,10 +208,10 @@ Sydney: I can't access Instagram yet.
 - sending approved messages.
 
 ### Study and learning agents
-A dedicated category worth calling out — no connector required, pure scheduled intelligence, extremely high daily engagement.
+A dedicated category worth calling out - no connector required, pure scheduled intelligence, extremely high daily engagement.
 
 **Study plan agent:**
-User says "create a study plan for JEE on November 15th — Physics, Chemistry, Maths." Sydney generates a day-by-day plan, messages the user every morning with today's topic, tracks completion via replies, implements spaced repetition automatically, and shifts to full revision mode in the final 2 weeks.
+User says "create a study plan for JEE on November 15th - Physics, Chemistry, Maths." Sydney generates a day-by-day plan, messages the user every morning with today's topic, tracks completion via replies, implements spaced repetition automatically, and shifts to full revision mode in the final 2 weeks.
 
 Agent lifecycle:
 - Day 1: full plan generated, messaged to user
@@ -221,10 +221,10 @@ Agent lifecycle:
 - Critical period (14 days before exam): switches to revision-only mode
 - Exam eve: sends checklist, encouragement, no new content
 
-This agent requires zero connectors, works from day one, creates daily habit, and serves India's 2.5M+ JEE aspirants, 2M+ NEET aspirants, plus global exam markets. Strong word-of-mouth vector — students share tools with classmates.
+This agent requires zero connectors, works from day one, creates daily habit, and serves India's 2.5M+ JEE aspirants, 2M+ NEET aspirants, plus global exam markets. Strong word-of-mouth vector - students share tools with classmates.
 
 **Learning streak agent:**
-Daily word, concept, or skill delivery with streak tracking. User says "teach me one Spanish word every morning." Agent delivers word, example sentence, pronunciation note, and streak counter. User replies "got it" or "need review" — agent adjusts difficulty over time.
+Daily word, concept, or skill delivery with streak tracking. User says "teach me one Spanish word every morning." Agent delivers word, example sentence, pronunciation note, and streak counter. User replies "got it" or "need review" - agent adjusts difficulty over time.
 
 **Habit anchor agent:**
 "Remind me to meditate every morning and track my streak." Agent messages daily, tracks consistency via replies, sends milestone messages at day 7, day 21, day 66 (habit formation research milestones), and adjusts encouragement tone based on streak health.
@@ -293,16 +293,16 @@ Entirely owned, self-hosted, and open source where possible. No managed abstract
         └────────────────────────────────┘
 ```
 
-### 6.1 Mobile app — Flutter
+### 6.1 Mobile app - Flutter
 
-**Why Flutter:** Single codebase for Android and iOS. Android-first at launch. iOS added later with minimal additional work — same codebase, one config change.
+**Why Flutter:** Single codebase for Android and iOS. Android-first at launch. iOS added later with minimal additional work - same codebase, one config change.
 
 **Key packages:**
-- `flutter_web_auth_2` — OAuth in-app browser flow. Opens secure browser, captures redirect, passes auth code to backend. App never touches connector tokens.
-- `firebase_messaging` — receives push notifications from FCM when an agent sends a new message.
-- `flutter_secure_storage` — stores the user's Better Auth JWT in device keychain only. Nothing else on-device.
-- `dio` — HTTP client for all backend API calls.
-- `riverpod` — state management.
+- `flutter_web_auth_2` - OAuth in-app browser flow. Opens secure browser, captures redirect, passes auth code to backend. App never touches connector tokens.
+- `firebase_messaging` - receives push notifications from FCM when an agent sends a new message.
+- `flutter_secure_storage` - stores the user's Better Auth JWT in device keychain only. Nothing else on-device.
+- `dio` - HTTP client for all backend API calls.
+- `riverpod` - state management.
 
 **What Flutter does NOT do:**
 - store connector tokens (Gmail, Slack, Drive),
@@ -310,9 +310,9 @@ Entirely owned, self-hosted, and open source where possible. No managed abstract
 - execute background jobs,
 - anything except UI, notifications, and API calls.
 
-### 6.2 Backend — Node.js + Fastify
+### 6.2 Backend - Node.js + Fastify
 
-**Why Node.js:** Official MCP TypeScript SDK is Anthropic-maintained. Same language across backend, MCP client, and agent runtime — no serialisation boundary.
+**Why Node.js:** Official MCP TypeScript SDK is Anthropic-maintained. Same language across backend, MCP client, and agent runtime - no serialisation boundary.
 
 **Why Fastify:** Better performance than Express, native TypeScript, built-in JSON schema validation.
 
@@ -341,16 +341,16 @@ Entirely owned, self-hosted, and open source where possible. No managed abstract
   /api           → Fastify route definitions
 ```
 
-### 6.3 Authentication — Better Auth (self-hosted)
+### 6.3 Authentication - Better Auth (self-hosted)
 
 Open source, TypeScript-native, zero per-user cost. Runs as a library inside the Node.js backend.
 
 **What Better Auth handles:**
-1. **User auth** — email/password sign-up and sign-in, JWT issuance.
-2. **Session management** — 15-minute access tokens, 30-day refresh tokens. Flutter refreshes silently.
-3. **OAuth 2.1 provider** — backend acts as a proper OAuth authorization server for MCP clients. Handles PKCE, dynamic client registration, consent, token issuance.
-4. **Agent Auth plugin** — exposes agent capabilities for discovery with scoped permissions.
-5. **Connector OAuth initiation** — initiates Google/Slack/Figma OAuth flows via `genericOAuth` plugin. Callback hands tokens to the vault, not Better Auth's session store.
+1. **User auth** - email/password sign-up and sign-in, JWT issuance.
+2. **Session management** - 15-minute access tokens, 30-day refresh tokens. Flutter refreshes silently.
+3. **OAuth 2.1 provider** - backend acts as a proper OAuth authorization server for MCP clients. Handles PKCE, dynamic client registration, consent, token issuance.
+4. **Agent Auth plugin** - exposes agent capabilities for discovery with scoped permissions.
+5. **Connector OAuth initiation** - initiates Google/Slack/Figma OAuth flows via `genericOAuth` plugin. Callback hands tokens to the vault, not Better Auth's session store.
 
 **What Better Auth does NOT handle:**
 - connector token storage or refresh (token vault),
@@ -358,7 +358,7 @@ Open source, TypeScript-native, zero per-user cost. Runs as a library inside the
 - MCP server connections,
 - message storage or chat thread logic.
 
-### 6.4 Database — PostgreSQL (direct)
+### 6.4 Database - PostgreSQL (direct)
 
 No Supabase, no Prisma. Direct connection via `pg` npm package. Managed Postgres on Railway (~$5/month at MVP). Migrations via `node-pg-migrate`.
 
@@ -427,9 +427,9 @@ agent_runs (
 )
 ```
 
-**Key design decision:** Every agent output — scheduled reports, connected chat responses, general chat responses, system notifications — is stored as a row in `agent_messages`. Role distinguishes who sent it. This single table powers the entire messaging UI across all agent types including the Assistant contact.
+**Key design decision:** Every agent output - scheduled reports, connected chat responses, general chat responses, system notifications - is stored as a row in `agent_messages`. Role distinguishes who sent it. This single table powers the entire messaging UI across all agent types including the Assistant contact.
 
-### 6.5 Token vault — custom, built in-house
+### 6.5 Token vault - custom, built in-house
 
 Per-user, per-connector OAuth token storage with background refresh. No third-party solution. One-time build, zero ongoing cost.
 
@@ -452,22 +452,22 @@ getValidToken(userId, connectorId)
 **Security rules:**
 - tokens decrypted in memory only, never logged,
 - never passed to Claude Haiku or stored in BullMQ payloads,
-- each connector isolated per row — revoking one doesn't affect others,
+- each connector isolated per row - revoking one doesn't affect others,
 - failures always surface as messages in the agent thread, never silent.
 
 **Vault encryption key generation:**
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # Store as VAULT_ENCRYPTION_KEY in environment
-# Back this up — losing it makes all stored tokens unrecoverable
+# Back this up - losing it makes all stored tokens unrecoverable
 ```
 
-### 6.6 Job queue and scheduler — BullMQ + Redis
+### 6.6 Job queue and scheduler - BullMQ + Redis
 
 **Two queues:**
 
-1. `agent-scheduler` — cron-triggered repeatable jobs. Registered when an agent is created or updated.
-2. `agent-executor` — actual work queue. Workers pick up jobs, execute, write output as agent message.
+1. `agent-scheduler` - cron-triggered repeatable jobs. Registered when an agent is created or updated.
+2. `agent-executor` - actual work queue. Workers pick up jobs, execute, write output as agent message.
 
 **Worker flow:**
 ```
@@ -509,7 +509,7 @@ const jitterMs = Math.floor(Math.random() * 10 * 60 * 1000); // up to 10min
 const actualFireTime = scheduledTime + jitterMs;
 ```
 
-### 6.7 MCP layer — TypeScript SDK + self-hosted servers
+### 6.7 MCP layer - TypeScript SDK + self-hosted servers
 
 **SDK:** `@modelcontextprotocol/sdk` official Anthropic TypeScript SDK (post-SEP-2207 for background token refresh support).
 
@@ -527,7 +527,7 @@ const actualFireTime = scheduledTime + jitterMs;
 
 **Unsupported connector response:** If intent parsing detects a required connector that doesn't exist yet, the agent creation flow responds with a graceful fallback suggestion rather than creating a broken agent.
 
-### 6.8 LLM — Claude Haiku
+### 6.8 LLM - Claude Haiku
 
 **Model:** `claude-haiku-4-5` for all agent execution, chat, and intent parsing. Fast, cheap (~25× cheaper than Sonnet), fully sufficient for all MVP tasks.
 
@@ -557,15 +557,15 @@ if (intent.needsConnectors.length > 0) {
 
 **Hard rules:**
 - LLM never receives raw tokens or credentials,
-- LLM never calls tools autonomously — always called with pre-fetched data,
+- LLM never calls tools autonomously - always called with pre-fetched data,
 - all structured output validated against schemas before being stored or acted on,
 - Haiku API spend monitored with hard alerts to prevent unexpected bills.
 
-### 6.9 Push notifications — Firebase Cloud Messaging
+### 6.9 Push notifications - Firebase Cloud Messaging
 
 Free at any scale. First-class Flutter SDK. Works for Android and iOS.
 
-**Notification model — identical to WhatsApp:**
+**Notification model - identical to WhatsApp:**
 ```
 title: "Tech News"                        ← agent name
 body:  "Your 7am brief: 8 stories today" ← first line of output
@@ -579,9 +579,9 @@ Tapping opens the agent's chat thread with the new message scrolled into view.
 - agent paused due to failures → push with explanation,
 - partial run (some data missing) → flagged inline in the message.
 
-### 6.10 Hosting — Railway (MVP) → AWS EC2 (Phase 3+)
+### 6.10 Hosting - Railway (MVP) → AWS EC2 (Phase 3+)
 
-**MVP hosting — Railway:**
+**MVP hosting - Railway:**
 ```
 railway project
 ├── api-server    (Node.js + Fastify + Better Auth)
@@ -592,7 +592,7 @@ railway project
 
 Same Docker containers, same codebase. Migration to AWS is a config change, not a rewrite.
 
-**Phase 3+ hosting — AWS EC2 + OpenShell:**
+**Phase 3+ hosting - AWS EC2 + OpenShell:**
 
 When assisted actions and coding agents are introduced, Railway's shared container model is insufficient for per-user security isolation. At that point:
 
@@ -606,8 +606,8 @@ When assisted actions and coding agents are introduced, Railway's shared contain
 - GPU passthrough via `openshell sandbox create --gpu` for compute-intensive tasks.
 
 **Why OpenShell matters for Sydney:**
-- token vault becomes partially redundant — OpenShell injects credentials at the runtime level,
-- user A's agent execution is kernel-isolated from user B's — not just application-layer promises,
+- token vault becomes partially redundant - OpenShell injects credentials at the runtime level,
+- user A's agent execution is kernel-isolated from user B's - not just application-layer promises,
 - coding agents can install packages, run tests, execute code safely per user,
 - audit logs of every tool call and file access are cryptographically signed,
 - the privacy router ensures user data never reaches unauthorized model providers.
@@ -620,11 +620,11 @@ Sydney's web version is a natural extension of the same backend and agent runtim
 
 **What the web version adds over mobile:**
 
-- **Split-pane inbox** — agent contact list on the left, chat thread on the right, full message history visible simultaneously,
-- **Multi-agent overview** — dashboard showing all agents' last outputs at a glance,
-- **Coding agent IDE panel** — code editor + terminal output + agent chat in one interface, backed by OpenShell on EC2,
-- **Research agent deep dives** — full document-style output with sources sidebar, inline follow-up questions,
-- **Cross-surface continuity** — same inbox, same agents, same history. Read a notification on mobile, open the full report on web.
+- **Split-pane inbox** - agent contact list on the left, chat thread on the right, full message history visible simultaneously,
+- **Multi-agent overview** - dashboard showing all agents' last outputs at a glance,
+- **Coding agent IDE panel** - code editor + terminal output + agent chat in one interface, backed by OpenShell on EC2,
+- **Research agent deep dives** - full document-style output with sources sidebar, inline follow-up questions,
+- **Cross-surface continuity** - same inbox, same agents, same history. Read a notification on mobile, open the full report on web.
 
 **Surface rollout order:** Android → Web → iOS
 
@@ -675,7 +675,7 @@ Apple Developer account ($99/year) deferred until iOS launch.
 Before any distribution push, the following must be in place:
 
 **Google:**
-- Submit Google OAuth verification the day Gmail connector works locally — review takes 2–6 weeks and blocks growth beyond 100 users,
+- Submit Google OAuth verification the day Gmail connector works locally - review takes 2–6 weeks and blocks growth beyond 100 users,
 - Request Gmail API quota increase at the same time,
 - Have a waitlist ready for overflow during verification.
 
@@ -726,7 +726,7 @@ Before any distribution push, the following must be in place:
 ### 7.1 Design direction
 Sydney should feel like a messaging app, not a productivity tool.
 
-Reference: WhatsApp, iMessage, Telegram — calm, fast, familiar, trustworthy.
+Reference: WhatsApp, iMessage, Telegram - calm, fast, familiar, trustworthy.
 Not: Notion, Linear, Zapier, or any dashboard-first product.
 
 The user manages contacts, not automations.
@@ -738,7 +738,7 @@ The user manages contacts, not automations.
 - large readable typography,
 - unread indicators like a messaging app,
 - minimal chrome, maximum content,
-- restrained color palette — color used only for status signals.
+- restrained color palette - color used only for status signals.
 
 ### 7.3 Primary screens
 
@@ -775,7 +775,7 @@ The Assistant contact is pre-installed at sign-up. It sends a welcome message im
 Hey! I'm Sydney.
 
 I can chat with you like Claude or
-ChatGPT — just ask me anything.
+ChatGPT - just ask me anything.
 
 But the real magic is agents. Try:
 
@@ -839,7 +839,7 @@ Tapping any agent opens its chat thread. Agent messages on the left, user replie
 ```
 
 #### Agent creation flow
-Tapping "+ New" opens a prompt bar. User types what they want. Sydney parses intent and shows a lightweight confirmation card. Templates pre-fill the prompt bar — same flow from there.
+Tapping "+ New" opens a prompt bar. User types what they want. Sydney parses intent and shows a lightweight confirmation card. Templates pre-fill the prompt bar - same flow from there.
 
 ```
 ┌─────────────────────────────────────────┐
@@ -885,14 +885,14 @@ Split-pane layout identical to desktop messaging apps:
 │  Sydney   + New  │  📧 Email Digest                    ⚙️   │
 ├──────────────────┤                                          │
 │ 🤖 Assistant     │  ┌──────────────────────────────────┐    │
-│ Ask me anything  │  │ Tuesday 13 May — 6pm Report     │    │
+│ Ask me anything  │  │ Tuesday 13 May - 6pm Report     │    │
 │                  │  │ 47 emails · 6 need attention    │    │
 │ 📧 Email Digest  │  │ → Alice: Q3 budget review       │    │
 │ 47 emails · 6pm  │  │ → Team standup notes            │    │
 │                  │  └──────────────────────────────────┘    │
 │ 📰 Tech News     │                                          │
 │ 8 stories · 7am  │  ┌──────────────────────────────────┐    │
-│                  │  │ Monday 12 May — 6pm Report      │    │
+│                  │  │ Monday 12 May - 6pm Report      │    │
 │ 💬 Slack         │  │ 31 emails · newsletters filtered │    │
 │ 2 urgent · now   │  └──────────────────────────────────┘    │
 │                  │                                          │
@@ -939,7 +939,7 @@ Identical to receiving and replying to a WhatsApp message. The familiarity is th
 
 ---
 
-## 7.6 Design system — tokens and constants
+## 7.6 Design system - tokens and constants
 
 Every UI element in Sydney uses a shared design token system. Define once, inherit everywhere. New templates, new screens, new components all pull from the same source of truth.
 
@@ -1009,22 +1009,22 @@ class SydneyRadius {
 ### Animation constants
 ```dart
 class SydneyAnimations {
-  // thread open — slide up + fade
+  // thread open - slide up + fade
   static const threadOpen = Duration(milliseconds: 280);
   static const threadOpenCurve = Curves.easeOutCubic;
 
-  // new message arrival — fade + slide from bottom
+  // new message arrival - fade + slide from bottom
   static const messageArrive = Duration(milliseconds: 220);
   static const messageArriveCurve = Curves.easeOutQuart;
 
-  // agent typing indicator — pulse
+  // agent typing indicator - pulse
   static const typingPulse = Duration(milliseconds: 600);
 
-  // progress bar fill — animated on first render
+  // progress bar fill - animated on first render
   static const progressFill = Duration(milliseconds: 800);
   static const progressFillCurve = Curves.easeOutCubic;
 
-  // confirmation card appear — scale + fade
+  // confirmation card appear - scale + fade
   static const cardAppear = Duration(milliseconds: 240);
   static const cardAppearCurve = Curves.easeOutBack;
 }
@@ -1035,17 +1035,17 @@ Every new screen is evaluated against one question before shipping:
 
 > Does a non-technical person understand what to do within 10 seconds, without reading any instructions?
 
-If the answer is no, the screen is redesigned. Not simplified — redesigned. Every screen has one primary action. Every screen has one clear hierarchy. No competing calls to action anywhere.
+If the answer is no, the screen is redesigned. Not simplified - redesigned. Every screen has one primary action. Every screen has one clear hierarchy. No competing calls to action anywhere.
 
 ---
 
 ## 7.7 Output template system
 
-This is one of Sydney's core differentiators. Every agent message is rendered using a purpose-built template widget — not a generic text blob. The LLM returns structured JSON. Flutter renders the right widget automatically.
+This is one of Sydney's core differentiators. Every agent message is rendered using a purpose-built template widget - not a generic text blob. The LLM returns structured JSON. Flutter renders the right widget automatically.
 
 ### How it works end to end
 
-**Step 1 — Intent parser assigns a template**
+**Step 1 - Intent parser assigns a template**
 
 When an agent is created, the intent parser returns a template type alongside the agent definition:
 
@@ -1066,7 +1066,7 @@ When an agent is created, the intent parser returns a template type alongside th
 }
 ```
 
-**Step 2 — Agent runtime returns structured JSON**
+**Step 2 - Agent runtime returns structured JSON**
 
 Every agent execution returns a typed JSON payload, not raw text:
 
@@ -1079,7 +1079,7 @@ Every agent execution returns a typed JSON payload, not raw text:
 }
 ```
 
-**Step 3 — Flutter renders the right widget**
+**Step 3 - Flutter renders the right widget**
 
 ```dart
 // lib/widgets/agent_message_widget.dart
@@ -1116,7 +1116,7 @@ class AgentMessageWidget extends StatelessWidget {
 }
 ```
 
-**Step 4 — Interactive elements send replies**
+**Step 4 - Interactive elements send replies**
 
 Action buttons inside templates are tappable. Tapping sends a structured reply back to the agent:
 
@@ -1132,11 +1132,11 @@ ActionButton(
 )
 ```
 
-The backend receives the reply, updates agent state, adjusts next run accordingly. No separate settings screen needed — the message IS the interface.
+The backend receives the reply, updates agent state, adjusts next run accordingly. No separate settings screen needed - the message IS the interface.
 
 ---
 
-### Template 1 — plain_text
+### Template 1 - plain_text
 
 **Used for:** tech news agent, general summaries, assistant chat responses, any agent without structured data.
 
@@ -1177,7 +1177,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 2 — progress_tracker
+### Template 2 - progress_tracker
 
 **Used for:** study plan agent, fitness agent, habit agent, project milestone agent, any agent tracking progress toward a goal over time.
 
@@ -1217,7 +1217,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 ┌──────────────────────────────────────┐
 │ Day 67 of 183           116 days 🎯  │
 ├──────────────────────────────────────┤
-│ Today — Physics                      │
+│ Today - Physics                      │
 │ Newton's Laws of Motion              │
 │ ~45 min · builds on Kinematics       │
 ├──────────────────────────────────────┤
@@ -1243,7 +1243,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 3 — urgency_list
+### Template 3 - urgency_list
 
 **Used for:** Slack watcher, Gmail monitor, keyword alert agent, any agent that surfaces time-sensitive items requiring attention.
 
@@ -1298,7 +1298,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 4 — data_summary
+### Template 4 - data_summary
 
 **Used for:** email digest, portfolio agent, subscription auditor, analytics agent, any agent that summarizes quantitative or categorical data.
 
@@ -1345,7 +1345,7 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 
 ---
 
-### Template 5 — checklist
+### Template 5 - checklist
 
 **Used for:** travel agent, pre-exam checklist, weekly review agent, any agent that delivers actionable items the user should complete.
 
@@ -1385,13 +1385,13 @@ The backend receives the reply, updates agent state, adjusts next run accordingl
 └──────────────────────────────────────┘
 ```
 
-Checklist items are tappable — checking one sends a reply to the agent which stores completion state.
+Checklist items are tappable - checking one sends a reply to the agent which stores completion state.
 
 **Build order:** V1.3
 
 ---
 
-### Template 6 — streak_counter
+### Template 6 - streak_counter
 
 **Used for:** habit agent, learning agent, fitness agent, any agent built around daily consistency and streaks.
 
@@ -1440,7 +1440,7 @@ Checklist items are tappable — checking one sends a reply to the agent which s
 
 ---
 
-### Template 7 — comparison
+### Template 7 - comparison
 
 **Used for:** competitor watcher, market research agent, portfolio comparison agent, any agent that surfaces side-by-side data over time.
 
@@ -1473,9 +1473,9 @@ Checklist items are tappable — checking one sends a reply to the agent which s
 
 ---
 
-### Template 8 — system
+### Template 8 - system
 
-**Used for:** error messages, token reconnection prompts, agent paused notifications, onboarding messages. Not agent output — internal Sydney communication.
+**Used for:** error messages, token reconnection prompts, agent paused notifications, onboarding messages. Not agent output - internal Sydney communication.
 
 ```json
 {
@@ -1500,7 +1500,7 @@ Checklist items are tappable — checking one sends a reply to the agent which s
 └──────────────────────────────────────┘
 ```
 
-System messages use a subtly different visual style — slightly muted background, no agent avatar — so the user immediately knows this is from Sydney itself, not from agent output.
+System messages use a subtly different visual style - slightly muted background, no agent avatar - so the user immediately knows this is from Sydney itself, not from agent output.
 
 **Build order:** Week 3 (needed from day one for error handling)
 
@@ -1529,25 +1529,25 @@ V1.4
   timeline        → project agents, roadmap agents
 ```
 
-### Adding new templates — developer guide
+### Adding new templates - developer guide
 
 Adding a new template requires changes in exactly three places:
 
-**1. Backend — add to intent parser prompt**
+**1. Backend - add to intent parser prompt**
 ```typescript
 // src/agents/intent-parser.ts
 // Add new template to the allowed output_template values
 // and describe when to use it in the system prompt
 ```
 
-**2. Backend — add agent runtime output schema**
+**2. Backend - add agent runtime output schema**
 ```typescript
 // src/agents/templates/{template_name}.schema.ts
 // Define the JSON schema for the template's data payload
 // Haiku is prompted to return this exact structure
 ```
 
-**3. Flutter — add widget**
+**3. Flutter - add widget**
 ```dart
 // lib/widgets/templates/{template_name}_template.dart
 // Implement the StatelessWidget that renders the template
@@ -1556,13 +1556,13 @@ Adding a new template requires changes in exactly three places:
 // Must be testable with mock data
 ```
 
-That's it. No other files change. The routing in `AgentMessageWidget` uses a switch on the template string — new case added, done.
+That's it. No other files change. The routing in `AgentMessageWidget` uses a switch on the template string - new case added, done.
 
 ---
 
 ## 7.8 UI quality standard
 
-Sydney's UI is held to the standard of the apps users compare it to unconsciously — WhatsApp, ChatGPT, Claude, Gmail. These apps were designed by world-class teams over years. Sydney must match their *feel*, not their feature set.
+Sydney's UI is held to the standard of the apps users compare it to unconsciously - WhatsApp, ChatGPT, Claude, Gmail. These apps were designed by world-class teams over years. Sydney must match their *feel*, not their feature set.
 
 ### The non-negotiables before any public release
 
@@ -1591,20 +1591,20 @@ Every new screen is shown to a non-technical person. If they don't immediately u
 
 ## 8. Build Order
 
-### Week 1 — Foundation
+### Week 1 - Foundation
 - Docker Compose local environment (Postgres + Redis + Node.js in one command),
 - Postgres schema (all tables from section 6.4),
 - Better Auth setup (email/password, JWT, sessions),
 - Fastify API skeleton with auth middleware,
 - Flutter project scaffold, secure storage, dio HTTP client.
 
-### Week 2 — UI and API contract
+### Week 2 - UI and API contract
 - Flutter messaging inbox (contact list, chat thread, creation prompt),
 - API routes that match UI needs (agents CRUD, messages, auth),
 - Pre-installed Assistant contact seeded at sign-up,
 - Mock data in Flutter to validate UI before backend is fully connected.
 
-### Week 3 — First agent end to end
+### Week 3 - First agent end to end
 - BullMQ + Redis job queue setup,
 - Anthropic server-side web search enabled (no OAuth needed),
 - Tech News Agent: schedule → BullMQ fires → web search → Haiku summarizes → message written → FCM push,
@@ -1613,15 +1613,15 @@ Every new screen is shown to a non-technical person. If they don't immediately u
 
 Implementation note: Week 3 realtime delivery is being completed with an authenticated backend event stream first. Firebase/FCM push is postponed until the Android application ID, Firebase project, backend domains, and dev/staging/prod environment split are stable. This avoids locking test push configuration to temporary app identity.
 
-### Week 4 — Gmail connector
+### Week 4 - Gmail connector
 - Google Cloud Console OAuth app setup,
 - Gmail OAuth flow (auth URL → in-app browser → callback → token vault),
 - Token vault (AES-256-GCM encrypt/decrypt + refresh logic),
 - Gmail MCP server running locally,
 - Email Digest Agent end to end,
-- **Submit Google OAuth verification this week — not at launch.**
+- **Submit Google OAuth verification this week - not at launch.**
 
-### Week 5+ — More agents and polish
+### Week 5+ - More agents and polish
 - Slack connector + Slack Digest Agent,
 - Drive connector + PDF Summary Agent,
 - Agent reply handling (user replies fed back to agent context),
@@ -1643,11 +1643,11 @@ Implementation note: Week 3 realtime delivery is being completed with an authent
 ## 9. MVP Plan
 
 ### 9.1 Best MVP wedge
-Read-first recurring agents — agents that message the user on a schedule with useful summaries. Zero risk of unwanted actions.
+Read-first recurring agents - agents that message the user on a schedule with useful summaries. Zero risk of unwanted actions.
 
 Starting agents:
-- Tech News Brief (web search, no OAuth — build first),
-- Daily Email Digest (Gmail OAuth — validates full auth stack),
+- Tech News Brief (web search, no OAuth - build first),
+- Daily Email Digest (Gmail OAuth - validates full auth stack),
 - Slack Digest,
 - PDF Summarizer,
 - EOD Task Report.
@@ -1666,7 +1666,7 @@ Starting agents:
 - graceful unsupported connector response.
 
 ### 9.3 First connectors
-- Web search (Anthropic server-side web search, no OAuth — day one),
+- Web search (Anthropic server-side web search, no OAuth - day one),
 - Gmail,
 - Google Drive,
 - Slack.
@@ -1683,20 +1683,20 @@ Day-2 retention driven by push notifications is the single most important early 
 
 ## 10. Roadmap
 
-### Phase 1 — Read-only agents (MVP)
+### Phase 1 - Read-only agents (MVP)
 Agents message you with summaries, digests, reports. You reply to refine them. No actions taken on your behalf. Assistant contact for general and connected chat.
 
-### Phase 2 — Web version
+### Phase 2 - Web version
 Full web app with split-pane inbox, multi-agent overview, and connected chat. Same backend, same agents, same history across mobile and web.
 
-### Phase 3 — Assisted actions + OpenShell + EC2
+### Phase 3 - Assisted actions + OpenShell + EC2
 Agents suggest actions in messages. User taps to approve. Migrate to EC2 + OpenShell for kernel-level sandboxing. Introduce coding agent with IDE panel on web.
 
-### Phase 4 — Light autonomous actions
+### Phase 4 - Light autonomous actions
 Agents take low-risk actions within pre-approved boundaries: filing, tagging, scheduling, marking tasks complete. OpenShell enforces safety at runtime level.
 
-### Phase 5 — Multi-agent orchestration
-Agents trigger other agents. Slack watcher tells email agent to include a thread summary. Agents share context and collaborate. Agent marketplace — users publish and install community agents.
+### Phase 5 - Multi-agent orchestration
+Agents trigger other agents. Slack watcher tells email agent to include a thread summary. Agents share context and collaborate. Agent marketplace - users publish and install community agents.
 
 ### iOS
 After web version is stable. Same Flutter codebase, one config change.
@@ -1724,7 +1724,7 @@ Silent refresh failures cause agents to stop messaging without explanation. Ever
 Too many connectors or agent types at launch creates confusion. Launch with 4 connectors maximum. Expand based on user requests.
 
 ### 7. Generic positioning
-Described as "another AI assistant," Sydney is ignored. "Agents that message you" must be the consistent frame everywhere — App Store description, first tweet, onboarding message, press coverage.
+Described as "another AI assistant," Sydney is ignored. "Agents that message you" must be the consistent frame everywhere - App Store description, first tweet, onboarding message, press coverage.
 
 ### 8. Platform risk (OpenShell alpha)
 OpenShell is alpha software in single-player mode. Not suitable for multi-tenant Phase 1 deployment. Adopt only at Phase 3 when sandboxed actions are introduced.
@@ -1736,7 +1736,7 @@ OpenShell is alpha software in single-player mode. Not suitable for multi-tenant
 ### Core positioning
 **AI agents that message you.**
 
-Not a chatbot you open. Not a dashboard you manage. Contacts that work for you and report back — like getting a WhatsApp message, except it's your email digest, news brief, or Slack summary.
+Not a chatbot you open. Not a dashboard you manage. Contacts that work for you and report back - like getting a WhatsApp message, except it's your email digest, news brief, or Slack summary.
 
 ### Competitive differentiation
 
@@ -1751,21 +1751,21 @@ Not a chatbot you open. Not a dashboard you manage. Contacts that work for you a
 
 ### Pricing anchor
 $9.99/month sits between:
-- Claude Pro / ChatGPT Plus (~$20) — AI you have to ask,
-- Perplexity Pro (~$20) — search you have to initiate.
+- Claude Pro / ChatGPT Plus (~$20) - AI you have to ask,
+- Perplexity Pro (~$20) - search you have to initiate.
 
 Half the price. Does something neither can: works while you're away and messages you unprompted.
 
 ### Good messaging
 - "AI agents that message you."
-- "Your daily briefings, summaries, and alerts — delivered like messages."
+- "Your daily briefings, summaries, and alerts - delivered like messages."
 - "Tell it what you want. It handles the rest."
 
 ### Avoid
-- "MCP-powered agent builder" — too technical,
-- "workflow automation platform" — wrong audience,
-- "developer agent framework" — wrong audience,
-- "AI assistant" — too generic, indistinguishable.
+- "MCP-powered agent builder" - too technical,
+- "workflow automation platform" - wrong audience,
+- "developer agent framework" - wrong audience,
+- "AI assistant" - too generic, indistinguishable.
 
 ---
 
@@ -1780,10 +1780,10 @@ From pull to push. From tool to contact. From dashboard to inbox. From "I need t
 That inversion is what makes Sydney a new consumer software category rather than another feature on an existing product. It is not an AI wrapper. The AI is one component of a platform that includes a custom agent runtime, a per-user token vault solving a genuinely unsolved mobile OAuth problem, MCP as the connector ecosystem, OpenShell as the safety layer, and a messaging interface that makes all of it feel like talking to a contact.
 
 The moat compounds over time:
-- **Month 1–3:** First-mover on Android consumer agent messaging — no competitor has this UI,
-- **Month 3–6:** Agent memory and personalisation — each user's agents learn their preferences, that context doesn't transfer to competitors,
-- **Month 6–12:** MCP ecosystem compounds — every new MCP server published becomes a potential Sydney connector for free,
-- **Year 2+:** Agent marketplace — community-published agents, network effects, platform lock-in.
+- **Month 1–3:** First-mover on Android consumer agent messaging - no competitor has this UI,
+- **Month 3–6:** Agent memory and personalisation - each user's agents learn their preferences, that context doesn't transfer to competitors,
+- **Month 6–12:** MCP ecosystem compounds - every new MCP server published becomes a potential Sydney connector for free,
+- **Year 2+:** Agent marketplace - community-published agents, network effects, platform lock-in.
 
 The winning formula:
 - **custom agents in one sentence**,

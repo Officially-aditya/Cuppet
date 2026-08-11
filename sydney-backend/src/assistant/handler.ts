@@ -427,7 +427,7 @@ async function executeRoute(input: {
           : [
               "Your agents:",
               ...agents.map((agent) =>
-                `- ${agent.name} — ${agent.status}${agent.schedule_cron ? `, ${describeSchedule(agent.schedule_cron)}` : ", manual"}`
+                `- ${agent.name} - ${agent.status}${agent.schedule_cron ? `, ${describeSchedule(agent.schedule_cron)}` : ", manual"}`
               )
             ].join("\n")
       )

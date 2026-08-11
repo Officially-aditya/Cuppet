@@ -154,7 +154,7 @@ void main() {
           'part_count': 3,
         },
         'data': {
-          'title': 'AI news — Context and timeline',
+          'title': 'AI news - Context and timeline',
           'items': <Object>[],
           'perspectives': [
             {

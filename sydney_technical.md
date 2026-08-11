@@ -1,4 +1,4 @@
-# Sydney — Technical Document
+# Sydney - Technical Document
 ### Internal alias: Sydney | Version 1.0
 ### Reference this when building. Contains full stack, architecture, auth, database, queue, MCP, and build order.
 
@@ -42,16 +42,16 @@ Entirely owned, self-hosted, and open source where possible. No managed abstract
         └────────────────────────────────┘
 ```
 
-### 6.1 Mobile app — Flutter
+### 6.1 Mobile app - Flutter
 
-**Why Flutter:** Single codebase for Android and iOS. Android-first at launch. iOS added later with minimal additional work — same codebase, one config change.
+**Why Flutter:** Single codebase for Android and iOS. Android-first at launch. iOS added later with minimal additional work - same codebase, one config change.
 
 **Key packages:**
-- `flutter_web_auth_2` — OAuth in-app browser flow. Opens secure browser, captures redirect, passes auth code to backend. App never touches connector tokens.
-- `firebase_messaging` — receives push notifications from FCM when an agent sends a new message.
-- `flutter_secure_storage` — stores the user's Better Auth JWT in device keychain only. Nothing else on-device.
-- `dio` — HTTP client for all backend API calls.
-- `riverpod` — state management.
+- `flutter_web_auth_2` - OAuth in-app browser flow. Opens secure browser, captures redirect, passes auth code to backend. App never touches connector tokens.
+- `firebase_messaging` - receives push notifications from FCM when an agent sends a new message.
+- `flutter_secure_storage` - stores the user's Better Auth JWT in device keychain only. Nothing else on-device.
+- `dio` - HTTP client for all backend API calls.
+- `riverpod` - state management.
 
 **What Flutter does NOT do:**
 - store connector tokens (Gmail, Slack, Drive),
@@ -59,9 +59,9 @@ Entirely owned, self-hosted, and open source where possible. No managed abstract
 - execute background jobs,
 - anything except UI, notifications, and API calls.
 
-### 6.2 Backend — Node.js + Fastify
+### 6.2 Backend - Node.js + Fastify
 
-**Why Node.js:** Official MCP TypeScript SDK is Anthropic-maintained. Same language across backend, MCP client, and agent runtime — no serialisation boundary.
+**Why Node.js:** Official MCP TypeScript SDK is Anthropic-maintained. Same language across backend, MCP client, and agent runtime - no serialisation boundary.
 
 **Why Fastify:** Better performance than Express, native TypeScript, built-in JSON schema validation.
 
@@ -90,16 +90,16 @@ Entirely owned, self-hosted, and open source where possible. No managed abstract
   /api           → Fastify route definitions
 ```
 
-### 6.3 Authentication — Better Auth (self-hosted)
+### 6.3 Authentication - Better Auth (self-hosted)
 
 Open source, TypeScript-native, zero per-user cost. Runs as a library inside the Node.js backend.
 
 **What Better Auth handles:**
-1. **User auth** — email/password sign-up and sign-in, JWT issuance.
-2. **Session management** — 15-minute access tokens, 30-day refresh tokens. Flutter refreshes silently.
-3. **OAuth 2.1 provider** — backend acts as a proper OAuth authorization server for MCP clients. Handles PKCE, dynamic client registration, consent, token issuance.
-4. **Agent Auth plugin** — exposes agent capabilities for discovery with scoped permissions.
-5. **Connector OAuth initiation** — initiates Google/Slack/Figma OAuth flows via `genericOAuth` plugin. Callback hands tokens to the vault, not Better Auth's session store.
+1. **User auth** - email/password sign-up and sign-in, JWT issuance.
+2. **Session management** - 15-minute access tokens, 30-day refresh tokens. Flutter refreshes silently.
+3. **OAuth 2.1 provider** - backend acts as a proper OAuth authorization server for MCP clients. Handles PKCE, dynamic client registration, consent, token issuance.
+4. **Agent Auth plugin** - exposes agent capabilities for discovery with scoped permissions.
+5. **Connector OAuth initiation** - initiates Google/Slack/Figma OAuth flows via `genericOAuth` plugin. Callback hands tokens to the vault, not Better Auth's session store.
 
 **What Better Auth does NOT handle:**
 - connector token storage or refresh (token vault),
@@ -107,7 +107,7 @@ Open source, TypeScript-native, zero per-user cost. Runs as a library inside the
 - MCP server connections,
 - message storage or chat thread logic.
 
-### 6.4 Database — PostgreSQL (direct)
+### 6.4 Database - PostgreSQL (direct)
 
 No Supabase, no Prisma. Direct connection via `pg` npm package. Managed Postgres on Railway (~$5/month at MVP). Migrations via `node-pg-migrate`.
 
@@ -176,9 +176,9 @@ agent_runs (
 )
 ```
 
-**Key design decision:** Every agent output — scheduled reports, connected chat responses, general chat responses, system notifications — is stored as a row in `agent_messages`. Role distinguishes who sent it. This single table powers the entire messaging UI across all agent types including the Assistant contact.
+**Key design decision:** Every agent output - scheduled reports, connected chat responses, general chat responses, system notifications - is stored as a row in `agent_messages`. Role distinguishes who sent it. This single table powers the entire messaging UI across all agent types including the Assistant contact.
 
-### 6.5 Token vault — custom, built in-house
+### 6.5 Token vault - custom, built in-house
 
 Per-user, per-connector OAuth token storage with background refresh. No third-party solution. One-time build, zero ongoing cost.
 
@@ -201,22 +201,22 @@ getValidToken(userId, connectorId)
 **Security rules:**
 - tokens decrypted in memory only, never logged,
 - never passed to Claude Haiku or stored in BullMQ payloads,
-- each connector isolated per row — revoking one doesn't affect others,
+- each connector isolated per row - revoking one doesn't affect others,
 - failures always surface as messages in the agent thread, never silent.
 
 **Vault encryption key generation:**
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # Store as VAULT_ENCRYPTION_KEY in environment
-# Back this up — losing it makes all stored tokens unrecoverable
+# Back this up - losing it makes all stored tokens unrecoverable
 ```
 
-### 6.6 Job queue and scheduler — BullMQ + Redis
+### 6.6 Job queue and scheduler - BullMQ + Redis
 
 **Two queues:**
 
-1. `agent-scheduler` — cron-triggered repeatable jobs. Registered when an agent is created or updated.
-2. `agent-executor` — actual work queue. Workers pick up jobs, execute, write output as agent message.
+1. `agent-scheduler` - cron-triggered repeatable jobs. Registered when an agent is created or updated.
+2. `agent-executor` - actual work queue. Workers pick up jobs, execute, write output as agent message.
 
 **Worker flow:**
 ```
@@ -258,7 +258,7 @@ const jitterMs = Math.floor(Math.random() * 10 * 60 * 1000); // up to 10min
 const actualFireTime = scheduledTime + jitterMs;
 ```
 
-### 6.7 MCP layer — TypeScript SDK + self-hosted servers
+### 6.7 MCP layer - TypeScript SDK + self-hosted servers
 
 **SDK:** `@modelcontextprotocol/sdk` official Anthropic TypeScript SDK (post-SEP-2207 for background token refresh support).
 
@@ -276,7 +276,7 @@ const actualFireTime = scheduledTime + jitterMs;
 
 **Unsupported connector response:** If intent parsing detects a required connector that doesn't exist yet, the agent creation flow responds with a graceful fallback suggestion rather than creating a broken agent.
 
-### 6.8 LLM — Claude Haiku
+### 6.8 LLM - Claude Haiku
 
 **Model:** `claude-haiku-4-5` for all agent execution, chat, and intent parsing. Fast, cheap (~25× cheaper than Sonnet), fully sufficient for all MVP tasks.
 
@@ -306,15 +306,15 @@ if (intent.needsConnectors.length > 0) {
 
 **Hard rules:**
 - LLM never receives raw tokens or credentials,
-- LLM never calls tools autonomously — always called with pre-fetched data,
+- LLM never calls tools autonomously - always called with pre-fetched data,
 - all structured output validated against schemas before being stored or acted on,
 - Haiku API spend monitored with hard alerts to prevent unexpected bills.
 
-### 6.9 Push notifications — Firebase Cloud Messaging
+### 6.9 Push notifications - Firebase Cloud Messaging
 
 Free at any scale. First-class Flutter SDK. Works for Android and iOS.
 
-**Notification model — identical to WhatsApp:**
+**Notification model - identical to WhatsApp:**
 ```
 title: "Tech News"                        ← agent name
 body:  "Your 7am brief: 8 stories today" ← first line of output
@@ -328,9 +328,9 @@ Tapping opens the agent's chat thread with the new message scrolled into view.
 - agent paused due to failures → push with explanation,
 - partial run (some data missing) → flagged inline in the message.
 
-### 6.10 Hosting — Railway (MVP) → AWS EC2 (Phase 3+)
+### 6.10 Hosting - Railway (MVP) → AWS EC2 (Phase 3+)
 
-**MVP hosting — Railway:**
+**MVP hosting - Railway:**
 ```
 railway project
 ├── api-server    (Node.js + Fastify + Better Auth)
@@ -341,7 +341,7 @@ railway project
 
 Same Docker containers, same codebase. Migration to AWS is a config change, not a rewrite.
 
-**Phase 3+ hosting — AWS EC2 + OpenShell:**
+**Phase 3+ hosting - AWS EC2 + OpenShell:**
 
 When assisted actions and coding agents are introduced, Railway's shared container model is insufficient for per-user security isolation. At that point:
 
@@ -355,8 +355,8 @@ When assisted actions and coding agents are introduced, Railway's shared contain
 - GPU passthrough via `openshell sandbox create --gpu` for compute-intensive tasks.
 
 **Why OpenShell matters for Sydney:**
-- token vault becomes partially redundant — OpenShell injects credentials at the runtime level,
-- user A's agent execution is kernel-isolated from user B's — not just application-layer promises,
+- token vault becomes partially redundant - OpenShell injects credentials at the runtime level,
+- user A's agent execution is kernel-isolated from user B's - not just application-layer promises,
 - coding agents can install packages, run tests, execute code safely per user,
 - audit logs of every tool call and file access are cryptographically signed,
 - the privacy router ensures user data never reaches unauthorized model providers.
@@ -369,11 +369,11 @@ Sydney's web version is a natural extension of the same backend and agent runtim
 
 **What the web version adds over mobile:**
 
-- **Split-pane inbox** — agent contact list on the left, chat thread on the right, full message history visible simultaneously,
-- **Multi-agent overview** — dashboard showing all agents' last outputs at a glance,
-- **Coding agent IDE panel** — code editor + terminal output + agent chat in one interface, backed by OpenShell on EC2,
-- **Research agent deep dives** — full document-style output with sources sidebar, inline follow-up questions,
-- **Cross-surface continuity** — same inbox, same agents, same history. Read a notification on mobile, open the full report on web.
+- **Split-pane inbox** - agent contact list on the left, chat thread on the right, full message history visible simultaneously,
+- **Multi-agent overview** - dashboard showing all agents' last outputs at a glance,
+- **Coding agent IDE panel** - code editor + terminal output + agent chat in one interface, backed by OpenShell on EC2,
+- **Research agent deep dives** - full document-style output with sources sidebar, inline follow-up questions,
+- **Cross-surface continuity** - same inbox, same agents, same history. Read a notification on mobile, open the full report on web.
 
 **Surface rollout order:** Android → Web → iOS
 
@@ -424,7 +424,7 @@ Apple Developer account ($99/year) deferred until iOS launch.
 Before any distribution push, the following must be in place:
 
 **Google:**
-- Submit Google OAuth verification the day Gmail connector works locally — review takes 2–6 weeks and blocks growth beyond 100 users,
+- Submit Google OAuth verification the day Gmail connector works locally - review takes 2–6 weeks and blocks growth beyond 100 users,
 - Request Gmail API quota increase at the same time,
 - Have a waitlist ready for overflow during verification.
 
@@ -470,20 +470,20 @@ Before any distribution push, the following must be in place:
 
 ## 8. Build Order
 
-### Week 1 — Foundation
+### Week 1 - Foundation
 - Docker Compose local environment (Postgres + Redis + Node.js in one command),
 - Postgres schema (all tables from section 6.4),
 - Better Auth setup (email/password, JWT, sessions),
 - Fastify API skeleton with auth middleware,
 - Flutter project scaffold, secure storage, dio HTTP client.
 
-### Week 2 — UI and API contract
+### Week 2 - UI and API contract
 - Flutter messaging inbox (contact list, chat thread, creation prompt),
 - API routes that match UI needs (agents CRUD, messages, auth),
 - Pre-installed Assistant contact seeded at sign-up,
 - Mock data in Flutter to validate UI before backend is fully connected.
 
-### Week 3 — First agent end to end
+### Week 3 - First agent end to end
 - BullMQ + Redis job queue setup,
 - Anthropic server-side web search enabled (no OAuth needed),
 - Tech News Agent: schedule → BullMQ fires → web search → Haiku summarizes → message written → FCM push,
@@ -492,15 +492,15 @@ Before any distribution push, the following must be in place:
 
 Implementation note: Week 3 realtime delivery is being completed with an authenticated backend event stream first. Firebase/FCM push is postponed until the Android application ID, Firebase project, backend domains, and dev/staging/prod environment split are stable. This avoids locking test push configuration to temporary app identity.
 
-### Week 4 — Gmail connector
+### Week 4 - Gmail connector
 - Google Cloud Console OAuth app setup,
 - Gmail OAuth flow (auth URL → in-app browser → callback → token vault),
 - Token vault (AES-256-GCM encrypt/decrypt + refresh logic),
 - Gmail MCP server running locally,
 - Email Digest Agent end to end,
-- **Submit Google OAuth verification this week — not at launch.**
+- **Submit Google OAuth verification this week - not at launch.**
 
-### Week 5+ — More agents and polish
+### Week 5+ - More agents and polish
 - Slack connector + Slack Digest Agent,
 - Drive connector + PDF Summary Agent,
 - Agent reply handling (user replies fed back to agent context),
