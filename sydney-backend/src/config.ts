@@ -56,6 +56,7 @@ const envSchema = z.object({
   NOTION_CLIENT_SECRET: z.string().optional(),
   NOTION_AUTHORIZATION_URL: z.string().url().optional(),
   NOTION_API_VERSION: z.string().default("2026-03-11"),
+  WAITLIST_BLOCKED_EMAIL_DOMAINS: z.string().default(""),
   CIMD_CLIENT_IDENTITY_URL: z
     .string()
     .url()

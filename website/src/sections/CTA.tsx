@@ -26,7 +26,10 @@ export default function CTA() {
       const response = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail }),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          website: new FormData(event.currentTarget).get('website')?.toString() ?? '',
+        }),
       })
 
       if (!response.ok) {
@@ -78,6 +81,14 @@ export default function CTA() {
             onSubmit={submit}
             className="mx-auto mt-9 flex w-full max-w-md flex-col gap-2 rounded-2xl border border-[rgba(245,243,238,0.15)] bg-[rgba(245,243,238,0.05)] p-1.5 sm:flex-row sm:rounded-full"
           >
+            <input
+              aria-hidden="true"
+              autoComplete="off"
+              name="website"
+              tabIndex={-1}
+              type="text"
+              className="absolute -left-[9999px] h-px w-px overflow-hidden"
+            />
             <input
               aria-label="Email address"
               type="email"
