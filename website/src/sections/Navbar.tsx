@@ -94,13 +94,13 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href={{ pathname: '/', hash: 'waitlist' }}
+          <a
+            href="#waitlist"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[var(--forest)] px-4 py-2 text-[13px] font-semibold text-[var(--paper)] transition-colors duration-200 hover:bg-[#102e20]"
           >
             Join private beta
             <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
+          </a>
           <button
             onClick={() => setOpen(!open)}
             className="md:hidden flex h-11 w-11 items-center justify-center rounded-full border border-[var(--rule)] bg-[var(--paper)]/70 text-[var(--ink)]"
@@ -132,14 +132,14 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
-          <Link
-            href={{ pathname: '/', hash: 'waitlist' }}
+          <a
+            href="#waitlist"
             onClick={() => setOpen(false)}
             className="mt-2 flex items-center justify-center gap-2 rounded-full bg-[var(--forest)] px-4 py-2.5 text-sm font-semibold text-[var(--paper)]"
           >
             Join private beta
             <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
+          </a>
         </div>
       )}
     </header>
