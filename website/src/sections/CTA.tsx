@@ -50,7 +50,7 @@ export default function CTA() {
   }
 
   return (
-    <section id="cta" className="border-t border-[var(--rule)]">
+    <section id="waitlist" className="scroll-mt-24 border-t border-[var(--rule)]">
       <div className="beta-geometry relative mx-auto w-full max-w-6xl overflow-hidden bg-[var(--ink)] px-5 py-14 text-center sm:px-10 sm:py-24 md:my-8 md:rounded-[var(--radius-surface)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(245,243,238,0.6)]">
           Private beta

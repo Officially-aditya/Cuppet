@@ -20,7 +20,7 @@ export default function Hero() {
           </p>
 
           <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
-            <a href="#cta" className="btn-primary w-full sm:w-auto">
+            <a href="#waitlist" className="btn-primary w-full sm:w-auto">
               Join private beta
               <ArrowRight className="h-4 w-4" />
             </a>

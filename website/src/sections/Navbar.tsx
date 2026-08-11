@@ -95,7 +95,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/#cta"
+            href={{ pathname: '/', hash: 'waitlist' }}
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[var(--forest)] px-4 py-2 text-[13px] font-semibold text-[var(--paper)] transition-colors duration-200 hover:bg-[#102e20]"
           >
             Join private beta
@@ -133,7 +133,7 @@ export default function Navbar() {
             </Link>
           ))}
           <Link
-            href="/#cta"
+            href={{ pathname: '/', hash: 'waitlist' }}
             onClick={() => setOpen(false)}
             className="mt-2 flex items-center justify-center gap-2 rounded-full bg-[var(--forest)] px-4 py-2.5 text-sm font-semibold text-[var(--paper)]"
           >
