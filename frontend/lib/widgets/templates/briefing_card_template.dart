@@ -20,7 +20,7 @@ class BriefingCardTemplate extends StatelessWidget {
     final sections = templateMaps(data['sections']);
     final missing = templateStrings(data['missing_sources']);
     final eyebrow = data['eyebrow']?.toString() ?? 'BRIEFING';
-    final title = data['title']?.toString() ?? 'Your briefing';
+    final title = cleanDisplayTitle(data['title'], fallback: 'Your briefing');
     final summary = data['summary']?.toString();
     final priorities = _briefingLines(data['priorities'], objectTitle: 'title');
     final insights = templateStrings(data['cross_source_insights']);
@@ -201,7 +201,7 @@ List<String> _briefingLines(Object? value, {required String objectTitle}) {
       .map((item) {
         if (item is Map) {
           final map = Map<String, dynamic>.from(item);
-          final title = map[objectTitle]?.toString().trim() ?? '';
+          final title = cleanDisplayTitle(map[objectTitle]);
           final detail = map['detail']?.toString().trim() ?? '';
           return [title, detail].where((part) => part.isNotEmpty).join(' - ');
         }
@@ -290,7 +290,9 @@ class _CompactBriefing extends StatelessWidget {
       for (final item in templateMaps(section['items'])) {
         final itemTitle = item['title']?.toString().trim();
         if (itemTitle == null || itemTitle.isEmpty) continue;
-        highlights.add((source: source, title: itemTitle, tone: tone));
+        highlights.add(
+          (source: source, title: cleanDisplayTitle(itemTitle), tone: tone),
+        );
         if (highlights.length == 3) break;
       }
       if (highlights.length == 3) break;
@@ -439,7 +441,7 @@ class _BriefingSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  section['title']?.toString() ?? 'Update',
+                  cleanDisplayTitle(section['title'], fallback: 'Update'),
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: SydneyColors.ink,
                     fontWeight: FontWeight.w800,
@@ -475,7 +477,7 @@ class _BriefingItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          item['title']?.toString() ?? 'Update',
+          cleanDisplayTitle(item['title'], fallback: 'Update'),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: SydneyColors.onSurface,
             fontWeight: FontWeight.w600,

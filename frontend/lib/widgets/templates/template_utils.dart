@@ -26,3 +26,14 @@ Map<String, dynamic> templateMap(Object? value) {
   }
   return const {};
 }
+
+/// Removes a markdown bold wrapper from structured display titles.
+String cleanDisplayTitle(Object? value, {String fallback = ''}) {
+  final text = value?.toString().trim() ?? '';
+  if (text.isEmpty) return fallback;
+
+  final boldMatch = RegExp(r'^\*\*(.+?)\*\*$').firstMatch(text);
+  if (boldMatch != null) return boldMatch.group(1)!.trim();
+
+  return text;
+}

@@ -255,6 +255,33 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('briefing titles hide markdown bold markers', (tester) async {
+      await tester.pumpWidget(
+        templateHost(
+          BriefingCardTemplate(
+            data: const {
+              'title': '**Your day, distilled**',
+              'sections': [
+                {
+                  'title': '**Calendar**',
+                  'items': [
+                    {'title': '**Design review at 10:00**'},
+                  ],
+                },
+              ],
+            },
+          ),
+        ),
+      );
+
+      expect(find.text('Your day, distilled'), findsOneWidget);
+      expect(find.text('Calendar'), findsOneWidget);
+      expect(find.text('Design review at 10:00'), findsOneWidget);
+      expect(find.text('**Your day, distilled**'), findsNothing);
+      expect(find.text('**Calendar**'), findsNothing);
+      expect(find.text('**Design review at 10:00**'), findsNothing);
+    });
+
     testWidgets('compact briefing shows at most three highlights', (
       tester,
     ) async {
