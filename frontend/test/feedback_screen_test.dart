@@ -1,15 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sydney/design/app_theme.dart';
+import 'package:sydney/providers/feedback_provider.dart';
 import 'package:sydney/screens/feedback/feedback_screen.dart';
+import 'package:sydney/services/api.dart';
+import 'package:sydney/services/feedback_service.dart';
 import 'package:sydney/widgets/feedback_header_button.dart';
+
+class _FakeFeedbackService extends FeedbackService {
+  _FakeFeedbackService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  String? submittedTopic;
+  String? submittedMessage;
+
+  @override
+  Future<void> submitFeedback({
+    required String topic,
+    required String message,
+  }) async {
+    submittedTopic = topic;
+    submittedMessage = message;
+  }
+}
 
 void main() {
   testWidgets('feedback form follows the Cuppet submission flow', (
     tester,
   ) async {
+    final service = _FakeFeedbackService();
     await tester.pumpWidget(
-      MaterialApp(theme: SydneyTheme.light, home: const FeedbackScreen()),
+      ProviderScope(
+        overrides: [feedbackServiceProvider.overrideWithValue(service)],
+        child: MaterialApp(
+          theme: SydneyTheme.light,
+          home: const FeedbackScreen(),
+        ),
+      ),
     );
 
     expect(find.text('Help shape Cuppet'), findsOneWidget);
@@ -56,6 +85,8 @@ void main() {
 
     expect(find.byKey(const ValueKey('feedback-confirmation')), findsOneWidget);
     expect(find.text('Thanks for helping Cuppet grow.'), findsOneWidget);
+    expect(service.submittedTopic, 'general_feedback');
+    expect(service.submittedMessage, 'The inbox is easy to scan.');
   });
 
   testWidgets('glass feedback header button invokes its action', (

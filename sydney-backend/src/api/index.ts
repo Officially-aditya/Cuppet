@@ -16,6 +16,7 @@ import { accessRoutes } from "../access/routes.js";
 import { personalizationRoutes } from "../personalization/routes.js";
 import { suggestionRoutes } from "../suggestions/routes.js";
 import { waitlistRoutes } from "../waitlist/routes.js";
+import { feedbackRoutes } from "../feedback/routes.js";
 
 export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(authRoutes);
@@ -26,6 +27,7 @@ export async function registerApi(app: FastifyInstance): Promise<void> {
   await app.register(personalizationRoutes);
   await app.register(suggestionRoutes);
   await app.register(waitlistRoutes);
+  await app.register(feedbackRoutes);
   await app.register(agentRoutes);
   await app.register(connectorRoutes);
   await app.register(messageRoutes);
