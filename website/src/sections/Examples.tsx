@@ -1,4 +1,5 @@
-import { CalendarClock, Github, HardDrive, Inbox, Newspaper } from 'lucide-react'
+import { CalendarClock, Github, Inbox, Newspaper } from 'lucide-react'
+import { GoogleDriveIcon } from '../components/BrandIcons'
 import SectionHeading from '../components/SectionHeading'
 
 const EXAMPLES = [
@@ -17,7 +18,7 @@ const EXAMPLES = [
     result: 'The day’s loose ends in one message.',
   },
   {
-    Icon: HardDrive,
+    Icon: GoogleDriveIcon,
     name: 'Project watch',
     prompt: 'Tell me what changed in the client folder every Friday.',
     schedule: 'Weekly · Friday',

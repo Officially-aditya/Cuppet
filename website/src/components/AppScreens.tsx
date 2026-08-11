@@ -19,7 +19,8 @@ import {
   Zap,
 } from 'lucide-react'
 import { FaSlack } from 'react-icons/fa'
-import { SiGmail, SiGoogledrive, SiNotion } from 'react-icons/si'
+import { SiGmail, SiNotion } from 'react-icons/si'
+import { GoogleDriveIcon } from './BrandIcons'
 
 /* ---------- shared bits ---------- */
 
@@ -78,7 +79,7 @@ const SERVICES = [
     defaultConnected: false,
     iconBg: '#ffffff',
     foreground: '#0f9d58',
-    icon: <SiGoogledrive size={15} />,
+    icon: <GoogleDriveIcon size={15} />,
   },
   {
     name: 'Notion',

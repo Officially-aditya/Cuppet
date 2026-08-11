@@ -19,7 +19,6 @@ import {
   SiGmail,
   SiGooglecalendar,
   SiGoogledocs,
-  SiGoogledrive,
   SiGooglesheets,
   SiHubspot,
   SiIntercom,
@@ -33,6 +32,7 @@ import {
   SiZendesk,
   SiZoom,
 } from 'react-icons/si'
+import { GoogleDriveIcon } from '../components/BrandIcons'
 import SectionHeading from '../components/SectionHeading'
 
 type Connector = {
@@ -59,7 +59,7 @@ const CONNECTOR_CATALOG: Connector[] = [
   {
     name: 'Google Drive',
     color: '#0f9d58',
-    Icon: SiGoogledrive,
+    Icon: GoogleDriveIcon,
     description:
       'Find the right files, work from their contents, and save results where your team expects them.',
   },
