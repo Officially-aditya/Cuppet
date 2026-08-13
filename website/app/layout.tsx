@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import type { ReactNode } from 'react'
 import { DM_Sans, Instrument_Serif } from 'next/font/google'
 import { SITE_URL } from '@/lib/metadata'
@@ -69,6 +70,18 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en" className={`${dmSans.variable} ${instrumentSerif.variable}`}>
       <body>
         {children}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-Q546ZF4TH2"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-Q546ZF4TH2');
+          `}
+        </Script>
       </body>
     </html>
   )
