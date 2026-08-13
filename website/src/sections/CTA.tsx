@@ -4,6 +4,8 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 
+const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
+
 export default function CTA() {
   const [email, setEmail] = useState('')
   const [done, setDone] = useState(false)
@@ -12,13 +14,19 @@ export default function CTA() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const normalizedEmail = email.trim().toLowerCase()
+    const trimmedEmail = email.trim()
 
-    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
-      setError('Enter a valid email address.')
+    if (!trimmedEmail) {
+      setError('Please enter your email address.')
       return
     }
 
+    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setError('Could you check that email address?')
+      return
+    }
+
+    const normalizedEmail = trimmedEmail.toLowerCase()
     setSubmitting(true)
     setError('')
 
@@ -79,6 +87,7 @@ export default function CTA() {
         ) : (
           <form
             onSubmit={submit}
+            noValidate
             className="mx-auto mt-9 flex w-full max-w-md flex-col gap-2 rounded-2xl border border-[rgba(245,243,238,0.15)] bg-[rgba(245,243,238,0.05)] p-1.5 sm:flex-row sm:rounded-full"
           >
             <input
@@ -91,10 +100,16 @@ export default function CTA() {
             />
             <input
               aria-label="Email address"
+              aria-describedby={error ? 'waitlist-email-error' : undefined}
+              aria-invalid={Boolean(error)}
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => {
+                const nextEmail = event.target.value
+                setEmail(nextEmail)
+                if (EMAIL_PATTERN.test(nextEmail.trim())) setError('')
+              }}
               placeholder="you@example.com"
               className="w-full min-w-0 flex-1 bg-transparent px-4 py-3 text-sm text-[var(--paper)] outline-none placeholder:text-[rgba(245,243,238,0.65)] sm:px-5"
             />
@@ -110,7 +125,11 @@ export default function CTA() {
         )}
 
         {error && (
-          <p role="alert" className="mx-auto mt-3 max-w-md text-xs text-[#f5b5a8]">
+          <p
+            id="waitlist-email-error"
+            role="alert"
+            className="mx-auto mt-3 max-w-md text-xs text-[#f5b5a8]"
+          >
             {error}
           </p>
         )}
