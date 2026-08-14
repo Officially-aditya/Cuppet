@@ -205,36 +205,66 @@ class _Form extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: SydneySpacing.md),
-              DropdownButtonFormField<_FeedbackTopic>(
+              DropdownMenu<_FeedbackTopic>(
                 key: const ValueKey('feedback-topic-dropdown'),
-                initialValue: selectedTopic,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                enabled: !isSubmitting,
+                initialSelection: selectedTopic,
+                expandedInsets: EdgeInsets.zero,
+                selectOnly: true,
+                enableFilter: false,
+                enableSearch: false,
+                trailingIcon: const Icon(Icons.keyboard_arrow_down_rounded),
+                selectedTrailingIcon: const Icon(
+                  Icons.keyboard_arrow_up_rounded,
+                ),
+                textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: CuppetWorkspaceColors.ink,
                 ),
-                decoration: InputDecoration(
+                inputDecorationTheme: InputDecorationTheme(
                   filled: true,
                   fillColor: CuppetWorkspaceColors.background,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: SydneySpacing.md,
                     vertical: SydneySpacing.md,
                   ),
-                  border: _fieldBorder(),
-                  enabledBorder: _fieldBorder(),
-                  focusedBorder: _fieldBorder(
+                  border: _dropdownBorder(),
+                  enabledBorder: _dropdownBorder(),
+                  focusedBorder: _dropdownBorder(
                     color: CuppetWorkspaceColors.primary,
                     width: 1.4,
                   ),
                 ),
-                items: [
+                menuStyle: MenuStyle(
+                  backgroundColor: const WidgetStatePropertyAll(
+                    CuppetWorkspaceColors.card,
+                  ),
+                  surfaceTintColor: const WidgetStatePropertyAll(
+                    Colors.transparent,
+                  ),
+                  elevation: const WidgetStatePropertyAll(4),
+                  shadowColor: WidgetStatePropertyAll(
+                    Colors.black.withValues(alpha: 0.12),
+                  ),
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(vertical: SydneySpacing.xs),
+                  ),
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(SydneyRadius.lg),
+                      side: const BorderSide(
+                        color: CuppetWorkspaceColors.panelBorder,
+                      ),
+                    ),
+                  ),
+                ),
+                dropdownMenuEntries: [
                   for (final topic in topics)
-                    DropdownMenuItem<_FeedbackTopic>(
+                    DropdownMenuEntry<_FeedbackTopic>(
                       value: topic,
-                      child: Text(topic.label),
+                      label: topic.label,
                     ),
                 ],
-                onChanged:
+                onSelected:
                     isSubmitting
                         ? null
                         : (topic) {
@@ -343,6 +373,16 @@ class _Form extends StatelessWidget {
   }) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(SydneyRadius.md),
+      borderSide: BorderSide(color: color, width: width),
+    );
+  }
+
+  OutlineInputBorder _dropdownBorder({
+    Color color = CuppetWorkspaceColors.border,
+    double width = 1,
+  }) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SydneyRadius.lg),
       borderSide: BorderSide(color: color, width: width),
     );
   }

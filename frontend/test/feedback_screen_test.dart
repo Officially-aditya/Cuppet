@@ -68,6 +68,10 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('feedback-topic-dropdown')));
     await tester.pumpAndSettle();
+    final dropdownBarrier = tester.widget<ModalBarrier>(
+      find.byType(ModalBarrier),
+    );
+    expect(dropdownBarrier.color, isNull);
     await tester.tap(find.text('General feedback').last);
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.check_rounded), findsNothing);
