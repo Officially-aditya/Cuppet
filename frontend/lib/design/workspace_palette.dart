@@ -34,7 +34,7 @@ class CuppetWorkspaceColors {
   ];
 
   /// Keeps created-agent avatars visible without overpowering the inbox cards.
-  static const agentAvatarOpacity = 0.78;
+  static const agentAvatarOpacity = 0.60;
 
   static Color agentAvatarBackgroundFor(String agentId) {
     final index = _agentAvatarPaletteIndex(agentId);
