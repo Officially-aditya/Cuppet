@@ -106,35 +106,27 @@ class MessageCard extends StatelessWidget {
                 ? CuppetWorkspaceColors.softSage
                 : CuppetWorkspaceColors.card)
             : (isUser ? SydneyColors.userBubble : SydneyColors.agentBubble);
-    final selectedSurfaceColor =
-        useWorkspacePalette
-            ? CuppetWorkspaceColors.softSage
-            : SydneyColors.primarySoft;
     final content = Container(
       key: ValueKey('message-surface-${message.id}'),
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(SydneySpacing.lg),
       decoration: BoxDecoration(
-        color: selected ? selectedSurfaceColor : defaultSurfaceColor,
+        color: defaultSurfaceColor,
         borderRadius:
             isUser ? SydneyRadius.bubbleUser : SydneyRadius.bubbleAgent,
         border:
-            useWorkspacePalette
+            selected
+                ? null
+                : useWorkspacePalette
                 ? Border.all(
                   color:
-                      selected
-                          ? CuppetWorkspaceColors.primary
-                          : isUser
+                      isUser
                           ? CuppetWorkspaceColors.panelBorder
                           : CuppetWorkspaceColors.border,
-                  width: selected ? 1.5 : 1.0,
                 )
                 : isUser
                 ? null
-                : Border.all(
-                  color: selected ? SydneyColors.primary : SydneyColors.line,
-                  width: selected ? 1.5 : 1.0,
-                ),
+                : Border.all(color: SydneyColors.line),
         boxShadow: [
           BoxShadow(
             color:
@@ -146,6 +138,14 @@ class MessageCard extends StatelessWidget {
           ),
         ],
       ),
+      foregroundDecoration:
+          selected
+              ? BoxDecoration(
+                color: CuppetWorkspaceColors.primary.withValues(alpha: 0.12),
+                borderRadius:
+                    isUser ? SydneyRadius.bubbleUser : SydneyRadius.bubbleAgent,
+              )
+              : null,
       child: DefaultTextStyle.merge(
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color:

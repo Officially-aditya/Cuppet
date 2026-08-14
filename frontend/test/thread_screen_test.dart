@@ -588,10 +588,12 @@ void main() {
     );
     final selectedMessageDecoration =
         selectedMessageSurface.decoration! as BoxDecoration;
-    expect(selectedMessageDecoration.color, CuppetWorkspaceColors.softSage);
-    final selectedMessageBorder = selectedMessageDecoration.border! as Border;
-    expect(selectedMessageBorder.top.color, CuppetWorkspaceColors.primary);
-    expect(selectedMessageBorder.top.width, 1.5);
+    expect(selectedMessageDecoration.color, CuppetWorkspaceColors.card);
+    expect(selectedMessageDecoration.border, isNull);
+    final selectedForeground =
+        selectedMessageSurface.foregroundDecoration! as BoxDecoration;
+    expect(selectedForeground.color?.a, closeTo(0.12, 0.01));
+    expect(selectedForeground.border, isNull);
     expect(find.text('1 message selected'), findsOneWidget);
     expect(find.byTooltip('Copy text'), findsOneWidget);
     expect(find.byTooltip('Reply to message'), findsOneWidget);
