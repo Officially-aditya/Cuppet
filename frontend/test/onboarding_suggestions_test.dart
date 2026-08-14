@@ -504,6 +504,16 @@ void main() {
     expect(agentCard, findsOneWidget);
     expect(tester.widget(agentCard), isA<WorkspaceCard>());
 
+    final agentAvatar = tester.widget<Container>(
+      find.byKey(const ValueKey('agent-avatar-news-agent')),
+    );
+    final avatarDecoration = agentAvatar.decoration! as BoxDecoration;
+    expect(
+      avatarDecoration.color,
+      isIn(CuppetWorkspaceColors.agentAvatarBackgrounds),
+    );
+    expect(avatarDecoration.gradient, isNull);
+
     await tester.tap(agentCard);
     await tester.pumpAndSettle();
 

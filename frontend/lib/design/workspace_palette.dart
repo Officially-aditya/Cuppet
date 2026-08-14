@@ -25,15 +25,15 @@ class CuppetWorkspaceColors {
   /// Dark green ink for icons/text on soft green fills.
   static const primaryInk = Color(0xFF004D39);
 
-  /// Full-color logo gradients used for distinct agent avatar treatments.
-  static const agentAvatarGradients = <List<Color>>[
-    [Color(0xFFFF9A7F), Color(0xFFC94F66)],
-    [Color(0xFF5D579D), Color(0xFF29264F)],
-    [Color(0xFF0B625B), Color(0xFF2BA898)],
-    [Color(0xFFF4C66D), Color(0xFFDB8833)],
+  /// Opaque logo colors used for distinct non-Assistant agent avatars.
+  static const agentAvatarBackgrounds = <Color>[
+    Color(0xFFC94F66),
+    Color(0xFF29264F),
+    Color(0xFF0B625B),
+    Color(0xFFDB8833),
   ];
 
-  /// Foreground colors with sufficient contrast for each logo gradient.
+  /// Foreground colors with sufficient contrast for each avatar background.
   static const agentAvatarForegrounds = <Color>[
     Color(0xFF17201C),
     Color(0xFFF5F3EE),

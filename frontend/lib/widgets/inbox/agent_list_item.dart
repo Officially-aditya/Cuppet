@@ -118,21 +118,19 @@ class _AgentAvatar extends StatelessWidget {
     }
 
     final paletteIndex = _agentAvatarPaletteIndex(agent.id);
-    final gradient = CuppetWorkspaceColors.agentAvatarGradients[paletteIndex];
+    final background =
+        CuppetWorkspaceColors.agentAvatarBackgrounds[paletteIndex];
     final foreground =
         CuppetWorkspaceColors.agentAvatarForegrounds[paletteIndex];
 
     return Container(
+      key: ValueKey('agent-avatar-${agent.id}'),
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradient,
-        ),
+        color: background,
         borderRadius: BorderRadius.circular(SydneyRadius.md),
-        border: Border.all(color: gradient.last.withValues(alpha: 0.45)),
+        border: Border.all(color: background),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -152,7 +150,7 @@ int _agentAvatarPaletteIndex(String agentId) {
   for (final codeUnit in agentId.codeUnits) {
     total += codeUnit;
   }
-  return total % CuppetWorkspaceColors.agentAvatarGradients.length;
+  return total % CuppetWorkspaceColors.agentAvatarBackgrounds.length;
 }
 
 String _formatTimestamp(Agent agent) {
