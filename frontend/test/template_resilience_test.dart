@@ -282,7 +282,7 @@ void main() {
       expect(find.text('**Design review at 10:00**'), findsNothing);
     });
 
-    testWidgets('compact briefing shows at most three highlights', (
+    testWidgets('compact briefing keeps source details in Assistant', (
       tester,
     ) async {
       var opened = false;
@@ -316,9 +316,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Design review at 10:00'), findsOneWidget);
-      expect(find.text('Customer call at 14:00'), findsOneWidget);
-      expect(find.text('Contract needs approval'), findsOneWidget);
+      expect(find.text('Calendar and inbox checked'), findsOneWidget);
+      expect(find.text('Design review at 10:00'), findsNothing);
+      expect(find.text('Customer call at 14:00'), findsNothing);
+      expect(find.text('Contract needs approval'), findsNothing);
       expect(find.text('Fourth detail stays in the full report'), findsNothing);
       expect(find.text('Open in Assistant'), findsNothing);
       await tester.tap(

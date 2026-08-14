@@ -28,12 +28,7 @@ class BriefingCardTemplate extends StatelessWidget {
 
     final content =
         compact
-            ? _CompactBriefing(
-              eyebrow: eyebrow,
-              title: title,
-              summary: summary,
-              sections: sections,
-            )
+            ? _CompactBriefing(eyebrow: eyebrow, title: title, summary: summary)
             : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -270,34 +265,14 @@ class _CompactBriefing extends StatelessWidget {
     required this.eyebrow,
     required this.title,
     required this.summary,
-    required this.sections,
   });
 
   final String eyebrow;
   final String title;
   final String? summary;
-  final List<Map<String, dynamic>> sections;
 
   @override
   Widget build(BuildContext context) {
-    final highlights = <({String source, String title, String tone})>[];
-    for (final section in sections) {
-      final source =
-          section['source']?.toString() ??
-          section['title']?.toString() ??
-          'Update';
-      final tone = section['tone']?.toString() ?? 'neutral';
-      for (final item in templateMaps(section['items'])) {
-        final itemTitle = item['title']?.toString().trim();
-        if (itemTitle == null || itemTitle.isEmpty) continue;
-        highlights.add(
-          (source: source, title: cleanDisplayTitle(itemTitle), tone: tone),
-        );
-        if (highlights.length == 3) break;
-      }
-      if (highlights.length == 3) break;
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -343,59 +318,7 @@ class _CompactBriefing extends StatelessWidget {
             ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
           ),
         ],
-        if (highlights.isNotEmpty) ...[
-          const SizedBox(height: SydneySpacing.sm),
-          for (final highlight in highlights)
-            _CompactHighlight(highlight: highlight),
-        ],
       ],
-    );
-  }
-}
-
-class _CompactHighlight extends StatelessWidget {
-  const _CompactHighlight({required this.highlight});
-
-  final ({String source, String title, String tone}) highlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (highlight.tone) {
-      'attention' => SydneyColors.warning,
-      'info' => SydneyColors.info,
-      _ => SydneyColors.primary,
-    };
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: SydneySpacing.xs),
-          Text(
-            '${highlight.source}: ',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SydneyColors.mutedInk,
-              fontWeight: FontWeight.w700,
-              fontSize: 10,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              highlight.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: SydneyColors.onSurface,
-                height: 1.2,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
