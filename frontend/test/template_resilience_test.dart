@@ -13,6 +13,7 @@ import 'package:sydney/widgets/templates/dsa_question_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/progress_tracker_template.dart';
 import 'package:sydney/widgets/templates/briefing_card_template.dart';
+import 'package:sydney/widgets/connectors/connector_list_item.dart';
 import 'package:sydney/widgets/thread/message_card.dart';
 
 Widget templateHost(Widget child) {
@@ -282,7 +283,7 @@ void main() {
       expect(find.text('**Design review at 10:00**'), findsNothing);
     });
 
-    testWidgets('compact briefing keeps source details in Assistant', (
+    testWidgets('compact briefing shows concise updates with source logos', (
       tester,
     ) async {
       var opened = false;
@@ -298,15 +299,24 @@ void main() {
                 {
                   'title': 'Calendar',
                   'items': [
-                    {'title': 'Design review at 10:00'},
+                    {'title': 'Design review at 10:00', 'detail': 'Room 4B'},
                     {'title': 'Customer call at 14:00'},
                   ],
                 },
                 {
                   'title': 'Gmail',
                   'items': [
-                    {'title': 'Contract needs approval'},
+                    {
+                      'title': 'Contract needs approval',
+                      'detail': 'From Legal · due today',
+                    },
                     {'title': 'Fourth detail stays in the full report'},
+                  ],
+                },
+                {
+                  'title': 'Slack',
+                  'items': [
+                    {'title': 'No notable updates found.'},
                   ],
                 },
               ],
@@ -316,11 +326,20 @@ void main() {
         ),
       );
 
-      expect(find.text('Calendar and inbox checked'), findsOneWidget);
-      expect(find.text('Design review at 10:00'), findsNothing);
+      expect(find.text('Calendar and inbox checked'), findsNothing);
+      expect(
+        find.textContaining('Calendar: Design review at 10:00'),
+        findsOneWidget,
+      );
       expect(find.text('Customer call at 14:00'), findsNothing);
-      expect(find.text('Contract needs approval'), findsNothing);
+      expect(find.textContaining('Room 4B'), findsOneWidget);
+      expect(
+        find.textContaining('Gmail: Contract needs approval'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('From Legal · due today'), findsOneWidget);
       expect(find.text('Fourth detail stays in the full report'), findsNothing);
+      expect(find.byType(ConnectorIcon), findsNWidgets(2));
       expect(find.text('Open in Assistant'), findsNothing);
       await tester.tap(
         find.byKey(const ValueKey('open_briefing_in_assistant')),
