@@ -16,6 +16,7 @@ import {
   ianaTimeZoneSchema,
   normalizeIanaTimeZone
 } from "./time-zone.js";
+import { updateUserSchema } from "./schemas.js";
 
 const updatePreferencesSchema = z
   .object({
@@ -26,13 +27,6 @@ const updatePreferencesSchema = z
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one preference is required."
   });
-
-const updateUserSchema = z
-  .object({
-    name: z.string().trim().min(1).max(100).optional(),
-    image: z.string().trim().min(1).max(500).optional()
-  })
-  .strict();
 
 type UserPreferenceRow = {
   time_zone: string | null;
@@ -61,23 +55,25 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const userId = request.auth!.userId;
-    const { name, image } = parsed.data;
+    const { name, image, avatar } = parsed.data;
 
     const result = await pool.query<{
       id: string;
       email: string;
       name: string | null;
       image: string | null;
+      avatar: number | null;
     }>(
       `
         UPDATE users
         SET name = COALESCE($2, name),
             image = COALESCE($3, image),
+            avatar = COALESCE($4, avatar),
             updated_at = NOW()
         WHERE id = $1
-        RETURNING id, email, name, image
+        RETURNING id, email, name, image, avatar
       `,
-      [userId, name ?? null, image ?? null]
+      [userId, name ?? null, image ?? null, avatar ?? null]
     );
 
     const user = result.rows[0];

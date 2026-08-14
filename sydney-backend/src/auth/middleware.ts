@@ -41,7 +41,8 @@ export async function requireAuth(
       id: session.user.id,
       email: session.user.email,
       name: session.user.name,
-      image: session.user.image
+      image: session.user.image,
+      avatar: await loadUserAvatar(session.user.id)
     },
     session: session.session
   };
@@ -62,6 +63,7 @@ async function verifyDatabaseSessionBearer(
       email: string;
       name: string | null;
       image: string | null;
+      avatar: number | null;
     }>(
       `
         SELECT s.id AS session_id,
@@ -70,7 +72,8 @@ async function verifyDatabaseSessionBearer(
                u.id AS user_id,
                u.email,
                u.name,
-               u.image
+               u.image,
+               u.avatar
         FROM sessions s
         JOIN users u ON u.id = s.user_id
         WHERE s.token = $1
@@ -89,7 +92,8 @@ async function verifyDatabaseSessionBearer(
         id: row.user_id,
         email: row.email,
         name: row.name,
-        image: row.image
+        image: row.image,
+        avatar: row.avatar
       },
       session: {
         id: row.session_id,
@@ -147,8 +151,9 @@ async function verifyJwtBearer(
       email: string;
       name: string | null;
       image: string | null;
+      avatar: number | null;
     }>(
-      "SELECT id, email, name, image FROM users WHERE id = $1",
+      "SELECT id, email, name, image, avatar FROM users WHERE id = $1",
       [payload.sub]
     );
     const user = userResult.rows[0];
@@ -166,6 +171,14 @@ async function verifyJwtBearer(
     request.log.debug({ error }, "JWT bearer verification failed");
     return null;
   }
+}
+
+async function loadUserAvatar(userId: string): Promise<number | null> {
+  const result = await pool.query<{ avatar: number | null }>(
+    "SELECT avatar FROM users WHERE id = $1",
+    [userId]
+  );
+  return result.rows[0]?.avatar ?? null;
 }
 
 function bearerTokenFrom(request: FastifyRequest): string | null {

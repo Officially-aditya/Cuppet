@@ -22,6 +22,7 @@ type UserRow = {
   email: string;
   name: string | null;
   image: string | null;
+  avatar: number | null;
 };
 
 type SessionRow = {
@@ -38,6 +39,7 @@ export type NativeGoogleSession = {
     email: string;
     name: string | null;
     image: string | null;
+    avatar: number | null;
   };
   session: {
     id: string;
@@ -86,7 +88,8 @@ export async function createNativeGoogleSession(input: {
         id: user.id,
         email: user.email,
         name: user.name,
-        image: user.image
+        image: user.image,
+        avatar: user.avatar
       },
       session: {
         id: session.id,
@@ -165,7 +168,7 @@ async function upsertGoogleUser(
 ): Promise<{ user: UserRow; isNewUser: boolean }> {
   const accountUser = await client.query<UserRow>(
     `
-      SELECT u.id, u.email, u.name, u.image
+      SELECT u.id, u.email, u.name, u.image, u.avatar
       FROM accounts a
       JOIN users u ON u.id = a.user_id
       WHERE a.provider_id = 'google'
@@ -184,7 +187,7 @@ async function upsertGoogleUser(
         `
           INSERT INTO users (email, name, image, email_verified)
           VALUES ($1, $2, $3, $4)
-          RETURNING id, email, name, image
+          RETURNING id, email, name, image, avatar
         `,
         [profile.email, profile.name, profile.picture, profile.emailVerified]
       )
@@ -226,7 +229,7 @@ async function findUserByEmail(
 ): Promise<UserRow | null> {
   const result = await client.query<UserRow>(
     `
-      SELECT id, email, name, image
+      SELECT id, email, name, image, avatar
       FROM users
       WHERE lower(email) = lower($1)
       LIMIT 1
@@ -253,7 +256,7 @@ async function updateUserProfile(
           email_verified = email_verified OR $4::boolean,
           updated_at = NOW()
       WHERE id = $1
-      RETURNING id, email, name, image
+      RETURNING id, email, name, image, avatar
     `,
     [input.userId, input.name, input.picture, input.emailVerified]
   );

@@ -135,20 +135,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          color: CuppetWorkspaceColors.primary,
-        ),
-      ),
+      builder:
+          (context) => const Center(
+            child: CircularProgressIndicator(
+              color: CuppetWorkspaceColors.primary,
+            ),
+          ),
     );
 
     try {
       await ref.read(authControllerProvider.notifier).deleteAccount();
       navigator.pop(); // Dismiss loading indicator
-      navigator.pushNamedAndRemoveUntil(
-        AppRoutes.signIn,
-        (route) => false,
-      );
+      navigator.pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
     } catch (error) {
       if (mounted) {
         navigator.pop(); // Dismiss loading indicator
@@ -174,7 +172,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = authState.asData?.value.user;
     final defaultDisplayName = user?.displayName ?? 'Cuppet User';
     final preferredName = ref.watch(preferredNameProvider);
-    final displayName = preferredName.isNotEmpty ? preferredName : defaultDisplayName;
+    final displayName =
+        preferredName.isNotEmpty ? preferredName : defaultDisplayName;
     final email = user?.email ?? '';
 
     return Scaffold(
@@ -249,7 +248,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         Text(
                           'What should cuppet call you',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(
                             color: CuppetWorkspaceColors.ink,
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
@@ -258,13 +259,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         const SizedBox(height: SydneySpacing.md),
                         TextField(
                           controller: _nameController,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
                             color: CuppetWorkspaceColors.ink,
                             height: 1.4,
                           ),
                           cursorColor: CuppetWorkspaceColors.primary,
                           onChanged: (val) {
-                            ref.read(preferredNameProvider.notifier).setPreferredName(val.trim());
+                            ref
+                                .read(preferredNameProvider.notifier)
+                                .setPreferredName(val.trim());
                           },
                           decoration: InputDecoration(
                             hintText: defaultDisplayName,
@@ -275,15 +280,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               vertical: 14,
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(SydneyRadius.md),
-                              borderSide: const BorderSide(color: CuppetWorkspaceColors.border),
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.md,
+                              ),
+                              borderSide: const BorderSide(
+                                color: CuppetWorkspaceColors.border,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(SydneyRadius.md),
-                              borderSide: const BorderSide(color: CuppetWorkspaceColors.border),
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.md,
+                              ),
+                              borderSide: const BorderSide(
+                                color: CuppetWorkspaceColors.border,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(SydneyRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.md,
+                              ),
                               borderSide: const BorderSide(
                                 color: CuppetWorkspaceColors.primary,
                                 width: 1.4,
@@ -317,14 +332,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       runSpacing: 12,
                       alignment: WrapAlignment.center,
                       children: [
-                        for (final iconPath in kUserAvatarIcons) ...[
+                        for (final entry
+                            in kUserAvatarIcons.asMap().entries) ...[
                           InkWell(
-                            onTap: () {
-                              ref
-                                  .read(preferredAvatarProvider.notifier)
-                                  .setPreferredAvatar(iconPath);
+                            onTap: () async {
+                              try {
+                                await ref
+                                    .read(authControllerProvider.notifier)
+                                    .setAvatar(entry.key + 1);
+                              } catch (error) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(readableAuthError(error)),
+                                  ),
+                                );
+                              }
                             },
-                            borderRadius: BorderRadius.circular(SydneyRadius.full),
+                            borderRadius: BorderRadius.circular(
+                              SydneyRadius.full,
+                            ),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               width: 52,
@@ -333,11 +360,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: (ref.watch(preferredAvatarProvider) == iconPath ||
-                                          (ref.watch(preferredAvatarProvider).isEmpty &&
-                                              userAvatarIconPath(user) == iconPath))
-                                      ? CuppetWorkspaceColors.primary
-                                      : Colors.transparent,
+                                  color:
+                                      (user?.avatar == entry.key + 1 ||
+                                              (user?.avatar == null &&
+                                                  userAvatarIconPath(user) ==
+                                                      entry.value))
+                                          ? CuppetWorkspaceColors.primary
+                                          : Colors.transparent,
                                   width: 2.5,
                                 ),
                               ),
@@ -348,7 +377,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                                 clipBehavior: Clip.antiAlias,
                                 child: Image.asset(
-                                  iconPath,
+                                  entry.value,
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -390,7 +419,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   height: 40,
                                   decoration: BoxDecoration(
                                     color: SydneyColors.dangerSoft,
-                                    borderRadius: BorderRadius.circular(SydneyRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      SydneyRadius.md,
+                                    ),
                                   ),
                                   alignment: Alignment.center,
                                   child: const Icon(
@@ -402,11 +433,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 const SizedBox(width: SydneySpacing.md),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Delete my account',
-                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall?.copyWith(
                                           color: SydneyColors.danger,
                                           fontSize: 14,
                                           fontWeight: FontWeight.w800,
@@ -415,7 +449,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       const SizedBox(height: SydneySpacing.xs),
                                       Text(
                                         'Permanently remove your profile and all associated data.',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.copyWith(
                                           color: CuppetWorkspaceColors.muted,
                                           fontWeight: FontWeight.w500,
                                           height: 1.4,

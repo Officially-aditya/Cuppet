@@ -9,6 +9,7 @@ CREATE TABLE users (
   email           TEXT NOT NULL UNIQUE,
   email_verified  BOOLEAN NOT NULL DEFAULT FALSE,
   image           TEXT,
+  avatar          SMALLINT CHECK (avatar BETWEEN 1 AND 9),
   time_zone       TEXT,
   follow_device_time_zone BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/env.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
@@ -144,6 +145,49 @@ class AuthController extends AsyncNotifier<AuthState> {
       return const AuthState.signedOut();
     });
   }
+
+  Future<void> setAvatar(int avatarNumber) async {
+    if (avatarNumber < 1 || avatarNumber > 9) {
+      throw ArgumentError.value(avatarNumber, 'avatarNumber');
+    }
+
+    final current = state.asData?.value;
+    final user = current?.user;
+    if (current == null || user == null || current.sessionToken == null) {
+      return;
+    }
+
+    if (Env.useMockData) {
+      state = AsyncValue.data(
+        AuthState(
+          user: user.copyWith(avatar: avatarNumber),
+          sessionToken: current.sessionToken,
+          isNewUser: current.isNewUser,
+        ),
+      );
+      return;
+    }
+
+    final response = await ref
+        .read(apiClientProvider)
+        .patch<Map<String, dynamic>>(
+          '/users/me',
+          data: {'avatar': avatarNumber},
+        );
+    final responseUser = response.data?['user'];
+    final updatedUser =
+        responseUser is Map
+            ? User.fromJson(Map<String, dynamic>.from(responseUser))
+            : user.copyWith(avatar: avatarNumber);
+
+    state = AsyncValue.data(
+      AuthState(
+        user: updatedUser,
+        sessionToken: current.sessionToken,
+        isNewUser: current.isNewUser,
+      ),
+    );
+  }
 }
 
 final preferredNameProvider = NotifierProvider<PreferredNameNotifier, String>(
@@ -176,41 +220,6 @@ class PreferredNameNotifier extends Notifier<String> {
       await api.patch('/users/me', data: {'name': name});
     } catch (_) {
       state = name;
-    }
-  }
-}
-
-final preferredAvatarProvider =
-    NotifierProvider<PreferredAvatarNotifier, String>(
-      PreferredAvatarNotifier.new,
-    );
-
-class PreferredAvatarNotifier extends Notifier<String> {
-  @override
-  String build() {
-    _load();
-    return '';
-  }
-
-  Future<void> _load() async {
-    try {
-      final secureStorage = ref.watch(secureStorageProvider);
-      final avatar = await secureStorage.read(key: 'preferred_avatar');
-      state = avatar ?? '';
-    } catch (_) {
-      state = '';
-    }
-  }
-
-  Future<void> setPreferredAvatar(String avatarPath) async {
-    try {
-      final secureStorage = ref.read(secureStorageProvider);
-      await secureStorage.write(key: 'preferred_avatar', value: avatarPath);
-      state = avatarPath;
-      final api = ref.read(apiClientProvider);
-      await api.patch('/users/me', data: {'image': avatarPath});
-    } catch (_) {
-      state = avatarPath;
     }
   }
 }

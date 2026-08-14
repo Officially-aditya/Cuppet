@@ -217,12 +217,23 @@ class AuthService {
     if (token == null || token.isEmpty || userData is! Map) {
       throw const ApiException('The server returned an incomplete session.');
     }
+    final fallbackUser = User.fromJson(Map<String, dynamic>.from(userData));
     await _api.writeSessionToken(token);
-    return AuthSession(
-      user: User.fromJson(Map<String, dynamic>.from(userData)),
-      token: token,
-      isNewUser: isNewUser,
-    );
+    final currentUser = await _loadCurrentUser(fallback: fallbackUser);
+    return AuthSession(user: currentUser, token: token, isNewUser: isNewUser);
+  }
+
+  Future<User> _loadCurrentUser({required User fallback}) async {
+    try {
+      final response = await _api.get<Map<String, dynamic>>('/users/me');
+      final userData = response.data?['user'];
+      if (userData is Map) {
+        return User.fromJson(Map<String, dynamic>.from(userData));
+      }
+    } catch (_) {
+      // The auth response remains a valid fallback if the profile refresh fails.
+    }
+    return fallback;
   }
 
   Future<void> _ensureGoogleSignInInitialized() async {

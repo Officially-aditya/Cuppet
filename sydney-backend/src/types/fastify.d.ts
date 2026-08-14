@@ -9,6 +9,7 @@ declare module "fastify" {
         email: string;
         name?: string | null;
         image?: string | null;
+        avatar?: number | null;
       };
       session: unknown;
     };
