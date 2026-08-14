@@ -550,7 +550,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                               color:
                                   isSelected
                                       ? CuppetWorkspaceColors.primary
-                                          .withValues(alpha: 0.08)
+                                          .withValues(alpha: 0.16)
                                       : Colors.transparent,
                             ),
                             padding: const EdgeInsets.symmetric(

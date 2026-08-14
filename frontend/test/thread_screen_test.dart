@@ -572,6 +572,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final selectionSurface = find.ancestor(
+      of: find.byKey(
+        const ValueKey('message-surface-selectable-agent-message'),
+      ),
+      matching: find.byType(AnimatedContainer),
+    );
+    expect(selectionSurface, findsOneWidget);
+    final selectionDecoration =
+        tester.widget<AnimatedContainer>(selectionSurface).decoration!
+            as BoxDecoration;
+    expect(selectionDecoration.color?.a, closeTo(0.16, 0.01));
     expect(find.text('1 message selected'), findsOneWidget);
     expect(find.byTooltip('Copy text'), findsOneWidget);
     expect(find.byTooltip('Reply to message'), findsOneWidget);
