@@ -280,7 +280,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
               )
               : AppBar(
                 key: const ValueKey('thread-app-bar'),
-                titleSpacing: 0,
+                titleSpacing: SydneySpacing.page,
                 backgroundColor: CuppetWorkspaceColors.background,
                 foregroundColor: CuppetWorkspaceColors.ink,
                 surfaceTintColor: Colors.transparent,
@@ -308,6 +308,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                         )
                       else
                         Container(
+                          key: const ValueKey('thread-agent-avatar'),
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
@@ -812,11 +813,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         if (stored) {
           ref.invalidate(personalizationProvider);
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Feedback saved.'),
-            ),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Feedback saved.')));
         }
       } catch (error) {
         if (mounted) {

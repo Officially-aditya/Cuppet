@@ -145,6 +145,10 @@ void main() {
       find.byKey(const ValueKey('thread-app-bar')),
     );
     expect(appBar.backgroundColor, CuppetWorkspaceColors.background);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('thread-agent-avatar'))).dx,
+      closeTo(SydneySpacing.page, 0.1),
+    );
 
     final composer = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('thread-composer')),
