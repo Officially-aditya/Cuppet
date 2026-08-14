@@ -306,16 +306,22 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                           key: ValueKey('assistant-thread-avatar'),
                           size: 32,
                         )
-                      else
+                      else ...[
                         Container(
                           key: const ValueKey('thread-agent-avatar'),
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: CuppetWorkspaceColors.softSage,
+                            color:
+                                CuppetWorkspaceColors.agentAvatarBackgroundFor(
+                                  agent.id,
+                                ),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: CuppetWorkspaceColors.panelBorder,
+                              color:
+                                  CuppetWorkspaceColors.agentAvatarBackgroundFor(
+                                    agent.id,
+                                  ),
                             ),
                           ),
                           alignment: Alignment.center,
@@ -324,11 +330,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                             style: Theme.of(
                               context,
                             ).textTheme.labelMedium?.copyWith(
-                              color: CuppetWorkspaceColors.primaryInk,
+                              color:
+                                  CuppetWorkspaceColors.agentAvatarForegroundFor(
+                                    agent.id,
+                                  ),
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
+                      ],
                       const SizedBox(width: SydneySpacing.md),
                       Flexible(
                         child: Column(

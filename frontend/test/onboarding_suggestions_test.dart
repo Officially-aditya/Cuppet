@@ -509,8 +509,8 @@ void main() {
     );
     final avatarDecoration = agentAvatar.decoration! as BoxDecoration;
     expect(
-      avatarDecoration.color,
-      isIn(CuppetWorkspaceColors.agentAvatarBackgrounds),
+      avatarDecoration.color?.a,
+      closeTo(CuppetWorkspaceColors.agentAvatarOpacity, 0.01),
     );
     expect(avatarDecoration.gradient, isNull);
 

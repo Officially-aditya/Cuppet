@@ -25,13 +25,33 @@ class CuppetWorkspaceColors {
   /// Dark green ink for icons/text on soft green fills.
   static const primaryInk = Color(0xFF004D39);
 
-  /// Opaque logo colors used for distinct non-Assistant agent avatars.
+  /// Brand colors used for distinct non-Assistant agent avatars.
   static const agentAvatarBackgrounds = <Color>[
     Color(0xFFC94F66),
     Color(0xFF29264F),
     Color(0xFF0B625B),
     Color(0xFFDB8833),
   ];
+
+  /// Keeps created-agent avatars visible without overpowering the inbox cards.
+  static const agentAvatarOpacity = 0.78;
+
+  static Color agentAvatarBackgroundFor(String agentId) {
+    final index = _agentAvatarPaletteIndex(agentId);
+    return agentAvatarBackgrounds[index].withValues(alpha: agentAvatarOpacity);
+  }
+
+  static Color agentAvatarForegroundFor(String agentId) {
+    return agentAvatarForegrounds[_agentAvatarPaletteIndex(agentId)];
+  }
+
+  static int _agentAvatarPaletteIndex(String agentId) {
+    var total = 0;
+    for (final codeUnit in agentId.codeUnits) {
+      total += codeUnit;
+    }
+    return total % agentAvatarBackgrounds.length;
+  }
 
   /// Foreground colors with sufficient contrast for each avatar background.
   static const agentAvatarForegrounds = <Color>[

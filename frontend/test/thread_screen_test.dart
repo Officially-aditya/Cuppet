@@ -149,6 +149,14 @@ void main() {
       tester.getTopLeft(find.byKey(const ValueKey('thread-agent-avatar'))).dx,
       closeTo(SydneySpacing.page, 0.1),
     );
+    final threadAvatar = tester.widget<Container>(
+      find.byKey(const ValueKey('thread-agent-avatar')),
+    );
+    final avatarDecoration = threadAvatar.decoration! as BoxDecoration;
+    expect(
+      avatarDecoration.color?.a,
+      closeTo(CuppetWorkspaceColors.agentAvatarOpacity, 0.01),
+    );
 
     final composer = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('thread-composer')),
