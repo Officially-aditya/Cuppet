@@ -260,13 +260,12 @@ class MessageCard extends StatelessWidget {
       ),
     );
 
+    final messageSpacing =
+        message.isMultipart && !message.isLastPart
+            ? SydneySpacing.xs
+            : SydneySpacing.lg;
     return Padding(
-      padding: EdgeInsets.only(
-        bottom:
-            message.isMultipart && !message.isLastPart
-                ? SydneySpacing.xs
-                : SydneySpacing.lg,
-      ),
+      padding: EdgeInsets.symmetric(vertical: messageSpacing),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: content,
