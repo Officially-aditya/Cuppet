@@ -563,6 +563,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                                   feedbackState[message.id] ??
                                   _feedbackByMessage[message.id],
                               useWorkspacePalette: true,
+                              selected: isSelected,
                             ),
                           ),
                         );

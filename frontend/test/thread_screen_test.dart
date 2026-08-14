@@ -583,6 +583,15 @@ void main() {
         tester.widget<AnimatedContainer>(selectionSurface).decoration!
             as BoxDecoration;
     expect(selectionDecoration.color?.a, closeTo(0.16, 0.01));
+    final selectedMessageSurface = tester.widget<Container>(
+      find.byKey(const ValueKey('message-surface-selectable-agent-message')),
+    );
+    final selectedMessageDecoration =
+        selectedMessageSurface.decoration! as BoxDecoration;
+    expect(selectedMessageDecoration.color, CuppetWorkspaceColors.softSage);
+    final selectedMessageBorder = selectedMessageDecoration.border! as Border;
+    expect(selectedMessageBorder.top.color, CuppetWorkspaceColors.primary);
+    expect(selectedMessageBorder.top.width, 1.5);
     expect(find.text('1 message selected'), findsOneWidget);
     expect(find.byTooltip('Copy text'), findsOneWidget);
     expect(find.byTooltip('Reply to message'), findsOneWidget);

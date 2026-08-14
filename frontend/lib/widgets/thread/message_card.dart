@@ -28,6 +28,7 @@ class MessageCard extends StatelessWidget {
     this.onAction,
     this.feedbackType,
     this.useWorkspacePalette = false,
+    this.selected = false,
     super.key,
   });
 
@@ -35,6 +36,7 @@ class MessageCard extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>>? onAction;
   final String? feedbackType;
   final bool useWorkspacePalette;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -98,35 +100,49 @@ class MessageCard extends StatelessWidget {
         message.isLastPart;
     final feedbackSubjectKey = message.feedbackSubjectKey;
     final maxWidth = MediaQuery.sizeOf(context).width * 0.84;
+    final defaultSurfaceColor =
+        useWorkspacePalette
+            ? (isUser
+                ? CuppetWorkspaceColors.softSage
+                : CuppetWorkspaceColors.card)
+            : (isUser ? SydneyColors.userBubble : SydneyColors.agentBubble);
+    final selectedSurfaceColor =
+        useWorkspacePalette
+            ? CuppetWorkspaceColors.softSage
+            : SydneyColors.primarySoft;
     final content = Container(
       key: ValueKey('message-surface-${message.id}'),
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(SydneySpacing.lg),
       decoration: BoxDecoration(
-        color:
-            useWorkspacePalette
-                ? (isUser
-                    ? CuppetWorkspaceColors.softSage
-                    : CuppetWorkspaceColors.card)
-                : (isUser ? SydneyColors.userBubble : SydneyColors.agentBubble),
+        color: selected ? selectedSurfaceColor : defaultSurfaceColor,
         borderRadius:
             isUser ? SydneyRadius.bubbleUser : SydneyRadius.bubbleAgent,
         border:
             useWorkspacePalette
                 ? Border.all(
                   color:
-                      isUser
+                      selected
+                          ? CuppetWorkspaceColors.primary
+                          : isUser
                           ? CuppetWorkspaceColors.panelBorder
                           : CuppetWorkspaceColors.border,
+                  width: selected ? 1.5 : 1.0,
                 )
                 : isUser
                 ? null
-                : Border.all(color: SydneyColors.line),
-        boxShadow: const [
+                : Border.all(
+                  color: selected ? SydneyColors.primary : SydneyColors.line,
+                  width: selected ? 1.5 : 1.0,
+                ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0A1C1A17),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color:
+                selected
+                    ? CuppetWorkspaceColors.primary.withValues(alpha: 0.14)
+                    : const Color(0x0A1C1A17),
+            blurRadius: selected ? 10 : 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
