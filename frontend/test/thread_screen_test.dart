@@ -157,6 +157,7 @@ void main() {
       avatarDecoration.color?.a,
       closeTo(CuppetWorkspaceColors.agentAvatarOpacity, 0.01),
     );
+    expect(avatarDecoration.border, isNull);
 
     final composer = tester.widget<DecoratedBox>(
       find.byKey(const ValueKey('thread-composer')),

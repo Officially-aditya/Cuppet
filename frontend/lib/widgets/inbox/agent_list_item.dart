@@ -129,7 +129,6 @@ class _AgentAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: avatarColor,
         borderRadius: BorderRadius.circular(SydneyRadius.md),
-        border: Border.all(color: avatarColor),
       ),
       alignment: Alignment.center,
       child: Text(

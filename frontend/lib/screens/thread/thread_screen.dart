@@ -317,12 +317,6 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                                   agent.id,
                                 ),
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color:
-                                  CuppetWorkspaceColors.agentAvatarBackgroundFor(
-                                    agent.id,
-                                  ),
-                            ),
                           ),
                           alignment: Alignment.center,
                           child: Text(

@@ -512,6 +512,7 @@ void main() {
       avatarDecoration.color?.a,
       closeTo(CuppetWorkspaceColors.agentAvatarOpacity, 0.01),
     );
+    expect(avatarDecoration.border, isNull);
     expect(avatarDecoration.gradient, isNull);
 
     await tester.tap(agentCard);
