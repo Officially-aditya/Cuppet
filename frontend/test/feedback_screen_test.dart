@@ -45,6 +45,11 @@ void main() {
     expect(find.text('Feedback'), findsNothing);
     expect(find.text('A thoughtful note goes a long way'), findsNothing);
     expect(find.byKey(const ValueKey('feedback-back-button')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('feedback-topic-dropdown')),
+      findsOneWidget,
+    );
+    expect(find.byType(ChoiceChip), findsNothing);
     expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
     expect(find.byIcon(Icons.send_rounded), findsNothing);
     expect(find.byIcon(Icons.check_rounded), findsNothing);
@@ -61,9 +66,10 @@ void main() {
       isNull,
     );
 
-    await tester.tap(
-      find.byKey(const ValueKey('feedback-topic-General feedback')),
-    );
+    await tester.tap(find.byKey(const ValueKey('feedback-topic-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('General feedback').last);
+    await tester.pumpAndSettle();
     expect(find.byIcon(Icons.check_rounded), findsNothing);
     await tester.enterText(
       find.byKey(const ValueKey('feedback-message-field')),

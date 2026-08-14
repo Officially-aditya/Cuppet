@@ -205,36 +205,41 @@ class _Form extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: SydneySpacing.md),
-              Wrap(
-                spacing: SydneySpacing.sm,
-                runSpacing: SydneySpacing.sm,
-                children: [
+              DropdownButtonFormField<_FeedbackTopic>(
+                key: const ValueKey('feedback-topic-dropdown'),
+                initialValue: selectedTopic,
+                isExpanded: true,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: CuppetWorkspaceColors.ink,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: CuppetWorkspaceColors.background,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: SydneySpacing.md,
+                    vertical: SydneySpacing.md,
+                  ),
+                  border: _fieldBorder(),
+                  enabledBorder: _fieldBorder(),
+                  focusedBorder: _fieldBorder(
+                    color: CuppetWorkspaceColors.primary,
+                    width: 1.4,
+                  ),
+                ),
+                items: [
                   for (final topic in topics)
-                    ChoiceChip(
-                      key: ValueKey('feedback-topic-${topic.label}'),
-                      label: Text(topic.label),
-                      selected: selectedTopic.value == topic.value,
-                      showCheckmark: false,
-                      onSelected: (_) => onTopicSelected(topic),
-                      selectedColor: CuppetWorkspaceColors.softSage,
-                      backgroundColor: CuppetWorkspaceColors.background,
-                      side: BorderSide(
-                        color:
-                            selectedTopic.value == topic.value
-                                ? CuppetWorkspaceColors.secondary
-                                : CuppetWorkspaceColors.border,
-                      ),
-                      labelStyle: Theme.of(
-                        context,
-                      ).textTheme.labelMedium?.copyWith(
-                        color:
-                            selectedTopic.value == topic.value
-                                ? CuppetWorkspaceColors.primaryInk
-                                : CuppetWorkspaceColors.muted,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    DropdownMenuItem<_FeedbackTopic>(
+                      value: topic,
+                      child: Text(topic.label),
                     ),
                 ],
+                onChanged:
+                    isSubmitting
+                        ? null
+                        : (topic) {
+                          if (topic != null) onTopicSelected(topic);
+                        },
               ),
               const SizedBox(height: SydneySpacing.xl),
               Text(

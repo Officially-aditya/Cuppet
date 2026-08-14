@@ -117,16 +117,22 @@ class _AgentAvatar extends StatelessWidget {
       );
     }
 
-    final background = CuppetWorkspaceColors.softSage;
-    final foreground = CuppetWorkspaceColors.primaryInk;
+    final paletteIndex = _agentAvatarPaletteIndex(agent.id);
+    final gradient = CuppetWorkspaceColors.agentAvatarGradients[paletteIndex];
+    final foreground =
+        CuppetWorkspaceColors.agentAvatarForegrounds[paletteIndex];
 
     return Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: background,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
         borderRadius: BorderRadius.circular(SydneyRadius.md),
-        border: Border.all(color: CuppetWorkspaceColors.panelBorder),
+        border: Border.all(color: gradient.last.withValues(alpha: 0.45)),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -139,6 +145,14 @@ class _AgentAvatar extends StatelessWidget {
       ),
     );
   }
+}
+
+int _agentAvatarPaletteIndex(String agentId) {
+  var total = 0;
+  for (final codeUnit in agentId.codeUnits) {
+    total += codeUnit;
+  }
+  return total % CuppetWorkspaceColors.agentAvatarGradients.length;
 }
 
 String _formatTimestamp(Agent agent) {
