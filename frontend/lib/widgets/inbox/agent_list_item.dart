@@ -83,14 +83,46 @@ class AgentListItem extends StatelessWidget {
                     ),
                     if (active || agent.hasUnread) ...[
                       const SizedBox(width: SydneySpacing.sm),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: CuppetWorkspaceColors.primary,
-                          shape: BoxShape.circle,
+                      if (agent.hasUnread)
+                        Semantics(
+                          label:
+                              '${agent.unreadCount} unread ${agent.unreadCount == 1 ? 'message' : 'messages'}',
+                          child: Container(
+                            key: ValueKey('agent-unread-count-${agent.id}'),
+                            constraints: const BoxConstraints(
+                              minWidth: 22,
+                              minHeight: 20,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: CuppetWorkspaceColors.primary,
+                              borderRadius: BorderRadius.circular(
+                                SydneyRadius.full,
+                              ),
+                            ),
+                            child: Text(
+                              _formatUnreadCount(agent.unreadCount),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelSmall?.copyWith(
+                                color: CuppetWorkspaceColors.card,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: CuppetWorkspaceColors.primary,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
                     ],
                   ],
                 ),
@@ -102,6 +134,8 @@ class AgentListItem extends StatelessWidget {
     );
   }
 }
+
+String _formatUnreadCount(int count) => count > 99 ? '99+' : count.toString();
 
 class _AgentAvatar extends StatelessWidget {
   const _AgentAvatar({required this.agent});

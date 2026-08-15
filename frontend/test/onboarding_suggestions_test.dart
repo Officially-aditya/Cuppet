@@ -482,9 +482,10 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     Object? routeArguments;
+    final unreadAgent = _createdAgent.copyWith(unreadCount: 7);
     await tester.pumpWidget(
       _host(
-        agents: [_assistant, _createdAgent],
+        agents: [_assistant, unreadAgent],
         onRoute: (arguments) => routeArguments = arguments,
       ),
     );
@@ -503,6 +504,11 @@ void main() {
     final agentCard = find.byKey(const ValueKey('agent_news-agent'));
     expect(agentCard, findsOneWidget);
     expect(tester.widget(agentCard), isA<WorkspaceCard>());
+    expect(
+      find.byKey(const ValueKey('agent-unread-count-news-agent')),
+      findsOneWidget,
+    );
+    expect(find.text('7'), findsOneWidget);
 
     final agentAvatar = tester.widget<Container>(
       find.byKey(const ValueKey('agent-avatar-news-agent')),
@@ -519,7 +525,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Assistant opened'), findsOneWidget);
-    expect(routeArguments, same(_createdAgent));
+    expect(routeArguments, same(unreadAgent));
   });
 
   testWidgets('create action expands, collapses, and keeps navigation', (
