@@ -147,7 +147,7 @@ void main() {
     expect(appBar.backgroundColor, CuppetWorkspaceColors.background);
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('thread-agent-avatar'))).dx,
-      closeTo(SydneySpacing.page, 0.1),
+      closeTo(SydneySpacing.page + 2, 0.1),
     );
     final threadAvatar = tester.widget<Container>(
       find.byKey(const ValueKey('thread-agent-avatar')),
@@ -251,6 +251,12 @@ void main() {
     expect(
       find.byKey(const ValueKey('assistant-thread-avatar')),
       findsOneWidget,
+    );
+    expect(
+      tester
+          .getTopLeft(find.byKey(const ValueKey('assistant-thread-avatar')))
+          .dx,
+      closeTo(SydneySpacing.page + 2, 0.1),
     );
   });
 

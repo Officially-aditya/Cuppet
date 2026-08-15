@@ -302,33 +302,39 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                   child: Row(
                     children: [
                       if (agent.isAssistant)
-                        const CuppetAssistantAvatar(
-                          key: ValueKey('assistant-thread-avatar'),
-                          size: 32,
+                        Transform.translate(
+                          offset: const Offset(2, 0),
+                          child: const CuppetAssistantAvatar(
+                            key: ValueKey('assistant-thread-avatar'),
+                            size: 32,
+                          ),
                         )
                       else ...[
-                        Container(
-                          key: const ValueKey('thread-agent-avatar'),
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color:
-                                CuppetWorkspaceColors.agentAvatarBackgroundFor(
-                                  agent.id,
-                                ),
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            agent.avatarInitials,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelMedium?.copyWith(
+                        Transform.translate(
+                          offset: const Offset(2, 0),
+                          child: Container(
+                            key: const ValueKey('thread-agent-avatar'),
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
                               color:
-                                  CuppetWorkspaceColors.agentAvatarForegroundFor(
+                                  CuppetWorkspaceColors.agentAvatarBackgroundFor(
                                     agent.id,
                                   ),
-                              fontWeight: FontWeight.w800,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              agent.avatarInitials,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelMedium?.copyWith(
+                                color:
+                                    CuppetWorkspaceColors.agentAvatarForegroundFor(
+                                      agent.id,
+                                    ),
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ),
