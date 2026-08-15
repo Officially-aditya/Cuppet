@@ -508,7 +508,7 @@ void main() {
       find.byKey(const ValueKey('agent-unread-count-news-agent')),
       findsOneWidget,
     );
-    expect(find.text('7'), findsOneWidget);
+    expect(find.text('3+'), findsOneWidget);
 
     final agentAvatar = tester.widget<Container>(
       find.byKey(const ValueKey('agent-avatar-news-agent')),

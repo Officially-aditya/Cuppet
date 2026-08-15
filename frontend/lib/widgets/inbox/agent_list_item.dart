@@ -135,7 +135,7 @@ class AgentListItem extends StatelessWidget {
   }
 }
 
-String _formatUnreadCount(int count) => count > 99 ? '99+' : count.toString();
+String _formatUnreadCount(int count) => count > 3 ? '3+' : count.toString();
 
 class _AgentAvatar extends StatelessWidget {
   const _AgentAvatar({required this.agent});
