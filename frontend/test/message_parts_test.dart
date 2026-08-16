@@ -101,6 +101,54 @@ void main() {
     expect(submitted?['subject_type'], isNull);
   });
 
+  testWidgets(
+    'unknown templates render common fields without unknown actions',
+    (tester) async {
+      final message = Message.fromJson({
+        'id': 'future-template',
+        'agent_id': 'agent',
+        'role': 'agent',
+        'created_at': '2026-07-19T10:00:00Z',
+        'content': {
+          'template': 'future_template',
+          'data': {
+            'title': 'A future update',
+            'summary': 'The app can still show the useful context.',
+            'status': 'Ready',
+            'items': [
+              {
+                'headline': 'First item',
+                'description': 'Read-only details remain visible.',
+              },
+            ],
+            'actions': [
+              {'label': 'Run unknown action'},
+            ],
+          },
+        },
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(child: MessageCard(message: message)),
+          ),
+        ),
+      );
+
+      expect(find.text('A future update'), findsOneWidget);
+      expect(
+        find.text('The app can still show the useful context.'),
+        findsOneWidget,
+      );
+      expect(find.text('First item'), findsOneWidget);
+      expect(find.text('Status: Ready'), findsOneWidget);
+      expect(find.text('Run unknown action'), findsNothing);
+      expect(find.byType(ElevatedButton), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
+    },
+  );
+
   testWidgets('multipart news overview omits the empty-result warning', (
     tester,
   ) async {

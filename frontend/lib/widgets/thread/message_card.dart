@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 import '../../models/message.dart';
+import '../sydney_primitives.dart';
 import '../templates/assistant_suggestion_template.dart';
 import '../templates/checklist_template.dart';
 import '../templates/comparison_template.dart';
@@ -407,16 +408,43 @@ class _TemplateRouter extends StatelessWidget {
                   'messageId': message.id,
                 }),
       ),
-      _ => const _UnsupportedTemplateCard(),
+      _ => _UnsupportedTemplateCard(template: message.template, data: data),
     };
   }
 }
 
 class _UnsupportedTemplateCard extends StatelessWidget {
-  const _UnsupportedTemplateCard();
+  const _UnsupportedTemplateCard({required this.template, required this.data});
+
+  final String template;
+  final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
+    final title = _fallbackText(data, const [
+      'title',
+      'heading',
+      'name',
+      'label',
+      'subject',
+    ]);
+    final body = _fallbackText(data, const [
+      'text',
+      'body',
+      'summary',
+      'description',
+      'message',
+      'detail',
+      'why_it_matters',
+    ]);
+    final entries = _fallbackEntries(data);
+    final details = _fallbackDetails(data);
+    final hasContent =
+        title != null ||
+        body != null ||
+        entries.isNotEmpty ||
+        details.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(SydneySpacing.md),
       decoration: BoxDecoration(
@@ -424,24 +452,237 @@ class _UnsupportedTemplateCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(SydneyRadius.md),
         border: Border.all(color: SydneyColors.line),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.extension_off_outlined,
-            size: 20,
-            color: SydneyColors.mutedInk,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.auto_awesome_outlined,
+                size: 20,
+                color: SydneyColors.primary,
+              ),
+              const SizedBox(width: SydneySpacing.sm),
+              Expanded(
+                child: Text(
+                  title ?? 'Message update',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: SydneyColors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: SydneySpacing.sm),
-          Expanded(
-            child: Text(
-              'This message uses a display template supported in newer app versions.',
+          if (body != null) ...[
+            const SizedBox(height: SydneySpacing.sm),
+            MarkdownText(
+              text: body,
+              textColor: SydneyColors.onSurface,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.38),
+            ),
+          ],
+          if (entries.isNotEmpty) ...[
+            if (body != null) const SizedBox(height: SydneySpacing.sm),
+            for (var index = 0; index < entries.length; index++) ...[
+              _FallbackEntryView(entry: entries[index]),
+              if (index < entries.length - 1)
+                const SizedBox(height: SydneySpacing.xs),
+            ],
+          ],
+          if (details.isNotEmpty) ...[
+            const SizedBox(height: SydneySpacing.sm),
+            Wrap(
+              spacing: SydneySpacing.sm,
+              runSpacing: SydneySpacing.xs,
+              children: [
+                for (final detail in details)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: SydneySpacing.sm,
+                      vertical: SydneySpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: SydneyColors.primarySoft,
+                      borderRadius: BorderRadius.circular(SydneyRadius.full),
+                    ),
+                    child: Text(
+                      '${detail.label}: ${detail.value}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: SydneyColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          if (!hasContent)
+            Text(
+              'This message is available in a newer display format.',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: SydneyColors.mutedInk),
             ),
-          ),
+          if (hasContent) ...[
+            const SizedBox(height: SydneySpacing.xs),
+            Text(
+              'Some interactive options are unavailable in this version.',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: SydneyColors.mutedInk),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _FallbackEntry {
+  const _FallbackEntry({this.title, this.body});
+
+  final String? title;
+  final String? body;
+}
+
+class _FallbackDetail {
+  const _FallbackDetail(this.label, this.value);
+
+  final String label;
+  final String value;
+}
+
+class _FallbackEntryView extends StatelessWidget {
+  const _FallbackEntryView({required this.entry});
+
+  final _FallbackEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = entry.title;
+    final body = entry.body;
+    if (title == null && body == null) return const SizedBox.shrink();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 7),
+          child: Icon(Icons.circle, size: 5, color: SydneyColors.primary),
+        ),
+        const SizedBox(width: SydneySpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (title != null)
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: SydneyColors.ink,
+                  ),
+                ),
+              if (body != null)
+                MarkdownText(
+                  text: body,
+                  textColor: SydneyColors.onSurface,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(height: 1.35),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String? _fallbackText(Map<String, dynamic> data, List<String> keys) {
+  for (final key in keys) {
+    final value = data[key];
+    if (value is String && value.trim().isNotEmpty) {
+      return _limitFallbackText(value.trim());
+    }
+    if (value is num || value is bool) return value.toString();
+  }
+  return null;
+}
+
+List<_FallbackEntry> _fallbackEntries(Map<String, dynamic> data) {
+  const listKeys = [
+    'items',
+    'entries',
+    'results',
+    'records',
+    'updates',
+    'highlights',
+    'tldr',
+  ];
+  final entries = <_FallbackEntry>[];
+  for (final key in listKeys) {
+    final raw = data[key];
+    if (raw is! List) continue;
+    for (final item in raw) {
+      if (entries.length >= 8) return entries;
+      if (item is Map) {
+        final map = Map<String, dynamic>.from(item);
+        final title = _fallbackText(map, const [
+          'title',
+          'headline',
+          'name',
+          'label',
+          'subject',
+        ]);
+        final body = _fallbackText(map, const [
+          'summary',
+          'description',
+          'body',
+          'text',
+          'detail',
+          'status',
+        ]);
+        if (title != null || body != null) {
+          entries.add(_FallbackEntry(title: title, body: body));
+        }
+      } else if (item is String && item.trim().isNotEmpty) {
+        entries.add(_FallbackEntry(body: _limitFallbackText(item.trim())));
+      }
+    }
+    if (entries.isNotEmpty) return entries;
+  }
+  return entries;
+}
+
+List<_FallbackDetail> _fallbackDetails(Map<String, dynamic> data) {
+  const detailKeys = <String, String>{
+    'status': 'Status',
+    'category': 'Category',
+    'date': 'Date',
+    'time': 'Time',
+    'source': 'Source',
+    'count': 'Count',
+    'progress': 'Progress',
+  };
+  final details = <_FallbackDetail>[];
+  for (final entry in detailKeys.entries) {
+    final value = data[entry.key];
+    if (value is String && value.trim().isNotEmpty) {
+      details.add(
+        _FallbackDetail(entry.value, _limitFallbackText(value.trim(), 80)),
+      );
+    } else if (value is num || value is bool) {
+      details.add(_FallbackDetail(entry.value, value.toString()));
+    }
+  }
+  return details;
+}
+
+String _limitFallbackText(String value, [int limit = 500]) {
+  if (value.length <= limit) return value;
+  return '${value.substring(0, limit - 1).trimRight()}…';
 }

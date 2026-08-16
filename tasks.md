@@ -31,12 +31,12 @@ This file is the execution checklist for the app completion plan. Read it before
   - [x] T2B - provider CRUD and OAuth routes
   - [x] T2C - assistant and agent execution integration
   - [x] T2D - tests and local security verification
-  - [ ] T2G - `WAITING FOR USER` at G2 for live OAuth/read-only MCP smoke test
-- [ ] **T3 - Custom MCP Flutter UI** - replace the `Other...` placeholder with custom MCP provider creation, OAuth connection, status, and disconnect flows.
-  - [ ] T3A - model/service/provider state
-  - [ ] T3B - add-provider form and connector list integration
-  - [ ] T3C - widget tests and analyzer verification
-- [ ] **T4 - Unsupported message fallback** - replace the newer-version placeholder with a safe generic renderer that displays common fields and no unknown actions.
+  - [ ] T2G - `WAITING FOR USER` at G2; Linear pre-approval passed, but final user approval/token exchange remains deferred by the user
+- [x] **T3 - Custom MCP Flutter UI** - replace the `Other...` placeholder with custom MCP provider creation, OAuth connection, status, and disconnect flows.
+  - [x] T3A - model/service/provider state
+  - [x] T3B - add-provider form and connector list integration
+  - [x] T3C - widget tests and analyzer verification
+- [x] **T4 - Unsupported message fallback** - replace the newer-version placeholder with a safe generic renderer that displays common fields and no unknown actions.
 - [ ] **T5 - Deployment credential hygiene** - rotate the Firebase service-account credential and verify no secret is tracked.
   - [ ] T5G - `WAITING FOR USER` at G3
 - [ ] **T6 - Android release signing** - generate an ignored upload keystore, wire ignored `key.properties`, and prepare release signing without changing the production application ID prematurely.
@@ -46,4 +46,4 @@ This file is the execution checklist for the app completion plan. Read it before
 
 ## Current task
 
-**T2G - WAITING FOR USER at G2:** deploy the `connect.cuppet.in` CIMD configuration, then run the live OAuth/read-only MCP smoke test before continuing to the next task.
+**T5 - WAITING FOR USER at G3:** rotate the Firebase service-account credential in local/deployment configuration before credential-hygiene verification. T2G’s final user approval/token exchange remains recorded as deferred.
