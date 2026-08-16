@@ -12,7 +12,9 @@ const nativeConnectors = new Set([
 
 export function isSupportedConnectorId(connectorId: string): boolean {
   return /^[a-z][a-z0-9_.-]{1,79}$/.test(connectorId) &&
-    (nativeConnectors.has(connectorId) || Boolean(trustedMcpProviderForConnector(connectorId)));
+    (nativeConnectors.has(connectorId) ||
+      Boolean(trustedMcpProviderForConnector(connectorId)) ||
+      /^mcp\.[a-z][a-z0-9_.:-]{1,119}$/i.test(connectorId));
 }
 
 export function safePublicUrl(value: unknown): string | null {

@@ -4,14 +4,17 @@ import {
   UNSUPPORTED_CONNECTORS
 } from "./unsupported-connectors.js";
 import { extractGitHubRepository } from "./github-scope.js";
-import { listTrustedMcpProviders } from "../access/provider-directory.js";
+import {
+  listMcpProvidersForUser,
+  listTrustedMcpProviders
+} from "../access/provider-directory.js";
 import {
   getAgentRecipeProfile,
   hasAgentRecipeProfile,
   validateRecipeInputs
 } from "./runtime/recipe-registry.js";
 import { supportsRealtimeAgentIntent } from "./runtime/trigger-support.js";
-import type { AccessRequirement } from "../access/types.js";
+import type { AccessProvider, AccessRequirement } from "../access/types.js";
 
 export {
   isDraftOutputPlatformName,
@@ -686,6 +689,35 @@ export function parseIntent(prompt: string): ParsedIntent {
   };
 }
 
+export async function parseIntentForUser(
+  userId: string,
+  prompt: string
+): Promise<ParsedIntent> {
+  let providers: AccessProvider[] = [];
+  try {
+    providers = await listMcpProvidersForUser(userId);
+  } catch {
+    // Provider discovery must not make the agent parser unavailable.
+  }
+  const lower = prompt.toLowerCase();
+  const customProvider = providers
+    .filter((provider) => provider.ownerUserId === userId)
+    .find((provider) =>
+      [provider.providerId, provider.displayName].some((value) =>
+        lower.includes(value.toLowerCase())
+      )
+    );
+  if (customProvider) {
+    const parsed = genericProviderIntent(prompt, lower, customProvider);
+    return {
+      ...parsed,
+      connector: customProvider.providerId,
+      connector_ids: [customProvider.providerId]
+    };
+  }
+  return parseIntent(prompt);
+}
+
 function parseIntentLegacy(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
   // Drafting agents name Twitter/LinkedIn as output formats, not OAuth connectors.
@@ -1256,7 +1288,7 @@ function trustedProviderForPrompt(lowerPrompt: string, unsupported?: string) {
 function genericProviderIntent(
   prompt: string,
   lower: string,
-  provider: ReturnType<typeof listTrustedMcpProviders>[number]
+  provider: AccessProvider
 ): ParsedIntent {
   return baseIntent(prompt, {
     name: provider.displayName,

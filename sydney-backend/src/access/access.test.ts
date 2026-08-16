@@ -115,3 +115,28 @@ test("schema version 2 keeps explicit access requirements without accepting extr
     /Unrecognized key|unknown/i
   );
 });
+
+test("custom MCP provider ids survive compilation as read-only access references", () => {
+  const parsed = {
+    ...parseIntent("Read my notes."),
+    intent: "custom_read_agent",
+    output_template: "plain_text",
+    connector: "mcp.user.example",
+    connector_ids: ["mcp.user.example"],
+    recipe_inputs: {},
+    required_access: [
+      {
+        service: "linear",
+        capabilities: ["read"],
+        required: true,
+        preferred_provider_ids: ["mcp.user.example"],
+        reason: "Linear read access"
+      }
+    ]
+  };
+  const definition = compileAgentDefinition(parsed, "Read my Linear updates.");
+  const step = definition.steps[0]!;
+  assert.deepEqual(step.config.connector_ids, ["mcp.user.example"]);
+  assert.deepEqual(step.config.access_refs, parsed.required_access);
+  assert.doesNotThrow(() => validateCompiledDefinition(definition));
+});

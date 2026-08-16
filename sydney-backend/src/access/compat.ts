@@ -1,7 +1,9 @@
 import {
   accessProviderByIdOrConnector,
+  accessProviderForUser,
   listTrustedMcpProviders
 } from "./provider-directory.js";
+import { listCustomMcpProviders } from "./custom-providers.js";
 import { disconnectAccessProvider, listAccessConnections } from "./repository.js";
 
 export async function genericConnectorPayloads(userId: string) {
@@ -12,7 +14,11 @@ export async function genericConnectorPayloads(userId: string) {
       .map((connection) => [connection.providerId, connection] as const)
   );
 
-  return listTrustedMcpProviders().map((provider) => {
+  const providers = [
+    ...listTrustedMcpProviders(),
+    ...(await listCustomMcpProviders(userId))
+  ];
+  return providers.map((provider) => {
     const connection = connectionsByProvider.get(provider.providerId);
     return {
       id: provider.providerId,
@@ -38,11 +44,19 @@ export function trustedMcpProviderForConnector(connectorId: string) {
   return provider?.kind === "mcp" ? provider : null;
 }
 
+export async function mcpProviderForUser(
+  userId: string,
+  connectorId: string
+) {
+  const provider = await accessProviderForUser(userId, connectorId);
+  return provider?.kind === "mcp" ? provider : null;
+}
+
 export async function disconnectGenericConnector(
   userId: string,
   connectorId: string
 ): Promise<void> {
-  const provider = trustedMcpProviderForConnector(connectorId);
+  const provider = await mcpProviderForUser(userId, connectorId);
   if (!provider) throw new Error("mcp_provider_not_trusted");
   await disconnectAccessProvider(userId, provider.providerId);
 }

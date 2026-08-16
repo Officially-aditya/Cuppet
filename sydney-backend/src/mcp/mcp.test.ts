@@ -9,7 +9,7 @@ test("CIMD metadata advertises the stable client identity and backend callback",
   const metadata = cimdClientMetadata();
   assert.equal(
     metadata.client_id,
-    "https://api.cuppet.in/.well-known/oauth-client.json"
+    "https://connect.cuppet.in/.well-known/oauth-client.json"
   );
   assert.deepEqual(metadata.response_types, ["code"]);
   assert.equal(metadata.token_endpoint_auth_method, "none");

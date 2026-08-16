@@ -494,6 +494,32 @@ CREATE INDEX idx_access_connections_user
 CREATE INDEX idx_access_connections_provider
   ON access_connections(provider_id, status);
 
+CREATE TABLE user_mcp_providers (
+  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider_id            TEXT NOT NULL UNIQUE,
+  display_name           TEXT NOT NULL,
+  description            TEXT NOT NULL DEFAULT '',
+  icon_name              TEXT NOT NULL DEFAULT 'Extension',
+  category               TEXT NOT NULL DEFAULT 'CUSTOM MCP',
+  endpoint               TEXT NOT NULL,
+  capabilities           TEXT[] NOT NULL DEFAULT '{}',
+  allowed_tools          TEXT[] NOT NULL DEFAULT '{}',
+  oauth_scopes           TEXT[] NOT NULL DEFAULT '{}',
+  authorization_endpoint TEXT,
+  token_endpoint         TEXT,
+  issuer                 TEXT,
+  resource               TEXT,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_mcp_providers_user
+  ON user_mcp_providers(user_id, updated_at DESC);
+
+CREATE INDEX idx_user_mcp_providers_endpoint
+  ON user_mcp_providers(user_id, endpoint);
+
 CREATE TABLE access_connection_credentials (
   connection_id       UUID PRIMARY KEY REFERENCES access_connections(id) ON DELETE CASCADE,
   access_token_enc    TEXT NOT NULL,

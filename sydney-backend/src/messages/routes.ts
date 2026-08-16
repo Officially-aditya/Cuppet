@@ -9,7 +9,7 @@ import {
 import { createAgentChatReply } from "../agents/agent-chat.js";
 import { createAssistantChatReply } from "../agents/assistant-chat.js";
 import { ensureAssistantContact } from "../agents/assistant.js";
-import { parseIntentHybrid } from "../agents/llm-intent.js";
+import { parseIntentHybridForUser } from "../agents/llm-intent.js";
 import { refineAmbiguousAgentMessage } from "../agents/llm-message-router.js";
 import {
   describeSchedule,
@@ -718,7 +718,7 @@ async function handleAssistantTextMessage(
       };
     }
 
-    const parsedIntent = await parseIntentHybrid(text);
+    const parsedIntent = await parseIntentHybridForUser(userId, text);
 
     if (parsedIntent.unsupported_connector) {
       const assistantMessage = await insertMessage(client, {

@@ -18,7 +18,7 @@ import {
   type ManagedAgent
 } from "../agents/agent-service.js";
 import { isContextualAgentTarget } from "../agents/agent-target.js";
-import { parseIntentHybrid } from "../agents/llm-intent.js";
+import { parseIntentHybridForUser } from "../agents/llm-intent.js";
 import type { ParsedIntent } from "../agents/parser.js";
 import { describeSchedule } from "../agents/message-router.js";
 import type { AgentMessageContent } from "../agents/output.js";
@@ -1038,7 +1038,10 @@ async function applyManagedAgentRoute(
 async function createAgentFromAssistant(
   input: Parameters<typeof executeRoute>[0]
 ): Promise<AssistantOutcome> {
-  const parsedIntent = await parseIntentHybrid(input.text);
+  const parsedIntent = await parseIntentHybridForUser(
+    input.userId,
+    input.text
+  );
   if (parsedIntent.unsupported_connector) {
     return {
       content: plainText(

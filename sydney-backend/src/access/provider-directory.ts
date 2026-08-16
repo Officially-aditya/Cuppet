@@ -3,6 +3,10 @@ import {
   type AccessAuthMethod,
   type AccessProvider
 } from "./types.js";
+import {
+  findCustomMcpProvider,
+  listCustomMcpProviders
+} from "./custom-providers.js";
 
 const nativeProviders: AccessProvider[] = [
   native("native.gmail", "Gmail", "Read approved Gmail context and prepare summaries", "Mail", "EMAIL & COMMUNICATION", "gmail", ["mail.read"]),
@@ -135,6 +139,31 @@ export function accessProviderForConnector(connectorId: string): AccessProvider 
 
 export function accessProviderByIdOrConnector(id: string): AccessProvider | null {
   return accessProviderById(id) ?? accessProviderForConnector(id);
+}
+
+export async function listAccessProvidersForUser(
+  userId: string
+): Promise<AccessProvider[]> {
+  return [
+    ...listAccessProviders(),
+    ...(await listCustomMcpProviders(userId))
+  ];
+}
+
+export async function listMcpProvidersForUser(
+  userId: string
+): Promise<AccessProvider[]> {
+  return [
+    ...listTrustedMcpProviders(),
+    ...(await listCustomMcpProviders(userId))
+  ];
+}
+
+export async function accessProviderForUser(
+  userId: string,
+  id: string
+): Promise<AccessProvider | null> {
+  return accessProviderByIdOrConnector(id) ?? findCustomMcpProvider(userId, id);
 }
 
 function native(

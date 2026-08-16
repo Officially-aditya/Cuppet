@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "permissions": ["storage", "tabs"],
   "host_permissions": [
-    "https://api.cuppet.in/*",
+    "https://connect.cuppet.in/*",
     "http://localhost:3000/*"
   ],
   "background": {

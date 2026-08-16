@@ -33,6 +33,16 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
+  SMTP_USERNAME: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  SMTP_FROM_NAME: z.string().default("Cuppet"),
+  SMTP_SECURE: z
+    .string()
+    .default("false")
+    .transform((value) => value === "true" || value === "1"),
   AGENT_SCHEDULE_TIME_ZONE: ianaTimeZoneSchema.default("Asia/Kolkata"),
   MOBILE_AUTH_CALLBACK_SCHEME: z.string().default("sydney"),
   SLACK_CLIENT_ID: z.string().optional(),
@@ -60,7 +70,7 @@ const envSchema = z.object({
   CIMD_CLIENT_IDENTITY_URL: z
     .string()
     .url()
-    .default("https://api.cuppet.in/.well-known/oauth-client.json"),
+    .default("https://connect.cuppet.in/.well-known/oauth-client.json"),
   MCP_OAUTH_CALLBACK_URL: z.string().url().optional(),
   MCP_TRUSTED_PROVIDER_DIRECTORY: z.string().default("[]"),
   MCP_ALLOWED_HOSTS: z.string().default(""),

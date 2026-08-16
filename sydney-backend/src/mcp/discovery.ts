@@ -16,6 +16,45 @@ export type ProtectedResourceMetadata = {
   scopes_supported?: string[];
 };
 
+const WRITE_SCOPE_SEGMENTS = new Set([
+  "write",
+  "create",
+  "delete",
+  "destroy",
+  "update",
+  "send",
+  "post",
+  "put",
+  "patch",
+  "remove",
+  "execute",
+  "run",
+  "invite",
+  "grant",
+  "revoke",
+  "mutate",
+  "action"
+]);
+
+export function isReadOnlyMcpScope(scope: string): boolean {
+  const segments = scope
+    .trim()
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean)
+    .map((segment) => segment.toLowerCase());
+  return (
+    segments.length > 0 &&
+    !segments.some(
+      (segment) =>
+        WRITE_SCOPE_SEGMENTS.has(segment) || segment.startsWith("mutat")
+    )
+  );
+}
+
+export function readOnlyMcpScopes(scopes: string[]): string[] {
+  return [...new Set(scopes.map((scope) => scope.trim()).filter(isReadOnlyMcpScope))];
+}
+
 export async function discoverMcpOAuthMetadata(
   provider: AccessProvider
 ): Promise<{
@@ -36,7 +75,7 @@ export async function discoverMcpOAuthMetadata(
       tokenEndpoint: configured.tokenEndpoint,
       ...(configured.issuer ? { issuer: configured.issuer } : {}),
       ...(configured.resource ? { resource: configured.resource } : {}),
-      scopes: configured.scopes
+      scopes: readOnlyMcpScopes(configured.scopes)
     };
   }
 
@@ -73,9 +112,11 @@ export async function discoverMcpOAuthMetadata(
     tokenEndpoint: metadata.token_endpoint,
     ...(metadata.issuer ? { issuer: metadata.issuer } : {}),
     resource,
-    scopes: configured?.scopes.length
-      ? configured.scopes
-      : resourceMetadata?.scopes_supported ?? metadata.scopes_supported ?? ["mcp"]
+    scopes: readOnlyMcpScopes(
+      configured?.scopes.length
+        ? configured.scopes
+        : resourceMetadata?.scopes_supported ?? metadata.scopes_supported ?? ["mcp"]
+    )
   };
 }
 

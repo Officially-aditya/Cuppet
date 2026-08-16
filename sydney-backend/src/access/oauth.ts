@@ -2,9 +2,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { config } from "../config.js";
 import { ConnectorAuthRequiredError } from "../connectors/errors.js";
 import {
-  accessProviderById,
-  accessProviderByIdOrConnector
+  accessProviderForUser
 } from "./provider-directory.js";
+import { updateCustomMcpProviderAllowedTools } from "./custom-providers.js";
 import {
   completeAccessOAuthTransaction,
   claimAccessOAuthTransaction,
@@ -20,25 +20,28 @@ import {
   upsertAccessConnection
 } from "./repository.js";
 import { mcpOAuthCallbackUrl } from "../mcp/cimd.js";
-import { McpHttpClient } from "../mcp/client.js";
+import { isReadOnlyMcpTool, McpHttpClient } from "../mcp/client.js";
 import { discoverMcpOAuthMetadata } from "../mcp/discovery.js";
-import { assertSafeRemoteMcpUrl, fetchRemoteMcp } from "../mcp/security.js";
+import {
+  assertSafeRemoteMcpUrlWithDns,
+  fetchRemoteMcp
+} from "../mcp/security.js";
 
 export async function startMcpOAuth(input: {
   userId: string;
   providerId: string;
   callbackScheme: string;
 }): Promise<{ authUrl: string; callbackScheme: string; providerId: string }> {
-  const provider = accessProviderByIdOrConnector(input.providerId);
+  const provider = await accessProviderForUser(input.userId, input.providerId);
   if (!provider || provider.kind !== "mcp" || !provider.endpoint) {
     throw new Error("mcp_provider_not_trusted");
   }
   const callbackScheme = sanitizeCallbackScheme(input.callbackScheme);
   const metadata = await discoverMcpOAuthMetadata(provider);
-  assertSafeRemoteMcpUrl(metadata.authorizationEndpoint);
-  assertSafeRemoteMcpUrl(metadata.tokenEndpoint);
-  if (metadata.issuer) assertSafeRemoteMcpUrl(metadata.issuer);
-  if (metadata.resource) assertSafeRemoteMcpUrl(metadata.resource);
+  await assertSafeRemoteMcpUrlWithDns(metadata.authorizationEndpoint);
+  await assertSafeRemoteMcpUrlWithDns(metadata.tokenEndpoint);
+  if (metadata.issuer) await assertSafeRemoteMcpUrlWithDns(metadata.issuer);
+  if (metadata.resource) await assertSafeRemoteMcpUrlWithDns(metadata.resource);
 
   const state = randomBytes(32).toString("base64url");
   const codeVerifier = randomBytes(48).toString("base64url");
@@ -122,7 +125,10 @@ export async function handleMcpOAuthCallback(input: {
   try {
     const token = await exchangeCode(transaction, input.code);
     validateTokenBinding(transaction, token);
-    const provider = accessProviderById(transaction.providerId);
+    const provider = await accessProviderForUser(
+      transaction.userId,
+      transaction.providerId
+    );
     if (!provider?.endpoint) throw new Error("mcp_provider_not_trusted");
     const connection = await upsertAccessConnection({
       userId: transaction.userId,
@@ -159,7 +165,21 @@ export async function handleMcpOAuthCallback(input: {
         client.listTools(),
         client.listResources().catch(() => [])
       ]);
-      for (const tool of tools) {
+      const readOnlyTools = tools.filter(isReadOnlyMcpTool);
+      const approvedTools = provider.allowedTools?.length
+        ? readOnlyTools.filter((tool) => provider.allowedTools!.includes(tool.name))
+        : readOnlyTools;
+      if (approvedTools.length === 0) {
+        throw new Error("mcp_no_read_only_tools");
+      }
+      if (provider.ownerUserId) {
+        await updateCustomMcpProviderAllowedTools({
+          userId: transaction.userId,
+          providerId: provider.providerId,
+          allowedTools: approvedTools.map((tool) => tool.name)
+        });
+      }
+      for (const tool of approvedTools) {
         await saveMcpToolSnapshot({
           connectionId: connection.id,
           name: tool.name,
@@ -277,13 +297,13 @@ export async function accessTokenForConnection(
     });
   }
 
-  const provider = accessProviderById(connection.providerId);
+  const provider = await accessProviderForUser(userId, connection.providerId);
   if (!provider?.endpoint) throw new Error("mcp_provider_not_trusted");
   try {
     const metadata = await discoverMcpOAuthMetadata(provider);
-    assertSafeRemoteMcpUrl(metadata.tokenEndpoint);
-    if (metadata.issuer) assertSafeRemoteMcpUrl(metadata.issuer);
-    if (metadata.resource) assertSafeRemoteMcpUrl(metadata.resource);
+    await assertSafeRemoteMcpUrlWithDns(metadata.tokenEndpoint);
+    if (metadata.issuer) await assertSafeRemoteMcpUrlWithDns(metadata.issuer);
+    if (metadata.resource) await assertSafeRemoteMcpUrlWithDns(metadata.resource);
     const body = new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: credential.refreshToken,

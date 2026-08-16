@@ -19,6 +19,7 @@ describe("Web Search Pipeline Rules", () => {
 
     assert.equal(hasPrivateConnectors([]), false);
     assert.equal(hasPrivateConnectors(["web_search"]), false);
+    assert.equal(hasPrivateConnectors(["mcp.user.example"]), true);
   });
 
   it("detects explicit web search requests in prompt", () => {

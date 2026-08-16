@@ -1,6 +1,6 @@
 import { nativeConnectionFor } from "./native-adapters.js";
 import {
-  listTrustedMcpProviders,
+  listMcpProvidersForUser,
   listNativeAccessProviders
 } from "./provider-directory.js";
 import { findAccessConnection, findConnectedAccessConnection } from "./repository.js";
@@ -17,11 +17,12 @@ export async function resolveAccess(
   requirements: AccessRequirement[]
 ): Promise<AccessResolution> {
   const items: AccessResolutionItem[] = [];
+  const mcpProviders = await listMcpProvidersForUser(userId);
   for (const requirement of requirements) {
     const nativeCandidates = listNativeAccessProviders().filter((provider) =>
       providerSupportsRequirement(provider, requirement)
     );
-    const mcpCandidates = listTrustedMcpProviders().filter((provider) =>
+    const mcpCandidates = mcpProviders.filter((provider) =>
       providerSupportsRequirement(provider, requirement)
     );
     const candidates = preferredCandidates(requirement, [

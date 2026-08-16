@@ -139,104 +139,106 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                              const WorkspaceSectionLabel('Email sign in'),
-                              const SizedBox(height: SydneySpacing.md),
-                              WorkspaceCard(
-                                padding: const EdgeInsets.all(
-                                  SydneySpacing.lg,
-                                ),
-                                child: Form(
-                                  key: _formKey,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      AuthField(
-                                        label: 'Email Address',
-                                        controller: _emailController,
-                                        icon: Icons.mail_outline_rounded,
-                                        keyboardType:
-                                            TextInputType.emailAddress,
-                                        textInputAction: TextInputAction.next,
-                                        validator:
-                                            (value) =>
-                                                value == null ||
-                                                        value.trim().isEmpty
-                                                    ? 'Enter your email.'
-                                                    : null,
-                                      ),
-                                      const SizedBox(height: 14),
-                                      AuthField(
-                                        label: 'Password',
-                                        controller: _passwordController,
-                                        icon: Icons.lock_outline_rounded,
-                                        obscureText: !_showPassword,
-                                        textInputAction: TextInputAction.done,
-                                        suffix: IconButton(
-                                          tooltip:
-                                              _showPassword
-                                                  ? 'Hide password'
-                                                  : 'Show password',
-                                          onPressed:
-                                              () => setState(
-                                                () =>
-                                                    _showPassword =
-                                                        !_showPassword,
-                                              ),
-                                          icon: Icon(
+                            const WorkspaceSectionLabel('Email sign in'),
+                            const SizedBox(height: SydneySpacing.md),
+                            WorkspaceCard(
+                              padding: const EdgeInsets.all(SydneySpacing.lg),
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    AuthField(
+                                      label: 'Email Address',
+                                      controller: _emailController,
+                                      icon: Icons.mail_outline_rounded,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      validator:
+                                          (value) =>
+                                              value == null ||
+                                                      value.trim().isEmpty
+                                                  ? 'Enter your email.'
+                                                  : null,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    AuthField(
+                                      label: 'Password',
+                                      controller: _passwordController,
+                                      icon: Icons.lock_outline_rounded,
+                                      obscureText: !_showPassword,
+                                      textInputAction: TextInputAction.done,
+                                      suffix: IconButton(
+                                        tooltip:
                                             _showPassword
-                                                ? Icons.visibility_off_outlined
-                                                : Icons.visibility_outlined,
-                                            size: 18,
-                                            color: CuppetWorkspaceColors.muted,
-                                          ),
-                                        ),
-                                        validator:
-                                            (value) =>
-                                                value == null || value.isEmpty
-                                                    ? 'Enter your password.'
-                                                    : null,
-                                        onFieldSubmitted: (_) => _submit(),
-                                      ),
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton(
-                                          onPressed: loading ? null : () {},
-                                          style: TextButton.styleFrom(
-                                            foregroundColor:
-                                                CuppetWorkspaceColors.primary,
-                                            textStyle: const TextStyle(
-                                              fontWeight: FontWeight.w700,
+                                                ? 'Hide password'
+                                                : 'Show password',
+                                        onPressed:
+                                            () => setState(
+                                              () =>
+                                                  _showPassword =
+                                                      !_showPassword,
                                             ),
-                                          ),
-                                          child: const Text('Forgot Password?'),
+                                        icon: Icon(
+                                          _showPassword
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                          size: 18,
+                                          color: CuppetWorkspaceColors.muted,
                                         ),
                                       ),
-                                      if (auth.hasError) ...[
-                                        SydneyNotice(
-                                          text: readableAuthError(auth.error!),
-                                          icon: Icons.error_outline_rounded,
-                                          iconColor: SydneyColors.danger,
-                                          backgroundColor:
-                                              SydneyColors.dangerSoft,
-                                          borderColor: SydneyColors.dangerSoft,
-                                          textColor: SydneyColors.danger,
-                                        ),
-                                        const SizedBox(height: SydneySpacing.md),
-                                      ],
-                                      AuthPrimaryButton(
-                                        label:
+                                      validator:
+                                          (value) =>
+                                              value == null || value.isEmpty
+                                                  ? 'Enter your password.'
+                                                  : null,
+                                      onFieldSubmitted: (_) => _submit(),
+                                    ),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed:
                                             loading
-                                                ? 'Signing in...'
-                                                : 'Sign In',
-                                        onPressed: loading ? null : _submit,
+                                                ? null
+                                                : () => Navigator.of(
+                                                  context,
+                                                ).pushNamed(
+                                                  AppRoutes.forgotPassword,
+                                                ),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor:
+                                              CuppetWorkspaceColors.primary,
+                                          textStyle: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        child: const Text('Forgot Password?'),
                                       ),
+                                    ),
+                                    if (auth.hasError) ...[
+                                      SydneyNotice(
+                                        text: readableAuthError(auth.error!),
+                                        icon: Icons.error_outline_rounded,
+                                        iconColor: SydneyColors.danger,
+                                        backgroundColor:
+                                            SydneyColors.dangerSoft,
+                                        borderColor: SydneyColors.dangerSoft,
+                                        textColor: SydneyColors.danger,
+                                      ),
+                                      const SizedBox(height: SydneySpacing.md),
                                     ],
-                                  ),
+                                    AuthPrimaryButton(
+                                      label:
+                                          loading ? 'Signing in...' : 'Sign In',
+                                      onPressed: loading ? null : _submit,
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        ),
 
                         // --- BOTTOM FOOTER & NAVIGATION ---
                         Column(

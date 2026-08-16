@@ -3,7 +3,11 @@ import {
   createLlmMessage,
   extractLlmText
 } from "./llm.js";
-import { parseIntent, type ParsedIntent } from "./parser.js";
+import {
+  parseIntent,
+  parseIntentForUser,
+  type ParsedIntent
+} from "./parser.js";
 import { validateAgentPlan, type AgentPlanProposal } from "./plan-validator.js";
 import { userInstructionBlock } from "../security/prompt-guard.js";
 import { z } from "zod";
@@ -32,7 +36,20 @@ const agentPlanProposalSchema = z
   .strict();
 
 export async function parseIntentHybrid(prompt: string): Promise<ParsedIntent> {
-  const deterministic = parseIntent(prompt);
+  return refineIntent(prompt, parseIntent(prompt));
+}
+
+export async function parseIntentHybridForUser(
+  userId: string,
+  prompt: string
+): Promise<ParsedIntent> {
+  return refineIntent(prompt, await parseIntentForUser(userId, prompt));
+}
+
+async function refineIntent(
+  prompt: string,
+  deterministic: ParsedIntent
+): Promise<ParsedIntent> {
   if (!shouldRefineIntent(prompt, deterministic) || !llmConfigured()) {
     return deterministic;
   }

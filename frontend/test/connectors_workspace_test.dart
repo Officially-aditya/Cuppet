@@ -7,6 +7,7 @@ import 'package:sydney/design/workspace_palette.dart';
 import 'package:sydney/models/connector.dart';
 import 'package:sydney/providers/connectors_provider.dart';
 import 'package:sydney/screens/connectors/connectors_screen.dart';
+import 'package:sydney/screens/connectors/add_connector_screen.dart';
 import 'package:sydney/widgets/connectors/connector_list_item.dart';
 import 'package:sydney/widgets/sydney_primitives.dart';
 import 'package:sydney/widgets/workspace_primitives.dart';
@@ -41,11 +42,24 @@ const _canvaConnector = Connector(
   providerId: 'mcp.canva',
 );
 
+const _customConnector = Connector(
+  id: 'mcp.user.linear',
+  name: 'Linear workspace',
+  description: 'Read approved project updates.',
+  status: ConnectorStatus.disconnected,
+  category: 'CUSTOM MCP',
+  iconName: 'Extension',
+  authMethod: 'oauth2',
+  authConfigured: true,
+  providerId: 'mcp.user.linear',
+);
+
 class _LoadedConnectorsController extends ConnectorsController {
   @override
   Future<List<Connector>> build() async => const [
     _githubConnector,
     _canvaConnector,
+    _customConnector,
   ];
 }
 
@@ -96,7 +110,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('AVAILABLE SERVICES'), findsOneWidget);
-    expect(find.byType(WorkspaceCard), findsOneWidget);
+    expect(find.byType(WorkspaceCard), findsNWidgets(2));
     expect(find.byType(WorkspacePrivacyPanel), findsOneWidget);
     expect(find.text('Access & privacy'), findsOneWidget);
     expect(
@@ -128,7 +142,31 @@ void main() {
 
     expect(find.text('GitHub'), findsOneWidget);
     expect(find.text('Canva'), findsNothing);
+    expect(find.text('Linear workspace'), findsOneWidget);
   });
+
+  testWidgets(
+    'add connector replaces the Other placeholder with custom MCP form',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            connectorsProvider.overrideWith(_LoadedConnectorsController.new),
+          ],
+          child: const MaterialApp(home: AddConnectorScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Other...'), findsNothing);
+      await tester.tap(find.text('Add custom MCP provider'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add a custom MCP provider'), findsOneWidget);
+      expect(find.text('MCP HTTPS endpoint'), findsOneWidget);
+      expect(find.textContaining('never asks for API keys'), findsOneWidget);
+    },
+  );
 
   testWidgets('advanced connector switch keeps the existing callback', (
     tester,

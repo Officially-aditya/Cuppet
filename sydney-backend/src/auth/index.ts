@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { bearer, jwt } from "better-auth/plugins";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
+import { sendPasswordResetEmail } from "./mailer.js";
 
 const socialProviders =
   config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
@@ -22,7 +23,16 @@ export const auth = betterAuth({
   trustedOrigins: config.TRUSTED_ORIGINS,
   socialProviders,
   emailAndPassword: {
-    enabled: true
+    enabled: true,
+    revokeSessionsOnPasswordReset: true,
+    resetPasswordTokenExpiresIn: 60 * 60,
+    sendResetPassword: async ({ user, url }) => {
+      await sendPasswordResetEmail({
+        email: user.email,
+        name: user.name,
+        url
+      });
+    }
   },
   user: {
     modelName: "users",

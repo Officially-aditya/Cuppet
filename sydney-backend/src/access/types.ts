@@ -28,6 +28,7 @@ export type AccessConnectionStatus =
 
 export type AccessProvider = {
   providerId: string;
+  ownerUserId?: string;
   kind: AccessProviderKind;
   displayName: string;
   description: string;

@@ -115,7 +115,7 @@ import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.j
 import { splitAgentMessageContent } from "../agents/runtime/message-parts.js";
 import { isLlmTokenLimitError, withLlmUser } from "../agents/token-rate-limit.js";
 import { accessExecutionRouter } from "../access/router.js";
-import { accessProviderByIdOrConnector } from "../access/provider-directory.js";
+import { accessProviderForUser } from "../access/provider-directory.js";
 import { setAccessProviderStatus } from "../access/repository.js";
 import { accessRequirementSchema, type AccessRequirement } from "../access/types.js";
 import { recordConnectedContentSignals } from "../personalization/connected-content.js";
@@ -770,7 +770,7 @@ async function markConnectorActionRequired(
   userId: string,
   connectorId: string
 ): Promise<void> {
-  const provider = accessProviderByIdOrConnector(connectorId);
+  const provider = await accessProviderForUser(userId, connectorId);
   if (provider?.kind === "mcp") {
     await setAccessProviderStatus(userId, provider.providerId, "action_required");
     return;
@@ -1472,6 +1472,7 @@ async function renderCustomAgent(
   }
 
   const llmRendered = await renderLlmCustomAgent({
+    userId: agent.user_id,
     agentName: agent.name,
     prompt: agent.prompt,
     action: actionText(agent),

@@ -391,6 +391,7 @@ IconData _iconData(String? iconName) {
     'HardDrive' => Icons.storage_rounded,
     'FolderOpen' => Icons.folder_open_rounded,
     'Palette' => Icons.palette_outlined,
+    'Extension' => Icons.extension_outlined,
     'search' || 'Search' => Icons.language_rounded,
     _ => Icons.mail_outline_rounded,
   };
@@ -463,6 +464,11 @@ IconData _iconData(String? iconName) {
     'Palette' => (
       background: const Color(0xFFF3E8FF),
       foreground: const Color(0xFF9333EA),
+      border: null,
+    ),
+    'Extension' => (
+      background: const Color(0xFFE0F2FE),
+      foreground: const Color(0xFF0369A1),
       border: null,
     ),
     _ => (

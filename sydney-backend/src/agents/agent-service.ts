@@ -1,7 +1,7 @@
 import { pool } from "../db/index.js";
 import { enqueueAgentRun } from "../queue/index.js";
 import { publishRealtimeEvent } from "../realtime/events.js";
-import { parseIntentHybrid } from "./llm-intent.js";
+import { parseIntentHybridForUser } from "./llm-intent.js";
 import {
   isDraftOutputPlatformName,
   looksLikeContentDraftPrompt,
@@ -161,7 +161,7 @@ export async function updateManagedAgentDescription(
       "Agent functionality must be between 3 and 4000 characters."
     );
   }
-  let reparsed = await parseIntentHybrid(clean);
+  let reparsed = await parseIntentHybridForUser(userId, clean);
   const previous = typeof existing.parsed_intent === "string"
     ? JSON.parse(existing.parsed_intent)
     : existing.parsed_intent || {};
@@ -173,7 +173,10 @@ export async function updateManagedAgentDescription(
       looksLikeContentDraftPrompt(existing.prompt ?? "") ||
       looksLikeContentDraftPrompt(clean);
     if (isDraftOutputPlatformName(platform) && existingIsDraftAgent) {
-      reparsed = await parseIntentHybrid(`Content extractor agent: ${clean}`);
+      reparsed = await parseIntentHybridForUser(
+        userId,
+        `Content extractor agent: ${clean}`
+      );
     }
   }
   if (reparsed.unsupported_connector) {

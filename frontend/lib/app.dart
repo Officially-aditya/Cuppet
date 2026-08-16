@@ -16,6 +16,7 @@ import 'providers/timezone_provider.dart';
 import 'services/push_service.dart';
 import 'services/notification_clear_service.dart';
 import 'screens/auth/email_sign_in_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/personalization_onboarding_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/sign_up_screen.dart';
@@ -50,6 +51,10 @@ class SydneyApp extends ConsumerWidget {
     return switch (settings.name) {
       AppRoutes.signIn => _route(settings, const SignInScreen()),
       AppRoutes.signInWithEmail => _route(settings, const EmailSignInScreen()),
+      AppRoutes.forgotPassword => _route(
+        settings,
+        const ForgotPasswordScreen(),
+      ),
       AppRoutes.signUp => _route(settings, const SignUpScreen()),
       AppRoutes.personalizationOnboarding => _route(
         settings,

@@ -122,6 +122,31 @@ class AuthService {
     }
   }
 
+  Future<void> requestPasswordReset({required String email}) async {
+    final normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty) {
+      throw const ApiException('Enter the email address for your account.');
+    }
+
+    if (Env.useMockData) {
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      return;
+    }
+
+    try {
+      await _api.post<Map<String, dynamic>>(
+        '/auth/request-password-reset',
+        data: {'email': normalizedEmail},
+        options: authRouteOptions(),
+      );
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not send a reset link right now. Please try again.',
+      );
+    }
+  }
+
   Future<AuthSession> continueWithGoogle({
     bool isAccountCreation = false,
   }) async {

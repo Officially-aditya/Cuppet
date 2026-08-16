@@ -136,15 +136,19 @@ export class McpHttpClient {
   }
 
   private isAllowedTool(tool: McpTool): boolean {
-    if (!this.input.allowedTools?.length || !this.input.allowedTools.includes(tool.name)) {
+    if (this.input.allowedTools?.length && !this.input.allowedTools.includes(tool.name)) {
       return false;
     }
-    if (/(create|delete|destroy|update|write|send|post|put|patch|remove|execute|run|invite|grant|revoke)/i.test(tool.name)) {
-      return false;
-    }
-    if (tool.annotations?.readOnlyHint === true) return true;
-    return /^(get|list|search|read|fetch|query|find|lookup|retrieve|describe|inspect)(?:$|[_.:-])/i.test(tool.name);
+    return isReadOnlyMcpTool(tool);
   }
+}
+
+export function isReadOnlyMcpTool(tool: McpTool): boolean {
+  if (/(create|delete|destroy|update|write|send|post|put|patch|remove|execute|run|invite|grant|revoke)/i.test(tool.name)) {
+    return false;
+  }
+  if (tool.annotations?.readOnlyHint === true) return true;
+  return /^(get|list|search|read|fetch|query|find|lookup|retrieve|describe|inspect)(?:$|[_.:-])/i.test(tool.name);
 }
 
 export function parseJsonRpcBody(body: string): JsonRpcResponse {

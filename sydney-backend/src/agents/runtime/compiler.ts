@@ -108,6 +108,10 @@ export function compileAgentDefinition(
   );
   const contract = profile.output_contract;
   const capability = profile.capability;
+  const configuredConnectors =
+    profile.id === "custom_read_agent" && parsedIntent.connector_ids.length > 0
+      ? parsedIntent.connector_ids
+      : profile.required_connectors;
   const stepId = "deliver";
   const definition = agentDefinitionV1Schema.parse({
     schema_version: 1,
@@ -127,7 +131,7 @@ export function compileAgentDefinition(
           recipe_inputs: recipeInputs,
           prompt: prompt.trim(),
           action: profile.action,
-          connector_ids: [...profile.required_connectors],
+          connector_ids: [...configuredConnectors],
           ...(parsedIntent.required_access
             ? { access_refs: parsedIntent.required_access }
             : {}),
@@ -454,15 +458,7 @@ export function validateCompiledDefinition(
   if (
     outputCapability.requiredConnectors(outputStep.config).some(
       (connector) =>
-        ![
-          "gmail",
-          "drive",
-          "calendar",
-          "github",
-          "slack",
-          "notion",
-          "web_search"
-        ].includes(connector)
+        !isRegisteredConnectorId(connector)
     )
   ) {
     throw new Error("A capability requested an unregistered connector.");
@@ -735,10 +731,32 @@ function connectorPermissions(connectors: string[]): string[] {
   return [
     ...new Set(
       connectors
-        .map((connector) => permissions[connector])
+        .map(
+          (connector) =>
+            permissions[connector] ??
+            (isRegisteredMcpConnectorId(connector)
+              ? "Connected MCP provider read access"
+              : undefined)
+        )
         .filter((permission): permission is string => Boolean(permission))
     )
   ];
+}
+
+function isRegisteredConnectorId(connector: string): boolean {
+  return new Set([
+    "gmail",
+    "drive",
+    "calendar",
+    "github",
+    "slack",
+    "notion",
+    "web_search"
+  ]).has(connector) || isRegisteredMcpConnectorId(connector);
+}
+
+function isRegisteredMcpConnectorId(connector: string): boolean {
+  return /^mcp\.[a-z][a-z0-9_.:-]{1,119}$/i.test(connector);
 }
 
 function templateConfiguration(contract: string): Record<string, boolean> {

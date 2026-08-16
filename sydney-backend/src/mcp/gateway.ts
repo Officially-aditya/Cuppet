@@ -1,6 +1,6 @@
 import { ConnectorAuthRequiredError } from "../connectors/errors.js";
 import { accessTokenForConnection } from "../access/oauth.js";
-import { accessProviderByIdOrConnector } from "../access/provider-directory.js";
+import { accessProviderForUser } from "../access/provider-directory.js";
 import {
   findConnectedAccessConnection,
   listMcpToolSnapshots
@@ -19,7 +19,7 @@ export class McpGateway {
     toolName: string;
     result: Record<string, unknown>;
   }> {
-    const provider = accessProviderByIdOrConnector(input.providerId);
+    const provider = await accessProviderForUser(input.userId, input.providerId);
     if (!provider || provider.kind !== "mcp" || !provider.endpoint) {
       throw new Error("mcp_provider_not_trusted");
     }
@@ -42,7 +42,7 @@ export class McpGateway {
     if (!tool) throw new Error("mcp_no_read_tool");
 
     const client = new McpHttpClient({
-      endpoint: provider.endpoint,
+      endpoint: connection.endpoint ?? provider.endpoint,
       accessToken: await accessTokenForConnection(input.userId, connection.id),
       allowedTools: provider.allowedTools
     });

@@ -3,6 +3,7 @@ class AppRoutes {
 
   static const signIn = '/sign-in';
   static const signInWithEmail = '/sign-in/email';
+  static const forgotPassword = '/sign-in/forgot-password';
   static const signUp = '/sign-up';
   static const personalizationOnboarding = '/onboarding/personalization';
   static const inbox = '/inbox';

@@ -40,7 +40,7 @@ import { markMessageArchiveDisconnected } from "../archive/message-archive.js";
 import {
   disconnectGenericConnector,
   genericConnectorPayloads,
-  trustedMcpProviderForConnector
+  mcpProviderForUser
 } from "../access/compat.js";
 import { completeMcpOAuth, startMcpOAuth } from "../access/oauth.js";
 
@@ -283,7 +283,10 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       const { connectorId } = request.params as { connectorId: string };
       const connector = connectorById(connectorId);
       if (!connector) {
-        const provider = trustedMcpProviderForConnector(connectorId);
+        const provider = await mcpProviderForUser(
+          request.auth!.userId,
+          connectorId
+        );
         if (provider) {
           const body = connectorStatusSchema.safeParse(request.body);
           if (!body.success) {
@@ -413,7 +416,10 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       const { connectorId } = request.params as { connectorId: string };
       const connector = connectorById(connectorId);
       if (!connector) {
-        const provider = trustedMcpProviderForConnector(connectorId);
+        const provider = await mcpProviderForUser(
+          request.auth!.userId,
+          connectorId
+        );
         if (provider) {
           const body = oauthStartSchema.safeParse(request.body ?? {});
           if (!body.success) {
@@ -531,7 +537,10 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
       const { connectorId } = request.params as { connectorId: string };
       const connector = connectorById(connectorId);
       if (!connector) {
-        const provider = trustedMcpProviderForConnector(connectorId);
+        const provider = await mcpProviderForUser(
+          request.auth!.userId,
+          connectorId
+        );
         if (provider) {
           const body = oauthCompleteSchema.safeParse(request.body);
           if (!body.success) {

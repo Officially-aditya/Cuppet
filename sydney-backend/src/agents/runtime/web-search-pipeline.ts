@@ -38,7 +38,9 @@ export function isExplicitWebSearchRequested(
 }
 
 export function hasPrivateConnectors(connectorIds: string[] = []): boolean {
-  return connectorIds.some((id) => PRIVATE_CONNECTOR_IDS.has(id.toLowerCase()));
+  return connectorIds.some((id) =>
+    PRIVATE_CONNECTOR_IDS.has(id.toLowerCase()) || /^mcp\./i.test(id)
+  );
 }
 
 export function shouldPerformWebSearch(input: {

@@ -161,6 +161,92 @@ class ConnectorService {
       );
     }
   }
+
+  Future<Connector> createCustomMcpProvider({
+    required String name,
+    required String endpoint,
+    required List<String> capabilities,
+    String description = '',
+    String category = 'CUSTOM MCP',
+    List<String> oauthScopes = const <String>[],
+  }) async {
+    if (Env.useMockData) {
+      final connector = Connector(
+        id: 'mcp.user.${DateTime.now().millisecondsSinceEpoch}',
+        name: name,
+        description:
+            description.isEmpty
+                ? 'Read approved data from this MCP provider.'
+                : description,
+        status: ConnectorStatus.disconnected,
+        category: category,
+        iconName: 'Extension',
+        requiredScopes: oauthScopes,
+        authConfigured: true,
+        authMethod: 'oauth2',
+      );
+      _mockConnectors ??= _mockConnectorList();
+      _mockConnectors = [..._mockConnectors!, connector];
+      return connector;
+    }
+
+    try {
+      final response = await _api.post<Map<String, dynamic>>(
+        '/access/providers',
+        data: {
+          'name': name,
+          'description': description,
+          'category': category,
+          'icon_name': 'Extension',
+          'endpoint': endpoint,
+          'capabilities': capabilities,
+          'oauth_scopes': oauthScopes,
+        },
+      );
+      final data = response.data;
+      final providerId = data?['provider_id']?.toString();
+      if (providerId == null || providerId.isEmpty) {
+        throw const ApiException('The provider did not return an identifier.');
+      }
+
+      try {
+        final latest = await listConnectors();
+        final listed = latest.where(
+          (connector) =>
+              connector.id == providerId || connector.providerId == providerId,
+        );
+        if (listed.isNotEmpty) return listed.first;
+      } catch (_) {
+        // The provider was created successfully. Return the server payload below.
+      }
+
+      return Connector.fromJson({
+        ...?data,
+        'id': providerId,
+        'name': data?['name'] ?? name,
+        'description': data?['description'] ?? description,
+        'category': data?['category'] ?? category,
+        'icon_name': data?['icon_name'] ?? 'Extension',
+        'status': 'disconnected',
+        'auth_method': 'oauth2',
+        'auth_configured': true,
+        'required_scopes': data?['required_scopes'] ?? oauthScopes,
+      });
+    } catch (error) {
+      throw apiExceptionFrom(
+        error,
+        'We could not add that MCP provider. Check the HTTPS endpoint and try again.',
+      );
+    }
+  }
+
+  Future<void> deleteCustomMcpProvider(String providerId) async {
+    try {
+      await _api.delete<void>('/access/providers/$providerId');
+    } catch (error) {
+      throw apiExceptionFrom(error, 'We could not remove that MCP provider.');
+    }
+  }
 }
 
 List<Connector> _mockConnectorList() {

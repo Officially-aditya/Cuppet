@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ensureAssistantContact } from "../agents/assistant.js";
 import { config } from "../config.js";
 import { auth } from "./index.js";
+import { renderPasswordResetPage } from "./reset-page.js";
 import {
   createNativeGoogleSession,
   NativeGoogleAuthError
@@ -80,6 +81,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.redirect(redirectUri.toString());
   });
+
+  app.get<{ Params: { token: string } }>(
+    "/auth/reset-password/:token",
+    async (request, reply) => {
+      return reply
+        .type("text/html; charset=utf-8")
+        .send(renderPasswordResetPage(request.params.token));
+    }
+  );
 
   app.route({
     method: ["GET", "POST"],
