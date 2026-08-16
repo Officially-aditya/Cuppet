@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildGmailDigestMessages,
+  constrainGmailQuery,
+  fetchGmailMessages,
   fetchVisibleCalendarEvents,
   formatCalendarDateTime,
+  gmailEventQuery,
   gmailMessageSourceRef,
   googleScopesCoverConnector,
   startGmailWatch
@@ -263,6 +266,70 @@ test("Gmail push watch targets Pub/Sub and filters to inbox changes", async () =
       historyId: "123",
       expiration: "9999999999999"
     });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Gmail query refinements cannot broaden mandatory freshness or mailbox scope", () => {
+  const query = constrainGmailQuery(
+    "from:prospect@example.com OR older_than:1y",
+    "in:inbox newer_than:14d (lead OR inquiry OR demo OR interested)"
+  );
+
+  assert.equal(
+    query,
+    "newer_than:14d in:inbox (from:prospect@example.com OR older_than:1y)"
+  );
+});
+
+test("Gmail event queries replace broad lookbacks with the push event window", () => {
+  const occurredAt = "2026-07-15T09:30:00.000Z";
+  const after = Math.floor((Date.parse(occurredAt) - 2 * 60_000) / 1000);
+
+  assert.equal(
+    gmailEventQuery(
+      "in:inbox newer_than:14d (lead OR inquiry OR demo OR interested)",
+      occurredAt
+    ),
+    `after:${after} in:inbox (lead OR inquiry OR demo OR interested)`
+  );
+});
+
+test("Gmail fetches are sorted by internal mailbox time, not API or Date-header order", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: URL[] = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    requestedUrls.push(url);
+    if (url.pathname.endsWith("/messages")) {
+      return Response.json({ messages: [{ id: "older" }, { id: "newer" }] });
+    }
+
+    const id = url.pathname.split("/").at(-1);
+    if (id === "older") {
+      return Response.json({
+        id,
+        internalDate: String(Date.parse("2026-07-15T08:00:00.000Z")),
+        payload: {
+          headers: [{ name: "Date", value: "Thu, 16 Jul 2026 12:00:00 +0000" }]
+        }
+      });
+    }
+    return Response.json({
+      id: "newer",
+      internalDate: String(Date.parse("2026-07-15T09:00:00.000Z")),
+      payload: {
+        headers: [{ name: "Date", value: "Tue, 14 Jul 2026 12:00:00 +0000" }]
+      }
+    });
+  };
+
+  try {
+    const messages = await fetchGmailMessages("access-token", "newer_than:1d", 8);
+    assert.deepEqual(messages.map((message) => message.id), ["newer", "older"]);
+    assert.equal(requestedUrls[0]?.searchParams.get("q"), "newer_than:1d");
+    assert.equal(requestedUrls[0]?.searchParams.get("maxResults"), "8");
   } finally {
     globalThis.fetch = originalFetch;
   }

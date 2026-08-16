@@ -35,6 +35,7 @@ import {
   createLlmMessage,
   extractLlmText
 } from "../agents/llm.js";
+import type { AgentRunTrigger } from "../queue/index.js";
 
 export type GoogleWorkspaceConnectorId = "gmail" | "drive" | "calendar";
 
@@ -72,6 +73,8 @@ type WorkspaceAgent = {
 type WorkspaceRenderOptions = {
   scheduledIntro: (agent: WorkspaceAgent, label: string) => string;
   scheduledTitle: (agent: WorkspaceAgent, label: string) => string;
+  trigger?: AgentRunTrigger;
+  eventId?: string;
 };
 
 export type GmailMessage = {
@@ -152,6 +155,7 @@ const googleTokenEndpoint = "https://oauth2.googleapis.com/token";
 const gmailApiBase = "https://gmail.googleapis.com/gmail/v1";
 const driveApiBase = "https://www.googleapis.com/drive/v3";
 const calendarApiBase = "https://www.googleapis.com/calendar/v3";
+const gmailEventLookbackMs = 2 * 60 * 1000;
 
 const gmailScopes = ["https://www.googleapis.com/auth/gmail.readonly"];
 const driveScopes = ["https://www.googleapis.com/auth/drive.readonly"];
@@ -185,7 +189,7 @@ async function buildDynamicGmailQuery(prompt: string, action: string, defaultQue
   try {
     const response = await createLlmMessage({
       maxTokens: 100,
-      system: "You are a precise search query generator. Based on the user's agent prompt and action instructions, output ONLY the Gmail search query (using standard Gmail search operators like subject:, from:, newer_than:, has:attachment, etc.) that best retrieves the relevant messages. Do not explain, do not add quotes around the whole query unless needed by Gmail, just return the query string.",
+      system: "You are a precise search query generator. Based on the user's agent prompt and action instructions, output ONLY the Gmail search query (using standard Gmail search operators like subject:, from:, newer_than:, has:attachment, etc.) that best retrieves the relevant messages. The default query's recency and mailbox constraints are mandatory: preserve its newer_than:, after:, in:inbox, and in:sent operators exactly and never broaden their window. Do not explain, do not add quotes around the whole query unless needed by Gmail, just return the query string.",
       messages: [
         {
           role: "user",
@@ -194,10 +198,50 @@ async function buildDynamicGmailQuery(prompt: string, action: string, defaultQue
       ]
     });
     const query = extractLlmText(response.content).trim();
-    return query || defaultQuery;
+    return constrainGmailQuery(query || defaultQuery, defaultQuery);
   } catch {
     return defaultQuery;
   }
+}
+
+export function constrainGmailQuery(
+  candidateQuery: string,
+  defaultQuery: string
+): string {
+  const candidate = candidateQuery.trim() || defaultQuery.trim();
+  const fallback = defaultQuery.trim();
+  if (!fallback || candidate.toLowerCase() === fallback.toLowerCase()) {
+    return candidate;
+  }
+
+  const mandatory = [
+    ...fallback.matchAll(/\b(?:newer_than|after):[^\s(){}]+/gi),
+    ...fallback.matchAll(/\bin:(?:inbox|sent)\b/gi)
+  ].map((match) => match[0]);
+  const uniqueMandatory = [...new Map(
+    mandatory.map((constraint) => [constraint.toLowerCase(), constraint])
+  ).values()];
+
+  if (uniqueMandatory.length === 0) return candidate;
+  return `${uniqueMandatory.join(" ")} (${candidate})`;
+}
+
+export function gmailEventQuery(
+  defaultQuery: string,
+  occurredAt: Date | string
+): string {
+  const timestamp = occurredAt instanceof Date
+    ? occurredAt.getTime()
+    : new Date(occurredAt).getTime();
+  if (!Number.isFinite(timestamp)) {
+    throw new Error("gmail_event_timestamp_invalid");
+  }
+  const after = `after:${Math.floor((timestamp - gmailEventLookbackMs) / 1000)}`;
+  const withoutDefaultWindow = defaultQuery
+    .replace(/\b(?:newer_than|after):[^\s(){}]+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return [after, withoutDefaultWindow].filter(Boolean).join(" ");
 }
 
 async function buildDynamicDriveQuery(prompt: string, action: string, defaultQuery: string): Promise<string> {
@@ -791,7 +835,13 @@ async function renderGmailAgent(
   options: WorkspaceRenderOptions
 ): Promise<RenderedAgentMessage> {
   const intent = String(agent.parsed_intent.intent ?? "");
-  const defaultQuery = gmailQuery(intent);
+  let defaultQuery = gmailQuery(intent);
+  if (options.trigger === "event") {
+    if (!options.eventId) throw new Error("gmail_event_context_missing");
+    const occurredAt = await loadGmailInboundEventTime(options.eventId, agent.id);
+    if (!occurredAt) throw new Error("gmail_event_not_found");
+    defaultQuery = gmailEventQuery(defaultQuery, occurredAt);
+  }
   const query = await buildDynamicGmailQuery(agent.prompt, actionText(agent), defaultQuery);
   const messages = await fetchGmailMessages(accessToken, query, 8);
   const title = options.scheduledTitle(agent, gmailOutputLabel(intent));
@@ -1310,7 +1360,7 @@ async function existingGoogleRefreshToken(
   return rows[0] ? decryptConnectorSecret(rows[0].refresh_token_enc) : null;
 }
 
-async function fetchGmailMessages(
+export async function fetchGmailMessages(
   accessToken: string,
   query: string,
   maxResults: number
@@ -1325,9 +1375,31 @@ async function fetchGmailMessages(
   );
   const ids = (list.messages ?? []).map((message) => message.id).filter(Boolean);
 
-  return Promise.all(
+  const messages = await Promise.all(
     ids.map((id) => fetchGmailMessage(accessToken, id!))
   );
+  return messages.sort(
+    (left, right) => gmailMessageTimestamp(right) - gmailMessageTimestamp(left)
+  );
+}
+
+async function loadGmailInboundEventTime(
+  eventId: string,
+  agentId: string
+): Promise<Date | string | null> {
+  const { rows } = await pool.query<{ occurred_at: Date | string }>(
+    `
+      SELECT event.occurred_at
+      FROM inbound_events event
+      JOIN event_deliveries delivery ON delivery.event_id = event.id
+      WHERE event.id = $1
+        AND delivery.agent_id = $2
+        AND event.source = 'gmail'
+      LIMIT 1
+    `,
+    [eventId, agentId]
+  );
+  return rows[0]?.occurred_at ?? null;
 }
 
 export async function readGmailForAssistant(
@@ -1780,7 +1852,7 @@ function gmailQuery(intent: string): string {
     case "email_followup_watcher":
       return "in:sent newer_than:14d";
     case "lead_response_monitor":
-      return "newer_than:14d (lead OR inquiry OR demo OR interested)";
+      return "in:inbox newer_than:14d (lead OR inquiry OR demo OR interested)";
     case "travel_sentinel":
       return "newer_than:180d (flight OR hotel OR booking OR itinerary OR travel)";
     default:
@@ -2215,15 +2287,22 @@ function messageDate(message: GmailMessage): string | undefined {
 }
 
 function gmailTimestamp(message: GmailMessage): string | undefined {
-  const raw = header(message, "Date");
-  if (raw) {
-    const parsed = Date.parse(raw);
-    if (Number.isFinite(parsed)) return new Date(parsed).toISOString();
+  const timestamp = gmailMessageTimestamp(message);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
+}
+
+function gmailMessageTimestamp(message: GmailMessage): number {
+  if (message.internalDate) {
+    const internalDate = Number(message.internalDate);
+    if (Number.isFinite(internalDate)) return internalDate;
   }
 
-  if (!message.internalDate) return undefined;
-  const parsed = Number(message.internalDate);
-  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : undefined;
+  const raw = header(message, "Date");
+  if (raw) {
+    const headerDate = Date.parse(raw);
+    if (Number.isFinite(headerDate)) return headerDate;
+  }
+  return Number.NEGATIVE_INFINITY;
 }
 
 function driveFileLine(file: DriveFile): string {

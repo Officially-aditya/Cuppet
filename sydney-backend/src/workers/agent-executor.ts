@@ -1196,7 +1196,9 @@ async function renderConnectorCapability(
   }
   const googleWorkspaceMessage = await renderGoogleWorkspaceAgent(agent, {
     scheduledIntro: (a, label) => scheduledIntro(a, label, trigger),
-    scheduledTitle: (a, label) => scheduledTitle(a, label, trigger)
+    scheduledTitle: (a, label) => scheduledTitle(a, label, trigger),
+    trigger,
+    eventId
   });
   if (googleWorkspaceMessage) return googleWorkspaceMessage;
 
