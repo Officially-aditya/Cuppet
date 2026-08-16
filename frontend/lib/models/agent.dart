@@ -36,6 +36,11 @@ class Agent {
 
   bool get hasUnread => unreadCount > 0;
   bool get notificationsMuted => parsedIntent?['notifications_muted'] == true;
+  bool get supportsRealtime {
+    final explicit = parsedIntent?['supports_realtime'];
+    if (explicit is bool) return explicit;
+    return _realtimeAgentIntents.contains(parsedIntent?['intent']?.toString());
+  }
 
   String? get scheduleCron {
     final raw = parsedIntent?['schedule_cron']?.toString();
@@ -234,6 +239,8 @@ Map<String, dynamic>? agentConfigurationCompatibilityView(
             : configuration['goal']?.toString() ?? legacy?['action'],
     'schedule_cron': trigger['type'] == 'schedule' ? trigger['cron'] : null,
     'realtime_enabled': trigger['type'] == 'event',
+    if (configuration['supports_realtime'] is bool)
+      'supports_realtime': configuration['supports_realtime'],
     if (output['contract'] != null) 'output_template': output['contract'],
     if (policy['response_limit'] != null)
       'response_limit': policy['response_limit'],
@@ -245,6 +252,17 @@ Map<String, dynamic>? agentConfigurationCompatibilityView(
       'permissions_needed': configuration['permissions_needed'],
   };
 }
+
+const _realtimeAgentIntents = <String>{
+  'github_activity_digest',
+  'slack_urgent_watcher',
+  'lead_response_monitor',
+  'calendar_agenda',
+  'drive_summary',
+  'pdf_summary',
+  'meeting_recap',
+  'portfolio_watch',
+};
 
 DateTime _parseDate(Object? value) {
   if (value is DateTime) {

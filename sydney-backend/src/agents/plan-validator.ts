@@ -5,6 +5,7 @@ import {
   normalizeSecurityText
 } from "../security/prompt-guard.js";
 import { isScheduledOutputContract } from "./runtime/output-registry.js";
+import { supportsRealtimeAgentIntent } from "./runtime/trigger-support.js";
 
 export type AgentPlanProposal = {
   name?: string;
@@ -134,7 +135,7 @@ function normalizeTrigger(
 ): ValidatedAgentPlan["trigger"] {
   const triggerType = proposal.trigger?.type?.trim().toLowerCase();
   if (triggerType === "event") {
-    if (supportsEventTrigger(base.intent)) {
+    if (supportsRealtimeAgentIntent(base.intent)) {
       return {
         type: "event",
         schedule_cron: null,
@@ -160,7 +161,11 @@ function normalizeTrigger(
     };
   }
 
-  if (base.realtime_enabled && triggerType !== "schedule") {
+  if (
+    base.realtime_enabled &&
+    supportsRealtimeAgentIntent(base.intent) &&
+    triggerType !== "schedule"
+  ) {
     return {
       type: "event",
       schedule_cron: null,
@@ -207,21 +212,6 @@ function normalizeTrigger(
     event: null,
     config: proposal.trigger?.config ?? {}
   };
-}
-
-const EVENT_TRIGGER_INTENTS = new Set([
-  "github_activity_digest",
-  "slack_urgent_watcher",
-  "lead_response_monitor",
-  "calendar_agenda",
-  "drive_summary",
-  "pdf_summary",
-  "meeting_recap",
-  "portfolio_watch"
-]);
-
-function supportsEventTrigger(intent: string): boolean {
-  return EVENT_TRIGGER_INTENTS.has(intent);
 }
 
 function defaultEventForIntent(intent: string): string {

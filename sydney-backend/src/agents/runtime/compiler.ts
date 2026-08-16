@@ -24,6 +24,7 @@ import {
   validateRecipeInputs,
   type AgentRecipeProfileV1
 } from "./recipe-registry.js";
+import { supportsRealtimeAgentIntent } from "./trigger-support.js";
 
 const BRIEFING_RECIPES = new Set([
   "daily_executive_briefing",
@@ -80,6 +81,14 @@ export function compileAgentDefinition(
   if (parsedIntent.unsupported_connector) {
     throw new Error(
       `Cannot compile unsupported connector: ${parsedIntent.unsupported_connector}`
+    );
+  }
+  if (
+    parsedIntent.realtime_enabled &&
+    !supportsRealtimeAgentIntent(parsedIntent.intent)
+  ) {
+    throw new Error(
+      `Realtime triggers are not supported for ${parsedIntent.intent}.`
     );
   }
 
@@ -482,12 +491,13 @@ export function definitionToParsedIntent(
         (connector): connector is string => typeof connector === "string"
       )
     : [];
+  const recipeId =
+    definition.metadata.recipe_id ??
+    String(config.recipe_id ?? "custom_read_agent");
   return {
     name: input.name,
     avatar: input.avatar,
-    intent:
-      definition.metadata.recipe_id ??
-      String(config.recipe_id ?? "custom_read_agent"),
+    intent: recipeId,
     connector: connectors[0] ?? null,
     connector_ids: connectors,
     unsupported_connector: null,
@@ -508,6 +518,7 @@ export function definitionToParsedIntent(
     permissions_needed: connectorPermissions(connectors),
     required_access: requiredAccess,
     realtime_enabled: definition.trigger.type === "event",
+    supports_realtime: supportsRealtimeAgentIntent(recipeId),
     response_limit: definition.policy.response_limit,
     ...(definition.policy.active_until
       ? { active_until: definition.policy.active_until }
@@ -555,6 +566,9 @@ export function agentConfigurationView(
   const requiredAccess = definition.schema_version === 2
     ? definition.required_access
     : getCapabilityDefinition(outputStep.capability).requiredAccess(outputStep.config);
+  const recipeId =
+    definition.metadata.recipe_id ??
+    String(outputStep.config.recipe_id ?? "custom_read_agent");
   return {
     schema_version: definition.schema_version,
     name: input.name,
@@ -574,6 +588,10 @@ export function agentConfigurationView(
     interaction: definition.interaction,
     policy: definition.policy,
     recipe_id: definition.metadata.recipe_id,
+    supports_realtime: supportsRealtimeAgentIntent(recipeId),
+    supported_trigger_types: supportsRealtimeAgentIntent(recipeId)
+      ? ["manual", "schedule", "event"]
+      : ["manual", "schedule"],
     recipe_version: definition.metadata.recipe_version,
     prompt_profile_version: definition.metadata.prompt_profile_version,
     recipe_inputs: definition.metadata.recipe_inputs,

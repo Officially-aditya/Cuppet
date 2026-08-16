@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { parseIntent } from "./parser.js";
 import {
+  agentConfigurationView,
   compileAgentDefinition,
   definitionToParsedIntent,
   validateCompiledDefinition
@@ -86,6 +87,49 @@ test("registered capability safety cannot be raised by a definition", () => {
       }),
     /Unsupported capability/
   );
+});
+
+test("static recipes reject realtime triggers and advertise schedule-only support", () => {
+  const prompt = "Summarize Gmail every evening";
+  const parsed = parseIntent(prompt);
+  assert.throws(
+    () =>
+      compileAgentDefinition(
+        { ...parsed, realtime_enabled: true, schedule_cron: null },
+        prompt
+      ),
+    /Realtime triggers are not supported for email_digest/
+  );
+
+  const definition = compileAgentDefinition(parsed, prompt);
+  const compatibility = definitionToParsedIntent(definition, {
+    name: parsed.name,
+    avatar: parsed.avatar
+  });
+  const view = agentConfigurationView(definition);
+  assert.equal(compatibility.supports_realtime, false);
+  assert.equal(view.supports_realtime, false);
+  assert.deepEqual(view.supported_trigger_types, ["manual", "schedule"]);
+});
+
+test("event-backed recipes advertise realtime support", () => {
+  const prompt =
+    "Alert me immediately when GitHub repository openai/openai-node changes";
+  const parsed = parseIntent(prompt);
+  const definition = compileAgentDefinition(parsed, prompt);
+  const compatibility = definitionToParsedIntent(definition, {
+    name: parsed.name,
+    avatar: parsed.avatar
+  });
+  const view = agentConfigurationView(definition);
+
+  assert.equal(compatibility.supports_realtime, true);
+  assert.equal(view.supports_realtime, true);
+  assert.deepEqual(view.supported_trigger_types, [
+    "manual",
+    "schedule",
+    "event"
+  ]);
 });
 
 test("universal executor dispatches capability steps, not recipe metadata", async () => {

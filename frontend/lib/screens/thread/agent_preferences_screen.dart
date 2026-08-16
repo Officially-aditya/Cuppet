@@ -216,39 +216,43 @@ class _AgentPreferencesScreenState
             ),
             const SizedBox(height: SydneySpacing.xl),
 
-            // RESPONSE TIMING
-            const WorkspaceSectionLabel('Response Timing'),
-            const SizedBox(height: SydneySpacing.sm),
-            WorkspaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Select when the agent should deliver updates or actions.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: CuppetWorkspaceColors.muted,
-                      height: 1.3,
+            if (widget.agent.supportsRealtime) ...[
+              // RESPONSE TIMING
+              const WorkspaceSectionLabel('Response Timing'),
+              const SizedBox(height: SydneySpacing.sm),
+              WorkspaceCard(
+                key: const ValueKey('response-timing-card'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select when the agent should deliver updates or actions.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: CuppetWorkspaceColors.muted,
+                        height: 1.3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: SydneySpacing.md),
-                  _TimingOption(
-                    title: 'Real-time',
-                    subtitle:
-                        'Notify me when a matching external event occurs',
-                    selected: _responseTiming == 'real-time',
-                    onTap: () => setState(() => _responseTiming = 'real-time'),
-                  ),
-                  const SizedBox(height: SydneySpacing.sm),
-                  _TimingOption(
-                    title: 'Daily Summary',
-                    subtitle: 'A consolidated digest at a set time',
-                    selected: _responseTiming == 'daily',
-                    onTap: () => setState(() => _responseTiming = 'daily'),
-                  ),
-                ],
+                    const SizedBox(height: SydneySpacing.md),
+                    _TimingOption(
+                      title: 'Real-time',
+                      subtitle:
+                          'Notify me when a matching external event occurs',
+                      selected: _responseTiming == 'real-time',
+                      onTap:
+                          () => setState(() => _responseTiming = 'real-time'),
+                    ),
+                    const SizedBox(height: SydneySpacing.sm),
+                    _TimingOption(
+                      title: 'Daily Summary',
+                      subtitle: 'A consolidated digest at a set time',
+                      selected: _responseTiming == 'daily',
+                      onTap: () => setState(() => _responseTiming = 'daily'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: SydneySpacing.xl),
+              const SizedBox(height: SydneySpacing.xl),
+            ],
 
             // RESPONSE LIMIT
             const WorkspaceSectionLabel('Response Verbosity'),
@@ -559,7 +563,8 @@ class _AgentPreferencesScreenState
       final patch = <String, dynamic>{
         'response_limit': limitStr,
         'active_until': activeUntilIso,
-        'realtime_enabled': _responseTiming == 'real-time',
+        if (widget.agent.supportsRealtime)
+          'realtime_enabled': _responseTiming == 'real-time',
         'status': _isPaused ? 'paused' : 'active',
         if (descriptionChanged) 'description': description,
       };
@@ -718,10 +723,16 @@ class _TimingOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: selected ? CuppetWorkspaceColors.softSage : CuppetWorkspaceColors.card,
+        color:
+            selected
+                ? CuppetWorkspaceColors.softSage
+                : CuppetWorkspaceColors.card,
         borderRadius: BorderRadius.circular(SydneyRadius.md),
         border: Border.all(
-          color: selected ? CuppetWorkspaceColors.primary : CuppetWorkspaceColors.border,
+          color:
+              selected
+                  ? CuppetWorkspaceColors.primary
+                  : CuppetWorkspaceColors.border,
           width: selected ? 1.4 : 1.0,
         ),
       ),
@@ -740,9 +751,7 @@ class _TimingOption extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleSmall?.copyWith(
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: CuppetWorkspaceColors.ink,
                           fontWeight: FontWeight.w800,
                         ),
@@ -781,7 +790,10 @@ class _RadioDot extends StatelessWidget {
         color: selected ? CuppetWorkspaceColors.primary : Colors.transparent,
         shape: BoxShape.circle,
         border: Border.all(
-          color: selected ? CuppetWorkspaceColors.primary : CuppetWorkspaceColors.border,
+          color:
+              selected
+                  ? CuppetWorkspaceColors.primary
+                  : CuppetWorkspaceColors.border,
           width: 1.5,
         ),
       ),
@@ -812,7 +824,10 @@ class _LimitLabel extends StatelessWidget {
     return Text(
       label,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: selected ? CuppetWorkspaceColors.primaryInk : CuppetWorkspaceColors.muted,
+        color:
+            selected
+                ? CuppetWorkspaceColors.primaryInk
+                : CuppetWorkspaceColors.muted,
         fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
       ),
     );

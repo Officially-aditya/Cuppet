@@ -63,6 +63,7 @@ import {
 import { isLlmTokenLimitError, withLlmUser } from "./token-rate-limit.js";
 import { recordCuppetActivitySignal } from "../personalization/activity-events.js";
 import { mergeRecipeInputsForDescriptionUpdate } from "./recipe-input-updates.js";
+import { supportsRealtimeAgentIntent } from "./runtime/trigger-support.js";
 
 const createAgentSchema = z
   .object({
@@ -464,6 +465,18 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       nextPrompt = description;
     }
 
+    const supportsRealtime = supportsRealtimeAgentIntent(
+      String(nextParsedIntent.intent ?? "")
+    );
+    if (body.data.realtime_enabled === true && !supportsRealtime) {
+      return reply.code(422).send({
+        error: {
+          code: "REALTIME_NOT_SUPPORTED",
+          message: "This agent runs on a schedule and does not support realtime delivery."
+        }
+      });
+    }
+
     const nextName = body.data.name ?? existing.name;
     const existingNotificationsMuted =
       existing.parsed_intent && typeof existing.parsed_intent === "object"
@@ -480,9 +493,18 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         : body.data.schedule_cron;
     if (
       body.data.realtime_enabled === true &&
+      supportsRealtime &&
       body.data.schedule_cron === undefined
     ) {
       nextSchedule = null;
+    }
+    if (
+      !supportsRealtime &&
+      nextSchedule === null &&
+      body.data.schedule_cron === undefined &&
+      existingParsedIntent.realtime_enabled === true
+    ) {
+      nextSchedule = savedRecipeSchedule(nextParsedIntent);
     }
     const nextStatus = body.data.status ?? existing.status;
 
@@ -500,7 +522,10 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       nextParsedIntent.notifications_muted = body.data.notifications_muted;
     }
     if (body.data.realtime_enabled !== undefined) {
-      nextParsedIntent.realtime_enabled = body.data.realtime_enabled;
+      nextParsedIntent.realtime_enabled =
+        supportsRealtime && body.data.realtime_enabled;
+    } else if (!supportsRealtime) {
+      nextParsedIntent.realtime_enabled = false;
     }
     nextParsedIntent.schedule_cron = nextSchedule;
     if (
@@ -945,4 +970,21 @@ function withConfigurationViews(agent: any): any {
     configuration: view,
     agent_preview: view
   };
+}
+
+function savedRecipeSchedule(
+  parsedIntent: Record<string, unknown>
+): string | null {
+  const recipeInputs = parsedIntent.recipe_inputs;
+  if (
+    !recipeInputs ||
+    typeof recipeInputs !== "object" ||
+    Array.isArray(recipeInputs)
+  ) {
+    return null;
+  }
+  const schedule = (recipeInputs as Record<string, unknown>).schedule;
+  return typeof schedule === "string" && cronSchema.safeParse(schedule).success
+    ? schedule
+    : null;
 }

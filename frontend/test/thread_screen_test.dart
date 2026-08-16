@@ -13,6 +13,7 @@ import 'package:sydney/providers/messages_provider.dart';
 import 'package:sydney/providers/message_archive_provider.dart';
 import 'package:sydney/screens/thread/thread_screen.dart';
 import 'package:sydney/screens/thread/agent_preferences_screen.dart';
+import 'package:sydney/services/agent_service.dart';
 import 'package:sydney/services/api.dart';
 import 'package:sydney/services/message_service.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
@@ -72,6 +73,18 @@ class _RecordingMessageService extends MessageService {
         createdAt: _testDate,
       ),
     );
+  }
+}
+
+class _RecordingAgentService extends AgentService {
+  _RecordingAgentService()
+    : super(api: ApiClient(secureStorage: const FlutterSecureStorage()));
+
+  Map<String, dynamic>? lastPatch;
+
+  @override
+  Future<void> patchAgent(String agentId, Map<String, dynamic> patch) async {
+    lastPatch = Map<String, dynamic>.from(patch);
   }
 }
 
@@ -681,6 +694,65 @@ void main() {
     );
     expect(resumeSwitch.activeThumbColor, Colors.white);
     expect(resumeSwitch.activeTrackColor, SydneyColors.primary);
+  });
+
+  testWidgets('schedule-only agent preferences omit realtime controls', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final service = _RecordingAgentService();
+    final staticAgent = testAgent.copyWith(
+      parsedIntent: const {
+        'intent': 'news_brief',
+        'schedule_cron': '0 7 * * *',
+        'supports_realtime': false,
+      },
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [agentServiceProvider.overrideWithValue(service)],
+        child: MaterialApp(home: AgentPreferencesScreen(agent: staticAgent)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('response-timing-card')), findsNothing);
+    expect(find.text('Real-time'), findsNothing);
+    expect(find.text('Daily Summary'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.text('Save Preferences'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save Preferences'));
+    await tester.pumpAndSettle();
+
+    expect(service.lastPatch, isNotNull);
+    expect(service.lastPatch!.containsKey('realtime_enabled'), isFalse);
+  });
+
+  testWidgets('event-backed agent preferences retain realtime controls', (
+    tester,
+  ) async {
+    setMobileViewport(tester);
+    final realtimeAgent = testAgent.copyWith(
+      parsedIntent: const {
+        'intent': 'github_activity_digest',
+        'realtime_enabled': true,
+        'supports_realtime': true,
+      },
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: AgentPreferencesScreen(agent: realtimeAgent)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('response-timing-card')), findsOneWidget);
+    expect(find.text('Real-time'), findsOneWidget);
+    expect(find.text('Daily Summary'), findsOneWidget);
   });
 
   testWidgets('description changes require functionality confirmation', (

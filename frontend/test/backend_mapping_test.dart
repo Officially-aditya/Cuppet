@@ -50,6 +50,7 @@ void main() {
       'configuration': {
         'schema_version': 1,
         'recipe_id': 'news_brief',
+        'supports_realtime': false,
         'goal': 'Current goal',
         'instructions': ['Current action'],
         'trigger': {'type': 'schedule', 'cron': '0 7 * * *'},
@@ -68,6 +69,8 @@ void main() {
     expect(agent.parsedIntent?['intent'], 'news_brief');
     expect(agent.parsedIntent?['schedule_cron'], '0 7 * * *');
     expect(agent.parsedIntent?['output_template'], 'news_brief');
+    expect(agent.parsedIntent?['supports_realtime'], isFalse);
+    expect(agent.supportsRealtime, isFalse);
   });
 
   test('agent chat update response refreshes its functional description', () {

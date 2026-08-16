@@ -50,6 +50,23 @@ test("accepts event triggers for realtime-capable connector agents", () => {
   assert.deepEqual(result.unsupported_requirements, []);
 });
 
+test("does not preserve stale realtime flags for schedule-only agents", () => {
+  const staticIntent: ParsedIntent = {
+    ...calendarIntent,
+    name: "News Brief",
+    intent: "news_brief",
+    connector: "web_search",
+    connector_ids: ["web_search"],
+    realtime_enabled: true
+  };
+
+  const result = validateAgentPlan(staticIntent, {});
+
+  assert.equal(result.trigger.type, "schedule");
+  assert.equal(result.intent.realtime_enabled, false);
+  assert.equal(result.intent.schedule_cron, "0 7 * * *");
+});
+
 test("all shipped scheduled output contracts share the authoritative allowlist", () => {
   for (const output_template of [
     "news_brief",

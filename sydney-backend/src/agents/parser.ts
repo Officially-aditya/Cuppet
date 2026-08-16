@@ -10,6 +10,7 @@ import {
   hasAgentRecipeProfile,
   validateRecipeInputs
 } from "./runtime/recipe-registry.js";
+import { supportsRealtimeAgentIntent } from "./runtime/trigger-support.js";
 import type { AccessRequirement } from "../access/types.js";
 
 export {
@@ -32,6 +33,7 @@ export interface ParsedIntent {
   risk_level: "low" | "medium" | "high";
   permissions_needed: string[];
   realtime_enabled?: boolean;
+  supports_realtime?: boolean;
   github_repository?: string;
   response_limit?: "concise" | "balanced" | "detailed";
   active_until?: string;
@@ -1211,7 +1213,7 @@ function baseIntent(
   const realtimeEnabled =
     overrides.realtime_enabled ??
     (isIntrinsicallyRealtimeIntent(intent) ||
-      (supportsRealtimeIntent(intent) && requestsRealtime(prompt)));
+      (supportsRealtimeAgentIntent(intent) && requestsRealtime(prompt)));
   const scheduleCron =
     realtimeEnabled && parseSchedule(prompt) === null
       ? null
@@ -1286,21 +1288,6 @@ function providerRequirements(provider: {
       reason: `${provider.displayName} ${action} access`
     }];
   });
-}
-
-const REALTIME_INTENTS = new Set([
-  "github_activity_digest",
-  "slack_urgent_watcher",
-  "lead_response_monitor",
-  "calendar_agenda",
-  "drive_summary",
-  "pdf_summary",
-  "meeting_recap",
-  "portfolio_watch"
-]);
-
-function supportsRealtimeIntent(intent: string): boolean {
-  return REALTIME_INTENTS.has(intent);
 }
 
 function isIntrinsicallyRealtimeIntent(intent: string): boolean {
