@@ -1889,12 +1889,6 @@ body {
   -webkit-mask-image: url("/bottom-nav-settings.svg");
 }
 
-.sidebar-brand-image {
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-}
-
 @media (min-width: 821px) {
   .workspace-shell {
     grid-template-columns: 84px minmax(360px, 420px) minmax(480px, 1fr);

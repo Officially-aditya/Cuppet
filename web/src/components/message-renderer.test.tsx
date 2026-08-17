@@ -29,10 +29,11 @@ const briefing: AgentMessage = {
 
 describe("MessageRenderer", () => {
   it("renders structured briefing content and sources", () => {
-    render(<MessageRenderer message={briefing} />);
+    const { container } = render(<MessageRenderer message={briefing} />);
     expect(screen.getByRole("heading", { name: "Your day at a glance" })).toBeInTheDocument();
     expect(screen.getByText("Approve the handoff")).toBeInTheDocument();
     expect(screen.getByText("1 source")).toBeInTheDocument();
+    expect(container.querySelector(".message-card svg")).not.toBeInTheDocument();
   });
 
   it("extracts a useful preview from known payload fields", () => {
