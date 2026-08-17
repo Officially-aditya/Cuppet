@@ -27,6 +27,10 @@ import {
   encryptConnectorSecret
 } from "./token-vault.js";
 import { effectiveTimeZone } from "../users/time-zone.js";
+import {
+  oauthCallbackRedirect,
+  sanitizeSupportedCallbackScheme
+} from "../security/oauth-callback.js";
 
 // @ts-ignore
 import pdfParse from "pdf-parse";
@@ -2411,11 +2415,7 @@ function hmac(value: string): string {
 }
 
 function sanitizeCallbackScheme(value: string): string {
-  if (!/^[a-z][a-z0-9+.-]*$/i.test(value)) {
-    throw new Error("Invalid connector callback scheme.");
-  }
-
-  return value;
+  return sanitizeSupportedCallbackScheme(value);
 }
 
 function mobileConnectorRedirect(
@@ -2423,12 +2423,12 @@ function mobileConnectorRedirect(
   connectorId: GoogleWorkspaceConnectorId,
   params: Record<string, string>
 ): URL {
-  const url = new URL(`${callbackScheme}://connectors/google`);
-  url.searchParams.set("connector_id", connectorId);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value);
-  }
-  return url;
+  return oauthCallbackRedirect({
+    callbackScheme: sanitizeCallbackScheme(callbackScheme),
+    nativePath: "connectors/google",
+    flow: params.purpose === "message_archive" ? "archive" : "connector",
+    params: { connector_id: connectorId, ...params }
+  });
 }
 
 function ensureGoogleWorkspaceAuthConfigured(): void {

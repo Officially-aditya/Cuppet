@@ -3,6 +3,7 @@ import { bearer, jwt } from "better-auth/plugins";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { sendPasswordResetEmail } from "./mailer.js";
+import { authPublicBasePath, authPublicOrigin } from "./public-url.js";
 
 const socialProviders =
   config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
@@ -16,8 +17,8 @@ const socialProviders =
 
 export const auth = betterAuth({
   appName: "Sydney",
-  baseURL: config.AUTH_BASE_URL,
-  basePath: "/auth",
+  baseURL: authPublicOrigin,
+  basePath: authPublicBasePath,
   database: pool,
   secret: config.BETTER_AUTH_SECRET,
   trustedOrigins: config.TRUSTED_ORIGINS,

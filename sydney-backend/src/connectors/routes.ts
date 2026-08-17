@@ -35,7 +35,11 @@ import {
   notionAuthConfigured,
   parseNotionCallbackUrl
 } from "./notion.js";
-import { callbackSchemeSchema } from "../security/input-validation.js";
+import {
+  callbackResponse,
+  callbackSchemeForRequest,
+  oauthCallbackRequestSchema
+} from "../security/oauth-callback.js";
 import { markMessageArchiveDisconnected } from "../archive/message-archive.js";
 import {
   disconnectGenericConnector,
@@ -65,11 +69,7 @@ const connectorStatusSchema = z
   })
   .strict();
 
-const oauthStartSchema = z
-  .object({
-    callbackScheme: callbackSchemeSchema.default("sydney")
-  })
-  .strict();
+const oauthStartSchema = oauthCallbackRequestSchema;
 
 const oauthCompleteSchema = z
   .object({
@@ -431,11 +431,16 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
             });
           }
           try {
-            return await startMcpOAuth({
+            const session = await startMcpOAuth({
               userId: request.auth!.userId,
               providerId: provider.providerId,
-              callbackScheme: body.data.callbackScheme
+              callbackScheme: callbackSchemeForRequest(body.data)
             });
+            return {
+              authUrl: session.authUrl,
+              providerId: session.providerId,
+              ...callbackResponse(session.callbackScheme)
+            };
           } catch (error) {
             return reply.code(400).send({
               error: {
@@ -467,12 +472,12 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         const session = await createGoogleWorkspaceAuthUrl({
           userId: request.auth!.userId,
           connectorId: connector.id,
-          callbackScheme: body.data.callbackScheme
+          callbackScheme: callbackSchemeForRequest(body.data)
         });
 
         return {
           authUrl: session.authUrl,
-          callbackScheme: session.callbackScheme
+          ...callbackResponse(session.callbackScheme)
         };
       }
 
@@ -483,11 +488,11 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
 
         const session = await createGitHubAuthUrl({
           userId: request.auth!.userId,
-          callbackScheme: body.data.callbackScheme
+          callbackScheme: callbackSchemeForRequest(body.data)
         });
         return {
           authUrl: session.authUrl,
-          callbackScheme: session.callbackScheme
+          ...callbackResponse(session.callbackScheme)
         };
       }
 
@@ -497,11 +502,11 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         }
         const session = await createSlackAuthUrl({
           userId: request.auth!.userId,
-          callbackScheme: body.data.callbackScheme
+          callbackScheme: callbackSchemeForRequest(body.data)
         });
         return {
           authUrl: session.authUrl,
-          callbackScheme: session.callbackScheme
+          ...callbackResponse(session.callbackScheme)
         };
       }
 
@@ -511,11 +516,11 @@ export async function connectorRoutes(app: FastifyInstance): Promise<void> {
         }
         const session = await createNotionAuthUrl({
           userId: request.auth!.userId,
-          callbackScheme: body.data.callbackScheme
+          callbackScheme: callbackSchemeForRequest(body.data)
         });
         return {
           authUrl: session.authUrl,
-          callbackScheme: session.callbackScheme
+          ...callbackResponse(session.callbackScheme)
         };
       }
 

@@ -3,6 +3,10 @@ import { z } from "zod";
 import { isUuid } from "../api/ids.js";
 import { requireAuth } from "../auth/middleware.js";
 import { callbackSchemeSchema } from "../security/input-validation.js";
+import {
+  callbackSchemeForRequest,
+  isAllowedWebOAuthCallback
+} from "../security/oauth-callback.js";
 import { pool } from "../db/index.js";
 import {
   deleteDriveArchives,
@@ -14,8 +18,23 @@ import {
 
 const updateArchiveSchema = z.object({
   enabled: z.boolean(),
-  callback_scheme: callbackSchemeSchema.optional()
-}).strict();
+  callback_scheme: callbackSchemeSchema.optional(),
+  callback_url: z.string().trim().url().max(2048).optional()
+}).strict().superRefine((value, context) => {
+  if (value.callback_scheme && value.callback_url) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Choose either callback_scheme or callback_url, not both."
+    });
+  }
+  if (value.callback_url && !isAllowedWebOAuthCallback(value.callback_url)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["callback_url"],
+      message: "The web OAuth callback URL is not allowed."
+    });
+  }
+});
 
 const deleteArchiveSchema = z.object({
   confirmation: z.literal("DELETE_DRIVE_ARCHIVES")
@@ -37,7 +56,10 @@ export async function messageArchiveRoutes(app: FastifyInstance): Promise<void> 
       return await updateMessageArchiveSetting({
         userId: request.auth!.userId,
         enabled: body.data.enabled,
-        callbackScheme: body.data.callback_scheme ?? "sydney"
+        callbackScheme: callbackSchemeForRequest({
+          callbackScheme: body.data.callback_scheme,
+          callbackUrl: body.data.callback_url
+        })
       });
     } catch (error) {
       return archiveError(reply, error);

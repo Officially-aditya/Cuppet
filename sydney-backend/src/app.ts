@@ -68,7 +68,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
       callback(new Error("Origin not allowed"), false);
     },
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",

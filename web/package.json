@@ -1,0 +1,51 @@
+{
+  "name": "cuppet-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 5173",
+    "build": "next build",
+    "build:sites": "opennextjs-cloudflare build",
+    "stage:sites": "node scripts/stage-sites.mjs",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.90.12",
+    "better-auth": "^1.6.0",
+    "firebase": "^12.7.0",
+    "lucide-react": "^0.468.0",
+    "next": "16.3.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-hook-form": "^7.71.1",
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "1.20.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "16.3.1",
+    "esbuild": "0.25.4",
+    "jsdom": "^27.4.0",
+    "rclone.js": "^0.6.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16",
+    "wrangler": "4.123.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

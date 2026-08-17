@@ -26,6 +26,12 @@ import {
   assertSafeRemoteMcpUrlWithDns,
   fetchRemoteMcp
 } from "../mcp/security.js";
+import {
+  isAllowedWebOAuthCallback,
+  oauthCallbackRedirect,
+  sanitizeSupportedCallbackScheme,
+  webOAuthCallbackScheme
+} from "../security/oauth-callback.js";
 
 export async function startMcpOAuth(input: {
   userId: string;
@@ -409,12 +415,16 @@ type McpTokenResponse = {
 };
 
 function mobileAccessRedirect(callbackScheme: string, params: Record<string, string>): URL {
-  const url = new URL(`${sanitizeCallbackScheme(callbackScheme)}://access/oauth/callback`);
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-  return url;
+  return oauthCallbackRedirect({
+    callbackScheme: sanitizeCallbackScheme(callbackScheme),
+    nativePath: "access/oauth/callback",
+    flow: "access",
+    params
+  });
 }
 
 function isAllowedCallbackUrl(url: URL): boolean {
+  if (isAllowedWebOAuthCallback(url)) return true;
   return (
     (url.protocol === "sydney:" || url.protocol === `${config.MOBILE_AUTH_CALLBACK_SCHEME}:`) &&
     url.hostname === "access" &&
@@ -424,6 +434,9 @@ function isAllowedCallbackUrl(url: URL): boolean {
 
 function sanitizeCallbackScheme(value: string): string {
   const scheme = value.trim();
+  if (scheme === webOAuthCallbackScheme) {
+    return sanitizeSupportedCallbackScheme(scheme);
+  }
   if (
     !/^[a-z][a-z0-9+.-]*$/i.test(scheme) ||
     scheme.toLowerCase() !== config.MOBILE_AUTH_CALLBACK_SCHEME.toLowerCase()

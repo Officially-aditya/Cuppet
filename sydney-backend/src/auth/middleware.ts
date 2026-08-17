@@ -4,6 +4,7 @@ import { importJWK, jwtVerify, type JWTPayload, type JWK } from "jose";
 import { config } from "../config.js";
 import { pool } from "../db/index.js";
 import { auth } from "./index.js";
+import { authPublicOrigin } from "./public-url.js";
 
 export async function requireAuth(
   request: FastifyRequest,
@@ -140,8 +141,8 @@ async function verifyJwtBearer(
     );
 
     const { payload } = await jwtVerify(token, publicKey, {
-      issuer: config.AUTH_BASE_URL,
-      audience: config.AUTH_BASE_URL
+      issuer: authPublicOrigin,
+      audience: authPublicOrigin
     });
 
     if (!payload.sub) return null;

@@ -9,6 +9,10 @@ import {
   createNativeGoogleSession,
   NativeGoogleAuthError
 } from "./google-native.js";
+import {
+  authPublicBasePath,
+  publicAuthRequestUrl
+} from "./public-url.js";
 
 const nativeGoogleBodySchema = z
   .object({
@@ -85,6 +89,21 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { token: string } }>(
     "/auth/reset-password/:token",
     async (request, reply) => {
+      const query = request.query as { callbackURL?: string };
+      if (query.callbackURL && config.WEB_APP_URL) {
+        try {
+          const callback = new URL(query.callbackURL, config.WEB_APP_URL);
+          if (
+            callback.origin === new URL(config.WEB_APP_URL).origin &&
+            callback.pathname === "/reset-password"
+          ) {
+            callback.searchParams.set("token", request.params.token);
+            return reply.redirect(callback.toString());
+          }
+        } catch {
+          // Fall through to the backend-hosted reset page.
+        }
+      }
       return reply
         .type("text/html; charset=utf-8")
         .send(renderPasswordResetPage(request.params.token));
@@ -96,7 +115,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     url: "/auth/*",
     async handler(request, reply) {
       try {
-        const url = new URL(request.url, config.AUTH_BASE_URL);
+        const url = publicAuthRequestUrl(request.url);
         const headers = fromNodeHeaders(request.headers);
         const init: RequestInit = {
           method: request.method,
@@ -116,7 +135,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
         if (
           request.method === "POST" &&
-          url.pathname === "/auth/sign-up/email" &&
+          url.pathname === `${authPublicBasePath}/sign-up/email` &&
           response.ok &&
           responseText
         ) {

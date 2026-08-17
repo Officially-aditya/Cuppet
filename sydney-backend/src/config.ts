@@ -7,6 +7,19 @@ const envSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().positive().default(3000),
   AUTH_BASE_URL: z.string().url().default("http://localhost:3000"),
+  WEB_APP_URL: z
+    .string()
+    .url()
+    .refine((value) => {
+      const url = new URL(value);
+      return url.pathname === "/" && !url.search && !url.hash;
+    }, "WEB_APP_URL must be an origin without a path, query, or hash.")
+    .optional(),
+  WEB_AUTH_BASE_PATH: z
+    .string()
+    .trim()
+    .regex(/^\/[a-z0-9/_-]*[a-z0-9_-]$/i)
+    .default("/api/auth"),
   TRUSTED_ORIGINS: z
     .string()
     .default("http://localhost:3000")

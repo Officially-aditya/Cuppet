@@ -29,10 +29,13 @@ import {
 } from "./repository.js";
 import { resolveAccess } from "./resolver.js";
 import { accessRequirementSchema, type AccessProvider } from "./types.js";
+import {
+  callbackResponse,
+  callbackSchemeForRequest,
+  oauthCallbackRequestSchema
+} from "../security/oauth-callback.js";
 
-const oauthStartSchema = z
-  .object({ callbackScheme: z.string().trim().regex(/^[a-z][a-z0-9+.-]*$/i).default("sydney") })
-  .strict();
+const oauthStartSchema = oauthCallbackRequestSchema;
 
 const oauthCompleteSchema = z
   .object({ callbackUrl: z.string().trim().url().max(2048) })
@@ -204,11 +207,16 @@ export async function accessRoutes(app: FastifyInstance): Promise<void> {
       const body = oauthStartSchema.safeParse(request.body ?? {});
       if (!body.success) return invalidRequest(reply, body.error.issues[0]?.message);
       try {
-        return await startMcpOAuth({
+        const session = await startMcpOAuth({
           userId: request.auth!.userId,
           providerId,
-          callbackScheme: body.data.callbackScheme
+          callbackScheme: callbackSchemeForRequest(body.data)
         });
+        return {
+          authUrl: session.authUrl,
+          providerId: session.providerId,
+          ...callbackResponse(session.callbackScheme)
+        };
       } catch (error) {
         request.log.warn({ error, providerId }, "MCP OAuth start failed");
         return reply.code(400).send({
