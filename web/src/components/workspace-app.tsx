@@ -29,8 +29,8 @@ import { SettingsPanel } from "./settings-panel";
 import { ThreadView } from "./thread-view";
 
 const navItems: Array<{ id: ViewKey; label: string; icon: typeof Inbox }> = [
-  { id: "overview", label: "Overview", icon: Command },
   { id: "inbox", label: "Inbox", icon: Inbox },
+  { id: "overview", label: "Overview", icon: Command },
   { id: "agents", label: "Agents", icon: Bot },
   { id: "connectors", label: "Connectors", icon: Plug }
 ];
@@ -223,21 +223,21 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
 
   return <main className={`workspace-shell live-workspace view-${view} ${threadOpen ? "mobile-thread-open" : ""}`}>
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-      <div className="brand-row"><div className="brand-mark"><Sparkles size={18} /></div><span className="brand-name">Cuppet</span><button className="icon-button mobile-only" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={20} /></button></div>
-      {demo && <div className="demo-badge"><Sparkles size={12} />Demo workspace</div>}
-      <nav className="primary-nav" aria-label="Primary navigation">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}><Icon size={18} />{label}{id === "inbox" && agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0) > 0 && <span className="nav-count">{agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0)}</span>}</button>)}</nav>
+      <div className="brand-row" title="Cuppet"><div className="brand-mark"><Sparkles size={18} /></div><span className="brand-name">Cuppet</span><button className="icon-button mobile-only" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={20} /></button></div>
+      {demo && <div className="demo-badge" title="Demo workspace"><Sparkles size={12} /><span>Demo workspace</span></div>}
+      <nav className="primary-nav" aria-label="Primary navigation">{navItems.map(({ id, label, icon: Icon }) => <button key={id} title={label} className={`nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}><Icon size={19} /><span className="nav-label">{label}</span>{id === "inbox" && agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0) > 0 && <span className="nav-count">{agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0)}</span>}</button>)}</nav>
       <div className="sidebar-section"><p className="eyebrow">Recent agents</p>{agents.filter((agent) => !agent.is_assistant).slice(0, 4).map((agent) => <button key={agent.id} className={`mini-thread ${effectiveSelectedAgentId === agent.id && view === "inbox" ? "active" : ""}`} onClick={() => selectThread(agent)}><span className={`mini-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={14} /></span><span><b>{agent.name}</b><small>{agent.last_message_preview || agent.description}</small></span>{Boolean(agent.unread_count) && <i>{agent.unread_count}</i>}</button>)}</div>
       <div className="sidebar-spacer" />
-      <button className="command-button" onClick={() => setCommandOpen(true)}><Search size={15} />Search<span>⌘K</span></button>
-      <button className="new-agent-button" onClick={() => setCreateOpen(true)}><Plus size={17} />New agent</button>
-      <button className={`profile-row ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}><span className="profile-avatar">{initials(me.user.name || me.user.email)}</span><span><b>{me.user.name || "Cuppet user"}</b><small>{demo ? "Demo workspace" : me.user.email}</small></span><Settings2 size={16} /></button>
-      <button className="feedback-link" onClick={() => setView("feedback")}><MessageSquareText size={15} />Send feedback</button>
+      <button className="command-button" title="Search" onClick={() => setCommandOpen(true)}><Search size={17} />Search<span>⌘K</span></button>
+      <button className="new-agent-button" title="New agent" onClick={() => setCreateOpen(true)}><Plus size={19} />New agent</button>
+      <button title="Settings" aria-label="Open settings" className={`profile-row ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}><span className="profile-avatar">{initials(me.user.name || me.user.email)}</span><span><b>{me.user.name || "Cuppet user"}</b><small>{demo ? "Demo workspace" : me.user.email}</small></span><Settings2 size={16} /></button>
+      <button className="feedback-link" title="Send feedback" onClick={() => setView("feedback")}><MessageSquareText size={17} />Send feedback</button>
     </aside>
     {sidebarOpen && <button className="sidebar-scrim" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
     <button className="mobile-nav-trigger icon-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
 
     {view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}
-    {view === "inbox" && <><InboxPane agents={agents} selectedAgentId={selectedAgent?.id} onSelect={selectThread} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleStatus={() => void updateAgent(selectedAgent.id, { status: selectedAgent.status === "active" ? "paused" : "active" })} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value) => { if (!demo) void api.messageFeedback(messageId, value).then(() => showToast("Thanks for the feedback.")); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
+    {view === "inbox" && <><InboxPane agents={agents} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleStatus={() => void updateAgent(selectedAgent.id, { status: selectedAgent.status === "active" ? "paused" : "active" })} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value) => { if (!demo) void api.messageFeedback(messageId, value).then(() => showToast("Thanks for the feedback.")); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
     {view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}
     {view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} />}
     {view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} />}
@@ -249,24 +249,34 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
   </main>;
 }
 
-function InboxPane({ agents, selectedAgentId, onSelect }: { agents: Agent[]; selectedAgentId?: string; onSelect: (agent: Agent) => void }) {
+function InboxPane({ agents, selectedAgentId, onSelect, onCreate }: { agents: Agent[]; selectedAgentId?: string; onSelect: (agent: Agent) => void; onCreate: () => void }) {
   const [filter, setFilter] = useState<"all" | "unread" | "active">("all");
   const [query, setQuery] = useState("");
   const visible = agents.filter((agent) => (filter === "unread" ? Boolean(agent.unread_count) : filter === "active" ? agent.status === "active" : true) && `${agent.name} ${agent.last_message_preview ?? ""}`.toLowerCase().includes(query.toLowerCase()));
-  return <section className="inbox-pane"><header className="pane-header"><div><p className="eyebrow">Workspace</p><h1>Inbox</h1></div><div className="inbox-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" aria-label="Search inbox" /></div></header><div className="filter-row"><button className={`filter-chip ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>All</button><button className={`filter-chip ${filter === "unread" ? "active" : ""}`} onClick={() => setFilter("unread")}>Unread <span>{agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0)}</span></button><button className={`filter-chip ${filter === "active" ? "active" : ""}`} onClick={() => setFilter("active")}>Active</button></div><div className="agent-list">{visible.map((agent) => <button key={agent.id} className={`agent-row ${agent.id === selectedAgentId ? "active" : ""}`} onClick={() => onSelect(agent)}><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar ?? (agent.is_assistant ? "sparkles" : "bot")} /></span><span className="agent-copy"><span className="agent-title"><b>{agent.name}</b><time>{relativeTime(agent.latest_message_at || agent.updated_at)}</time></span><small>{agent.last_message_preview || agent.description || "Ready when you are"}</small></span>{Boolean(agent.unread_count) && <span className="unread-count">{agent.unread_count}</span>}</button>)}{visible.length === 0 && <div className="inbox-empty"><Search size={21} /><p>No agents match this view.</p></div>}</div></section>;
+  const unread = agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0);
+  return <section className="inbox-pane"><header className="pane-header"><div><h1>Messages</h1><p className="pane-subtitle">{agents.length} agent conversations</p></div><button className="icon-button inbox-create" onClick={onCreate} aria-label="Create a new agent"><Plus size={19} /></button></header><div className="inbox-search-row"><label className="inbox-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" aria-label="Search inbox" /></label></div><div className="filter-row"><button className={`filter-chip ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>All</button><button className={`filter-chip ${filter === "unread" ? "active" : ""}`} onClick={() => setFilter("unread")}>Unread <span>{unread}</span></button><button className={`filter-chip ${filter === "active" ? "active" : ""}`} onClick={() => setFilter("active")}>Active</button></div><div className="agent-list">{visible.map((agent) => <button key={agent.id} className={`agent-row ${agent.id === selectedAgentId ? "active" : ""} ${agent.unread_count ? "has-unread" : ""}`} onClick={() => onSelect(agent)}><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar ?? (agent.is_assistant ? "sparkles" : "bot")} /></span><span className="agent-copy"><span className="agent-title"><b>{agent.name}</b><time>{relativeTime(agent.latest_message_at || agent.updated_at)}</time></span><small>{agent.last_message_preview || agent.description || "Ready when you are"}</small></span>{Boolean(agent.unread_count) && <span className="unread-count">{agent.unread_count}</span>}</button>)}{visible.length === 0 && <div className="inbox-empty"><Search size={21} /><p>No agents match this view.</p></div>}</div></section>;
 }
 
 function initials(value: string): string { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CU"; }
-function relativeTime(value?: string): string { if (!value) return ""; const delta = Date.now() - new Date(value).getTime(); const minutes = Math.floor(delta / 60_000); if (minutes < 1) return "Now"; if (minutes < 60) return `${minutes}m`; const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours}h`; return `${Math.floor(hours / 24)}d`; }
+function relativeTime(value?: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
 
 function initialView(): ViewKey {
-  if (typeof window === "undefined") return "overview";
+  if (typeof window === "undefined") return "inbox";
   const requested = new URLSearchParams(window.location.search).get("view") as ViewKey | null;
   return requested && ["overview", "inbox", "agents", "connectors", "settings", "feedback"].includes(requested)
     ? requested
-    : new URLSearchParams(window.location.search).has("agent")
-      ? "inbox"
-      : "overview";
+    : "inbox";
 }
 
 function initialAgentId(): string {
