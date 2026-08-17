@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: "variable",
+  variable: "--font-roboto",
+  display: "swap"
+});
 
 export const metadata: Metadata = {
   title: "Cuppet",
@@ -18,7 +26,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body><Providers>{children}</Providers></body>
+      <body className={roboto.variable}><Providers>{children}</Providers></body>
     </html>
   );
 }

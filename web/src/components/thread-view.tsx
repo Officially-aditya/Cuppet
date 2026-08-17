@@ -2,20 +2,15 @@
 
 import {
   ArrowLeft,
-  Bell,
-  BellOff,
   LoaderCircle,
   MoreVertical,
   Paperclip,
-  Play,
   Plus,
   Send,
-  Settings2,
-  Trash2,
   X
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, KeyboardEvent, useRef, useState } from "react";
+import { Fragment, FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { Agent, AgentMessage } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
 import { MessageRenderer } from "./message-renderer";
@@ -54,7 +49,17 @@ export function ThreadView({
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string }>>([]);
   const fileInput = useRef<HTMLInputElement>(null);
+  const messageScroll = useRef<HTMLDivElement>(null);
   const muted = agent.parsed_intent?.notifications_muted === true;
+  const groups = messageGroups(messages);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const scroll = messageScroll.current;
+      if (scroll) scroll.scrollTop = scroll.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [agent.id, messages.length, sending]);
 
   const submit = async (event?: FormEvent) => {
     event?.preventDefault();
@@ -99,18 +104,18 @@ export function ThreadView({
           <div className="menu-anchor">
             <button className="icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Thread actions"><MoreVertical size={20} /></button>
             {menuOpen && <div className="popover-menu">
-              {!agent.is_assistant && <button onClick={() => { onRun?.(); setMenuOpen(false); }}><Play size={16} />Run agent now</button>}
-              {!agent.is_assistant && <button onClick={() => { onOpenSettings?.(); setMenuOpen(false); }}><Settings2 size={16} />Agent settings</button>}
-              <button onClick={() => { onToggleMute?.(); setMenuOpen(false); }}>{muted ? <Bell size={16} /> : <BellOff size={16} />}{muted ? "Unmute agent" : "Mute agent"}</button>
-              <button className="danger" onClick={() => { onClear?.(); setMenuOpen(false); }}><Trash2 size={16} />Clear conversation</button>
+              {!agent.is_assistant && <button onClick={() => { onRun?.(); setMenuOpen(false); }}>Run agent now</button>}
+              <button onClick={() => { onOpenSettings?.(); setMenuOpen(false); }}>Agent preferences</button>
+              <button className="danger" onClick={() => { onClear?.(); setMenuOpen(false); }}>Clear chat</button>
+              <button onClick={() => { onToggleMute?.(); setMenuOpen(false); }}>{muted ? "Unmute agent" : "Mute agent"}</button>
             </div>}
           </div>
         </div>
       </header>
 
-      <div className="message-scroll">
-        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <><div className="day-divider"><span>TODAY</span></div>{messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback} />)}</>}
-        {sending && <div className="thinking-row"><span /><span /><span /><small>{agent.name} is thinking</small></div>}
+      <div ref={messageScroll} className="message-scroll">
+        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <>{groups.map((group, groupIndex) => <Fragment key={`${group.key}-${groupIndex}`}><div className="day-divider"><span>{group.label}</span></div>{group.messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback} />)}</Fragment>)}</>}
+        {sending && <div className="thinking-row" aria-label={`${agent.name} is typing`}><span /><span /><span /></div>}
       </div>
 
       <form className="composer-wrap" onSubmit={submit}>
@@ -130,4 +135,35 @@ export function ThreadView({
 
 function initials(value: string): string {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CU";
+}
+
+function messageGroups(messages: AgentMessage[]): Array<{ key: string; label: string; messages: AgentMessage[] }> {
+  const groups: Array<{ key: string; label: string; messages: AgentMessage[] }> = [];
+  for (const message of messages) {
+    const date = new Date(message.created_at);
+    const key = Number.isNaN(date.getTime()) ? "unknown" : localDateKey(date);
+    const previous = groups.at(-1);
+    if (previous?.key === key) previous.messages.push(message);
+    else groups.push({ key, label: threadDayLabel(date), messages: [message] });
+  }
+  return groups;
+}
+
+function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+}
+
+function threadDayLabel(date: Date, now = new Date()): string {
+  if (Number.isNaN(date.getTime())) return "MESSAGES";
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const difference = Math.round((today.getTime() - day.getTime()) / 86_400_000);
+  if (difference === 0) return "TODAY";
+  if (difference === 1) return "YESTERDAY";
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    ...(day.getFullYear() === today.getFullYear() ? {} : { year: "numeric" })
+  }).format(day).toUpperCase();
 }
