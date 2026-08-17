@@ -37,13 +37,13 @@ This file is the execution checklist for the app completion plan. Read it before
   - [x] T3B - add-provider form and connector list integration
   - [x] T3C - widget tests and analyzer verification
 - [x] **T4 - Unsupported message fallback** - replace the newer-version placeholder with a safe generic renderer that displays common fields and no unknown actions.
-- [ ] **T5 - Deployment credential hygiene** - rotate the Firebase service-account credential and verify no secret is tracked.
-  - [ ] T5G - `WAITING FOR USER` at G3
+- [x] **T5 - Deployment credential hygiene** - rotate the Firebase service-account credential and verify no secret is tracked.
+  - [x] T5G - G3 completed; the user rotated the credential, the local replacement passed Firebase Admin initialization and OAuth token exchange, and no credential is tracked.
 - [ ] **T6 - Android release signing** - generate an ignored upload keystore, wire ignored `key.properties`, and prepare release signing without changing the production application ID prematurely.
-  - [ ] T6A - signing configuration and ignore checks
-  - [ ] T6G - `WAITING FOR USER` at G4 before final package/Firebase alignment
+  - [x] T6A - signing configuration and ignore checks; the local upload keystore is ignored, Gradle release signing is wired, and a signed release APK was verified.
+  - [ ] T6G - `WAITING FOR USER` at G4; confirm the `in.cuppet.app` package is registered and accepted in Play Console before final release handoff
 - [ ] **T7 - Full verification and handoff** - run backend tests, Flutter tests/analyzer, build checks, inspect the final diff, and report remaining user actions.
 
 ## Current task
 
-**T5 - WAITING FOR USER at G3:** rotate the Firebase service-account credential in local/deployment configuration before credential-hygiene verification. T2G’s final user approval/token exchange remains recorded as deferred.
+**T6 - WAITING FOR USER at G4:** local Firebase alignment and a signed `in.cuppet.app` release APK are verified; confirm Play Console has accepted/registered `in.cuppet.app` before final release handoff. T2G’s final user approval/token exchange remains recorded as deferred.

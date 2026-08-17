@@ -1,0 +1,6 @@
+# Copy this file to key.properties and replace the placeholders with the
+# passwords and alias used for your local upload keystore.
+storePassword=REPLACE_WITH_STORE_PASSWORD
+keyPassword=REPLACE_WITH_KEY_PASSWORD
+keyAlias=cuppet-upload
+storeFile=upload-keystore.jks

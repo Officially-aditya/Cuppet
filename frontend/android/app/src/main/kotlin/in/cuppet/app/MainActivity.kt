@@ -1,4 +1,4 @@
-package com.example.sydney
+package `in`.cuppet.app
 
 import android.app.NotificationManager
 import android.content.Context

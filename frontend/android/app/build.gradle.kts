@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -5,8 +7,18 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val releaseKeyPropertiesFile = rootProject.file("key.properties")
+val releaseKeyProperties = Properties()
+if (releaseKeyPropertiesFile.exists()) {
+    releaseKeyPropertiesFile.inputStream().use { releaseKeyProperties.load(it) }
+}
+
+fun requiredReleaseKeyProperty(name: String): String =
+    releaseKeyProperties.getProperty(name)
+        ?: error("Missing $name in ${releaseKeyPropertiesFile.path}")
+
 android {
-    namespace = "com.example.sydney"
+    namespace = "in.cuppet.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -16,8 +28,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.sydney"
+        applicationId = "in.cuppet.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -27,11 +38,20 @@ android {
         manifestPlaceholders["appAuthRedirectScheme"] = "sydney"
     }
 
+    signingConfigs {
+        create("release") {
+            if (releaseKeyPropertiesFile.exists()) {
+                keyAlias = requiredReleaseKeyProperty("keyAlias")
+                keyPassword = requiredReleaseKeyProperty("keyPassword")
+                storeFile = rootProject.file(requiredReleaseKeyProperty("storeFile"))
+                storePassword = requiredReleaseKeyProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
