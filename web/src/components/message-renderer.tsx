@@ -55,7 +55,7 @@ export function MessageRenderer({
   const isUser = message.role === "user";
 
   if (isUser) {
-    return <div className="message-row user-row"><div className="user-message"><Markdown>{messageText(content)}</Markdown></div><MessageTime value={message.created_at} /></div>;
+    return <div className="message-row user-row"><div className="user-message"><Markdown>{messageText(content)}</Markdown><span className="flutter-message-time"><MessageTime value={message.created_at} /></span></div></div>;
   }
 
   return (
@@ -70,11 +70,9 @@ export function MessageRenderer({
           </div>
         )}
         {list(message.source_refs).length > 0 && <SourceLinks sources={message.source_refs ?? []} />}
+        {onFeedback && <div className="message-feedback flutter-feedback-actions"><button aria-label="Useful" onClick={() => onFeedback(message.id, "helpful")}><ThumbsUp size={15} />Useful</button><button aria-label="Not useful" onClick={() => onFeedback(message.id, "not_helpful")}><ThumbsDown size={15} />Not useful</button></div>}
+        <span className="flutter-message-time"><MessageTime value={message.created_at} /></span>
       </article>
-      <div className="message-meta-row">
-        <MessageTime value={message.created_at} />
-        <span className="message-feedback"><button aria-label="Helpful" onClick={() => onFeedback?.(message.id, "helpful")}><ThumbsUp size={13} /></button><button aria-label="Not helpful" onClick={() => onFeedback?.(message.id, "not_helpful")}><ThumbsDown size={13} /></button></span>
-      </div>
     </div>
   );
 }

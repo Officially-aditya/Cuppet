@@ -4,9 +4,8 @@ import {
   ArrowLeft,
   Bell,
   BellOff,
-  CirclePause,
   LoaderCircle,
-  MoreHorizontal,
+  MoreVertical,
   Paperclip,
   Play,
   Plus,
@@ -15,6 +14,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import Image from "next/image";
 import { FormEvent, KeyboardEvent, useRef, useState } from "react";
 import type { Agent, AgentMessage } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
@@ -31,7 +31,6 @@ export function ThreadView({
   onAction,
   onFeedback,
   onRun,
-  onToggleStatus,
   onToggleMute,
   onOpenSettings,
   onClear
@@ -46,7 +45,6 @@ export function ThreadView({
   onAction?: (messageId: string, action: "done" | "snooze" | "skip") => void;
   onFeedback?: (messageId: string, value: "helpful" | "not_helpful") => void;
   onRun?: () => void;
-  onToggleStatus?: () => void;
   onToggleMute?: () => void;
   onOpenSettings?: () => void;
   onClear?: () => void;
@@ -92,17 +90,18 @@ export function ThreadView({
       <header className="thread-header">
         <div className="thread-identity">
           {onBack && <button className="icon-button mobile-back" onClick={onBack} aria-label="Back to inbox"><ArrowLeft size={19} /></button>}
-          <span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar ?? (agent.is_assistant ? "sparkles" : "bot")} size={20} /></span>
-          <span><h2>{agent.name}</h2><small><span className={`status-dot ${agent.status}`} />{agent.status === "active" ? agent.schedule_cron ? "Scheduled and active" : "Ready" : agent.status === "paused" ? "Paused" : "Needs attention"}</small></span>
+          <button className="thread-profile" onClick={onOpenSettings}>
+            {agent.is_assistant ? <Image className="thread-assistant-avatar" src="/cuppet-app-icon.png" alt="" width={32} height={32} /> : <span className={`thread-agent-initials ${agentTone(agent.id)}`}>{initials(agent.name)}</span>}
+            <span><h2>{agent.name}</h2><small><span className={`status-dot ${agent.status}`} />{agent.status === "paused" ? "PAUSED" : agent.schedule_cron ? "SCHEDULED" : "ON DEMAND"}</small></span>
+          </button>
         </div>
         <div className="thread-actions">
-          {!agent.is_assistant && <button className="icon-button" onClick={onRun} aria-label="Run now"><Play size={17} /></button>}
-          <button className="icon-button" onClick={onToggleMute} aria-label={muted ? "Unmute notifications" : "Mute notifications"}>{muted ? <BellOff size={17} /> : <Bell size={17} />}</button>
           <div className="menu-anchor">
-            <button className="icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Thread actions"><MoreHorizontal size={20} /></button>
+            <button className="icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Thread actions"><MoreVertical size={20} /></button>
             {menuOpen && <div className="popover-menu">
-              {!agent.is_assistant && <button onClick={() => { onToggleStatus?.(); setMenuOpen(false); }}>{agent.status === "active" ? <CirclePause size={16} /> : <Play size={16} />}{agent.status === "active" ? "Pause agent" : "Resume agent"}</button>}
+              {!agent.is_assistant && <button onClick={() => { onRun?.(); setMenuOpen(false); }}><Play size={16} />Run agent now</button>}
               {!agent.is_assistant && <button onClick={() => { onOpenSettings?.(); setMenuOpen(false); }}><Settings2 size={16} />Agent settings</button>}
+              <button onClick={() => { onToggleMute?.(); setMenuOpen(false); }}>{muted ? <Bell size={16} /> : <BellOff size={16} />}{muted ? "Unmute agent" : "Mute agent"}</button>
               <button className="danger" onClick={() => { onClear?.(); setMenuOpen(false); }}><Trash2 size={16} />Clear conversation</button>
             </div>}
           </div>
@@ -110,20 +109,25 @@ export function ThreadView({
       </header>
 
       <div className="message-scroll">
-        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <><div className="day-divider"><span>Recent</span></div>{messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback} />)}</>}
+        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <><div className="day-divider"><span>TODAY</span></div>{messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback} />)}</>}
         {sending && <div className="thinking-row"><span /><span /><span /><small>{agent.name} is thinking</small></div>}
       </div>
 
       <form className="composer-wrap" onSubmit={submit}>
         {attachments.length > 0 && <div className="attachment-tray">{attachments.map((item) => <span key={item.id}><Paperclip size={13} />{item.name}<button type="button" onClick={() => setAttachments((current) => current.filter((entry) => entry.id !== item.id))}><X size={12} /></button></span>)}</div>}
-        <div className="composer">
-          {agent.is_assistant && <><input ref={fileInput} className="visually-hidden" type="file" accept=".pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg" onChange={(event) => void upload(event.target.files?.[0])} /><button type="button" className="icon-button subtle" onClick={() => fileInput.current?.click()} disabled={uploading} aria-label="Attach a file">{uploading ? <LoaderCircle className="spin" size={18} /> : <Paperclip size={18} />}</button></>}
-          {!agent.is_assistant && <button type="button" className="icon-button subtle" onClick={onRun} aria-label="Run agent"><Plus size={18} /></button>}
-          <textarea rows={1} value={value} onChange={(event) => setValue(event.target.value)} onKeyDown={keyboard} placeholder={`Message ${agent.name}…`} aria-label={`Message ${agent.name}`} />
-          <button className="send-button" disabled={sending || (!value.trim() && !attachments.length)} aria-label="Send message">{sending ? <LoaderCircle className="spin" size={17} /> : <Send size={17} />}</button>
+        <div className="composer-row">
+          <div className="composer">
+            <input ref={fileInput} className="visually-hidden" type="file" accept=".pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg" onChange={(event) => void upload(event.target.files?.[0])} />
+            <button type="button" className="icon-button subtle" onClick={() => fileInput.current?.click()} disabled={uploading} aria-label="Add attachment">{uploading ? <LoaderCircle className="spin" size={18} /> : <Plus size={22} />}</button>
+            <textarea rows={1} value={value} onChange={(event) => setValue(event.target.value)} onKeyDown={keyboard} placeholder="Message agent" aria-label={`Message ${agent.name}`} />
+          </div>
+          <button className="send-button" disabled={sending || (!value.trim() && !attachments.length)} aria-label="Send message">{sending ? <LoaderCircle className="spin" size={17} /> : <Send size={20} />}</button>
         </div>
-        <p>Cuppet can make mistakes. Check important details.</p>
       </form>
     </section>
   );
+}
+
+function initials(value: string): string {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CU";
 }

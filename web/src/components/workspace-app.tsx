@@ -2,19 +2,20 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
   Bot,
   Command,
-  Inbox,
   LoaderCircle,
   Menu,
   MessageSquareText,
-  Plug,
   Plus,
+  Pin,
   Search,
   Settings2,
   Sparkles,
   X
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { demoAgents, demoConnectors, demoMessages, demoRecipes, demoUser } from "@/lib/demo-data";
@@ -28,11 +29,10 @@ import { OverviewPanel } from "./overview-panel";
 import { SettingsPanel } from "./settings-panel";
 import { ThreadView } from "./thread-view";
 
-const navItems: Array<{ id: ViewKey; label: string; icon: typeof Inbox }> = [
-  { id: "inbox", label: "Inbox", icon: Inbox },
-  { id: "overview", label: "Overview", icon: Command },
-  { id: "agents", label: "Agents", icon: Bot },
-  { id: "connectors", label: "Connectors", icon: Plug }
+const navItems: Array<{ id: ViewKey; label: string; iconClass: string }> = [
+  { id: "inbox", label: "Inbox", iconClass: "app-nav-inbox" },
+  { id: "connectors", label: "Connectors", iconClass: "app-nav-connectors" },
+  { id: "settings", label: "Settings", iconClass: "app-nav-settings" }
 ];
 
 export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?: () => void }) {
@@ -223,9 +223,9 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
 
   return <main className={`workspace-shell live-workspace view-${view} ${threadOpen ? "mobile-thread-open" : ""}`}>
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-      <div className="brand-row" title="Cuppet"><div className="brand-mark"><Sparkles size={18} /></div><span className="brand-name">Cuppet</span><button className="icon-button mobile-only" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={20} /></button></div>
+      <div className="brand-row" title="Cuppet"><Image className="sidebar-brand-image" src="/cuppet-mark.png" alt="Cuppet" width={44} height={44} priority /><span className="brand-name">Cuppet</span><button className="icon-button mobile-only" onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X size={20} /></button></div>
       {demo && <div className="demo-badge" title="Demo workspace"><Sparkles size={12} /><span>Demo workspace</span></div>}
-      <nav className="primary-nav" aria-label="Primary navigation">{navItems.map(({ id, label, icon: Icon }) => <button key={id} title={label} className={`nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}><Icon size={19} /><span className="nav-label">{label}</span>{id === "inbox" && agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0) > 0 && <span className="nav-count">{agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0)}</span>}</button>)}</nav>
+      <nav className="primary-nav" aria-label="Primary navigation">{navItems.map(({ id, label, iconClass }) => <button key={id} title={label} className={`nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}><span className={`app-nav-icon ${iconClass}`} aria-hidden="true" /><span className="nav-label">{label}</span>{id === "inbox" && agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0) > 0 && <span className="nav-count">{agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0)}</span>}</button>)}</nav>
       <div className="sidebar-section"><p className="eyebrow">Recent agents</p>{agents.filter((agent) => !agent.is_assistant).slice(0, 4).map((agent) => <button key={agent.id} className={`mini-thread ${effectiveSelectedAgentId === agent.id && view === "inbox" ? "active" : ""}`} onClick={() => selectThread(agent)}><span className={`mini-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={14} /></span><span><b>{agent.name}</b><small>{agent.last_message_preview || agent.description}</small></span>{Boolean(agent.unread_count) && <i>{agent.unread_count}</i>}</button>)}</div>
       <div className="sidebar-spacer" />
       <button className="command-button" title="Search" onClick={() => setCommandOpen(true)}><Search size={17} />Search<span>⌘K</span></button>
@@ -237,10 +237,10 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     <button className="mobile-nav-trigger icon-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
 
     {view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}
-    {view === "inbox" && <><InboxPane agents={agents} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleStatus={() => void updateAgent(selectedAgent.id, { status: selectedAgent.status === "active" ? "paused" : "active" })} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value) => { if (!demo) void api.messageFeedback(messageId, value).then(() => showToast("Thanks for the feedback.")); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
+    {view === "inbox" && <><InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value) => { if (!demo) void api.messageFeedback(messageId, value).then(() => showToast("Thanks for the feedback.")); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
     {view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}
     {view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} />}
-    {view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} />}
+    {view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} onOpenConnectors={() => setView("connectors")} />}
     {view === "feedback" && <FeedbackPanel onSubmit={async (topic, message) => { if (!demo) await api.feedback(topic, message); }} />}
 
     {createOpen && <CreateAgentDialog recipes={recipes} onClose={() => setCreateOpen(false)} onParse={parseAgent} onCreate={createAgent} />}
@@ -249,13 +249,63 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
   </main>;
 }
 
-function InboxPane({ agents, selectedAgentId, onSelect, onCreate }: { agents: Agent[]; selectedAgentId?: string; onSelect: (agent: Agent) => void; onCreate: () => void }) {
-  const [filter, setFilter] = useState<"all" | "unread" | "active">("all");
-  const [query, setQuery] = useState("");
-  const visible = agents.filter((agent) => (filter === "unread" ? Boolean(agent.unread_count) : filter === "active" ? agent.status === "active" : true) && `${agent.name} ${agent.last_message_preview ?? ""}`.toLowerCase().includes(query.toLowerCase()));
-  const unread = agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0);
-  return <section className="inbox-pane"><header className="pane-header"><div><h1>Messages</h1><p className="pane-subtitle">{agents.length} agent conversations</p></div><button className="icon-button inbox-create" onClick={onCreate} aria-label="Create a new agent"><Plus size={19} /></button></header><div className="inbox-search-row"><label className="inbox-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search conversations" aria-label="Search inbox" /></label></div><div className="filter-row"><button className={`filter-chip ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>All</button><button className={`filter-chip ${filter === "unread" ? "active" : ""}`} onClick={() => setFilter("unread")}>Unread <span>{unread}</span></button><button className={`filter-chip ${filter === "active" ? "active" : ""}`} onClick={() => setFilter("active")}>Active</button></div><div className="agent-list">{visible.map((agent) => <button key={agent.id} className={`agent-row ${agent.id === selectedAgentId ? "active" : ""} ${agent.unread_count ? "has-unread" : ""}`} onClick={() => onSelect(agent)}><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar ?? (agent.is_assistant ? "sparkles" : "bot")} /></span><span className="agent-copy"><span className="agent-title"><b>{agent.name}</b><time>{relativeTime(agent.latest_message_at || agent.updated_at)}</time></span><small>{agent.last_message_preview || agent.description || "Ready when you are"}</small></span>{Boolean(agent.unread_count) && <span className="unread-count">{agent.unread_count}</span>}</button>)}{visible.length === 0 && <div className="inbox-empty"><Search size={21} /><p>No agents match this view.</p></div>}</div></section>;
+function InboxPane({ agents, briefings, firstName, selectedAgentId, onSelect, onCreate, onFeedback }: { agents: Agent[]; briefings: AgentMessage[]; firstName: string; selectedAgentId?: string; onSelect: (agent: Agent) => void; onCreate: () => void; onFeedback: () => void }) {
+  const openBriefing = (briefing: AgentMessage) => {
+    const assistant = agents.find((agent) => agent.is_assistant);
+    const source = agents.find((agent) => agent.id === briefing.agent_id);
+    if (assistant || source) onSelect(assistant ?? source!);
+  };
+
+  return <section className="inbox-pane flutter-inbox">
+    <header className="flutter-workspace-header">
+      <div className="flutter-header-copy">
+        <p className="flutter-eyebrow">{firstName ? `${firstName[0]!.toUpperCase()}${firstName.slice(1)}'s Workspace` : "Your workspace"}</p>
+        <div className="flutter-brand-title"><Image src="/cuppet-mark.png" alt="" width={36} height={36} /><h1>Cuppet</h1></div>
+        <p className="flutter-subtitle">Your delegation agents</p>
+      </div>
+      <button className="flutter-feedback-button" onClick={onFeedback}>Feedback</button>
+    </header>
+
+    <div className="flutter-inbox-list">
+      {briefings.length > 0 && <section className="flutter-briefings">
+        <div className="flutter-section-label"><b>BRIEFINGS</b><span>Tap to explore with Assistant</span></div>
+        {briefings.map((briefing) => <BriefingPreview key={briefing.id} briefing={briefing} onOpen={() => openBriefing(briefing)} />)}
+      </section>}
+      <section className="flutter-agent-list" aria-label="Agents">
+        {agents.map((agent) => <button key={agent.id} className={`flutter-agent-card ${agent.id === selectedAgentId ? "selected" : ""}`} onClick={() => onSelect(agent)}>
+          {agent.is_assistant ? <Image className="flutter-assistant-avatar" src="/cuppet-app-icon.png" alt="" width={44} height={44} /> : <span className={`flutter-agent-avatar ${agentTone(agent.id)}`}>{initials(agent.name)}</span>}
+          <span className="flutter-agent-copy"><span className="flutter-agent-title"><b>{agent.name}</b>{agent.is_assistant && <Pin size={14} />}<time>{agent.is_assistant ? "Pinned" : relativeTime(agent.latest_message_at || agent.updated_at)}</time></span><span className={agent.unread_count ? "unread-preview" : ""}>{agent.last_message_preview || agent.description || "Ready when you are"}</span></span>
+          {Boolean(agent.unread_count) && <span className="flutter-unread-count">{Math.min(agent.unread_count ?? 0, 3)}{(agent.unread_count ?? 0) > 3 ? "+" : ""}</span>}
+        </button>)}
+      </section>
+    </div>
+
+    <button className="flutter-new-agent" onClick={onCreate}><Plus size={20} /><span>New Agent</span></button>
+  </section>;
 }
+
+function BriefingPreview({ briefing, onOpen }: { briefing: AgentMessage; onOpen: () => void }) {
+  const data = briefingData(briefing);
+  const sections = Array.isArray(data.sections) ? data.sections.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)).slice(0, 3) : [];
+  const updates = sections.map((section) => {
+    const items = Array.isArray(section.items) ? section.items.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
+    return { source: stringValue(section.source || section.title) || "Update", title: stringValue(items[0]?.title) };
+  }).filter((item) => item.title);
+  const summary = updates.length ? updates.map((item) => `${item.source}: ${item.title}`).join(" · ") : stringValue(data.summary) || "No new updates from connected sources.";
+  return <button className="flutter-briefing-card" onClick={onOpen}>
+    <span className="flutter-briefing-heading"><b>{(stringValue(data.eyebrow) || "Briefing").toUpperCase()}</b><ArrowRight size={17} /></span>
+    <strong>{stringValue(data.title) || "Your briefing"}</strong>
+    <span className="flutter-briefing-summary">{summary}</span>
+    {updates.length > 0 && <span className="flutter-briefing-sources">{updates.map((item, index) => <i key={`${item.source}-${index}`} title={item.source}>{item.source.slice(0, 1).toUpperCase()}</i>)}</span>}
+  </button>;
+}
+
+function briefingData(message: AgentMessage): Record<string, unknown> {
+  if (typeof message.content === "string" || !message.content?.data || typeof message.content.data !== "object" || Array.isArray(message.content.data)) return {};
+  return message.content.data as Record<string, unknown>;
+}
+
+function stringValue(value: unknown): string { return typeof value === "string" ? value : typeof value === "number" ? String(value) : ""; }
 
 function initials(value: string): string { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "CU"; }
 function relativeTime(value?: string): string {

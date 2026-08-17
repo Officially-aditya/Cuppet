@@ -2,8 +2,10 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   Bell,
   Check,
+  ChevronRight,
   Database,
   Download,
   ExternalLink,
@@ -23,9 +25,75 @@ import type { CurrentUserResponse } from "@/lib/types";
 
 type SettingsTab = "profile" | "notifications" | "data";
 
-export function SettingsPanel({ me, demo, onExitDemo }: { me: CurrentUserResponse; demo: boolean; onExitDemo?: () => void }) {
-  const [tab, setTab] = useState<SettingsTab>("profile");
-  return <section className="content-panel settings-panel"><header className="content-header"><div><p className="eyebrow">Account</p><h1>Settings</h1><p>Profile, notifications, privacy, and workspace data.</p></div></header><div className="settings-layout"><nav className="settings-nav"><button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}><UserRound size={17} />Profile</button><button className={tab === "notifications" ? "active" : ""} onClick={() => setTab("notifications")}><Bell size={17} />Notifications</button><button className={tab === "data" ? "active" : ""} onClick={() => setTab("data")}><Shield size={17} />Data & privacy</button></nav><div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettings demo={demo} />}</div></div></section>;
+export function SettingsPanel({ me, demo, onExitDemo, onOpenConnectors }: { me: CurrentUserResponse; demo: boolean; onExitDemo?: () => void; onOpenConnectors: () => void }) {
+  const router = useRouter();
+  const [tab, setTab] = useState<SettingsTab | null>(null);
+  const [pushEnabled, setPushEnabled] = useState(() => typeof window !== "undefined" && Boolean(window.localStorage.getItem("cuppet-push-token")));
+  const [pushBusy, setPushBusy] = useState(false);
+  const [followDevice, setFollowDevice] = useState(me.preferences.follow_device_time_zone);
+  const [timezoneBusy, setTimezoneBusy] = useState(false);
+
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (demo) setPushEnabled((value) => !value);
+      else if (pushEnabled) { await disablePushNotifications(); setPushEnabled(false); }
+      else { await enablePushNotifications(); setPushEnabled(true); }
+    } finally { setPushBusy(false); }
+  };
+
+  const toggleTimeZone = async () => {
+    const next = !followDevice;
+    setFollowDevice(next);
+    setTimezoneBusy(true);
+    try {
+      if (!demo) await api.updatePreferences({ time_zone: next ? Intl.DateTimeFormat().resolvedOptions().timeZone : me.preferences.time_zone, follow_device_time_zone: next });
+    } catch { setFollowDevice(!next); }
+    finally { setTimezoneBusy(false); }
+  };
+
+  const signOut = async () => {
+    if (demo) { onExitDemo?.(); return; }
+    await authClient.signOut();
+    router.replace("/");
+    router.refresh();
+  };
+
+  if (tab) return <section className="content-panel settings-panel flutter-settings-detail">
+    <header className="flutter-detail-header"><button onClick={() => setTab(null)} aria-label="Back to settings"><ArrowLeft size={20} /></button><h1>{tab === "profile" ? "Profile" : tab === "notifications" ? "Notifications" : "Data & privacy"}</h1></header>
+    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettings demo={demo} />}</div>
+  </section>;
+
+  return <section className="content-panel settings-panel flutter-destination-panel">
+    <header className="flutter-workspace-header destination-header"><div className="flutter-header-copy"><p className="flutter-eyebrow">Your account</p><div className="flutter-brand-title"><h1>Settings</h1></div><p className="flutter-subtitle">Preferences, security and scheduling.</p></div></header>
+    <div className="flutter-settings-list">
+      <SettingsGroupLabel label="Profile" />
+      <button className="flutter-workspace-card flutter-profile-card" onClick={() => setTab("profile")}><span className="large-avatar">{initials(me.user.name || me.user.email)}</span><span><b>{me.user.name || "Cuppet User"}</b><small>{me.user.email}</small></span><ChevronRight size={20} /></button>
+
+      <SettingsGroup label="Preferences">
+        <SettingsTile icon="notification" title="Push notifications" description={pushEnabled ? "Message and agent status alerts are active." : "Enable message and agent status alerts."} trailing={<button className={`flutter-switch ${pushEnabled ? "on" : ""}`} disabled={pushBusy || (!pushConfigured() && !demo)} onClick={(event) => { event.stopPropagation(); void togglePush(); }} aria-pressed={pushEnabled}>{pushBusy ? <LoaderCircle className="spin" size={15} /> : <span />}</button>} />
+        <SettingsTile icon="timezone" title={followDevice ? "Automatic time zone" : "Fixed time zone"} description={`${me.preferences.time_zone} · ${followDevice ? "Follows this device when it changes." : "Turn on automatic to follow this device."}`} trailing={<button className={`flutter-switch ${followDevice ? "on" : ""}`} disabled={timezoneBusy} onClick={(event) => { event.stopPropagation(); void toggleTimeZone(); }} aria-pressed={followDevice}>{timezoneBusy ? <LoaderCircle className="spin" size={15} /> : <span />}</button>} />
+        <SettingsTile icon="memory" title="Memory" description="Review confirmed details remembered by Assistant." onClick={() => setTab("data")} />
+        <SettingsTile icon="personalization" title="Personalization" description="Choose what Cuppet may learn to make fewer, more useful suggestions." onClick={() => setTab("data")} />
+        <SettingsTile icon="storage" title="Storage" description="Manage 30-day history and Google Drive archives." onClick={() => setTab("data")} />
+      </SettingsGroup>
+
+      <SettingsGroup label="Security"><SettingsTile icon="connectors" title="Connectors" description="Review accounts approved for backend access." onClick={onOpenConnectors} /></SettingsGroup>
+      <SettingsGroup label="Privacy"><SettingsTile icon="session" title="Session storage" description="Cuppet stores only your session token on this device. No browser fingerprints or passive scripts are injected." /></SettingsGroup>
+      <button className="flutter-signout" onClick={() => void signOut()}><LogOut size={18} />Sign out</button>
+    </div>
+  </section>;
+}
+
+function SettingsGroupLabel({ label }: { label: string }) { return <div className="flutter-section-label settings-group-label"><b>{label.toUpperCase()}</b></div>; }
+
+function SettingsGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return <section className="flutter-settings-group"><SettingsGroupLabel label={label} /><div className="flutter-workspace-card flutter-settings-group-card">{children}</div></section>;
+}
+
+function SettingsTile({ icon, title, description, trailing, onClick }: { icon: string; title: string; description: string; trailing?: React.ReactNode; onClick?: () => void }) {
+  const content = <><span className={`flutter-settings-icon settings-icon-${icon}`} /><span className="flutter-settings-copy"><b>{title}</b><small>{description}</small></span>{trailing ?? (onClick ? <ChevronRight size={20} /> : null)}</>;
+  return onClick ? <button className="flutter-settings-tile" onClick={onClick}>{content}</button> : <div className="flutter-settings-tile">{content}</div>;
 }
 
 function ProfileSettings({ me, demo, onExitDemo }: { me: CurrentUserResponse; demo: boolean; onExitDemo?: () => void }) {
