@@ -259,8 +259,8 @@ void main() {
     testWidgets('briefing titles hide markdown bold markers', (tester) async {
       await tester.pumpWidget(
         templateHost(
-          BriefingCardTemplate(
-            data: const {
+          const BriefingCardTemplate(
+            data: {
               'title': '**Your day, distilled**',
               'sections': [
                 {

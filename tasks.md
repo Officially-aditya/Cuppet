@@ -39,11 +39,11 @@ This file is the execution checklist for the app completion plan. Read it before
 - [x] **T4 - Unsupported message fallback** - replace the newer-version placeholder with a safe generic renderer that displays common fields and no unknown actions.
 - [x] **T5 - Deployment credential hygiene** - rotate the Firebase service-account credential and verify no secret is tracked.
   - [x] T5G - G3 completed; the user rotated the credential, the local replacement passed Firebase Admin initialization and OAuth token exchange, and no credential is tracked.
-- [ ] **T6 - Android release signing** - generate an ignored upload keystore, wire ignored `key.properties`, and prepare release signing without changing the production application ID prematurely.
+- [x] **T6 - Android release signing** - generate an ignored upload keystore, wire ignored `key.properties`, and prepare release signing without changing the production application ID prematurely.
   - [x] T6A - signing configuration and ignore checks; the local upload keystore is ignored, Gradle release signing is wired, and a signed release APK was verified.
-  - [ ] T6G - `WAITING FOR USER` at G4; confirm the `in.cuppet.app` package is registered and accepted in Play Console before final release handoff
-- [ ] **T7 - Full verification and handoff** - run backend tests, Flutter tests/analyzer, build checks, inspect the final diff, and report remaining user actions.
+  - [x] T6G - G4 completed; Play Console verification is complete and the closed-test rollout remains an external 14-day requirement.
+- [x] **T7 - Full verification and handoff** - backend tests, Flutter tests/analyzer, release APK/AAB builds, final diff, and handoff are complete; Play closed-testing duration remains external.
 
 ## Current task
 
-**T6 - WAITING FOR USER at G4:** local Firebase alignment and a signed `in.cuppet.app` release APK are verified; confirm Play Console has accepted/registered `in.cuppet.app` before final release handoff. T2G’s final user approval/token exchange remains recorded as deferred.
+**T7 - COMPLETE:** verification and release artifacts are ready. Remaining external actions are the Play closed test, production-access request after its required duration, and T2G’s deferred final user approval/token exchange.

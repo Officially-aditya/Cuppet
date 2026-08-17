@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
-import '../sydney_primitives.dart';
 import 'template_utils.dart';
 
 class AllClearTemplate extends StatelessWidget {
