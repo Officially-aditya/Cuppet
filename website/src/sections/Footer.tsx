@@ -27,6 +27,9 @@ export default function Footer() {
           <Link href="/terms" className="transition-colors duration-200 hover:text-[var(--ink)]">
             Terms
           </Link>
+          <Link href="/profile/delete" className="transition-colors duration-200 hover:text-[var(--ink)]">
+            Delete account
+          </Link>
         </nav>
         <p className="text-[11px] text-[var(--ink-faint)]">© 2026 Cuppet</p>
       </div>
