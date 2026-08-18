@@ -1,5 +1,5 @@
 :root {
-  --font-sans: var(--font-roboto), Roboto, "Helvetica Neue", Arial;
+  --font-sans: var(--font-roboto, "Roboto"), "Roboto", "Helvetica Neue", Arial, sans-serif;
   --font-display: var(--font-sans);
   --ink: #17201c;
   --muted: #66736d;
@@ -42,10 +42,18 @@ body {
   color: var(--ink);
   background: var(--canvas);
   font-family: var(--font-sans), sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
-button, input, textarea, select { font: inherit; }
+button, input, textarea, select {
+  font-family: var(--font-sans), sans-serif;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
 button { color: inherit; }
 
 .workspace-shell { min-height: 100vh; display: grid; grid-template-columns: 238px minmax(320px, 390px) minmax(500px, 1fr); background: var(--paper); overflow: hidden; }
@@ -3449,6 +3457,26 @@ button.flutter-settings-tile:hover,
   font-weight: 400;
 }
 
+.live-thread .thread-identity small,
+.live-thread .day-divider,
+.live-thread .difficulty {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.live-thread .difficulty-row > small {
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.live-thread .composer-wrap > p {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
 .live-thread .empty-thread h3 {
   font-size: 20px;
   line-height: 1.25;
@@ -3465,4 +3493,360 @@ button.flutter-settings-tile:hover,
 .live-thread .attachment-tray > span {
   font-size: 12px;
   line-height: 1.35;
+}
+
+/* Flutter source parity: agent creation flow. Keep this surface text-led so
+   the controls and hierarchy carry the same quiet weight as the app screen. */
+.live-workspace .dialog-backdrop {
+  padding: 20px;
+  background: rgba(28, 26, 23, .2);
+  backdrop-filter: blur(3px);
+}
+
+.live-workspace .create-dialog {
+  width: min(680px, 100%);
+  max-height: min(780px, calc(100vh - 40px));
+  border: 1px solid #d4d9d2;
+  background: #f5f3ee;
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(28, 26, 23, .16);
+}
+
+.live-workspace .creation-dialog-header {
+  min-height: 64px;
+  padding: 0 20px;
+  background: #f5f3ee;
+  border-bottom: 1px solid #d4d9d2;
+}
+
+.live-workspace .creation-text-button {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  color: #004d39;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.live-workspace .creation-text-button:hover {
+  background: #e4f3ec;
+}
+
+.live-workspace .dialog-body {
+  padding: 20px;
+  overflow-y: auto;
+  background: #f5f3ee;
+}
+
+.live-workspace .creation-intro {
+  margin-bottom: 24px;
+}
+
+.live-workspace .creation-intro .eyebrow {
+  margin: 0 0 8px;
+  color: #004d39;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+.live-workspace .creation-intro h1 {
+  margin: 0 0 8px;
+  color: #1c1a17;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 28px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -.7px;
+}
+
+.live-workspace .creation-intro > p:last-child {
+  margin: 0;
+  max-width: 520px;
+  color: #706e6a;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.live-workspace .creation-field {
+  display: grid;
+  gap: 8px;
+}
+
+.live-workspace .creation-section-label {
+  margin: 0;
+  color: #004d39;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+.live-workspace .prompt-editor {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #eae9e8;
+  background: #fcfbfa;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(28, 26, 23, .04);
+}
+
+.live-workspace .prompt-editor:focus-within {
+  border-color: #d4d9d2;
+  box-shadow: 0 0 0 3px rgba(228, 243, 236, .9);
+}
+
+.live-workspace .prompt-editor textarea {
+  width: 100%;
+  min-height: 146px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  color: #1c1a17;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.live-workspace .prompt-editor textarea::placeholder {
+  color: #706e6a;
+  opacity: 1;
+}
+
+.live-workspace .prompt-editor small {
+  align-self: flex-end;
+  color: #706e6a;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.live-workspace .creation-section {
+  margin-top: 24px;
+}
+
+.live-workspace .creation-section > .creation-section-label {
+  margin-bottom: 8px;
+}
+
+.live-workspace .recipe-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.live-workspace .recipe-grid .recipe-card {
+  min-height: 0;
+  padding: 14px;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  border: 1px solid #eae9e8;
+  color: #1c1a17;
+  background: #fcfbfa;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(28, 26, 23, .04);
+  cursor: pointer;
+  text-align: left;
+}
+
+.live-workspace .recipe-grid .recipe-card:hover {
+  background: #fff;
+  border-color: #d4d9d2;
+}
+
+.live-workspace .recipe-grid .recipe-card.selected {
+  border-color: #d4d9d2;
+  background: #e4f3ec;
+}
+
+.live-workspace .recipe-grid .recipe-card b {
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.live-workspace .recipe-grid .recipe-card p {
+  margin: 0;
+  color: #706e6a;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.live-workspace .creation-footer {
+  position: sticky;
+  bottom: -20px;
+  z-index: 1;
+  margin: 24px -20px -20px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid #d4d9d2;
+  background: #fcfbfa;
+}
+
+.live-workspace .creation-footer .primary-button,
+.live-workspace .creation-footer .secondary-button {
+  min-height: 50px;
+  width: 100%;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.live-workspace .creation-footer .primary-button {
+  border-color: #006046;
+  color: #fff;
+  background: #006046;
+}
+
+.live-workspace .creation-footer .primary-button:hover {
+  background: #004d39;
+}
+
+.live-workspace .creation-footer .secondary-button {
+  border-color: #d4d9d2;
+  color: #1c1a17;
+  background: #fcfbfa;
+}
+
+.live-workspace .creation-footer .secondary-button:hover {
+  border-color: #bec9c2;
+  background: #fff;
+}
+
+.live-workspace .creation-confirm-step .creation-intro {
+  margin-bottom: 24px;
+}
+
+.live-workspace .creation-review-card {
+  overflow: hidden;
+  border: 1px solid #eae9e8;
+  background: #fcfbfa;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(28, 26, 23, .04);
+}
+
+.live-workspace .creation-review-card .preview-agent-heading {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px 12px;
+  border-bottom: 1px solid #eae9e8;
+}
+
+.live-workspace .creation-review-card .preview-agent-heading small {
+  grid-column: 1 / -1;
+  color: #706e6a;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.live-workspace .creation-review-card .preview-agent-heading h3 {
+  margin: 0;
+  color: #1c1a17;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.live-workspace .creation-review-card .ready-pill {
+  margin-left: 0;
+  padding: 6px 8px;
+  color: #004d39;
+  background: #e4f3ec;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.live-workspace .preview-review-prompt {
+  margin: 0;
+  padding: 16px;
+  color: #706e6a;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.live-workspace .preview-info-list {
+  display: grid;
+  gap: 8px;
+}
+
+.live-workspace .preview-info-card {
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid #eae9e8;
+  background: #fcfbfa;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(28, 26, 23, .04);
+}
+
+.live-workspace .preview-info-card b {
+  color: #1c1a17;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.live-workspace .preview-info-card p {
+  margin: 0;
+  color: #706e6a;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.live-workspace .creation-confirm-step .preview-note {
+  margin: 16px 0 0;
+  color: #706e6a;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.live-workspace .creation-confirm-step .form-message,
+.live-workspace .creation-start-step .form-message {
+  margin-top: 12px !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+@media (max-width: 820px) {
+  .live-workspace .dialog-backdrop {
+    padding: 0;
+    place-items: end center;
+  }
+
+  .live-workspace .create-dialog {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .live-workspace .creation-dialog-header {
+    min-height: 60px;
+  }
 }

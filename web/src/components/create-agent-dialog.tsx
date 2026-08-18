@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Bot, Check, LoaderCircle, Search, Sparkles, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import type { AgentRecipe } from "@/lib/types";
 
 export function CreateAgentDialog({
@@ -15,17 +14,17 @@ export function CreateAgentDialog({
   onParse: (prompt: string) => Promise<Record<string, unknown>>;
   onCreate: (prompt: string) => Promise<void>;
 }) {
-  const [step, setStep] = useState<"start" | "describe" | "preview">("start");
+  const [step, setStep] = useState<"start" | "preview">("start");
   const [prompt, setPrompt] = useState("");
-  const [query, setQuery] = useState("");
+  const [selectedRecipeId, setSelectedRecipeId] = useState("custom");
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const filtered = useMemo(() => recipes.filter((recipe) => `${recipe.name} ${recipe.description}`.toLowerCase().includes(query.toLowerCase())), [query, recipes]);
 
   const selectRecipe = (recipe: AgentRecipe) => {
     setPrompt(recipe.example_prompt || recipe.description);
-    setStep("describe");
+    setSelectedRecipeId(recipe.id);
+    setError("");
   };
 
   const parse = async (event: FormEvent) => {
@@ -58,32 +57,111 @@ export function CreateAgentDialog({
 
   const parsed = (preview?.parsed_intent && typeof preview.parsed_intent === "object" ? preview.parsed_intent : {}) as Record<string, unknown>;
   const configuration = ((preview?.agent_preview ?? preview?.configuration) && typeof (preview?.agent_preview ?? preview?.configuration) === "object" ? (preview?.agent_preview ?? preview?.configuration) : {}) as Record<string, unknown>;
+  const agentName = String(parsed.name ?? configuration.name ?? "New Cuppet agent");
+  const action = String(parsed.action ?? configuration.description ?? prompt);
+  const schedule = String(parsed.schedule_label ?? configuration.schedule ?? (parsed.schedule_cron ? "Custom schedule" : "On demand"));
+  const access = Array.isArray(parsed.connector_ids) && parsed.connector_ids.length ? parsed.connector_ids.join(", ") : "Only what you connect";
 
   return (
     <div className="dialog-backdrop" role="presentation">
       <section className="create-dialog" role="dialog" aria-modal="true" aria-labelledby="create-agent-title">
-        <header><div>{step !== "start" && <button className="icon-button" onClick={() => setStep(step === "preview" ? "describe" : "start")} aria-label="Go back"><ArrowLeft size={18} /></button>}<span className="dialog-mark"><Sparkles size={18} /></span><span><p className="eyebrow">New agent</p><h2 id="create-agent-title">{step === "start" ? "What should Cuppet watch?" : step === "describe" ? "Describe the outcome" : "A first look"}</h2></span></div><button className="icon-button" onClick={onClose} aria-label="Close"><X size={19} /></button></header>
+        <header className="creation-dialog-header">
+          {step === "preview" ? <button className="creation-text-button" onClick={() => { setStep("start"); setError(""); }}>Back</button> : <span aria-hidden="true" />}
+          <button className="creation-text-button" onClick={onClose}>Close</button>
+        </header>
 
-        {step === "start" && <div className="dialog-body start-step">
-          <button className="blank-agent-card" onClick={() => setStep("describe")}><span><Sparkles size={21} /></span><div><b>Describe it in your own words</b><p>Tell Cuppet what should happen and when.</p></div><ArrowRight size={18} /></button>
-          <div className="template-heading"><span>Or start with a recipe</span><div className="search-input"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search recipes" /></div></div>
-          <div className="recipe-grid">{filtered.map((recipe) => <button key={recipe.id} onClick={() => selectRecipe(recipe)}><span className="recipe-icon"><Bot size={18} /></span><b>{recipe.name}</b><p>{recipe.description}</p><small>{recipe.category || "Agent recipe"}</small></button>)}</div>
-        </div>}
+        {step === "start" && (
+          <form className="dialog-body creation-start-step" onSubmit={parse}>
+            <div className="creation-intro">
+              <p className="eyebrow">Agent setup</p>
+              <h1 id="create-agent-title">Create an agent</h1>
+              <p>Describe the work in your own words, or begin with an example.</p>
+            </div>
 
-        {step === "describe" && <form className="dialog-body describe-step" onSubmit={parse}>
-          <div className="prompt-helper"><span><Sparkles size={18} /></span><p>Write it like a request to a thoughtful teammate. Include the source, useful outcome, and timing if it matters.</p></div>
-          <label><span>What should this agent do?</span><textarea autoFocus value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={8} maxLength={4000} placeholder="Every weekday at 8 AM, check my calendar and important email, then give me a short briefing with anything that needs a decision." /><small>{prompt.length}/4000</small></label>
-          <div className="prompt-examples"><span>Try:</span><button type="button" onClick={() => setPrompt("Watch my Gmail and tell me when a message needs a decision from me.")}>Triage my inbox</button><button type="button" onClick={() => setPrompt("Every Friday afternoon, summarize meaningful progress and blockers across GitHub and Slack.")}>Weekly project pulse</button></div>
-          {error && <p className="form-message error">{error}</p>}
-          <footer><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={busy || prompt.trim().length < 3}>{busy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}Preview agent</button></footer>
-        </form>}
+            <label className="creation-field">
+              <span className="creation-section-label">Describe the work</span>
+              <div className="prompt-editor">
+                <textarea
+                  autoFocus
+                  value={prompt}
+                  onChange={(event) => { setPrompt(event.target.value); setSelectedRecipeId("custom"); setError(""); }}
+                  minLength={3}
+                  rows={6}
+                  maxLength={4000}
+                  placeholder="For example: Send me a concise news brief every morning."
+                />
+                <small>{prompt.length}/4000</small>
+              </div>
+            </label>
 
-        {step === "preview" && <div className="dialog-body preview-step">
-          <div className="agent-preview-card"><div className="preview-agent-heading"><span className="agent-avatar coral"><Bot size={20} /></span><span><small>Agent name</small><h3>{String(parsed.name ?? configuration.name ?? "New Cuppet agent")}</h3></span><span className="ready-pill"><Check size={13} />Ready</span></div><div className="preview-summary"><p className="eyebrow">What it will do</p><p>{String(parsed.action ?? configuration.description ?? prompt)}</p></div><div className="preview-details"><div><small>Schedule</small><b>{String(parsed.schedule_label ?? configuration.schedule ?? (parsed.schedule_cron ? "Custom schedule" : "On demand"))}</b></div><div><small>Access</small><b>{Array.isArray(parsed.connector_ids) && parsed.connector_ids.length ? parsed.connector_ids.join(", ") : "Only what you connect"}</b></div><div><small>Safety</small><b>Read-only by default</b></div></div></div>
-          <p className="preview-note">You can refine the name, schedule, notifications, and response length after creating it.</p>
-          {error && <p className="form-message error">{error}</p>}
-          <footer><button className="secondary-button" onClick={() => setStep("describe")}>Edit description</button><button className="primary-button" onClick={create} disabled={busy}>{busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}Create agent</button></footer>
-        </div>}
+            <div className="creation-section">
+              <p className="creation-section-label">Start with an example</p>
+              <div className="recipe-grid">
+                <button
+                  type="button"
+                  className={`recipe-card ${selectedRecipeId === "custom" ? "selected" : ""}`}
+                  onClick={() => { setSelectedRecipeId("custom"); setPrompt(""); setError(""); }}
+                >
+                  <b>Custom agent</b>
+                  <p>Write your own prompt from scratch.</p>
+                </button>
+                {recipes.map((recipe) => (
+                  <button
+                    type="button"
+                    key={recipe.id}
+                    className={`recipe-card ${selectedRecipeId === recipe.id ? "selected" : ""}`}
+                    onClick={() => selectRecipe(recipe)}
+                  >
+                    <b>{recipe.name}</b>
+                    <p>{recipe.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && <p className="form-message error">{error}</p>}
+            <footer className="creation-footer">
+              <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
+              <button type="submit" className="primary-button" disabled={busy || prompt.trim().length < 3}>{busy ? "Preparing…" : "Continue"}</button>
+            </footer>
+          </form>
+        )}
+
+        {step === "preview" && (
+          <div className="dialog-body creation-confirm-step">
+            <div className="creation-intro">
+              <p className="eyebrow">Final review</p>
+              <h1 id="create-agent-title">Confirm your agent</h1>
+              <p>Review what it will do, when it will run, and which services it needs.</p>
+            </div>
+
+            <div className="agent-preview-card creation-review-card">
+              <div className="preview-agent-heading">
+                <small>Agent name</small>
+                <h3>{agentName}</h3>
+                <span className="ready-pill">Ready</span>
+              </div>
+              <p className="preview-review-prompt">{prompt}</p>
+            </div>
+
+            <div className="creation-section preview-info-section">
+              <p className="creation-section-label">Agent details</p>
+              <div className="preview-info-list">
+                <article className="preview-info-card"><b>What it does</b><p>{action}</p></article>
+                <article className="preview-info-card"><b>When it runs</b><p>{schedule}</p></article>
+                <article className="preview-info-card"><b>Connected tools</b><p>{access}</p></article>
+                <article className="preview-info-card"><b>Safety</b><p>Read-only by default</p></article>
+              </div>
+            </div>
+
+            <p className="preview-note">You can refine the name, schedule, notifications, and response length after creating it.</p>
+            {error && <p className="form-message error">{error}</p>}
+            <footer className="creation-footer">
+              <button className="secondary-button" onClick={() => { setStep("start"); setError(""); }}>Back</button>
+              <button className="primary-button" onClick={create} disabled={busy}>{busy ? "Creating…" : "Create Agent"}</button>
+            </footer>
+          </div>
+        )}
       </section>
     </div>
   );
