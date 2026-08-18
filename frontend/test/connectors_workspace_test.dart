@@ -145,6 +145,25 @@ void main() {
     expect(find.text('Linear workspace'), findsOneWidget);
   });
 
+  testWidgets('main connector page opens the complete custom MCP form', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_screenWith(_LoadedConnectorsController.new));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('add-custom-mcp-provider-button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add a custom MCP provider'), findsOneWidget);
+    expect(find.text('Provider name'), findsOneWidget);
+    expect(find.text('MCP HTTPS endpoint'), findsOneWidget);
+    expect(find.text('Read capabilities'), findsOneWidget);
+    expect(find.text('OAuth scopes (optional)'), findsOneWidget);
+    expect(find.textContaining('Required: a provider name'), findsOneWidget);
+  });
+
   testWidgets(
     'add connector replaces the Other placeholder with custom MCP form',
     (tester) async {

@@ -8,6 +8,7 @@ import '../../services/api.dart';
 import '../../widgets/connectors/connector_list_item.dart';
 import '../../widgets/sydney_primitives.dart';
 import '../../widgets/workspace_primitives.dart';
+import 'custom_mcp_provider_form.dart';
 
 class ConnectorsScreen extends ConsumerWidget {
   const ConnectorsScreen({super.key});
@@ -104,6 +105,21 @@ class _ConnectorList extends ConsumerWidget {
             const SizedBox(height: SydneySpacing.md),
           ],
         const SizedBox(height: SydneySpacing.sm),
+        OutlinedButton.icon(
+          key: const ValueKey('add-custom-mcp-provider-button'),
+          onPressed: () => showCustomMcpProviderForm(context, ref),
+          icon: const Icon(Icons.extension_outlined, size: 17),
+          label: const Text('Add custom MCP provider'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+            foregroundColor: SydneyColors.onSurfaceVariant,
+            textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+              letterSpacing: 0.8,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: SydneySpacing.lg),
         const WorkspacePrivacyPanel(
           title: 'Access & privacy',
           message:

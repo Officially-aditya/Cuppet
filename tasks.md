@@ -1,6 +1,6 @@
 # Cuppet App Completion Tasks
 
-Last updated: 2026-08-16
+Last updated: 2026-08-18
 
 This file is the execution checklist for the app completion plan. Read it before starting each task and update it immediately after the task is completed. Keep only one task marked `IN PROGRESS`. Do not put credentials, tokens, or private keys in this file.
 
@@ -34,7 +34,7 @@ This file is the execution checklist for the app completion plan. Read it before
   - [ ] T2G - `WAITING FOR USER` at G2; Linear pre-approval passed, but final user approval/token exchange remains deferred by the user
 - [x] **T3 - Custom MCP Flutter UI** - replace the `Other...` placeholder with custom MCP provider creation, OAuth connection, status, and disconnect flows.
   - [x] T3A - model/service/provider state
-  - [x] T3B - add-provider form and connector list integration
+- [x] T3B - add-provider form and connector list integration, including a reachable entry point from the main Connectors page
   - [x] T3C - widget tests and analyzer verification
 - [x] **T4 - Unsupported message fallback** - replace the newer-version placeholder with a safe generic renderer that displays common fields and no unknown actions.
 - [x] **T5 - Deployment credential hygiene** - rotate the Firebase service-account credential and verify no secret is tracked.
@@ -46,4 +46,4 @@ This file is the execution checklist for the app completion plan. Read it before
 
 ## Current task
 
-**T7 - COMPLETE:** verification and release artifacts are ready. Remaining external actions are the Play closed test, production-access request after its required duration, and T2G’s deferred final user approval/token exchange.
+**T7 - COMPLETE:** verification and release artifacts are ready. The custom MCP form is reachable from the main Connectors page and its required-field flow is covered. Remaining external actions are the Play closed test, production-access request after its required duration, and T2G’s deferred final user approval/token exchange.
