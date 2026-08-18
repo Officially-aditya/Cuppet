@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, Eye, EyeOff, KeyRound, Mail, Sparkles } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { authClient } from "@/lib/auth-client";
@@ -62,28 +63,23 @@ export function AuthScreen({ onDemo }: { onDemo: () => void }) {
   return (
     <main className="auth-shell">
       <section className="auth-story">
-        <div className="auth-brand"><span className="brand-mark"><Sparkles size={18} /></span><span>Cuppet</span></div>
+        <div className="auth-brand"><Image className="auth-logo" src="/cuppet-mark.png" alt="" width={42} height={42} /><span>Cuppet</span></div>
         <div className="auth-story-copy">
           <p className="eyebrow">Useful agents, calm workspace</p>
           <h1>Let the right things find you.</h1>
           <p>Cuppet watches the tools you choose, keeps the noise down, and brings you useful work at the right moment.</p>
-        </div>
-        <div className="auth-preview-stack" aria-hidden="true">
-          <div className="auth-preview-card back"><span>Project pulse</span><b>4 launch blockers closed</b></div>
-          <div className="auth-preview-card middle"><span>Inbox triage</span><b>Two replies can unblock work</b></div>
-          <div className="auth-preview-card front"><span><Sparkles size={14} /> Daily briefing</span><h2>Your morning is clear.</h2><p>Deep work until 10:30, then three meetings.</p></div>
         </div>
       </section>
 
       <section className="auth-panel">
         <div className="auth-card">
           {mode === "forgot" && <button className="auth-back" onClick={() => setMode("sign-in")}><ArrowLeft size={16} />Back</button>}
-          <div className="auth-mobile-brand"><span className="brand-mark"><Sparkles size={18} /></span><span>Cuppet</span></div>
+          <div className="auth-mobile-brand"><Image className="auth-logo" src="/cuppet-mark.png" alt="" width={42} height={42} /><span>Cuppet</span></div>
           <p className="eyebrow">{mode === "sign-up" ? "Create your workspace" : mode === "forgot" ? "Reset your password" : "Welcome back"}</p>
           <h2>{mode === "sign-up" ? "Start with Cuppet" : mode === "forgot" ? "We’ll send a reset link" : "Sign in to your workspace"}</h2>
           <p className="auth-subtitle">{mode === "forgot" ? "Use the email tied to your Cuppet account." : "Your agents and briefings are waiting."}</p>
 
-          {mode !== "forgot" && <button className="google-button" type="button" onClick={google} disabled={busy}><span className="google-g">G</span>Continue with Google</button>}
+          {mode !== "forgot" && <button className="google-button" type="button" onClick={google} disabled={busy}><Image className="google-logo" src="/google-g-logo.png" alt="" width={22} height={22} />Continue with Google</button>}
           {mode !== "forgot" && <div className="auth-divider"><span>or continue with email</span></div>}
 
           <form onSubmit={submit} className="auth-form">
