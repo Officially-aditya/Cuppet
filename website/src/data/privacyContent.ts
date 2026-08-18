@@ -492,7 +492,7 @@ Cuppet does not sell personal information or share it for cross-context behaviou
 You may request deletion through:
 
 - The Cuppet application: Settings -> Profile -> Delete my account
-- The website: www.cuppet.in/profile/delete
+- The website: https://cuppet.in/profile/delete
 - Email: adityakumaryadav74@gmail.com
 
 After verifying the request, we will:
