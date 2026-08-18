@@ -3850,3 +3850,124 @@ button.flutter-settings-tile:hover,
     min-height: 60px;
   }
 }
+
+/* Font-weight parity with the mobile app. The app's Roboto looks medium and
+   airy in the inbox, so keep everyday emphasis below browser-bold. */
+.live-thread .message-card h3 {
+  font-weight: 500;
+}
+
+.live-thread .message-card b,
+.live-thread .message-card strong,
+.live-thread .markdown b,
+.live-thread .markdown strong,
+.live-thread .user-message b,
+.live-thread .user-message strong,
+.live-thread .section-title b,
+.live-thread .briefing-line b,
+.live-thread .urgency-item b,
+.live-thread .news-item b,
+.live-thread .idea-grid b,
+.live-thread .comparison-list b,
+.live-thread .simple-list b,
+.live-thread .check-list span,
+.live-thread .priority-box > b,
+.live-thread .insight-box > b,
+.live-thread .stock-grid b,
+.live-thread .word-box b {
+  font-weight: 500;
+}
+
+.live-thread .message-feedback.flutter-feedback-actions button {
+  font-weight: 400;
+}
+
+/* Final weight calibration against the mobile app capture. */
+.live-workspace .flutter-eyebrow,
+.live-workspace .flutter-brand-title h1,
+.live-workspace .flutter-section-label,
+.live-workspace .flutter-section-label b,
+.live-workspace .flutter-briefing-heading b,
+.live-workspace .flutter-briefing-card > strong,
+.live-workspace .flutter-agent-title b,
+.live-workspace .flutter-new-agent,
+.live-workspace .creation-intro .eyebrow,
+.live-workspace .creation-intro h1,
+.live-workspace .creation-section-label,
+.live-workspace .recipe-grid .recipe-card b,
+.live-workspace .creation-review-card .preview-agent-heading h3,
+.live-workspace .preview-info-card b {
+  font-weight: 500;
+}
+
+.live-workspace .flutter-feedback-button,
+.live-workspace .flutter-briefing-sources i,
+.live-workspace .flutter-agent-avatar,
+.live-workspace .flutter-unread-count,
+.live-workspace .recipe-grid .recipe-card button,
+.live-workspace .creation-footer button,
+.live-workspace .creation-review-card .ready-pill {
+  font-weight: 400;
+}
+
+.live-workspace .flutter-section-label span,
+.live-workspace .flutter-briefing-summary,
+.live-workspace .flutter-agent-copy > span:last-child,
+.live-workspace .creation-intro > p:last-child,
+.live-workspace .recipe-grid .recipe-card p,
+.live-workspace .preview-review-prompt,
+.live-workspace .preview-info-card p {
+  font-weight: 400;
+}
+
+.live-workspace .flutter-agent-title time {
+  font-weight: 400;
+}
+
+.live-workspace .flutter-agent-copy > .unread-preview {
+  font-weight: 400;
+}
+
+.live-thread .markdown h1,
+.live-thread .markdown h2,
+.live-thread .markdown h3,
+.live-thread .markdown h4,
+.live-thread .markdown h5,
+.live-thread .markdown h6,
+.live-thread .message-kicker,
+.live-thread .message-card .message-kicker {
+  font-weight: 500;
+}
+
+.live-thread .message-action-row button,
+.live-thread .message-feedback.flutter-feedback-actions button {
+  font-weight: 400;
+}
+
+.live-thread .thread-profile h2 {
+  font-weight: 500;
+}
+
+.live-thread .thread-profile small,
+.live-thread .thread-agent-initials,
+.live-thread .day-divider {
+  font-weight: 400;
+}
+
+.live-thread .difficulty {
+  font-weight: 400;
+}
+
+.live-thread .flutter-message-time {
+  font-weight: 400;
+}
+
+@media (min-width: 821px) {
+  .live-workspace .sidebar .nav-item {
+    font-weight: 400;
+  }
+
+  .live-workspace .sidebar .nav-item.active {
+    font-weight: 500;
+  }
+}
