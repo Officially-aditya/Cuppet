@@ -1453,7 +1453,7 @@ function capabilityIntent(
   });
 }
 
-function parseSchedule(prompt: string): string | null {
+export function parseSchedule(prompt: string): string | null {
   const lower = prompt.toLowerCase();
   const regexAmpm = /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i;
   const regex24h = /\b(?:at\s+)?(\d{1,2}):(\d{2})\b/;

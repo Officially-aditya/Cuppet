@@ -61,7 +61,23 @@ export function CreateAgentDialog({
   const configuration = ((preview?.agent_preview ?? preview?.configuration) && typeof (preview?.agent_preview ?? preview?.configuration) === "object" ? (preview?.agent_preview ?? preview?.configuration) : {}) as Record<string, unknown>;
   const agentName = String(parsed.name ?? configuration.name ?? "New Cuppet agent");
   const action = String(parsed.action ?? configuration.description ?? prompt);
-  const schedule = String(parsed.schedule_label ?? configuration.schedule ?? (parsed.schedule_cron ? "Custom schedule" : "On demand"));
+  const trigger =
+    configuration.trigger &&
+    typeof configuration.trigger === "object" &&
+    !Array.isArray(configuration.trigger)
+      ? (configuration.trigger as Record<string, unknown>)
+      : {};
+  const schedule = formatScheduleLabel(
+    typeof parsed.schedule_label === "string"
+      ? parsed.schedule_label
+      : typeof configuration.schedule === "string"
+        ? configuration.schedule
+        : typeof parsed.schedule_cron === "string"
+          ? parsed.schedule_cron
+          : typeof trigger.cron === "string"
+            ? trigger.cron
+            : ""
+  );
   const access = Array.isArray(parsed.connector_ids) && parsed.connector_ids.length ? parsed.connector_ids.join(", ") : "Only what you connect";
 
   return (
@@ -167,4 +183,47 @@ export function CreateAgentDialog({
       </section>
     </div>
   );
+}
+
+function formatScheduleLabel(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "On demand";
+  if (!/^\S+\s+\S+\s+\S+\s+\S+\s+\S+$/.test(trimmed)) return trimmed;
+
+  const [minuteField, hourField, dayOfMonth, month, dayOfWeek] = trimmed.split(/\s+/);
+  const minute = Number(minuteField);
+  const hour = Number(hourField);
+  if (
+    !Number.isInteger(minute) ||
+    !Number.isInteger(hour) ||
+    dayOfMonth === undefined ||
+    month === undefined ||
+    dayOfWeek === undefined
+  ) {
+    return "Custom schedule";
+  }
+
+  const formattedHour = hour % 12 || 12;
+  const period = hour >= 12 ? "PM" : "AM";
+  const time = `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
+
+  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+    return `Every day at ${time}`;
+  }
+  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "1-5") {
+    return `Every weekday at ${time}`;
+  }
+  if (dayOfMonth === "*" && month === "*" && /^[0-6]$/.test(dayOfWeek)) {
+    const weekday = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    ][Number(dayOfWeek)];
+    return `Every ${weekday} at ${time}`;
+  }
+  return "Custom schedule";
 }

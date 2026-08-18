@@ -109,12 +109,34 @@ test("edited news template prompts customize only registered recipe inputs", () 
     "policy",
     "science"
   ]);
+  assert.equal(untouched.parsedIntent.schedule_cron, "0 6 * * *");
+
+  const generatedPromptWithCustomTime = compileAgentRecipe({
+    recipeId: "news_brief",
+    prompt: profile.display.example_prompt.replace("6:00 AM", "8:00 AM")
+  });
+  assert.deepEqual(
+    generatedPromptWithCustomTime.parsedIntent.recipe_inputs?.topics,
+    ["top stories"]
+  );
+  assert.equal(
+    generatedPromptWithCustomTime.parsedIntent.schedule_cron,
+    "0 8 * * *"
+  );
 
   const genericCreation = compileAgentRecipe({
     recipeId: "news_brief",
     prompt: "Create a daily news agent."
   });
   assert.deepEqual(genericCreation.parsedIntent.recipe_inputs?.topics, [
+    "top stories"
+  ]);
+
+  const bareCreation = compileAgentRecipe({
+    recipeId: "news_brief",
+    prompt: "Create a news agent"
+  });
+  assert.deepEqual(bareCreation.parsedIntent.recipe_inputs?.topics, [
     "top stories"
   ]);
 

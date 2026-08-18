@@ -1,4 +1,4 @@
-import type { ParsedIntent } from "../parser.js";
+import { parseSchedule, type ParsedIntent } from "../parser.js";
 import {
   agentDefinitionV2Schema,
   agentDefinitionV1Schema,
@@ -193,12 +193,23 @@ export function parsedIntentForRecipe(input: {
     profile,
     customizeRecipeInputsFromPrompt(profile, baseInputs, input.prompt)
   );
+  const defaultSchedule =
+    profile.default_trigger.type === "schedule"
+      ? profile.default_trigger.cron
+      : null;
+  const configuredSchedule =
+    typeof recipeInputs.schedule === "string" ? recipeInputs.schedule : null;
+  const promptSchedule = hasScheduleField(profile)
+    ? explicitPromptSchedule(input.prompt)
+    : null;
   const schedule =
-    typeof recipeInputs.schedule === "string"
-      ? recipeInputs.schedule
-      : profile.default_trigger.type === "schedule"
-        ? profile.default_trigger.cron
-        : null;
+    configuredSchedule && configuredSchedule !== defaultSchedule
+      ? configuredSchedule
+      : promptSchedule ?? configuredSchedule ?? defaultSchedule;
+  const resolvedRecipeInputs =
+    schedule && recipeInputs.schedule !== schedule
+      ? { ...recipeInputs, schedule }
+      : recipeInputs;
   const githubRepositories = Array.isArray(recipeInputs.repository_filters)
     ? recipeInputs.repository_filters.filter(
         (value): value is string => typeof value === "string"
@@ -216,7 +227,7 @@ export function parsedIntentForRecipe(input: {
     connector: profile.required_connectors[0] ?? null,
     connector_ids: [...profile.required_connectors],
     unsupported_connector: null,
-    action: recipeAction(profile, recipeInputs),
+    action: recipeAction(profile, resolvedRecipeInputs),
     schedule_cron: schedule,
     output_template: profile.output_contract,
     template_config: templateConfiguration(profile.output_contract),
@@ -227,7 +238,7 @@ export function parsedIntentForRecipe(input: {
     response_limit: profile.response_limit,
     recipe_version: profile.version,
     prompt_profile_version: profile.prompt_profile_version,
-    recipe_inputs: recipeInputs,
+    recipe_inputs: resolvedRecipeInputs,
     ...(githubRepositories[0]
       ? { github_repository: githubRepositories[0] }
       : {}),
@@ -240,13 +251,31 @@ export function parsedIntentForRecipe(input: {
   } as ParsedIntent;
 }
 
+function hasScheduleField(profile: AgentRecipeProfileV1): boolean {
+  return profile.fields.some((field) => field.id === "schedule");
+}
+
+function explicitPromptSchedule(prompt?: string): string | null {
+  if (!prompt?.trim()) return null;
+
+  const hasExplicitTime =
+    /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(prompt) ||
+    /\b(?:at\s+)?\d{1,2}:\d{2}\b/i.test(prompt);
+
+  return hasExplicitTime ? parseSchedule(prompt) : null;
+}
+
 function customizeRecipeInputsFromPrompt(
   profile: AgentRecipeProfileV1,
   inputs: Record<string, unknown>,
   prompt?: string
 ): Record<string, unknown> {
   if (!prompt?.trim() || !NEWS_RECIPES.has(profile.id)) return inputs;
-  if (prompt.trim() === profile.display.example_prompt.trim()) return inputs;
+  if (
+    normalizePrompt(prompt) === normalizePrompt(profile.display.example_prompt)
+  ) {
+    return inputs;
+  }
 
   const topics = newsTopicsFromPrompt(prompt);
   if (topics.length === 0) return inputs;
@@ -285,11 +314,18 @@ function customizeRecipeInputsFromPrompt(
 export function newsTopicsFromPrompt(prompt: string): string[] {
   const topics: string[] = [];
   const generic = new Set([
+    "a",
+    "an",
     "agent",
     "brief",
     "briefing",
     "breaking",
+    "balanced",
+    "balanced current news",
+    "balanced current-news",
     "current",
+    "current news",
+    "current-news",
     "daily",
     "digest",
     "general",
@@ -322,6 +358,7 @@ export function newsTopicsFromPrompt(prompt: string): string[] {
         /^i\s+(?:need|want|would\s+like)\s+(?:(?:a|an|the)\s+)?/i,
         ""
       )
+      .replace(/^(?:a|an|the)\b\s*/i, "")
       .replace(
         /^(?:(?:a|an|about|breaking|current|daily|latest|the|top|with)\s+)+/i,
         ""
@@ -333,10 +370,15 @@ export function newsTopicsFromPrompt(prompt: string): string[] {
       .trim();
     if (candidate.split(/\s+/).length > 4) return;
     const lastWord = candidate.split(/\s+/).at(-1)?.toLowerCase() ?? "";
+    const normalizedCandidate = candidate
+      .toLowerCase()
+      .replace(/[-\s]+/g, " ")
+      .trim();
     if (
       !candidate ||
-      generic.has(candidate.toLowerCase()) ||
-      generic.has(lastWord)
+      generic.has(normalizedCandidate) ||
+      generic.has(lastWord) ||
+      normalizedCandidate === "balanced current news"
     ) {
       return;
     }
@@ -366,6 +408,14 @@ export function newsTopicsFromPrompt(prompt: string): string[] {
   if (topics.length === 0 && directAbout?.[1]) add(directAbout[1]);
 
   return topics.slice(0, 6);
+}
+
+function normalizePrompt(value: string): string {
+  return value
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function recipeAction(
