@@ -4053,7 +4053,12 @@ button.flutter-settings-tile:hover,
   transform: rotate(45deg);
 }
 
-.live-workspace .flutter-feedback-select-wrap select {
+.live-workspace .flutter-feedback-select-wrap.open::after {
+  top: 23px;
+  transform: rotate(225deg);
+}
+
+.live-workspace .flutter-feedback-select {
   width: 100%;
   min-height: 50px;
   padding: 0 44px 0 14px;
@@ -4069,15 +4074,54 @@ button.flutter-settings-tile:hover,
   font-weight: 400;
 }
 
-.live-workspace .flutter-feedback-select-wrap select:focus {
+.live-workspace .flutter-feedback-select span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-workspace .flutter-feedback-select:focus {
   border-color: #006046;
   box-shadow: 0 0 0 3px rgba(228, 243, 236, .9);
 }
 
-.live-workspace .flutter-feedback-select-wrap select:disabled,
+.live-workspace .flutter-feedback-select:disabled,
 .live-workspace .flutter-feedback-card textarea:disabled {
   cursor: not-allowed;
   opacity: .65;
+}
+
+.live-workspace .flutter-feedback-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  padding: 4px;
+  border: 1px solid #d4d9d2;
+  background: #fcfbfa;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(28, 26, 23, .12);
+}
+
+.live-workspace .flutter-feedback-option {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 0;
+  color: #1c1a17;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 400;
+  text-align: left;
+}
+
+.live-workspace .flutter-feedback-option:hover,
+.live-workspace .flutter-feedback-option.selected {
+  background: #e4f3ec;
 }
 
 .live-workspace .flutter-feedback-message-label {
@@ -4204,6 +4248,60 @@ button.flutter-settings-tile:hover,
   margin-top: 24px;
 }
 
+/* Navigation components stay independent from the rail surface. */
+@media (min-width: 821px) {
+  .live-workspace .sidebar .primary-nav {
+    margin-top: 16px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .live-workspace .sidebar .nav-item {
+    width: 64px;
+    min-height: 56px;
+    padding: 3px 0 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border-radius: 12px;
+    line-height: 1.2;
+  }
+
+  .live-workspace .sidebar .nav-item:hover {
+    color: #004d39;
+    background: transparent;
+  }
+
+  .live-workspace .sidebar .nav-item::before {
+    top: 3px;
+    width: 42px;
+    height: 26px;
+  }
+
+  .live-workspace .sidebar .nav-item:not(.active):hover::before {
+    background: rgba(228, 243, 236, .42);
+  }
+
+  .live-workspace .sidebar .nav-label {
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+  }
+}
+
+@media (max-width: 820px) {
+  .live-workspace .sidebar .nav-item {
+    background: transparent;
+  }
+
+  .live-workspace .sidebar .nav-item:hover {
+    background: transparent;
+  }
+}
+
 @media (max-width: 820px) {
   .live-workspace .flutter-feedback-panel {
     min-height: 100dvh;
@@ -4212,5 +4310,43 @@ button.flutter-settings-tile:hover,
 
   .live-workspace .flutter-feedback-scroll {
     padding-bottom: calc(40px + env(safe-area-inset-bottom));
+  }
+}
+
+/* The selected destination surface wraps the complete icon-and-label item. */
+.live-workspace .sidebar .nav-item.active {
+  color: #004d39;
+  background: #e4f3ec;
+  border-radius: 14px;
+}
+
+.live-workspace .sidebar .nav-item.active::before {
+  background: transparent;
+}
+
+.live-workspace .sidebar .nav-item:hover {
+  color: #004d39;
+  background: #eef8f3;
+  border-radius: 14px;
+}
+
+.live-workspace .sidebar .nav-item:hover::before {
+  background: transparent;
+}
+
+@media (min-width: 821px) {
+  .live-workspace .sidebar .nav-item {
+    width: 64px;
+    min-height: 64px;
+  }
+}
+
+@media (max-width: 820px) {
+  .live-workspace .sidebar .nav-item,
+  .live-workspace .sidebar .nav-item.active {
+    width: 88px;
+    min-height: 52px;
+    margin: 2px auto;
+    border-radius: 14px;
   }
 }

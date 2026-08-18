@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Check, LoaderCircle } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 const topics = [
   { id: "product_idea", label: "Product idea" },
@@ -16,6 +16,26 @@ export function FeedbackPanel({ onSubmit, onBack }: { onSubmit: (topic: string, 
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [topicOpen, setTopicOpen] = useState(false);
+  const topicMenuRef = useRef<HTMLDivElement>(null);
+  const selectedTopic = topics.find((item) => item.id === topic)?.label ?? topics[0].label;
+
+  useEffect(() => {
+    if (!topicOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!topicMenuRef.current?.contains(event.target as Node)) setTopicOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTopicOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [topicOpen]);
+
   const submit = async (event: FormEvent) => { event.preventDefault(); setBusy(true); setError(""); try { await onSubmit(topic, message.trim()); setSent(true); setMessage(""); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to send feedback."); } finally { setBusy(false); } };
   return <section className="content-panel feedback-panel flutter-feedback-panel">
     <header className="flutter-feedback-appbar"><Image src="/cuppet-mark.png" alt="Cuppet" width={28} height={28} /></header>
@@ -30,10 +50,13 @@ export function FeedbackPanel({ onSubmit, onBack }: { onSubmit: (topic: string, 
         <p className="flutter-feedback-lede">Tell us what is working, what is not, or what you would love to see next.</p>
         <div className="flutter-feedback-card">
           <label className="flutter-feedback-label" htmlFor="feedback-topic">What kind of feedback do you have?</label>
-          <div className="flutter-feedback-select-wrap">
-            <select id="feedback-topic" value={topic} disabled={busy} onChange={(event) => { setTopic(event.target.value); setError(""); }}>
-              {topics.map(({ id, label }) => <option value={id} key={id}>{label}</option>)}
-            </select>
+          <div className={`flutter-feedback-select-wrap ${topicOpen ? "open" : ""}`} ref={topicMenuRef}>
+            <button type="button" id="feedback-topic" className="flutter-feedback-select" disabled={busy} aria-haspopup="listbox" aria-expanded={topicOpen} onClick={() => setTopicOpen((open) => !open)}>
+              <span>{selectedTopic}</span>
+            </button>
+            {topicOpen && <div className="flutter-feedback-menu" role="listbox" aria-label="Feedback topic">
+              {topics.map(({ id, label }) => <button type="button" role="option" aria-selected={topic === id} className={`flutter-feedback-option ${topic === id ? "selected" : ""}`} key={id} onClick={() => { setTopic(id); setTopicOpen(false); setError(""); }}>{label}</button>)}
+            </div>}
           </div>
           <label className="flutter-feedback-label flutter-feedback-message-label" htmlFor="feedback-message">Your feedback</label>
           <textarea id="feedback-message" rows={6} maxLength={5000} disabled={busy} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Share a little detail so we can learn from it…" />
