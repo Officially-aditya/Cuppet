@@ -4383,3 +4383,150 @@ button.flutter-settings-tile:hover,
   object-fit: contain;
   filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .12));
 }
+
+/* Keep every non-inbox surface on the same quiet Roboto hierarchy as the
+   inbox: medium emphasis for titles and controls, regular weight for copy. */
+.auth-brand,
+.auth-mobile-brand,
+.auth-story-copy h1,
+.auth-card > h2,
+.auth-story-copy .eyebrow,
+.auth-card > .eyebrow,
+.auth-form label,
+.google-button,
+.auth-submit,
+.forgot-link,
+.auth-switch button,
+.demo-link {
+  font-weight: 500;
+}
+
+.auth-story-copy > p:last-child,
+.auth-subtitle,
+.auth-form input,
+.auth-switch {
+  font-weight: 400;
+}
+
+/* Overview and agent management use the same medium/regular split as the
+   Flutter inbox instead of the older browser-bold defaults. */
+.live-workspace.view-overview .content-header h1,
+.live-workspace.view-overview .card-heading h2,
+.live-workspace.view-overview .panel-empty h3,
+.live-workspace.view-overview .overview-metric strong,
+.live-workspace.view-overview .focus-list b,
+.live-workspace.view-overview .activity-list b,
+.live-workspace.view-overview .briefing-cards b,
+.live-workspace.view-overview .primary-button,
+.live-workspace.view-overview .text-button,
+.live-workspace.view-overview .eyebrow,
+.live-workspace.view-agents .content-header h1,
+.live-workspace.view-agents .agent-management-card h3,
+.live-workspace.view-agents .agent-detail-heading h2,
+.live-workspace.view-agents .agent-detail form > label,
+.live-workspace.view-agents .setting-row b,
+.live-workspace.view-agents .danger-zone b,
+.live-workspace.view-agents .danger-zone > button,
+.live-workspace.view-agents .delete-confirm button,
+.live-workspace.view-agents .primary-button,
+.live-workspace.view-agents .secondary-button,
+.live-workspace.view-agents .toggle-action,
+.live-workspace.view-agents .eyebrow {
+  font-weight: 500;
+}
+
+.live-workspace.view-overview .overview-metric small,
+.live-workspace.view-overview .overview-metric p,
+.live-workspace.view-overview .focus-list small,
+.live-workspace.view-overview .activity-list small,
+.live-workspace.view-overview .briefing-cards small,
+.live-workspace.view-overview .briefing-cards time,
+.live-workspace.view-agents .content-header > div > p:last-child,
+.live-workspace.view-agents .agent-management-card > p,
+.live-workspace.view-agents .agent-management-card > footer small,
+.live-workspace.view-agents .agent-management-card .status-pill,
+.live-workspace.view-agents .agent-tags span,
+.live-workspace.view-agents .agent-detail form > label small,
+.live-workspace.view-agents .setting-row small,
+.live-workspace.view-agents .danger-zone p,
+.live-workspace.view-agents .saved-note,
+.live-workspace.view-agents .form-message {
+  font-weight: 400;
+}
+
+/* Connectors and the settings landing/detail screens previously retained
+   700/800 weights from the old desktop surface. */
+.live-workspace .flutter-destination-panel .flutter-eyebrow,
+.live-workspace .flutter-destination-panel .flutter-brand-title h1,
+.live-workspace .flutter-destination-panel .flutter-section-label,
+.live-workspace .flutter-destination-panel .flutter-section-label b,
+.live-workspace .flutter-connector-heading b,
+.live-workspace .flutter-connector-status > b,
+.live-workspace .flutter-privacy-panel b,
+.live-workspace .flutter-profile-card b,
+.live-workspace .flutter-settings-copy b,
+.live-workspace .flutter-detail-header h1,
+.live-workspace.view-settings .settings-title h2,
+.live-workspace.view-settings .profile-editor b,
+.live-workspace.view-settings .switch-row b,
+.live-workspace.view-settings .setting-card b,
+.live-workspace.view-settings .setting-row b,
+.live-workspace.view-settings .danger-zone b,
+.live-workspace.view-settings .danger-zone > button,
+.live-workspace.view-settings .delete-confirm button,
+.live-workspace.view-settings .settings-section > label,
+.live-workspace.view-settings .flutter-signout,
+.live-workspace.view-settings .primary-button,
+.live-workspace.view-settings .secondary-button {
+  font-weight: 500;
+}
+
+.live-workspace .flutter-destination-panel .flutter-subtitle,
+.live-workspace .flutter-destination-panel .flutter-section-label span,
+.live-workspace .flutter-connector-heading small,
+.live-workspace .flutter-privacy-panel p,
+.live-workspace .flutter-profile-card small,
+.live-workspace .flutter-settings-copy small,
+.live-workspace.view-settings .settings-title p,
+.live-workspace.view-settings .profile-editor small,
+.live-workspace.view-settings .switch-row small,
+.live-workspace.view-settings .setting-card p,
+.live-workspace.view-settings .setting-card a:not(.secondary-button),
+.live-workspace.view-settings .privacy-callout p,
+.live-workspace.view-settings .danger-zone p,
+.live-workspace.view-settings .delete-confirm > span,
+.live-workspace.view-settings .form-message,
+.live-workspace.view-settings .setting-row small {
+  font-weight: 400;
+}
+
+.live-workspace.view-connectors .form-message,
+.live-workspace.view-feedback .flutter-feedback-card .form-message {
+  font-weight: 400;
+}
+
+/* The new-agent dialog is opened from the inbox, so scope it directly rather
+   than changing the inbox's established weight treatment. */
+.live-workspace .create-dialog .creation-text-button,
+.live-workspace .create-dialog .creation-intro .eyebrow,
+.live-workspace .create-dialog .creation-intro h1,
+.live-workspace .create-dialog .creation-section-label,
+.live-workspace .create-dialog .recipe-grid .recipe-card b,
+.live-workspace .create-dialog .creation-review-card .preview-agent-heading h3,
+.live-workspace .create-dialog .preview-info-card b,
+.live-workspace .create-dialog .creation-footer button {
+  font-weight: 500;
+}
+
+.live-workspace .create-dialog .creation-intro > p:last-child,
+.live-workspace .create-dialog .prompt-editor textarea,
+.live-workspace .create-dialog .prompt-editor small,
+.live-workspace .create-dialog .recipe-grid .recipe-card p,
+.live-workspace .create-dialog .creation-review-card .preview-agent-heading small,
+.live-workspace .create-dialog .creation-review-card .ready-pill,
+.live-workspace .create-dialog .preview-review-prompt,
+.live-workspace .create-dialog .preview-info-card p,
+.live-workspace .create-dialog .preview-note,
+.live-workspace .create-dialog .form-message {
+  font-weight: 400;
+}

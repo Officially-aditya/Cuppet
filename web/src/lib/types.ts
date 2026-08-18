@@ -64,6 +64,7 @@ export type Connector = {
 };
 
 export type RecipeField = {
+  id?: string;
   key?: string;
   name?: string;
   label?: string;
@@ -71,19 +72,35 @@ export type RecipeField = {
   type?: string;
   required?: boolean;
   default?: unknown;
+  default_value?: unknown;
   options?: Array<string | { label: string; value: string }>;
+  display_default_value?: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
 };
 
 export type AgentRecipe = {
   id: string;
   version?: number;
+  prompt_profile_version?: number;
   name: string;
   description: string;
   icon?: string;
   category?: string;
   example_prompt?: string;
+  required_connectors?: string[];
   fields?: RecipeField[];
   input_schema?: { fields?: RecipeField[] };
+  display?: {
+    name?: string;
+    description?: string;
+    icon?: string;
+    category?: string;
+    example_prompt?: string;
+    visible?: boolean;
+    sort_order?: number;
+  };
   [key: string]: unknown;
 };
 

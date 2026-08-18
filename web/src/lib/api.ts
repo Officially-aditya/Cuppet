@@ -5,6 +5,7 @@ import type {
   ApiErrorPayload,
   Connector,
   CurrentUserResponse,
+  RecipeField,
   UserPreferences
 } from "./types";
 
@@ -51,6 +52,96 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 
 const json = (value: unknown) => JSON.stringify(value);
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function normalizeRecipeField(value: unknown): RecipeField | null {
+  const raw = recordValue(value);
+  const id = stringValue(raw.id) ?? stringValue(raw.key) ?? stringValue(raw.name) ?? stringValue(raw.label);
+  if (!id) return null;
+  const label = stringValue(raw.label) ?? stringValue(raw.name) ?? id;
+  const options: RecipeField["options"] = Array.isArray(raw.options)
+    ? raw.options.flatMap((option: unknown): Array<string | { label: string; value: string }> => {
+        if (typeof option === "string") return [option];
+        const normalized = recordValue(option);
+        const optionValue = stringValue(normalized.value);
+        const optionLabel = stringValue(normalized.label) ?? optionValue;
+        return optionValue && optionLabel ? [{ value: optionValue, label: optionLabel }] : [];
+      })
+    : undefined;
+  const defaultValue = raw.default !== undefined ? raw.default : raw.default_value;
+  return {
+    id,
+    key: stringValue(raw.key) ?? id,
+    name: stringValue(raw.name) ?? label,
+    label,
+    description: stringValue(raw.description),
+    type: stringValue(raw.type),
+    required: raw.required === true,
+    ...(defaultValue !== undefined ? { default: defaultValue, default_value: defaultValue } : {}),
+    display_default_value: stringValue(raw.display_default_value),
+    placeholder: stringValue(raw.placeholder),
+    ...(options ? { options } : {}),
+    min: numberValue(raw.min),
+    max: numberValue(raw.max)
+  };
+}
+
+/** Normalize the backend's public recipe shape into the UI's flat recipe model. */
+export function normalizeAgentRecipe(value: unknown): AgentRecipe | null {
+  const raw = recordValue(value);
+  const display = recordValue(raw.display);
+  const id = stringValue(raw.id) ?? stringValue(raw.recipe_id);
+  if (!id) return null;
+  const fields = Array.isArray(raw.fields)
+    ? raw.fields.flatMap((field) => {
+        const normalized = normalizeRecipeField(field);
+        return normalized ? [normalized] : [];
+      })
+    : [];
+  const connectors = Array.isArray(raw.required_connectors)
+    ? raw.required_connectors.filter((connector): connector is string => typeof connector === "string")
+    : [];
+  const name = stringValue(raw.name) ?? stringValue(display.name) ?? "Agent";
+  const description = stringValue(raw.description) ?? stringValue(display.description) ?? "A useful Cuppet agent.";
+  const icon = stringValue(raw.icon) ?? stringValue(display.icon);
+  const category = stringValue(raw.category) ?? stringValue(display.category);
+  const examplePrompt = stringValue(raw.example_prompt) ?? stringValue(display.example_prompt) ?? description;
+  return {
+    ...raw,
+    id,
+    version: numberValue(raw.version) ?? numberValue(raw.recipe_version),
+    prompt_profile_version: numberValue(raw.prompt_profile_version),
+    name,
+    description,
+    icon,
+    category,
+    example_prompt: examplePrompt,
+    required_connectors: connectors,
+    fields,
+    display: {
+      name,
+      description,
+      icon,
+      category,
+      example_prompt: examplePrompt,
+      visible: display.visible === true,
+      sort_order: numberValue(display.sort_order)
+    }
+  };
+}
+
 export const api = {
   me: () => apiRequest<CurrentUserResponse>("/users/me"),
   updateMe: (value: { name?: string; image?: string; avatar?: number }) =>
@@ -66,7 +157,15 @@ export const api = {
   deleteAccount: () => apiRequest<{ success: boolean }>("/users/me", { method: "DELETE" }),
   agents: () => apiRequest<{ agents: Agent[] }>("/agents"),
   agent: (agentId: string) => apiRequest<{ agent: Agent }>(`/agents/${agentId}`),
-  recipes: () => apiRequest<{ recipes: AgentRecipe[] }>("/agents/recipes"),
+  recipes: async () => {
+    const response = await apiRequest<{ recipes?: unknown[] }>("/agents/recipes");
+    return {
+      recipes: (response.recipes ?? []).flatMap((recipe) => {
+        const normalized = normalizeAgentRecipe(recipe);
+        return normalized ? [normalized] : [];
+      })
+    };
+  },
   parseAgent: (value: Record<string, unknown>) =>
     apiRequest<Record<string, unknown>>("/agents/parse", { method: "POST", body: json(value) }),
   createAgent: (value: Record<string, unknown>) =>

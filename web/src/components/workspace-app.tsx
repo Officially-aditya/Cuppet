@@ -19,7 +19,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { demoAgents, demoConnectors, demoMessages, demoRecipes, demoUser } from "@/lib/demo-data";
-import type { Agent, AgentMessage, Connector, CurrentUserResponse, ViewKey } from "@/lib/types";
+import type { Agent, AgentMessage, AgentRecipe, Connector, CurrentUserResponse, ViewKey } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
 import { AgentsPanel } from "./agents-panel";
 import { ConnectorsPanel } from "./connectors-panel";
@@ -132,20 +132,30 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     window.history.replaceState({}, "", url);
   };
 
-  const parseAgent = async (prompt: string) => {
-    if (demo) return { parsed_intent: { name: prompt.includes("inbox") ? "Inbox helper" : "New useful agent", action: prompt, schedule_label: /every|weekday|daily|weekly/i.test(prompt) ? "On the schedule you described" : "On demand", connector_ids: [prompt.toLowerCase().includes("gmail") || prompt.toLowerCase().includes("inbox") ? "gmail" : "web_search"] } };
-    return api.parseAgent({ prompt });
+  const parseAgent = async (prompt: string, recipe?: AgentRecipe) => {
+    if (demo) {
+      const connectorIds = recipe?.required_connectors ?? (prompt.toLowerCase().includes("gmail") || prompt.toLowerCase().includes("inbox") ? ["gmail"] : []);
+      return {
+        parsed_intent: {
+          name: recipe?.name ?? (prompt.includes("inbox") ? "Inbox helper" : "New useful agent"),
+          action: recipe?.description ?? prompt,
+          schedule_label: recipe ? "Configured template schedule" : /every|weekday|daily|weekly/i.test(prompt) ? "On the schedule you described" : "On demand",
+          connector_ids: connectorIds
+        }
+      };
+    }
+    return api.parseAgent({ prompt, ...recipeRequest(recipe) });
   };
 
-  const createAgent = async (prompt: string) => {
+  const createAgent = async (prompt: string, recipe?: AgentRecipe) => {
     if (demo) {
       const id = `demo-${Date.now()}`;
-      const agent: Agent = { id, name: prompt.split(/[,.]/)[0]!.slice(0, 42) || "New agent", description: prompt, prompt, status: "active", avatar: "sparkles", last_message_preview: "Agent created and ready", latest_message_at: new Date().toISOString(), unread_count: 1 };
+      const agent: Agent = { id, name: recipe?.name ?? (prompt.split(/[,.]/)[0]!.slice(0, 42) || "New agent"), description: recipe?.description ?? prompt, prompt, status: "active", avatar: recipe?.icon ?? "sparkles", connector_ids: recipe?.required_connectors, last_message_preview: "Agent created and ready", latest_message_at: new Date().toISOString(), unread_count: 1 };
       setDemoAgentState((current) => [...current, agent]);
       setDemoMessageState((current) => ({ ...current, [id]: [{ id: `${id}-welcome`, agent_id: id, role: "agent", created_at: new Date().toISOString(), content: { template: "plain_text", data: { headline: "Agent ready", body: "I’m set up. You can run me now, or refine my instructions from Agent settings." } } }] }));
       selectThread(agent);
     } else {
-      const result = await api.createAgent({ prompt });
+      const result = await api.createAgent({ prompt, ...recipeRequest(recipe) });
       await queryClient.invalidateQueries({ queryKey: ["agents"] });
       selectThread(result.agent);
     }
@@ -246,6 +256,21 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     {commandOpen && <div className="command-backdrop" onMouseDown={() => setCommandOpen(false)}><section className="command-palette" onMouseDown={(event) => event.stopPropagation()}><div><Search size={18} /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="Search agents and views…" /><button onClick={() => setCommandOpen(false)}>esc</button></div><nav>{commandResults.map((result) => <button key={result.id} onClick={() => { result.action(); setCommandOpen(false); setCommandQuery(""); }}><span className="command-result-icon"><Command size={15} /></span><span><b>{result.label}</b><small>{result.note}</small></span></button>)}{commandResults.length === 0 && <p>No matching agents or views.</p>}</nav></section></div>}
     {toast && <div className="toast" role="status"><Sparkles size={15} />{toast}</div>}
   </main>;
+}
+
+function recipeRequest(recipe?: AgentRecipe): Record<string, unknown> {
+  if (!recipe?.id) return {};
+  const recipeInputs: Record<string, unknown> = {};
+  for (const field of recipe.fields ?? []) {
+    const key = field.id ?? field.key;
+    const value = field.default !== undefined ? field.default : field.default_value;
+    if (key && value !== undefined) recipeInputs[key] = value;
+  }
+  return {
+    recipe_id: recipe.id,
+    ...(recipe.version ? { recipe_version: recipe.version } : {}),
+    ...(Object.keys(recipeInputs).length ? { recipe_inputs: recipeInputs } : {})
+  };
 }
 
 function InboxPane({ agents, briefings, firstName, selectedAgentId, onSelect, onCreate, onFeedback }: { agents: Agent[]; briefings: AgentMessage[]; firstName: string; selectedAgentId?: string; onSelect: (agent: Agent) => void; onCreate: () => void; onFeedback: () => void }) {

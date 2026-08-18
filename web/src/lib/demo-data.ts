@@ -57,9 +57,37 @@ export const demoConnectors: Connector[] = [
   { id: "web_search", name: "Web Search", description: "Search the public web without a login", category: "Web & research", icon_name: "Search", status: "connected", auth_configured: true }
 ];
 
+const demoRecipe = (
+  id: string,
+  name: string,
+  description: string,
+  category: string,
+  example_prompt: string,
+  required_connectors: string[] = []
+): AgentRecipe => ({
+  id,
+  version: 1,
+  name,
+  description,
+  category,
+  example_prompt,
+  required_connectors
+});
+
+// Keep the demo workspace aligned with the visible recipes returned by the
+// backend so the New Agent flow is useful before a user connects an account.
 export const demoRecipes: AgentRecipe[] = [
-  { id: "daily_briefing", name: "Daily briefing", description: "A useful start-of-day overview from your connected tools.", category: "Planning", example_prompt: "Every weekday at 8 AM, brief me on my calendar and important email." },
-  { id: "inbox_triage", name: "Inbox triage", description: "Surface the messages that genuinely need a decision.", category: "Communication", example_prompt: "Watch Gmail and tell me when something needs a reply." },
-  { id: "project_pulse", name: "Project pulse", description: "Summarize meaningful progress across GitHub and Slack.", category: "Engineering", example_prompt: "Every Friday, summarize meaningful progress on Sydney." },
-  { id: "news_brief", name: "News brief", description: "Follow a topic and synthesize the useful developments.", category: "Research", example_prompt: "Every morning, give me a concise AI agents news brief." }
+  demoRecipe("news_brief", "News agent", "Five ranked current stories with a TL;DR.", "news", "Create a News agent. Research the top stories every morning and rank five useful developments.", ["web_search"]),
+  demoRecipe("tech_news_brief", "Tech News", "A ranked briefing of fresh, high-signal technology news.", "news", "Create a Tech News agent. Give me a concise technology briefing every morning.", ["web_search"]),
+  demoRecipe("email_digest", "Email agent", "Ranks Gmail replies, deadlines, finance or security alerts, and useful updates.", "work", "Create an Email agent. Review Gmail every evening and surface replies, deadlines, finance, and security alerts.", ["gmail"]),
+  demoRecipe("calendar_agenda", "Calendar agent", "Turns upcoming Google Calendar events into a concise prioritized agenda.", "work", "Create a Calendar agent. Prepare a prioritized agenda from my upcoming Google Calendar events every morning.", ["calendar"]),
+  demoRecipe("github_activity_digest", "GitHub agent", "Ranks commit messages, repository, issue, and pull-request activity involving you.", "work", "Create a GitHub agent. Summarize my recent repository, issue, and pull-request activity every morning.", ["github"]),
+  demoRecipe("scheduled_reminder", "Reminder agent", "A scheduled, tone-aware nudge with an optional tiny next step.", "productivity", "Create a Reminder agent. Remind me every evening to code for a few minutes with an encouraging first step."),
+  demoRecipe("dsa_question", "DSA agent", "One progressive coding problem with constraints, examples, and a bounded hint.", "learning", "Create a DSA agent. Send me one progressive coding problem every evening with examples and a hint."),
+  demoRecipe("portfolio_watch", "Market watch", "Tracks required symbols and explains material market moves and events.", "markets", "Create a Market watch agent. Track RIL, TCS, and MRF and explain material moves on weekdays.", ["web_search"]),
+  demoRecipe("content_extractor", "Content extractor", "Finds three fresh, audience-fit content angles and supports draft selection.", "content", "Create a Content extractor. Find three fresh technology content angles for curious professionals every morning.", ["web_search"]),
+  demoRecipe("daily_executive_briefing", "Daily briefing", "Calendar, important email, and Slack synthesized into one prioritized card.", "briefing", "Create a Daily briefing agent. Combine today's calendar, important Gmail, and relevant Slack into one morning briefing.", ["gmail", "calendar", "slack"]),
+  demoRecipe("project_pulse", "Project pulse", "GitHub, Slack, Notion, and Drive activity synthesized into a project view.", "briefing", "Create a Project pulse agent. Summarize GitHub, Slack, Notion, and Drive progress every weekday.", ["github", "slack", "notion", "drive"]),
+  demoRecipe("meeting_intelligence", "Meeting intelligence", "Calendar events enriched with relevant email and workspace context.", "briefing", "Create a Meeting intelligence agent. Prepare context for my upcoming meetings every weekday.", ["calendar", "gmail", "drive", "notion"]),
+  demoRecipe("weekly_accomplishment_report", "Weekly accomplishments", "An evidence-based weekly review across connected work tools.", "briefing", "Create a Weekly accomplishments agent. Summarize my contributions and measurable progress every Friday.", ["slack", "github", "drive", "notion"])
 ];

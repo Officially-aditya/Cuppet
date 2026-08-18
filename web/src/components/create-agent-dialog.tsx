@@ -11,8 +11,8 @@ export function CreateAgentDialog({
 }: {
   recipes: AgentRecipe[];
   onClose: () => void;
-  onParse: (prompt: string) => Promise<Record<string, unknown>>;
-  onCreate: (prompt: string) => Promise<void>;
+  onParse: (prompt: string, recipe?: AgentRecipe) => Promise<Record<string, unknown>>;
+  onCreate: (prompt: string, recipe?: AgentRecipe) => Promise<void>;
 }) {
   const [step, setStep] = useState<"start" | "preview">("start");
   const [prompt, setPrompt] = useState("");
@@ -20,6 +20,8 @@ export function CreateAgentDialog({
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId);
 
   const selectRecipe = (recipe: AgentRecipe) => {
     setPrompt(recipe.example_prompt || recipe.description);
@@ -33,7 +35,7 @@ export function CreateAgentDialog({
     setBusy(true);
     setError("");
     try {
-      setPreview(await onParse(prompt.trim()));
+      setPreview(await onParse(prompt.trim(), selectedRecipe));
       setStep("preview");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Cuppet couldn’t shape that agent yet.");
@@ -46,7 +48,7 @@ export function CreateAgentDialog({
     setBusy(true);
     setError("");
     try {
-      await onCreate(prompt.trim());
+      await onCreate(prompt.trim(), selectedRecipe);
       onClose();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to create the agent.");
@@ -84,7 +86,7 @@ export function CreateAgentDialog({
                 <textarea
                   autoFocus
                   value={prompt}
-                  onChange={(event) => { setPrompt(event.target.value); setSelectedRecipeId("custom"); setError(""); }}
+                  onChange={(event) => { setPrompt(event.target.value); setError(""); }}
                   minLength={3}
                   rows={6}
                   maxLength={4000}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest } from "./api";
+import { apiRequest, normalizeAgentRecipe } from "./api";
 
 describe("apiRequest", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -35,6 +35,29 @@ describe("apiRequest", () => {
       message: "Agent not found.",
       status: 404,
       code: "AGENT_NOT_FOUND"
+    });
+  });
+
+  it("normalizes backend recipe profiles for the creation dialog", () => {
+    expect(normalizeAgentRecipe({
+      recipe_id: "email_digest",
+      recipe_version: 1,
+      display: {
+        name: "Email agent",
+        description: "Ranks Gmail replies and deadlines.",
+        icon: "mail",
+        category: "work",
+        example_prompt: "Create an Email agent."
+      },
+      required_connectors: ["gmail"],
+      fields: [{ id: "scope", label: "Message scope", type: "enum", required: true, default_value: "unread" }]
+    })).toMatchObject({
+      id: "email_digest",
+      name: "Email agent",
+      description: "Ranks Gmail replies and deadlines.",
+      example_prompt: "Create an Email agent.",
+      required_connectors: ["gmail"],
+      fields: [{ id: "scope", label: "Message scope", default: "unread", default_value: "unread" }]
     });
   });
 });
