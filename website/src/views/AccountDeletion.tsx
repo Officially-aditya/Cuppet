@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Breadcrumb from '../components/Breadcrumb'
 import SiteLayout from '../components/SiteLayout'
 
-const deletionEmail = 'adityakumaryadav74@gmail.com'
+const deletionEmail = 'info@cuppet.in'
 const deletionRequestHref = `mailto:${deletionEmail}?subject=${encodeURIComponent(
   'Cuppet account deletion request',
 )}&body=${encodeURIComponent(
