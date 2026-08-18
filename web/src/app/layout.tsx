@@ -14,7 +14,11 @@ export const metadata: Metadata = {
   title: "Cuppet",
   description: "A calm workspace for useful AI agents.",
   robots: { index: false, follow: false },
-  icons: { icon: "/favicon.svg" }
+  icons: {
+    icon: "/cuppet-mark.png",
+    shortcut: "/cuppet-mark.png",
+    apple: "/cuppet-app-icon.png"
+  }
 };
 
 export const viewport: Viewport = {
