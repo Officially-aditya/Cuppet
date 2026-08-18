@@ -162,6 +162,12 @@ void main() {
     expect(find.text('Read capabilities'), findsOneWidget);
     expect(find.text('OAuth scopes (optional)'), findsOneWidget);
     expect(find.textContaining('Required: a provider name'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
+
+    final firstField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(firstField.style?.fontSize, 13);
+    expect(firstField.decoration?.hintStyle?.fontSize, 12);
+    expect(firstField.decoration?.helperStyle?.fontSize, 10);
   });
 
   testWidgets(

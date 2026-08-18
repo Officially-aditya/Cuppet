@@ -156,18 +156,23 @@ class _CustomMcpProviderFormState
               const SizedBox(height: SydneySpacing.lg),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
+                child: FilledButton(
                   onPressed: _submitting ? null : _submit,
-                  icon:
-                      _submitting
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Icon(Icons.arrow_forward_rounded, size: 17),
-                  label: Text(
-                    _submitting ? 'Checking provider...' : 'Add provider',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_submitting) ...[
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: SydneySpacing.sm),
+                      ],
+                      Text(
+                        _submitting ? 'Checking provider...' : 'Add provider',
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -187,16 +192,33 @@ class _CustomMcpProviderFormState
     TextInputAction? textInputAction,
     int maxLines = 1,
   }) {
+    final textTheme = Theme.of(context).textTheme;
     return TextField(
       controller: controller,
       enabled: !_submitting,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       maxLines: maxLines,
+      style: textTheme.bodyMedium?.copyWith(
+        color: SydneyColors.mutedInk,
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         helperText: helperText,
+        hintStyle: textTheme.bodySmall?.copyWith(
+          color: SydneyColors.subtleInk,
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+        ),
+        helperStyle: textTheme.labelSmall?.copyWith(
+          color: SydneyColors.subtleInk,
+          fontSize: 10,
+          fontWeight: FontWeight.w400,
+          height: 1.25,
+        ),
       ),
     );
   }
