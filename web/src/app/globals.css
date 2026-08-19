@@ -4737,7 +4737,7 @@ button.flutter-settings-tile:hover,
   .live-workspace .content-panel { grid-column: 2; height: 100vh; }
   .bottom-nav-mobile-only { display: none !important; }
   .agent-sidebar-nav [data-nav-id="inbox"] { display: none; }
-  .agent-sidebar-nav .bottom-nav-item + .bottom-nav-item::before {
+  .agent-sidebar-nav [data-nav-id="settings"]::before {
     content: "";
     position: absolute;
     top: -3px;
@@ -4797,6 +4797,6 @@ button.flutter-settings-tile:hover,
     padding: 3px 0 1px;
   }
   .agent-sidebar-nav [data-nav-id="inbox"] { display: flex; }
-  .agent-sidebar-nav .bottom-nav-item + .bottom-nav-item::before { display: none; }
+  .agent-sidebar-nav [data-nav-id="settings"]::before { display: none; }
   .flutter-inbox-list { padding-bottom: 150px; }
 }
