@@ -22,8 +22,9 @@ import { api, errorMessage } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { disablePushNotifications, enablePushNotifications, pushConfigured } from "@/lib/notifications";
 import type { CurrentUserResponse } from "@/lib/types";
+import { PersonalizationSettingsPanel } from "./personalization-settings";
 
-type SettingsTab = "profile" | "notifications" | "data";
+type SettingsTab = "profile" | "notifications" | "data" | "personalization";
 
 export function SettingsPanel({ me, demo, onExitDemo, onOpenConnectors }: { me: CurrentUserResponse; demo: boolean; onExitDemo?: () => void; onOpenConnectors: () => void }) {
   const router = useRouter();
@@ -61,7 +62,7 @@ export function SettingsPanel({ me, demo, onExitDemo, onOpenConnectors }: { me: 
 
   if (tab) return <section className="content-panel settings-panel flutter-settings-detail">
     <header className="flutter-detail-header"><button onClick={() => setTab(null)} aria-label="Back to settings"><ArrowLeft size={20} /></button><h1>{tab === "profile" ? "Profile" : tab === "notifications" ? "Notifications" : "Data & privacy"}</h1></header>
-    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettings demo={demo} />}</div>
+    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettings demo={demo} />}{tab === "personalization" && <PersonalizationSettingsPanel demo={demo} />}</div>
   </section>;
 
   return <section className="content-panel settings-panel flutter-destination-panel">
@@ -74,7 +75,7 @@ export function SettingsPanel({ me, demo, onExitDemo, onOpenConnectors }: { me: 
         <SettingsTile icon="notification" title="Push notifications" description={pushEnabled ? "Message and agent status alerts are active." : "Enable message and agent status alerts."} trailing={<button className={`flutter-switch ${pushEnabled ? "on" : ""}`} disabled={pushBusy || (!pushConfigured() && !demo)} onClick={(event) => { event.stopPropagation(); void togglePush(); }} aria-pressed={pushEnabled}>{pushBusy ? <LoaderCircle className="spin" size={15} /> : <span />}</button>} />
         <SettingsTile icon="timezone" title={followDevice ? "Automatic time zone" : "Fixed time zone"} description={`${me.preferences.time_zone} · ${followDevice ? "Follows this device when it changes." : "Turn on automatic to follow this device."}`} trailing={<button className={`flutter-switch ${followDevice ? "on" : ""}`} disabled={timezoneBusy} onClick={(event) => { event.stopPropagation(); void toggleTimeZone(); }} aria-pressed={followDevice}>{timezoneBusy ? <LoaderCircle className="spin" size={15} /> : <span />}</button>} />
         <SettingsTile icon="memory" title="Memory" description="Review confirmed details remembered by Assistant." onClick={() => setTab("data")} />
-        <SettingsTile icon="personalization" title="Personalization" description="Choose what Cuppet may learn to make fewer, more useful suggestions." onClick={() => setTab("data")} />
+        <SettingsTile icon="personalization" title="Personalization" description="Choose what Cuppet may learn to make fewer, more useful suggestions." onClick={() => setTab("personalization")} />
         <SettingsTile icon="storage" title="Storage" description="Manage 30-day history and Google Drive archives." onClick={() => setTab("data")} />
       </SettingsGroup>
 

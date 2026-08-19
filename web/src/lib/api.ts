@@ -6,7 +6,11 @@ import type {
   Connector,
   CurrentUserResponse,
   MessageFeedbackType,
+  PersonalizationConsent,
   PersonalizationResponse,
+  PersonalizationSettings,
+  PreferenceProfileItem,
+  PreferenceProfileResponse,
   RecipeField,
   UserPreferences
 } from "./types";
@@ -194,6 +198,45 @@ export const api = {
       })
     }),
   personalization: () => apiRequest<PersonalizationResponse>("/users/me/personalization"),
+  preferenceProfile: async () => {
+    const [settings, profile] = await Promise.all([
+      api.personalization(),
+      apiRequest<PreferenceProfileResponse>("/users/me/preference-profile")
+    ]);
+    return {
+      ...settings,
+      items: profile.items ?? [],
+      settings: settings.settings ?? defaultPersonalizationSettings(),
+      consents: settings.consents ?? [],
+      recent_suggestions: settings.recent_suggestions ?? []
+    };
+  },
+  updatePersonalization: (value: Partial<PersonalizationSettings>) =>
+    apiRequest<{ settings: PersonalizationSettings }>("/users/me/personalization", {
+      method: "PATCH",
+      body: json(value)
+    }),
+  grantPersonalizationConsent: (purpose: string, source = "settings") =>
+    apiRequest<{ consent: PersonalizationConsent }>("/users/me/personalization/consents", {
+      method: "POST",
+      body: json({ purpose, source })
+    }),
+  revokePersonalizationConsent: (purpose: string) =>
+    apiRequest<{ consent: PersonalizationConsent }>(`/users/me/personalization/consents/${encodeURIComponent(purpose)}`, { method: "DELETE" }),
+  updatePreferenceItem: (itemId: string, value: { key?: string; weight?: number }) =>
+    apiRequest<{ item: PreferenceProfileItem }>(`/users/me/preference-profile/${encodeURIComponent(itemId)}`, {
+      method: "PATCH",
+      body: json(value)
+    }),
+  deletePreferenceItem: (itemId: string) =>
+    apiRequest<void>(`/users/me/preference-profile/${encodeURIComponent(itemId)}`, { method: "DELETE" }),
+  resetPreferenceProfile: () => apiRequest<void>("/users/me/preference-profile", { method: "DELETE" }),
+  createPreferenceExclusion: (value: { subject_type: string; subject_key: string }) =>
+    apiRequest<Record<string, unknown>>("/users/me/preference-profile/exclusions", { method: "POST", body: json(value) }),
+  connectBrowserActivity: () =>
+    apiRequest<{ connection: { token: string } }>("/users/me/personalization/browser-connection", { method: "POST" }),
+  disconnectBrowserActivity: () => apiRequest<void>("/users/me/personalization/browser-connection", { method: "DELETE" }),
+  exportPreferenceProfile: () => apiRequest<Record<string, unknown>>("/users/me/preference-profile/export"),
   briefings: () => apiRequest<{ briefings: AgentMessage[] }>("/briefings"),
   connectors: () => apiRequest<Connector[]>("/connectors"),
   connectorStatus: (connectorId: string, connected: boolean) =>
@@ -233,6 +276,19 @@ export const api = {
     });
   }
 };
+
+export function defaultPersonalizationSettings(): PersonalizationSettings {
+  return {
+    enabled: false,
+    learning_paused: false,
+    frequency: "balanced",
+    in_chat: true,
+    proactive: false,
+    push: false,
+    quiet_hours_start: "21:00",
+    quiet_hours_end: "08:00"
+  };
+}
 
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong. Please try again.";

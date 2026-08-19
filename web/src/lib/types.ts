@@ -58,10 +58,67 @@ export type AgentMessage = {
 export type MessageFeedbackType = "useful" | "not_useful";
 
 export type PersonalizationResponse = {
+  settings?: PersonalizationSettings;
+  consents?: PersonalizationConsent[];
+  browser_connected?: boolean;
+  recent_suggestions?: AssistantSuggestion[];
   feedback?: Array<{
     message_id: string;
     feedback_type: string;
   }>;
+  [key: string]: unknown;
+};
+
+export type PersonalizationSettings = {
+  enabled: boolean;
+  learning_paused: boolean;
+  frequency: "low" | "balanced" | "high" | string;
+  in_chat: boolean;
+  proactive: boolean;
+  push: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+};
+
+export type PersonalizationConsent = {
+  id: string;
+  purpose: string;
+  status: string;
+  policy_version?: string;
+  created_at?: string;
+  granted_at?: string | null;
+  revoked_at?: string | null;
+  source?: string;
+};
+
+export type PreferenceProfileItem = {
+  id: string;
+  dimension?: string;
+  key: string;
+  weight: number;
+  confidence?: number;
+  evidence_count?: number;
+  strongest_evidence_type?: string;
+  derived_from?: string[];
+  first_observed_at?: string;
+  last_observed_at?: string;
+  expires_at?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type AssistantSuggestion = {
+  id: string;
+  type?: string;
+  title: string;
+  body: string;
+  status: string;
+  delivered_at?: string | null;
+  decided_at?: string | null;
+  explanation?: Record<string, unknown>;
+};
+
+export type PreferenceProfileResponse = {
+  items: PreferenceProfileItem[];
   [key: string]: unknown;
 };
 
