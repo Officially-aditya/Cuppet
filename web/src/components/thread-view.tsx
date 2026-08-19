@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Fragment, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import type { Agent, AgentMessage, MessageFeedbackType } from "@/lib/types";
+import type { Agent, AgentMessage, MessageAction, MessageFeedbackType } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
 import { MessageRenderer } from "./message-renderer";
 
@@ -38,7 +38,7 @@ export function ThreadView({
   onBack?: () => void;
   onSend: (text: string, attachmentIds?: string[]) => Promise<void> | void;
   onUpload?: (file: File) => Promise<{ id: string; name: string }>;
-  onAction?: (messageId: string, action: "done" | "snooze" | "skip") => void;
+  onAction?: (messageId: string, action: MessageAction) => void;
   onFeedback?: (messageId: string, value: MessageFeedbackType, subjectKey?: string) => void;
   feedback?: Record<string, string>;
   onRun?: () => void;

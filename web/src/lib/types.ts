@@ -55,6 +55,11 @@ export type AgentMessage = {
   created_at: string;
 };
 
+export type MessageAction = {
+  type: string;
+  [key: string]: unknown;
+};
+
 export type MessageFeedbackType = "useful" | "not_useful";
 
 export type PersonalizationResponse = {

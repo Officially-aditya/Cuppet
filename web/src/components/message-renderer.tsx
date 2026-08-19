@@ -3,7 +3,8 @@
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import type { AgentMessage, MessageContent, MessageFeedbackType } from "@/lib/types";
+import { useState } from "react";
+import type { AgentMessage, MessageAction, MessageContent, MessageFeedbackType } from "@/lib/types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -31,7 +32,7 @@ export function MessageRenderer({
   feedbackType
 }: {
   message: AgentMessage;
-  onAction?: (messageId: string, action: "done" | "snooze" | "skip") => void;
+  onAction?: (messageId: string, action: MessageAction) => void;
   onFeedback?: (messageId: string, value: MessageFeedbackType, subjectKey?: string) => void;
   feedbackType?: string;
 }) {
@@ -59,12 +60,12 @@ export function MessageRenderer({
   return (
     <div className="message-row agent-message-row">
       <article className={`message-card template-${template}`}>
-        <TemplateContent template={template} data={data} />
+        <TemplateContent template={template} data={data} messageId={message.id} onAction={onAction} />
         {(template === "study_guide" || template === "dsa_question" || template === "daily_task") && (
           <div className="message-action-row">
-            <button onClick={() => onAction?.(message.id, "done")}>Done</button>
-            <button onClick={() => onAction?.(message.id, "snooze")}>Snooze</button>
-            <button onClick={() => onAction?.(message.id, "skip")}>Skip</button>
+            <button onClick={() => onAction?.(message.id, { type: "message_action", action: "done" })}>Done</button>
+            <button onClick={() => onAction?.(message.id, { type: "message_action", action: "snooze" })}>Snooze</button>
+            <button onClick={() => onAction?.(message.id, { type: "message_action", action: "skip" })}>Skip</button>
           </div>
         )}
         {list(message.source_refs).length > 0 && <SourceLinks sources={message.source_refs ?? []} />}
@@ -93,7 +94,7 @@ function sendFeedback(
   else onFeedback(messageId, value);
 }
 
-function TemplateContent({ template, data }: { template: string; data: UnknownRecord }) {
+function TemplateContent({ template, data, messageId, onAction }: { template: string; data: UnknownRecord; messageId: string; onAction?: (messageId: string, action: MessageAction) => void }) {
   if (template === "briefing_card") return <Briefing data={data} />;
   if (template === "data_summary") return <DataSummary data={data} />;
   if (template === "urgency_list") return <UrgencyList data={data} />;
@@ -107,6 +108,12 @@ function TemplateContent({ template, data }: { template: string; data: UnknownRe
   if (template === "dsa_question") return <DsaQuestion data={data} />;
   if (template === "study_guide") return <StudyGuide data={data} />;
   if (template === "daily_task") return <DailyTask data={data} />;
+  if (template === "assistant_suggestion") return <AssistantSuggestion data={data} messageId={messageId} onAction={onAction} />;
+  if (template === "action_confirmation") return <ActionConfirmation data={data} messageId={messageId} onAction={onAction} />;
+  if (template === "agent_selection") return <AgentSelection data={data} messageId={messageId} onAction={onAction} />;
+  if (template === "system") return <SystemMessage data={data} />;
+  if (template === "gmail_digest") return <Digest data={data} kind="gmail" />;
+  if (template === "github_activity" || template === "github_activity_digest") return <Digest data={data} kind="github" />;
   return <PlainText data={data} />;
 }
 
@@ -168,6 +175,56 @@ function StudyGuide({ data }: { data: UnknownRecord }) {
 
 function DailyTask({ data }: { data: UnknownRecord }) {
   return <><p className="message-kicker">Today’s task</p><h3>{text(data.title)}</h3><p>{text(data.task)}</p>{text(data.context) && <div className="insight-box"><p>{text(data.context)}</p></div>}{data.estimated_minutes !== undefined && <p className="message-footer">About {text(data.estimated_minutes)} minutes</p>}</>;
+}
+
+function AssistantSuggestion({ data, messageId, onAction }: { data: UnknownRecord; messageId: string; onAction?: (messageId: string, action: MessageAction) => void }) {
+  const primary = record(data.primary_action);
+  const secondary = list(data.secondary_actions).map(record).filter((action) => text(action.label) || text(action.decision));
+  const explanation = record(data.explanation);
+  const resolved = data.resolved === true;
+  const dispatch = (action: UnknownRecord) => {
+    const type = text(action.type) || "suggestion_decision";
+    onAction?.(messageId, { ...action, type });
+  };
+  return <><div className="template-heading"><div><p className="message-kicker">Suggestion</p><h3>{text(data.title) || "A thought for you"}</h3></div></div>{text(data.body) && <Markdown>{text(data.body)}</Markdown>}{Object.keys(explanation).length > 0 && <div className="explanation-box"><b>Why this appeared</b><p>{text(explanation.summary)}</p>{list(explanation.data_categories).length > 0 && <small>Used: {list(explanation.data_categories).map(text).join(", ")}</small>}{list(explanation.data_categories_not_used).length > 0 && <small>Not used: {list(explanation.data_categories_not_used).map(text).join(", ")}</small>}</div>}{resolved ? <p className="message-footer">{resolutionLabel(text(data.resolution))}</p> : (Object.keys(primary).length > 0 || secondary.length > 0) && <div className="suggestion-actions">{Object.keys(primary).length > 0 && <button className="primary-button" onClick={() => dispatch(primary)}>{text(primary.label) || "Continue"}</button>}{secondary.map((action, index) => <button className="secondary-button" key={index} onClick={() => dispatch(action)}>{text(action.label) || text(action.decision) || "Not now"}</button>)}{text(data.suggestion_id) && <button className="text-button" onClick={() => dispatch({ type: "suggestion_decision", decision: "explain", suggestion_id: text(data.suggestion_id) })}>Why this?</button>}</div>}</>;
+}
+
+function ActionConfirmation({ data, messageId, onAction }: { data: UnknownRecord; messageId: string; onAction?: (messageId: string, action: MessageAction) => void }) {
+  const actions = list(data.actions).map(record);
+  const confirm = actions.find((action) => text(action.decision) === "confirm");
+  const cancel = actions.find((action) => text(action.decision) === "cancel");
+  const dispatch = (action: UnknownRecord) => onAction?.(messageId, { ...action, type: text(action.type) || "assistant_pending_action" });
+  return <><p className="message-kicker">Confirmation</p><h3>{text(data.title) || "Confirm this action"}</h3><p className="confirmation-question">{text(data.question) || "Is this what you want me to do?"}</p><div className="confirmation-box"><b>{text(data.action_label) || "Continue"}</b>{text(data.action_detail) && <p>{text(data.action_detail)}</p>}</div>{text(data.context) && <p>{text(data.context)}</p>}{(confirm || cancel) && <div className="message-action-row">{confirm && <button className="primary-button" onClick={() => dispatch(confirm)}>{text(confirm.label) || "Yes, continue"}</button>}{cancel && <button onClick={() => dispatch(cancel)}>{text(cancel.label) || "Cancel"}</button>}</div>}</>;
+}
+
+function AgentSelection({ data, messageId, onAction }: { data: UnknownRecord; messageId: string; onAction?: (messageId: string, action: MessageAction) => void }) {
+  const options = list(data.options).map(record);
+  const [selected, setSelected] = useState(text(data.suggested_agent_id));
+  const [resolved, setResolved] = useState(data.resolved === true);
+  const cancel = record(data.cancel_action);
+  const selectedName = text(options.find((option) => text(option.id) === selected)?.name);
+  const submit = () => { if (!selected || !text(data.pending_action_id)) return; setResolved(true); onAction?.(messageId, { type: "assistant_pending_action", id: "assistant_select_agent", decision: "assistant_select_agent", pending_action_id: data.pending_action_id, selected_agent_id: selected }); };
+  const cancelSelection = () => { setResolved(true); onAction?.(messageId, { ...cancel, type: text(cancel.type) || "assistant_pending_action" }); };
+  return <><p className="message-kicker">Choose an agent</p><h3>{text(data.title) || "Confirm the agent"}</h3><p className="confirmation-question">{text(data.question) || "Which agent did you mean?"}</p>{text(data.context) && <p>{text(data.context)}</p>}{resolved ? <p className="message-footer">{text(data.resolution) === "cancelled" ? "Selection cancelled." : `Using ${text(data.selected_agent_name) || selectedName || "the selected agent"}.`}</p> : <div className="agent-selection-options">{options.map((option, index) => <label className={`agent-option ${selected === text(option.id) ? "selected" : ""}`} key={text(option.id) || index}><input type="radio" name={`agent-${messageId}`} checked={selected === text(option.id)} onChange={() => setSelected(text(option.id))} /><span><b>{text(option.name) || "Agent"}</b>{text(option.description) && <small>{text(option.description)}</small>}</span></label>)}<div className="message-action-row"><button className="primary-button" disabled={!selected} onClick={submit}>{selectedName ? `Use ${selectedName}` : "Choose an agent"}</button>{Object.keys(cancel).length > 0 && <button onClick={cancelSelection}>{text(cancel.label) || "Cancel"}</button>}</div></div>}</>;
+}
+
+function SystemMessage({ data }: { data: UnknownRecord }) {
+  return <div className="system-message"><p className="message-kicker">System update</p><h3>{text(data.title) || text(data.headline) || "Cuppet update"}</h3><Markdown>{text(data.body || data.message || data.detail || data.text)}</Markdown></div>;
+}
+
+function Digest({ data, kind }: { data: UnknownRecord; kind: "gmail" | "github" }) {
+  const title = text(data.title) || (kind === "gmail" ? "Inbox digest" : "GitHub activity");
+  const items = list(data.items).length ? list(data.items) : list(data.timeline);
+  const metrics = list(data.metrics);
+  return <><p className="message-kicker">{kind === "gmail" ? "Gmail digest" : "GitHub activity"}</p><h3>{title}</h3>{text(data.summary || data.body || data.text) && <Markdown>{text(data.summary || data.body || data.text)}</Markdown>}{metrics.length > 0 && <div className="digest-metrics">{metrics.map((raw, index) => { const metric = record(raw); return <div key={index}><strong>{text(metric.value)}</strong><small>{text(metric.label)}</small></div>; })}</div>}<div className="digest-list">{items.map((raw, index) => { const item = record(raw); const href = text(item.url); return <article key={index} className="digest-item">{kind === "github" && <span className="digest-marker" /> }<div><b>{text(item.title || item.headline || item.subject || item.name) || "Update"}</b>{text(item.repository || item.sender || item.from) && <small>{text(item.repository || item.sender || item.from)}</small>}{text(item.detail || item.preview || item.summary || item.snippet) && <p>{text(item.detail || item.preview || item.summary || item.snippet)}</p>}{href && <a href={href} target="_blank" rel="noreferrer">Open source</a>}</div></article>; })}</div>{text(data.footer) && <p className="message-footer">{text(data.footer)}</p>}</>;
+}
+
+function resolutionLabel(value: string): string {
+  if (value === "accepted") return "Accepted. Cuppet is waiting for your confirmation before creating anything.";
+  if (value === "not_now") return "Not now. I’ll leave this quiet for a while.";
+  if (value === "dismiss") return "Dismissed. I won’t repeat this suggestion.";
+  if (value === "less_like_this") return "Feedback saved. I’ll show fewer suggestions like this.";
+  return "Suggestion resolved.";
 }
 
 function ItemList({ values }: { values: unknown[] }) {

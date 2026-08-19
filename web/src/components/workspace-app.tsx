@@ -19,7 +19,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { demoAgents, demoConnectors, demoMessages, demoRecipes, demoUser } from "@/lib/demo-data";
-import type { Agent, AgentMessage, AgentRecipe, Connector, CurrentUserResponse, ViewKey } from "@/lib/types";
+import type { Agent, AgentMessage, AgentRecipe, Connector, CurrentUserResponse, MessageAction, ViewKey } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
 import { AgentsPanel } from "./agents-panel";
 import { ConnectorsPanel } from "./connectors-panel";
@@ -219,6 +219,42 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     else { await api.clearMessages(selectedAgent.id); await queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] }); }
   };
 
+  const handleMessageAction = async (messageId: string, action: MessageAction) => {
+    if (demo || !selectedAgent) return;
+    try {
+      if (action.type === "message_action") {
+        await api.messageAction(selectedAgent.id, messageId, String(action.action ?? ""));
+      } else if (action.type === "suggestion_decision") {
+        const suggestionId = String(action.suggestion_id ?? "");
+        if (!suggestionId) return;
+        if (action.decision === "explain") {
+          const explanation = await api.suggestionExplanation(suggestionId);
+          showToast(String(explanation.explanation?.summary ?? "Suggestion explanation loaded."));
+        } else await api.suggestionDecision(suggestionId, String(action.decision ?? ""));
+      } else if (action.type === "assistant_pending_action") {
+        const pendingActionId = String(action.pending_action_id ?? "");
+        const decision = String(action.decision ?? "");
+        if (!pendingActionId || !decision) return;
+        await api.assistantAction(selectedAgent.id, { ...action, decision, pending_action_id: pendingActionId });
+      } else if (action.type === "message_activity") {
+        const subjectKey = String(action.subject_key ?? "").trim();
+        if (!subjectKey) return;
+        await api.messageActivity(messageId, { activity_type: String(action.activity_type ?? "view"), subject_type: String(action.subject_type ?? "topic"), subject_key: subjectKey });
+      } else if (action.type === "open_in_assistant") {
+        const handoff = await api.handoffToAssistant(selectedAgent.id, messageId);
+        const assistant = agents.find((candidate) => candidate.id === handoff.assistant_agent_id);
+        if (assistant) selectThread(assistant);
+      } else if (action.type === "send_message") {
+        await api.sendMessage(selectedAgent.id, { text: String(action.text ?? ""), ...(action.source_message_id ? { source_message_id: action.source_message_id } : {}) });
+      } else if (action.type === "connector_action") {
+        const connectorId = String(action.connector_id ?? "");
+        const connector = connectors.find((candidate) => candidate.id === connectorId);
+        if (connector) await connect(connector);
+      }
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] }), queryClient.invalidateQueries({ queryKey: ["agents"] }), queryClient.invalidateQueries({ queryKey: ["personalization"] })]);
+    } catch (caught) { showToast(errorMessage(caught)); }
+  };
+
   const connect = async (connector: Connector) => {
     if (demo) { setDemoConnectorState((current) => current.map((item) => item.id === connector.id ? { ...item, status: "connected" } : item)); return; }
     if (connector.id === "web_search") { await api.connectorStatus(connector.id, true); await queryClient.invalidateQueries({ queryKey: ["connectors"] }); return; }
@@ -258,7 +294,7 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     <button className="mobile-nav-trigger icon-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
 
     {view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}
-    {view === "inbox" && <><InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} feedback={messageFeedback} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value, subjectKey) => { setLocalMessageFeedback((current) => ({ ...current, [messageId]: value })); if (!demo) void api.messageFeedback(messageId, value, subjectKey).then(() => { void queryClient.invalidateQueries({ queryKey: ["personalization"] }); showToast("Thanks for the feedback."); }).catch((error) => showToast(errorMessage(error))); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
+    {view === "inbox" && <><InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} feedback={messageFeedback} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => void handleMessageAction(messageId, action)} onFeedback={(messageId, value, subjectKey) => { setLocalMessageFeedback((current) => ({ ...current, [messageId]: value })); if (!demo) void api.messageFeedback(messageId, value, subjectKey).then(() => { void queryClient.invalidateQueries({ queryKey: ["personalization"] }); showToast("Thanks for the feedback."); }).catch((error) => showToast(errorMessage(error))); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
     {view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}
     {view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} />}
     {view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} onOpenConnectors={() => setView("connectors")} />}

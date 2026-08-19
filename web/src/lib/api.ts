@@ -184,11 +184,26 @@ export const api = {
   sendMessage: (agentId: string, value: Record<string, unknown>) =>
     apiRequest<Record<string, unknown>>(`/agents/${agentId}/messages`, { method: "POST", body: json(value) }),
   clearMessages: (agentId: string) => apiRequest<void>(`/agents/${agentId}/messages`, { method: "DELETE" }),
-  messageAction: (agentId: string, messageId: string, action: "done" | "snooze" | "skip") =>
+  messageAction: (agentId: string, messageId: string, action: string) =>
     apiRequest<Record<string, unknown>>(`/agents/${agentId}/messages/${messageId}/action`, {
       method: "POST",
-      body: json({ action })
+      body: json({ action, date: new Date().toISOString().slice(0, 10) })
     }),
+  assistantAction: (agentId: string, action: { decision: string; pending_action_id: string; [key: string]: unknown }) =>
+    apiRequest<Record<string, unknown>>(`/agents/${agentId}/messages`, {
+      method: "POST",
+      body: json({ action: action.decision, payload: { ...action, pending_action_id: action.pending_action_id } })
+    }),
+  handoffToAssistant: (agentId: string, messageId: string) =>
+    apiRequest<{ assistant_agent_id: string }>(`/agents/${agentId}/messages/${messageId}/assistant-handoff`, { method: "POST" }),
+  messageActivity: (messageId: string, value: { activity_type: string; subject_type: string; subject_key: string }) =>
+    apiRequest<{ stored: boolean }>(`/messages/${messageId}/activity`, { method: "POST", body: json(value) }),
+  suggestionDecision: (suggestionId: string, decision: string) =>
+    apiRequest<Record<string, unknown>>(`/assistant/suggestions/${encodeURIComponent(suggestionId)}/decision`, { method: "POST", body: json({ decision }) }),
+  suggestionExplanation: (suggestionId: string) =>
+    apiRequest<{ explanation?: Record<string, unknown> }>(`/assistant/suggestions/${encodeURIComponent(suggestionId)}/explanation`),
+  continueSuggestion: (suggestionId: string) =>
+    apiRequest<Record<string, unknown>>(`/assistant/suggestions/${encodeURIComponent(suggestionId)}/continue`, { method: "POST" }),
   messageFeedback: (messageId: string, value: MessageFeedbackType, subjectKey?: string) =>
     apiRequest<Record<string, unknown>>(`/messages/${messageId}/feedback`, {
       method: "POST",
