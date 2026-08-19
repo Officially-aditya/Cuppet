@@ -1,12 +1,9 @@
 "use client";
 
 import { AlertCircle, Circle, LoaderCircle, ShieldCheck } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 import type { Connector } from "@/lib/types";
-import { AgentIcon } from "./agent-icon";
-
-const localLogos = new Set(["gmail", "calendar", "drive", "github", "slack", "notion"]);
+import { ConnectorLogo, getConnectorLogoPath } from "./connector-logo";
 
 export function ConnectorsPanel({
   connectors,
@@ -65,8 +62,8 @@ export function ConnectorsPanel({
 }
 
 function ConnectorArtwork({ connector }: { connector: Connector }) {
-  if (localLogos.has(connector.id)) {
-    return <span className="flutter-connector-art"><Image src={`/connector-${connector.id}.png`} alt="" width={28} height={28} /></span>;
-  }
-  return <span className="flutter-connector-art fallback"><AgentIcon name={connector.icon_name} size={20} /></span>;
+  const logoPath = getConnectorLogoPath(connector.id, connector.provider_id, connector.name);
+  return <span className={`flutter-connector-art ${logoPath ? "" : "fallback"}`}>
+    <ConnectorLogo id={connector.id} providerId={connector.provider_id} name={connector.name} iconName={connector.icon_name} size={28} />
+  </span>;
 }

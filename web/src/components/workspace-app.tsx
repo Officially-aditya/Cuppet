@@ -23,6 +23,7 @@ import type { Agent, AgentMessage, AgentRecipe, Connector, CurrentUserResponse, 
 import { AgentIcon, agentTone } from "./agent-icon";
 import { AgentsPanel } from "./agents-panel";
 import { ConnectorsPanel } from "./connectors-panel";
+import { ConnectorLogo } from "./connector-logo";
 import { CreateAgentDialog } from "./create-agent-dialog";
 import { FeedbackPanel } from "./feedback-panel";
 import { OverviewPanel } from "./overview-panel";
@@ -320,7 +321,7 @@ function BriefingPreview({ briefing, onOpen }: { briefing: AgentMessage; onOpen:
     <span className="flutter-briefing-heading"><b>{(stringValue(data.eyebrow) || "Briefing").toUpperCase()}</b><ArrowRight size={17} /></span>
     <strong>{stringValue(data.title) || "Your briefing"}</strong>
     <span className="flutter-briefing-summary">{summary}</span>
-    {updates.length > 0 && <span className="flutter-briefing-sources">{updates.map((item, index) => <i key={`${item.source}-${index}`} title={item.source}>{item.source.slice(0, 1).toUpperCase()}</i>)}</span>}
+    {updates.length > 0 && <span className="flutter-briefing-sources">{updates.map((item, index) => <i key={`${item.source}-${index}`} title={item.source}><ConnectorLogo name={item.source} size={16} /></i>)}</span>}
   </button>;
 }
 

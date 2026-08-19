@@ -942,6 +942,18 @@ button { color: inherit; }
   font-weight: 800;
 }
 
+.flutter-briefing-sources .connector-logo-image {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.flutter-briefing-sources .connector-logo-icon,
+.flutter-briefing-sources svg {
+  width: 16px;
+  height: 16px;
+}
+
 .flutter-agent-list {
   display: grid;
   gap: 6px;
@@ -2448,12 +2460,12 @@ body {
 }
 
 .thread-pane .attachment-tray {
-  width: min(860px, 100%);
+  width: 100%;
   margin: 0 auto 8px;
 }
 
 .composer-row {
-  width: min(860px, 100%);
+  width: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
