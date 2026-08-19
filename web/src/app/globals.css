@@ -4668,3 +4668,81 @@ button.flutter-settings-tile:hover,
 .live-workspace .create-dialog .form-message {
   font-weight: 400;
 }
+
+/* Destination navigation lives in a bottom bar. The agent/inbox surface owns
+   the main workspace columns; Inbox, Connectors, and Settings share one
+   consistent destination bar instead of a separate rail. */
+.bottom-nav {
+  position: absolute;
+  z-index: 80;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  padding: 7px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #706e6a;
+  background: rgba(252, 251, 250, .98);
+  border-top: 1px solid #eae9e8;
+  box-shadow: 0 -5px 18px rgba(28, 26, 23, .04);
+}
+.bottom-nav-item {
+  position: relative;
+  min-width: 116px;
+  height: 48px;
+  padding: 4px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+.bottom-nav-item:hover { color: #004d39; background: #eef8f3; }
+.bottom-nav-item.active { color: #004d39; background: #e4f3ec; font-weight: 600; }
+.bottom-nav-item .app-nav-icon { width: 20px; height: 20px; }
+.bottom-nav-count { min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; color: #fff; background: #006046; border-radius: 999px; font-size: 9px; }
+
+@media (min-width: 821px) {
+  .workspace-shell {
+    grid-template-columns: minmax(360px, 420px) minmax(480px, 1fr);
+    padding-bottom: 64px;
+  }
+  .sidebar { display: none; }
+  .sidebar-scrim, .mobile-nav-trigger { display: none !important; }
+  .live-workspace .inbox-pane { grid-column: 1; height: calc(100vh - 64px); }
+  .live-workspace .thread-pane { grid-column: 2; height: calc(100vh - 64px); }
+  .live-workspace .content-panel { grid-column: 1 / -1; height: calc(100vh - 64px); }
+}
+
+@media (max-width: 820px) {
+  .workspace-shell { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+  .sidebar { display: none; }
+  .sidebar-scrim, .mobile-nav-trigger { display: none !important; }
+  .bottom-nav {
+    position: fixed;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding: 0 8px env(safe-area-inset-bottom);
+    gap: 0;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    min-width: 0;
+    height: 52px;
+    padding: 3px 0 1px;
+    flex-direction: column;
+    gap: 3px;
+    border-radius: 14px;
+    font-size: 11px;
+  }
+  .bottom-nav-item .app-nav-icon { width: 20px; height: 20px; }
+  .mobile-thread-open .bottom-nav { display: none; }
+}
