@@ -69,10 +69,10 @@ export function ConnectorsPanel({
         <div className="flutter-brand-title"><h1>Connect your tools</h1></div>
         <p className="flutter-subtitle">Choose which services Cuppet can connect to.</p>
       </div>
+      <button className="primary-button connector-custom-button" onClick={() => { setCustomOpen(true); setCustomError(""); }}><Plus size={15} />Custom MCP</button>
     </header>
 
     <div className="flutter-destination-list">
-      <div className="connectors-toolbar connectors-toolbar-actions"><button className="primary-button" onClick={() => { setCustomOpen(true); setCustomError(""); }}><Plus size={15} />Custom MCP</button></div>
       <div className="flutter-section-label"><b>AVAILABLE SERVICES</b><span>{visible.length} available</span></div>
       {error && <p className="form-message error connector-error">{error}</p>}
       <div className="flutter-connector-list">

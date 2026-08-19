@@ -4853,11 +4853,9 @@ button.flutter-settings-tile:hover,
   background: #e4f3ec;
 }
 
-.flutter-destination-list > .connectors-toolbar.connectors-toolbar-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0;
-  border: 0;
+.connector-custom-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 @media (max-width: 820px) {
