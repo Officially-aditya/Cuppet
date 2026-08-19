@@ -625,6 +625,20 @@ button { color: inherit; }
 .privacy-callout { padding: 13px; display: flex; gap: 9px; color: #5e6f61; background: #edf2eb; border-radius: 11px; }
 .privacy-callout p { margin: 0; font-size: 8px; line-height: 1.5; }
 .settings-subsection { display: grid; gap: 9px; }
+.data-subsection { display: grid; gap: 12px; }
+.settings-subnav { display: flex; gap: 5px; padding: 4px; background: #f1efe8; border-radius: 10px; }
+.settings-subnav button { min-height: 32px; padding: 0 13px; border: 0; color: var(--muted); background: transparent; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: 700; }
+.settings-subnav button.active { color: var(--ink); background: #fff; box-shadow: 0 2px 6px rgba(35,36,31,.06); }
+.memory-list { display: grid; gap: 8px; }
+.memory-card { padding: 13px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border: 1px solid #e7e4da; background: #faf9f5; border-radius: 11px; }
+.memory-card > div { min-width: 0; display: grid; gap: 4px; }
+.memory-card b { font-size: 10px; line-height: 1.4; }
+.memory-card small { color: var(--muted); font-size: 8px; }
+.compacted-memory { border-color: #cfe2d7; background: #f3faf5; }
+.storage-explanation { padding: 12px 13px; background: #f7f5f0; border-radius: 10px; }
+.storage-explanation b { font-size: 10px; }
+.storage-explanation p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.storage-warning { display: block; margin-top: 7px; color: var(--danger); font-size: 8px; }
 .settings-subsection-heading { display: grid; gap: 3px; margin-top: 4px; }
 .settings-subsection-heading b { color: var(--ink); font-size: 11px; }
 .settings-subsection-heading small { color: var(--muted); font-size: 9px; line-height: 1.45; }

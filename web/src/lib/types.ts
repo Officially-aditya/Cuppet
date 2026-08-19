@@ -127,6 +127,43 @@ export type PreferenceProfileResponse = {
   [key: string]: unknown;
 };
 
+export type AssistantMemory = {
+  id: string;
+  content?: string;
+  text?: string;
+  created_at?: string;
+  updated_at?: string;
+  source?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type CompactedMemory = {
+  id?: string;
+  content?: string;
+  text?: string;
+  updated_at?: string;
+};
+
+export type MemoryResponse = {
+  memories: AssistantMemory[];
+  compacted_memory?: CompactedMemory | null;
+};
+
+export type ArchiveState = {
+  enabled: boolean;
+  status: string;
+  folder_link?: string | null;
+  last_success_at?: string | null;
+  error_code?: string | null;
+  action_required?: boolean;
+};
+
+export type ArchivedMessagePage = {
+  messages: AgentMessage[];
+  next_cursor?: string | null;
+  files_read?: number;
+};
+
 export type Connector = {
   id: string;
   provider_id?: string;

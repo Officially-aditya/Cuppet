@@ -22,6 +22,7 @@ import { api, errorMessage } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { disablePushNotifications, enablePushNotifications, pushConfigured } from "@/lib/notifications";
 import type { CurrentUserResponse } from "@/lib/types";
+import { DataSettingsPanel } from "./data-settings";
 import { PersonalizationSettingsPanel } from "./personalization-settings";
 
 type SettingsTab = "profile" | "notifications" | "data" | "personalization";
@@ -62,7 +63,7 @@ export function SettingsPanel({ me, demo, onExitDemo, onOpenConnectors }: { me: 
 
   if (tab) return <section className="content-panel settings-panel flutter-settings-detail">
     <header className="flutter-detail-header"><button onClick={() => setTab(null)} aria-label="Back to settings"><ArrowLeft size={20} /></button><h1>{tab === "profile" ? "Profile" : tab === "notifications" ? "Notifications" : "Data & privacy"}</h1></header>
-    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettings demo={demo} />}{tab === "personalization" && <PersonalizationSettingsPanel demo={demo} />}</div>
+    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettingsPanel demo={demo} />}{tab === "personalization" && <PersonalizationSettingsPanel demo={demo} />}</div>
   </section>;
 
   return <section className="content-panel settings-panel flutter-destination-panel">
@@ -118,7 +119,7 @@ function NotificationSettings({ demo }: { demo: boolean }) {
   return <div className="settings-section"><div className="settings-title"><span><Bell size={20} /></span><div><h2>Browser notifications</h2><p>Get an update when an agent has something genuinely useful.</p></div></div><div className="setting-card"><div><b>Push notifications</b><p>{pushConfigured() || demo ? "Delivered by this browser, even when Cuppet isn’t open." : "Add Firebase web credentials to enable push on this deployment."}</p></div><button className={`switch-button ${enabled ? "on" : ""}`} onClick={() => void toggle()} disabled={busy || (!pushConfigured() && !demo)} aria-pressed={enabled}>{busy ? <LoaderCircle className="spin" size={15} /> : <span />}</button></div><div className="setting-card"><div><b>Agent-level controls</b><p>Mute or resume notifications from each agent’s thread menu.</p></div><span className="quiet-pill"><Check size={13} />Available per agent</span></div>{message && <p className="form-message error">{message}</p>}<div className="privacy-callout"><Shield size={18} /><p>Cuppet only sends a notification after an agent produces an update. Notification content follows your browser privacy settings.</p></div></div>;
 }
 
-function DataSettings({ demo }: { demo: boolean }) {
+function LegacyDataSettings({ demo }: { demo: boolean }) {
   const router = useRouter();
   const client = useQueryClient();
   const memories = useQuery({ queryKey: ["memories"], queryFn: api.memories, enabled: !demo });
@@ -134,6 +135,8 @@ function DataSettings({ demo }: { demo: boolean }) {
   const archiveEnabled = demo ? archiveDemo : archive.data?.enabled ?? false;
   return <div className="settings-section"><div className="settings-title"><span><Shield size={20} /></span><div><h2>Data & privacy</h2><p>Review what Cuppet remembers and where messages are stored.</p></div></div><div className="setting-card stacked"><div><b>Assistant memory</b><p>{memoryCount ? `${memoryCount} confirmed ${memoryCount === 1 ? "memory" : "memories"} help Cuppet personalize useful responses.` : "The Assistant has no confirmed memories yet."}</p></div><button className="secondary-button" disabled={!memoryCount || busy === "memories"} onClick={() => void clearMemories()}><Trash2 size={14} />Forget all</button></div><div className="setting-card stacked"><div><b>Google Drive message archive</b><p>Optionally keep an export of agent messages in a Drive folder you control.</p>{archive.data?.folder_link && <a href={archive.data.folder_link} target="_blank" rel="noreferrer">Open archive folder <ExternalLink size={12} /></a>}</div><button className={`switch-button ${archiveEnabled ? "on" : ""}`} onClick={() => void toggleArchive()} disabled={busy === "archive"}>{busy === "archive" ? <LoaderCircle className="spin" size={15} /> : <span />}</button></div><div className="setting-card stacked"><div><b>Export preference profile</b><p>Download the portable preferences Cuppet has learned from explicit feedback.</p></div><a className="secondary-button" href={demo ? "#" : "/api/users/me/preference-profile/export"} download><Download size={14} />Export JSON</a></div><div className="danger-zone account-danger"><div><b>Delete Cuppet account</b><p>Permanently removes agents, messages, connections, and account data.</p></div>{!confirmDelete ? <button onClick={() => setConfirmDelete(true)}><Trash2 size={15} />Delete account</button> : <div className="delete-confirm"><span>Are you sure?</span><button className="secondary-button" onClick={() => setConfirmDelete(false)}>Cancel</button><button onClick={() => void deleteAccount()} disabled={busy === "account"}>{busy === "account" ? "Deleting…" : "Delete permanently"}</button></div>}</div>{message && <p className="form-message error">{message}</p>}</div>;
 }
+
+void LegacyDataSettings;
 
 function initials(value: string): string {
   return value
