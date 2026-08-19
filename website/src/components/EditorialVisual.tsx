@@ -1,4 +1,4 @@
-import { Cable, Funnel, Radar, ShieldCheck } from 'lucide-react'
+import { Cable, Funnel, Newspaper, Radar, ShieldCheck } from 'lucide-react'
 import type { BlogVisual } from '../data/blog'
 
 const VISUALS = {
@@ -21,6 +21,11 @@ const VISUALS = {
     Icon: ShieldCheck,
     label: 'Trust',
     title: 'Read first. Act later.',
+  },
+  news: {
+    Icon: Newspaper,
+    label: 'Briefing',
+    title: 'Start with the signal.',
   },
 } satisfies Record<BlogVisual, { Icon: typeof Radar; label: string; title: string }>
 

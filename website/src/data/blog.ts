@@ -1,4 +1,4 @@
-export type BlogVisual = 'signal' | 'connections' | 'filter' | 'trust'
+export type BlogVisual = 'signal' | 'connections' | 'filter' | 'trust' | 'news'
 
 export type BlogSection = {
   heading: string
@@ -30,7 +30,7 @@ export const blogPosts: BlogPost[] = [
     published: '2026-08-19',
     displayDate: 'August 19, 2026',
     readingTime: '6 min read',
-    visual: 'filter',
+    visual: 'news',
     sections: [
       {
         heading: 'The search loop is the real problem',
