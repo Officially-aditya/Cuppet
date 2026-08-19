@@ -304,6 +304,22 @@ button { color: inherit; }
 .message-row.agent-message-row { align-self: flex-start; }
 .message-row.user-row { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; }
 .message-row .message-card { max-width: 100%; }
+.thread-message-shell { position: relative; }
+.thread-message-shell.archived-message { opacity: .78; }
+.thread-message-shell.archived-message::before { content: "ARCHIVED"; position: absolute; top: 8px; right: 10px; z-index: 1; color: #9a988f; font-size: 7px; font-weight: 800; letter-spacing: .08em; }
+.archive-loader { min-height: 36px; display: flex; justify-content: center; align-items: center; }
+.archive-loader button { min-height: 30px; padding: 0 11px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); color: var(--muted); background: #fff; border-radius: 8px; cursor: pointer; font-size: 9px; font-weight: 700; }
+.archive-loader > span { color: #aaa79e; font-size: 8px; }
+.message-context-menu { position: fixed; z-index: 100; min-width: 165px; padding: 5px; border: 1px solid var(--line); background: #fff; border-radius: 10px; box-shadow: 0 12px 32px rgba(35,36,31,.16); }
+.message-context-menu button { width: 100%; min-height: 31px; padding: 0 8px; display: flex; align-items: center; gap: 7px; border: 0; color: var(--ink); background: transparent; border-radius: 7px; cursor: pointer; font-size: 9px; text-align: left; }
+.message-context-menu button:hover { background: #f3f1eb; }
+.reply-quote { margin: 0 auto 7px; width: min(720px, calc(100% - 36px)); padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-left: 3px solid var(--primary); background: var(--primary-soft); border-radius: 8px; }
+.reply-quote > div { min-width: 0; display: grid; gap: 2px; }
+.reply-quote small { color: var(--primary); font-size: 8px; font-weight: 800; }
+.reply-quote span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.reply-quote button { width: 24px; height: 24px; display: grid; place-items: center; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.attachment-tray span { align-items: center; }
+.attachment-tray img { width: 22px; height: 22px; object-fit: cover; border-radius: 5px; }
 .message-row .user-message { margin: 0; }
 .user-message .markdown p { color: white; }
 .user-row > time, .message-meta-row > time { margin-top: 5px; color: #aaa79e; font-size: 8px; }

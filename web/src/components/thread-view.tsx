@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  Copy,
   LoaderCircle,
   MoreVertical,
   Paperclip,
@@ -11,9 +12,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Fragment, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import type { Agent, AgentMessage, MessageAction, MessageFeedbackType } from "@/lib/types";
+import type { Agent, AgentMessage, ArchivedMessagePage, MessageAction, MessageFeedbackType } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
-import { MessageRenderer } from "./message-renderer";
+import { messageText, MessageRenderer } from "./message-renderer";
 
 export function ThreadView({
   agent,
@@ -30,13 +31,14 @@ export function ThreadView({
   onToggleMute,
   onOpenSettings,
   onClear
+  ,onLoadArchived
 }: {
   agent: Agent;
   messages: AgentMessage[];
   loading?: boolean;
   sending?: boolean;
   onBack?: () => void;
-  onSend: (text: string, attachmentIds?: string[]) => Promise<void> | void;
+  onSend: (text: string, attachmentIds?: string[], sourceMessageId?: string) => Promise<void> | void;
   onUpload?: (file: File) => Promise<{ id: string; name: string }>;
   onAction?: (messageId: string, action: MessageAction) => void;
   onFeedback?: (messageId: string, value: MessageFeedbackType, subjectKey?: string) => void;
@@ -45,16 +47,24 @@ export function ThreadView({
   onToggleMute?: () => void;
   onOpenSettings?: () => void;
   onClear?: () => void;
+  onLoadArchived?: (cursor?: string) => Promise<ArchivedMessagePage>;
 }) {
   const [value, setValue] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, string>>({});
-  const [attachments, setAttachments] = useState<Array<{ id: string; name: string }>>([]);
+  const [attachments, setAttachments] = useState<Array<{ id: string; name: string; preview?: string }>>([]);
+  const [archivedMessages, setArchivedMessages] = useState<AgentMessage[]>([]);
+  const [archiveCursor, setArchiveCursor] = useState<string | undefined>();
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveLoaded, setArchiveLoaded] = useState(false);
+  const [quote, setQuote] = useState<{ id: string; text: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ message: AgentMessage; x: number; y: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const messageScroll = useRef<HTMLDivElement>(null);
   const muted = agent.parsed_intent?.notifications_muted === true;
-  const groups = messageGroups(messages);
+  const allMessages = useMemo(() => [...archivedMessages, ...messages], [archivedMessages, messages]);
+  const groups = messageGroups(allMessages);
 
   const effectiveFeedback = useMemo(
     () => ({ ...feedback, ...feedbackByMessage }),
@@ -76,7 +86,9 @@ export function ThreadView({
     setValue("");
     const ids = attachments.map((item) => item.id);
     setAttachments([]);
-    await onSend(trimmed, ids);
+    const sourceMessageId = quote?.id;
+    setQuote(null);
+    await onSend(trimmed, ids, sourceMessageId);
   };
 
   const keyboard = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -91,11 +103,37 @@ export function ThreadView({
     setUploading(true);
     try {
       const uploaded = await onUpload(file);
-      setAttachments((current) => [...current, uploaded]);
+      setAttachments((current) => [...current, { ...uploaded, preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined }]);
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
     }
+  };
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    for (const file of Array.from(files)) await upload(file);
+  };
+
+  const loadArchived = async () => {
+    if (!onLoadArchived || archiveLoading) return;
+    setArchiveLoading(true);
+    try {
+      const page = await onLoadArchived(archiveCursor);
+      setArchivedMessages((current) => [...page.messages, ...current]);
+      setArchiveCursor(page.next_cursor ?? undefined);
+      setArchiveLoaded(true);
+    } finally { setArchiveLoading(false); }
+  };
+
+  const copyMessage = async (message: AgentMessage) => {
+    await navigator.clipboard?.writeText(messageText(message.content));
+    setContextMenu(null);
+  };
+
+  const replyToMessage = (message: AgentMessage) => {
+    setQuote({ id: message.id, text: messageText(message.content) });
+    setContextMenu(null);
+    window.setTimeout(() => document.querySelector<HTMLTextAreaElement>(`.thread-composer-input-${agent.id}`)?.focus(), 0);
   };
 
   return (
@@ -121,22 +159,25 @@ export function ThreadView({
         </div>
       </header>
 
-      <div ref={messageScroll} className="message-scroll">
-        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <>{groups.map((group, groupIndex) => <Fragment key={`${group.key}-${groupIndex}`}><div className="day-divider"><span>{group.label}</span></div>{group.messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback ? (messageId, value, subjectKey) => { setFeedbackByMessage((current) => ({ ...current, [messageId]: value })); onFeedback(messageId, value, subjectKey); } : undefined} feedbackType={effectiveFeedback[message.id]} />)}</Fragment>)}</>}
+      <div ref={messageScroll} className="message-scroll" onClick={() => setContextMenu(null)}>
+        {onLoadArchived && <div className="archive-loader">{archiveLoaded && !archiveCursor ? <span>Beginning of archived history</span> : <button onClick={() => void loadArchived()} disabled={archiveLoading}>{archiveLoading ? <LoaderCircle className="spin" size={14} /> : <ArrowLeft size={14} />} {archiveLoading ? "Loading older messages…" : "Load older messages"}</button>}</div>}
+        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : allMessages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <>{groups.map((group, groupIndex) => <Fragment key={`${group.key}-${groupIndex}`}><div className="day-divider"><span>{group.label}</span></div>{group.messages.map((message) => <div key={message.id} className={`thread-message-shell ${archivedMessages.some((item) => item.id === message.id) ? "archived-message" : ""}`} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setContextMenu({ message, x: event.clientX, y: event.clientY }); }}><MessageRenderer message={message} onAction={onAction} onFeedback={onFeedback ? (messageId, value, subjectKey) => { setFeedbackByMessage((current) => ({ ...current, [messageId]: value })); onFeedback(messageId, value, subjectKey); } : undefined} feedbackType={effectiveFeedback[message.id]} /></div>)}</Fragment>)}</>}
         {sending && <div className="thinking-row" aria-label={`${agent.name} is typing`}><span /><span /><span /></div>}
       </div>
 
       <form className="composer-wrap" onSubmit={submit}>
-        {attachments.length > 0 && <div className="attachment-tray">{attachments.map((item) => <span key={item.id}><Paperclip size={13} />{item.name}<button type="button" onClick={() => setAttachments((current) => current.filter((entry) => entry.id !== item.id))}><X size={12} /></button></span>)}</div>}
-        <div className="composer-row">
+        {quote && <div className="reply-quote"><div><small>Replying to</small><span>{quote.text}</span></div><button type="button" onClick={() => setQuote(null)} aria-label="Cancel reply"><X size={14} /></button></div>}
+        {attachments.length > 0 && <div className="attachment-tray">{attachments.map((item) => <span key={item.id}>{item.preview ? <img src={item.preview} alt="" /> : <Paperclip size={13} />}{item.name}<button type="button" onClick={() => { if (item.preview) URL.revokeObjectURL(item.preview); setAttachments((current) => current.filter((entry) => entry.id !== item.id)); }}><X size={12} /></button></span>)}</div>}
+        <div className="composer-row" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void uploadFiles(event.dataTransfer.files); }}>
           <div className="composer">
-            <input ref={fileInput} className="visually-hidden" type="file" accept=".pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg" onChange={(event) => void upload(event.target.files?.[0])} />
+            <input ref={fileInput} className="visually-hidden" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg" onChange={(event) => void uploadFiles(event.target.files ?? [])} />
             <button type="button" className="icon-button subtle" onClick={() => fileInput.current?.click()} disabled={uploading} aria-label="Add attachment">{uploading ? <LoaderCircle className="spin" size={18} /> : <Plus size={22} />}</button>
-            <textarea rows={1} value={value} onChange={(event) => setValue(event.target.value)} onKeyDown={keyboard} placeholder="Message agent" aria-label={`Message ${agent.name}`} />
+            <textarea className={`thread-composer-input-${agent.id}`} rows={1} value={value} onChange={(event) => setValue(event.target.value)} onKeyDown={keyboard} placeholder="Message agent" aria-label={`Message ${agent.name}`} />
           </div>
           <button className="send-button" disabled={sending || (!value.trim() && !attachments.length)} aria-label="Send message">{sending ? <LoaderCircle className="spin" size={17} /> : <Send size={20} />}</button>
         </div>
       </form>
+      {contextMenu && <div className="message-context-menu" style={{ left: Math.min(contextMenu.x, window.innerWidth - 180), top: Math.min(contextMenu.y, window.innerHeight - 100) }} onClick={(event) => event.stopPropagation()}><button onClick={() => void copyMessage(contextMenu.message)}><Copy size={14} />Copy message</button><button onClick={() => replyToMessage(contextMenu.message)}>Reply with quote</button></div>}
     </section>
   );
 }
