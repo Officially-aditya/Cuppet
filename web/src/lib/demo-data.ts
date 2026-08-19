@@ -26,6 +26,7 @@ export const demoMessages: Record<string, AgentMessage[]> = {
       source_refs: [{ source: "Google Calendar" }, { source: "Gmail" }],
       content: {
         template: "briefing_card",
+        presentation: { feedback_eligible: true, feedback_reason: "first_result", part_index: 0, part_count: 1 },
         data: {
           eyebrow: "Good morning, Addy",
           title: "Here’s the shape of your day.",

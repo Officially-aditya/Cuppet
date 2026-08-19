@@ -35,7 +35,13 @@ export type MessageContent = {
   template?: string;
   version?: string;
   data?: Record<string, unknown>;
-  presentation?: { group_id?: string; part_index?: number; part_count?: number };
+  presentation?: {
+    group_id?: string;
+    part_index?: number;
+    part_count?: number;
+    feedback_eligible?: boolean;
+    feedback_reason?: string;
+  };
   [key: string]: unknown;
 };
 
@@ -47,6 +53,16 @@ export type AgentMessage = {
   source_refs?: Array<Record<string, unknown>>;
   read_at?: string | null;
   created_at: string;
+};
+
+export type MessageFeedbackType = "useful" | "not_useful";
+
+export type PersonalizationResponse = {
+  feedback?: Array<{
+    message_id: string;
+    feedback_type: string;
+  }>;
+  [key: string]: unknown;
 };
 
 export type Connector = {

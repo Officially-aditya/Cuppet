@@ -10,8 +10,8 @@ import {
   X
 } from "lucide-react";
 import Image from "next/image";
-import { Fragment, FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
-import type { Agent, AgentMessage } from "@/lib/types";
+import { Fragment, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { Agent, AgentMessage, MessageFeedbackType } from "@/lib/types";
 import { AgentIcon, agentTone } from "./agent-icon";
 import { MessageRenderer } from "./message-renderer";
 
@@ -25,6 +25,7 @@ export function ThreadView({
   onUpload,
   onAction,
   onFeedback,
+  feedback,
   onRun,
   onToggleMute,
   onOpenSettings,
@@ -38,7 +39,8 @@ export function ThreadView({
   onSend: (text: string, attachmentIds?: string[]) => Promise<void> | void;
   onUpload?: (file: File) => Promise<{ id: string; name: string }>;
   onAction?: (messageId: string, action: "done" | "snooze" | "skip") => void;
-  onFeedback?: (messageId: string, value: "helpful" | "not_helpful") => void;
+  onFeedback?: (messageId: string, value: MessageFeedbackType, subjectKey?: string) => void;
+  feedback?: Record<string, string>;
   onRun?: () => void;
   onToggleMute?: () => void;
   onOpenSettings?: () => void;
@@ -47,11 +49,17 @@ export function ThreadView({
   const [value, setValue] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, string>>({});
   const [attachments, setAttachments] = useState<Array<{ id: string; name: string }>>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const messageScroll = useRef<HTMLDivElement>(null);
   const muted = agent.parsed_intent?.notifications_muted === true;
   const groups = messageGroups(messages);
+
+  const effectiveFeedback = useMemo(
+    () => ({ ...feedback, ...feedbackByMessage }),
+    [feedback, feedbackByMessage]
+  );
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -114,7 +122,7 @@ export function ThreadView({
       </header>
 
       <div ref={messageScroll} className="message-scroll">
-        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <>{groups.map((group, groupIndex) => <Fragment key={`${group.key}-${groupIndex}`}><div className="day-divider"><span>{group.label}</span></div>{group.messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback} />)}</Fragment>)}</>}
+        {loading ? <div className="thread-loading"><LoaderCircle className="spin" /><span>Gathering the thread…</span></div> : messages.length === 0 ? <div className="empty-thread"><span className={`agent-avatar ${agentTone(agent.id)}`}><AgentIcon name={agent.avatar} size={22} /></span><h3>Start a conversation with {agent.name}</h3><p>{agent.is_assistant ? "Ask a question, shape a new agent, or attach a document." : "Ask for an update or adjust what this agent should pay attention to."}</p></div> : <>{groups.map((group, groupIndex) => <Fragment key={`${group.key}-${groupIndex}`}><div className="day-divider"><span>{group.label}</span></div>{group.messages.map((message) => <MessageRenderer key={message.id} message={message} onAction={onAction} onFeedback={onFeedback ? (messageId, value, subjectKey) => { setFeedbackByMessage((current) => ({ ...current, [messageId]: value })); onFeedback(messageId, value, subjectKey); } : undefined} feedbackType={effectiveFeedback[message.id]} />)}</Fragment>)}</>}
         {sending && <div className="thinking-row" aria-label={`${agent.name} is typing`}><span /><span /><span /></div>}
       </div>
 

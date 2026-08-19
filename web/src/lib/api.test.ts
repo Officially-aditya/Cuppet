@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, normalizeAgentRecipe } from "./api";
+import { api, apiRequest, normalizeAgentRecipe } from "./api";
 
 describe("apiRequest", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -59,5 +59,29 @@ describe("apiRequest", () => {
       required_connectors: ["gmail"],
       fields: [{ id: "scope", label: "Message scope", default: "unread", default_value: "unread" }]
     });
+  });
+
+  it("posts the mobile-compatible message feedback payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ stored: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await api.messageFeedback("message-1", "not_useful", "machine-learning");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/messages/message-1/feedback",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          feedback_type: "not_useful",
+          subject_type: "topic",
+          subject_key: "machine-learning"
+        })
+      })
+    );
   });
 });

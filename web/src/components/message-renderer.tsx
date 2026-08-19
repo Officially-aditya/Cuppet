@@ -3,7 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
-import type { AgentMessage, MessageContent } from "@/lib/types";
+import type { AgentMessage, MessageContent, MessageFeedbackType } from "@/lib/types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -27,16 +27,30 @@ function Markdown({ children }: { children: string }) {
 export function MessageRenderer({
   message,
   onAction,
-  onFeedback
+  onFeedback,
+  feedbackType
 }: {
   message: AgentMessage;
   onAction?: (messageId: string, action: "done" | "snooze" | "skip") => void;
-  onFeedback?: (messageId: string, value: "helpful" | "not_helpful") => void;
+  onFeedback?: (messageId: string, value: MessageFeedbackType, subjectKey?: string) => void;
+  feedbackType?: string;
 }) {
   const content = typeof message.content === "string" ? ({ template: "plain_text", data: { body: message.content } } as MessageContent) : message.content;
   const data = record(content.data);
   const template = content.template ?? "plain_text";
   const isUser = message.role === "user";
+  const presentation = content.presentation ?? {};
+  const partCount = Math.max(1, Number(presentation.part_count ?? 1) || 1);
+  const partIndex = Math.max(0, Number(presentation.part_index ?? 0) || 0);
+  const isLastPart = partIndex >= partCount - 1;
+  const feedbackSubjectKey = getFeedbackSubjectKey(template, data);
+  const showFeedback =
+    message.role === "agent" &&
+    onFeedback !== undefined &&
+    content._recovered_raw_payload !== true &&
+    presentation.feedback_eligible === true &&
+    isLastPart &&
+    feedbackType === undefined;
 
   if (isUser) {
     return <div className="message-row user-row"><div className="user-message"><Markdown>{messageText(content)}</Markdown><span className="flutter-message-time"><MessageTime value={message.created_at} /></span></div></div>;
@@ -54,11 +68,29 @@ export function MessageRenderer({
           </div>
         )}
         {list(message.source_refs).length > 0 && <SourceLinks sources={message.source_refs ?? []} />}
-        {onFeedback && <div className="message-feedback flutter-feedback-actions"><button aria-label="Useful" onClick={() => onFeedback(message.id, "helpful")}>Useful</button><button aria-label="Not useful" onClick={() => onFeedback(message.id, "not_helpful")}>Not useful</button></div>}
+        {showFeedback && <div className="message-feedback flutter-feedback-actions"><button aria-label="Useful" onClick={() => sendFeedback(onFeedback, message.id, "useful", feedbackSubjectKey)}>Useful</button><button aria-label="Not useful" onClick={() => sendFeedback(onFeedback, message.id, "not_useful", feedbackSubjectKey)}>Not useful</button></div>}
         <span className="flutter-message-time"><MessageTime value={message.created_at} /></span>
       </article>
     </div>
   );
+}
+
+function getFeedbackSubjectKey(template: string, data: UnknownRecord): string | undefined {
+  if (template !== "news_brief") return undefined;
+  const item = list(data.items).map(record).find((candidate) => text(candidate.category).trim());
+  const category = item ? text(item.category).trim() : "";
+  return category || undefined;
+}
+
+function sendFeedback(
+  onFeedback: ((messageId: string, value: MessageFeedbackType, subjectKey?: string) => void) | undefined,
+  messageId: string,
+  value: MessageFeedbackType,
+  subjectKey?: string
+) {
+  if (!onFeedback) return;
+  if (subjectKey) onFeedback(messageId, value, subjectKey);
+  else onFeedback(messageId, value);
 }
 
 function TemplateContent({ template, data }: { template: string; data: UnknownRecord }) {

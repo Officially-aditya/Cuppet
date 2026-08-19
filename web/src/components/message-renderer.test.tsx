@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import type { AgentMessage } from "@/lib/types";
+import { describe, expect, it, vi } from "vitest";
+import type { AgentMessage, MessageContent } from "@/lib/types";
 import { MessageRenderer, messageText } from "./message-renderer";
 
 const briefing: AgentMessage = {
@@ -39,5 +39,31 @@ describe("MessageRenderer", () => {
   it("extracts a useful preview from known payload fields", () => {
     expect(messageText({ template: "plain_text", data: { body: "A calm update" } })).toBe("A calm update");
     expect(messageText({ template: "all_clear", data: { message: "Nothing urgent" } })).toBe("Nothing urgent");
+  });
+
+  it("only shows feedback for eligible final agent messages and hides it after selection", () => {
+    const onFeedback = vi.fn();
+    const baseContent = briefing.content as MessageContent;
+    const eligible: AgentMessage = {
+      ...briefing,
+      id: "eligible-message",
+      content: {
+        ...baseContent,
+        presentation: { feedback_eligible: true, part_index: 0, part_count: 2 }
+      }
+    };
+    const { rerender } = render(<MessageRenderer message={eligible} onFeedback={onFeedback} />);
+    expect(screen.queryByRole("button", { name: "Useful" })).not.toBeInTheDocument();
+
+    rerender(<MessageRenderer message={{ ...eligible, content: { ...baseContent, presentation: { feedback_eligible: true, part_index: 1, part_count: 1 } } }} onFeedback={onFeedback} />);
+    expect(screen.getByRole("button", { name: "Useful" })).toBeInTheDocument();
+    screen.getByRole("button", { name: "Useful" }).click();
+    expect(onFeedback).toHaveBeenCalledWith("eligible-message", "useful");
+
+    rerender(<MessageRenderer message={eligible} onFeedback={onFeedback} feedbackType="useful" />);
+    expect(screen.queryByRole("button", { name: "Useful" })).not.toBeInTheDocument();
+
+    rerender(<MessageRenderer message={{ ...eligible, role: "system" }} onFeedback={onFeedback} />);
+    expect(screen.queryByRole("button", { name: "Useful" })).not.toBeInTheDocument();
   });
 });

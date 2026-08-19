@@ -57,6 +57,7 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
   const recipesQuery = useQuery({ queryKey: ["recipes"], queryFn: api.recipes, enabled: !demo });
   const connectorsQuery = useQuery({ queryKey: ["connectors"], queryFn: api.connectors, enabled: !demo });
   const briefingsQuery = useQuery({ queryKey: ["briefings"], queryFn: api.briefings, enabled: !demo });
+  const personalizationQuery = useQuery({ queryKey: ["personalization"], queryFn: api.personalization, enabled: !demo });
 
   const me: CurrentUserResponse = demo ? demoUser : meQuery.data ?? { user: { id: "", email: "", name: "" }, preferences: { time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone, follow_device_time_zone: true } };
   const agents = useMemo(
@@ -66,6 +67,16 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
   const connectors = demo ? demoConnectorState : connectorsQuery.data ?? [];
   const recipes = demo ? demoRecipes : recipesQuery.data?.recipes ?? [];
   const briefings = demo ? (demoMessageState.daily?.filter((message) => message.content && typeof message.content === "object" && message.content.template === "briefing_card") ?? []) : briefingsQuery.data?.briefings ?? [];
+  const persistedFeedback = useMemo(() => {
+    const feedback: Record<string, string> = {};
+    for (const item of personalizationQuery.data?.feedback ?? []) feedback[item.message_id] = item.feedback_type;
+    return feedback;
+  }, [personalizationQuery.data?.feedback]);
+  const [localMessageFeedback, setLocalMessageFeedback] = useState<Record<string, string>>({});
+  const messageFeedback = useMemo(
+    () => ({ ...persistedFeedback, ...localMessageFeedback }),
+    [localMessageFeedback, persistedFeedback]
+  );
   const effectiveSelectedAgentId = selectedAgentId || agents.find((agent) => !agent.is_assistant)?.id || agents[0]?.id || "";
   const selectedAgent = agents.find((agent) => agent.id === effectiveSelectedAgentId) ?? agents[0];
   const detailAgent = agents.find((agent) => agent.id === detailAgentId);
@@ -247,7 +258,7 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     <button className="mobile-nav-trigger icon-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
 
     {view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}
-    {view === "inbox" && <><InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value) => { if (!demo) void api.messageFeedback(messageId, value).then(() => showToast("Thanks for the feedback.")); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
+    {view === "inbox" && <><InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} feedback={messageFeedback} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => { if (!demo) void api.messageAction(selectedAgent.id, messageId, action).then(() => queryClient.invalidateQueries({ queryKey: ["messages", selectedAgent.id] })); }} onFeedback={(messageId, value, subjectKey) => { setLocalMessageFeedback((current) => ({ ...current, [messageId]: value })); if (!demo) void api.messageFeedback(messageId, value, subjectKey).then(() => { void queryClient.invalidateQueries({ queryKey: ["personalization"] }); showToast("Thanks for the feedback."); }).catch((error) => showToast(errorMessage(error))); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
     {view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}
     {view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} />}
     {view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} onOpenConnectors={() => setView("connectors")} />}

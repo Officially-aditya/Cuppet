@@ -5,6 +5,8 @@ import type {
   ApiErrorPayload,
   Connector,
   CurrentUserResponse,
+  MessageFeedbackType,
+  PersonalizationResponse,
   RecipeField,
   UserPreferences
 } from "./types";
@@ -183,11 +185,15 @@ export const api = {
       method: "POST",
       body: json({ action })
     }),
-  messageFeedback: (messageId: string, value: "helpful" | "not_helpful") =>
+  messageFeedback: (messageId: string, value: MessageFeedbackType, subjectKey?: string) =>
     apiRequest<Record<string, unknown>>(`/messages/${messageId}/feedback`, {
       method: "POST",
-      body: json({ value })
+      body: json({
+        feedback_type: value,
+        ...(subjectKey ? { subject_type: "topic", subject_key: subjectKey } : {})
+      })
     }),
+  personalization: () => apiRequest<PersonalizationResponse>("/users/me/personalization"),
   briefings: () => apiRequest<{ briefings: AgentMessage[] }>("/briefings"),
   connectors: () => apiRequest<Connector[]>("/connectors"),
   connectorStatus: (connectorId: string, connected: boolean) =>
