@@ -167,7 +167,7 @@ export function ThreadView({
 
       <form className="composer-wrap" onSubmit={submit}>
         {quote && <div className="reply-quote"><div><small>Replying to</small><span>{quote.text}</span></div><button type="button" onClick={() => setQuote(null)} aria-label="Cancel reply"><X size={14} /></button></div>}
-        {attachments.length > 0 && <div className="attachment-tray">{attachments.map((item) => <span key={item.id}>{item.preview ? <img src={item.preview} alt="" /> : <Paperclip size={13} />}{item.name}<button type="button" onClick={() => { if (item.preview) URL.revokeObjectURL(item.preview); setAttachments((current) => current.filter((entry) => entry.id !== item.id)); }}><X size={12} /></button></span>)}</div>}
+        {attachments.length > 0 && <div className="attachment-tray">{attachments.map((item) => <span key={item.id}>{item.preview ? <Image src={item.preview} alt="" width={22} height={22} unoptimized /> : <Paperclip size={13} />}{item.name}<button type="button" onClick={() => { if (item.preview) URL.revokeObjectURL(item.preview); setAttachments((current) => current.filter((entry) => entry.id !== item.id)); }}><X size={12} /></button></span>)}</div>}
         <div className="composer-row" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void uploadFiles(event.dataTransfer.files); }}>
           <div className="composer">
             <input ref={fileInput} className="visually-hidden" type="file" multiple accept=".pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg" onChange={(event) => void uploadFiles(event.target.files ?? [])} />
