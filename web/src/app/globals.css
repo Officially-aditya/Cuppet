@@ -4689,6 +4689,7 @@ button.flutter-settings-tile:hover,
   border-top: 1px solid #eae9e8;
   box-shadow: 0 -5px 18px rgba(28, 26, 23, .04);
 }
+.bottom-nav-mobile-only { display: none; }
 .bottom-nav-item {
   position: relative;
   min-width: 116px;
@@ -4714,19 +4715,32 @@ button.flutter-settings-tile:hover,
 @media (min-width: 821px) {
   .workspace-shell {
     grid-template-columns: minmax(360px, 420px) minmax(480px, 1fr);
-    padding-bottom: 64px;
+    padding-bottom: 0;
   }
   .sidebar { display: none; }
   .sidebar-scrim, .mobile-nav-trigger { display: none !important; }
-  .live-workspace .inbox-pane { grid-column: 1; height: calc(100vh - 64px); }
-  .live-workspace .thread-pane { grid-column: 2; height: calc(100vh - 64px); }
-  .live-workspace .content-panel { grid-column: 1 / -1; height: calc(100vh - 64px); }
+  .live-workspace .inbox-pane { grid-column: 1; height: 100vh; }
+  .live-workspace .thread-pane { grid-column: 2; height: 100vh; }
+  .live-workspace .content-panel { grid-column: 2; height: 100vh; }
+  .bottom-nav-mobile-only { display: none !important; }
+
+  /* On Inbox, the destination controls belong to the agents pane. The
+     conversation remains full height beside it, with New Agent sitting above
+     the navigation row. The same agent pane remains available beside other
+     destinations so navigation stays in one predictable place. */
+  .flutter-inbox-list {
+    padding-bottom: 170px;
+  }
+  .flutter-new-agent {
+    bottom: 80px;
+  }
 }
 
 @media (max-width: 820px) {
   .workspace-shell { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
   .sidebar { display: none; }
   .sidebar-scrim, .mobile-nav-trigger { display: none !important; }
+  .live-workspace:not(.view-inbox) .inbox-pane { display: none; }
   .bottom-nav {
     position: fixed;
     height: calc(56px + env(safe-area-inset-bottom));
@@ -4745,4 +4759,5 @@ button.flutter-settings-tile:hover,
   }
   .bottom-nav-item .app-nav-icon { width: 20px; height: 20px; }
   .mobile-thread-open .bottom-nav { display: none; }
+  .flutter-inbox-list { padding-bottom: 150px; }
 }
