@@ -366,13 +366,13 @@ function InboxPane({ agents, briefings, firstName, selectedAgentId, view, onNavi
     </div>
 
     <button className="flutter-new-agent" onClick={onCreate}><Plus size={20} /><span>New Agent</span></button>
-    <DestinationNav view={view} agents={agents} onNavigate={onNavigate} />
+    <DestinationNav view={view} agents={agents} onNavigate={onNavigate} className="agent-sidebar-nav" />
   </section>;
 }
 
 function DestinationNav({ view, agents, onNavigate, className = "" }: { view: ViewKey; agents: Agent[]; onNavigate: (view: ViewKey) => void; className?: string }) {
   const unreadCount = agents.reduce((sum, agent) => sum + (agent.unread_count ?? 0), 0);
-  return <nav className={`bottom-nav ${className}`.trim()} aria-label="Primary navigation">{navItems.map(({ id, label, iconClass }) => <button key={id} type="button" title={label} aria-current={view === id ? "page" : undefined} className={`bottom-nav-item ${view === id ? "active" : ""}`} onClick={() => onNavigate(id)}><span className={`app-nav-icon ${iconClass}`} aria-hidden="true" /><span>{label}</span>{id === "inbox" && unreadCount > 0 && <b className="bottom-nav-count">{unreadCount}</b>}</button>)}</nav>;
+  return <nav className={`bottom-nav ${className}`.trim()} aria-label="Primary navigation">{navItems.map(({ id, label, iconClass }) => <button key={id} type="button" data-nav-id={id} title={label} aria-current={view === id ? "page" : undefined} className={`bottom-nav-item ${view === id ? "active" : ""}`} onClick={() => onNavigate(id)}><span className={`app-nav-icon ${iconClass}`} aria-hidden="true" /><span>{label}</span>{id === "inbox" && unreadCount > 0 && <b className="bottom-nav-count">{unreadCount}</b>}</button>)}</nav>;
 }
 
 function BriefingPreview({ briefing, onOpen }: { briefing: AgentMessage; onOpen: () => void }) {

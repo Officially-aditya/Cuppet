@@ -4690,6 +4690,19 @@ button.flutter-settings-tile:hover,
   box-shadow: 0 -5px 18px rgba(28, 26, 23, .04);
 }
 .bottom-nav-mobile-only { display: none; }
+.agent-sidebar-nav {
+  flex-direction: column;
+  height: 112px;
+  padding: 8px 14px;
+  gap: 4px;
+}
+.agent-sidebar-nav .bottom-nav-item {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  justify-content: flex-start;
+  padding: 4px 14px;
+}
 .bottom-nav-item {
   position: relative;
   min-width: 116px;
@@ -4723,16 +4736,17 @@ button.flutter-settings-tile:hover,
   .live-workspace .thread-pane { grid-column: 2; height: 100vh; }
   .live-workspace .content-panel { grid-column: 2; height: 100vh; }
   .bottom-nav-mobile-only { display: none !important; }
+  .agent-sidebar-nav [data-nav-id="inbox"] { display: none; }
 
   /* On Inbox, the destination controls belong to the agents pane. The
      conversation remains full height beside it, with New Agent sitting above
      the navigation row. The same agent pane remains available beside other
      destinations so navigation stays in one predictable place. */
   .flutter-inbox-list {
-    padding-bottom: 170px;
+    padding-bottom: 215px;
   }
   .flutter-new-agent {
-    bottom: 80px;
+    bottom: 124px;
   }
 }
 
@@ -4759,5 +4773,19 @@ button.flutter-settings-tile:hover,
   }
   .bottom-nav-item .app-nav-icon { width: 20px; height: 20px; }
   .mobile-thread-open .bottom-nav { display: none; }
+  .agent-sidebar-nav {
+    flex-direction: row;
+    height: calc(56px + env(safe-area-inset-bottom));
+    padding: 0 8px env(safe-area-inset-bottom);
+    gap: 0;
+  }
+  .agent-sidebar-nav .bottom-nav-item {
+    width: auto;
+    min-width: 0;
+    height: 52px;
+    justify-content: center;
+    padding: 3px 0 1px;
+  }
+  .agent-sidebar-nav [data-nav-id="inbox"] { display: flex; }
   .flutter-inbox-list { padding-bottom: 150px; }
 }
