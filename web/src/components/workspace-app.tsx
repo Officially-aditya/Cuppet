@@ -38,7 +38,8 @@ const navItems: Array<{ id: ViewKey; label: string; iconClass: string }> = [
 
 export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?: () => void }) {
   const queryClient = useQueryClient();
-  const [view, setViewState] = useState<ViewKey>(initialView);
+  const [view, setViewState] = useState<ViewKey>(() => initialView() === "feedback" ? "inbox" : initialView());
+  const [feedbackOpen, setFeedbackOpen] = useState(() => initialView() === "feedback");
   const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId);
   const [detailAgentId, setDetailAgentId] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -90,6 +91,12 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
   }, []);
 
   const setView = useCallback((next: ViewKey) => {
+    if (next === "feedback") {
+      setFeedbackOpen(true);
+      setSidebarOpen(false);
+      return;
+    }
+    setFeedbackOpen(false);
     setViewState(next);
     setSidebarOpen(false);
     setThreadOpen(false);
@@ -99,14 +106,28 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     window.history.replaceState({}, "", url);
   }, []);
 
+  const openFeedback = useCallback(() => {
+    setFeedbackOpen(true);
+    setSidebarOpen(false);
+  }, []);
+
+  const closeFeedback = useCallback(() => {
+    setFeedbackOpen(false);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("view") === "feedback") {
+      url.searchParams.set("view", view);
+      window.history.replaceState({}, "", url);
+    }
+  }, [view]);
+
   useEffect(() => {
     const keyboard = (event: globalThis.KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setCommandOpen((open) => !open); }
-      if (event.key === "Escape") { setCommandOpen(false); setCreateOpen(false); }
+      if (event.key === "Escape") { setCommandOpen(false); setCreateOpen(false); closeFeedback(); }
     };
     window.addEventListener("keydown", keyboard);
     return () => window.removeEventListener("keydown", keyboard);
-  }, []);
+  }, [closeFeedback]);
 
   useEffect(() => {
     if (demo) return;
@@ -294,7 +315,7 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
   if (loading) return <main className="boot-screen"><span className="brand-mark"><Sparkles size={19} /></span><LoaderCircle className="spin" size={18} /><span>Gathering your agents…</span></main>;
   if (!demo && (agentsQuery.error || meQuery.error)) return <main className="boot-screen error-state"><span className="brand-mark"><X size={19} /></span><h1>We couldn’t open your workspace.</h1><p>{errorMessage(agentsQuery.error || meQuery.error)}</p><button className="primary-button" onClick={() => window.location.reload()}>Try again</button></main>;
 
-  const inboxPane = <InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} view={view} onNavigate={setView} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />;
+  const inboxPane = <InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} view={view} onNavigate={setView} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={openFeedback} />;
 
   return <main className={`workspace-shell live-workspace view-${view} ${threadOpen ? "mobile-thread-open" : ""}`}>
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
@@ -304,14 +325,16 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
       <button className="command-button" title="Search" onClick={() => setCommandOpen(true)}><Search size={17} />Search<span>⌘K</span></button>
       <button className="new-agent-button" title="New agent" onClick={() => setCreateOpen(true)}><Plus size={19} />New agent</button>
       <button title="Settings" aria-label="Open settings" className={`profile-row ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}><span className={`profile-avatar profile-avatar-${me.user.avatar ?? 1}`}>{initials(me.user.name || me.user.email)}</span><span><b>{me.user.name || "Cuppet user"}</b><small>{demo ? "Demo workspace" : me.user.email}</small></span><Settings2 size={16} /></button>
-      <button className="feedback-link" title="Send feedback" onClick={() => setView("feedback")}><MessageSquareText size={17} />Send feedback</button>
+      <button className="feedback-link" title="Send feedback" onClick={openFeedback}><MessageSquareText size={17} />Send feedback</button>
     </aside>
     {view !== "inbox" && <DestinationNav view={view} agents={agents} onNavigate={setView} className="bottom-nav-mobile-only" />}
     {sidebarOpen && <button className="sidebar-scrim" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
     <button className="mobile-nav-trigger icon-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
 
     {view === "inbox" && <>{inboxPane}{selectedAgent ? <ThreadView key={selectedAgent.id} agent={selectedAgent} messages={messages} feedback={messageFeedback} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onLoadArchived={demo ? undefined : (cursor) => api.archivedMessages(selectedAgent.id, cursor)} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => void handleMessageAction(messageId, action)} onFeedback={(messageId, value, subjectKey) => { setLocalMessageFeedback((current) => ({ ...current, [messageId]: value })); if (!demo) void api.messageFeedback(messageId, value, subjectKey).then(() => { void queryClient.invalidateQueries({ queryKey: ["personalization"] }); showToast("Thanks for the feedback."); }).catch((error) => showToast(errorMessage(error))); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
-    {view !== "inbox" && <>{inboxPane}{view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}{view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}{view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} onCreateCustom={createCustomConnector} onDeleteCustom={deleteCustomConnector} />}{view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} onOpenConnectors={() => setView("connectors")} />}{view === "feedback" && <FeedbackPanel onBack={() => setView("inbox")} onSubmit={async (topic, message) => { if (!demo) await api.feedback(topic, message); }} />}</>}
+    {view !== "inbox" && <>{inboxPane}{view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}{view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}{view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} onCreateCustom={createCustomConnector} onDeleteCustom={deleteCustomConnector} />}{view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} onOpenConnectors={() => setView("connectors")} />}</>}
+
+    {feedbackOpen && <div className="feedback-modal-backdrop" role="presentation" onMouseDown={closeFeedback}><div className="feedback-modal" role="dialog" aria-modal="true" aria-label="Send feedback" onMouseDown={(event) => event.stopPropagation()}><FeedbackPanel onBack={closeFeedback} onClose={closeFeedback} onSubmit={async (topic, message) => { if (!demo) await api.feedback(topic, message); }} /></div></div>}
 
     {createOpen && <CreateAgentDialog recipes={recipes} onClose={() => setCreateOpen(false)} onParse={parseAgent} onCreate={createAgent} />}
     {commandOpen && <div className="command-backdrop" onMouseDown={() => setCommandOpen(false)}><section className="command-palette" onMouseDown={(event) => event.stopPropagation()}><div><Search size={18} /><input autoFocus value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="Search agents and views…" /><button onClick={() => setCommandOpen(false)}>esc</button></div><nav>{commandResults.map((result) => <button key={result.id} onClick={() => { result.action(); setCommandOpen(false); setCommandQuery(""); }}><span className="command-result-icon"><Command size={15} /></span><span><b>{result.label}</b><small>{result.note}</small></span></button>)}{commandResults.length === 0 && <p>No matching agents or views.</p>}</nav></section></div>}

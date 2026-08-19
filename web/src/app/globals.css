@@ -4800,3 +4800,71 @@ button.flutter-settings-tile:hover,
   .agent-sidebar-nav [data-nav-id="settings"]::before { display: none; }
   .flutter-inbox-list { padding-bottom: 150px; }
 }
+
+/* Feedback is a workspace overlay, so the active inbox/destination stays
+   visible underneath it instead of being replaced by a separate page. */
+.feedback-modal-backdrop {
+  position: absolute;
+  z-index: 120;
+  inset: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(28, 26, 23, .28);
+  backdrop-filter: blur(4px);
+}
+.feedback-modal {
+  width: min(720px, 100%);
+  max-height: min(90vh, 760px);
+  overflow: hidden;
+  border: 1px solid #eae9e8;
+  background: #f5f3ee;
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(28, 26, 23, .2);
+}
+.feedback-modal .flutter-feedback-panel {
+  grid-column: auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  border-radius: 24px;
+}
+.feedback-modal .flutter-feedback-appbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  justify-content: space-between;
+  border-bottom: 1px solid #eae9e8;
+}
+.flutter-feedback-close {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d4d9d2;
+  color: #006046;
+  background: #fcfbfa;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+.flutter-feedback-close:hover {
+  background: #e4f3ec;
+}
+
+@media (max-width: 820px) {
+  .feedback-modal-backdrop {
+    align-items: end;
+    padding: 8px 0 0;
+  }
+  .feedback-modal {
+    width: 100%;
+    max-height: calc(100dvh - 8px);
+    border-radius: 24px 24px 0 0;
+  }
+  .feedback-modal .flutter-feedback-panel {
+    max-height: calc(100dvh - 8px);
+    border-radius: 24px 24px 0 0;
+  }
+}
