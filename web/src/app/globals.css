@@ -4743,10 +4743,11 @@ button.flutter-settings-tile:hover,
      the navigation row. The same agent pane remains available beside other
      destinations so navigation stays in one predictable place. */
   .flutter-inbox-list {
-    padding-bottom: 215px;
+    padding-bottom: 170px;
   }
   .flutter-new-agent {
-    bottom: 124px;
+    bottom: 20px;
+    z-index: 90;
   }
 }
 
