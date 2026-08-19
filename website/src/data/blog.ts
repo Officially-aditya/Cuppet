@@ -20,6 +20,56 @@ export type BlogPost = {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'how-cuppet-removes-the-hassle-from-staying-informed',
+    title: 'How Cuppet removes the hassle from staying informed',
+    excerpt:
+      'News should help you make decisions, not become another daily research project. Cuppet turns your priorities into a focused, scheduled brief.',
+    dek:
+      'Instead of opening tabs, repeating the same searches, and sorting through a stream of headlines, you tell Cuppet what matters once. It researches the latest developments, ranks what deserves attention, and brings a compact brief to you.',
+    category: 'Product',
+    published: '2026-08-19',
+    displayDate: 'August 19, 2026',
+    readingTime: '6 min read',
+    visual: 'filter',
+    sections: [
+      {
+        heading: 'The search loop is the real problem',
+        paragraphs: [
+          'Staying informed sounds simple until you try to do it every day. You open a search page, scan a few headlines, open the most promising links, compare what different outlets are saying, and try to remember which stories are actually relevant to your work. Then the next morning, you start the process again. The individual steps are small, but together they turn news into a recurring task that competes with the work the news was meant to support.',
+          'The difficulty is not a lack of information. It is the opposite. There are more updates, alerts, newsletters, feeds, and opinion pieces than anyone can evaluate carefully. Important developments can disappear inside that volume, while routine stories continue to take up the same amount of attention. A better news experience has to reduce the search itself, not only summarize the results after you have already found them.',
+        ],
+      },
+      {
+        heading: 'Tell Cuppet what deserves attention once',
+        paragraphs: [
+          'Cuppet starts with a persistent instruction instead of a one-time search. You can describe the brief in plain language: follow AI infrastructure and technology policy, include local and global developments, keep it balanced, and send it every morning. The instruction becomes a reusable news agent that remembers the topics, the scope, the level of freshness, and the time that works for you.',
+          'That changes the relationship with the news. You do not have to reconstruct the same query every day or keep a list of sources in your head. If your focus changes, you refine the instruction. You can narrow the topics, change the geography, choose a different balance, or adjust the schedule. The routine stays understandable because its purpose remains visible in ordinary language.',
+        ],
+      },
+      {
+        heading: 'Research and selection happen together',
+        paragraphs: [
+          'A useful brief needs more than a list of search results. Cuppet researches current sources and selects the developments that best match the agent you created. Its news workflow is designed around a small, ranked set of stories, with a short TL;DR that lets you understand the point before deciding whether to read further. The result is meant to answer the practical question behind most news searches: what changed, and why should I care?',
+          'Selection also makes the result easier to trust. Stories are ranked using signals such as material impact, freshness, source reliability, and fit with your configured topics and geography. The brief keeps the underlying context available, so a concise summary does not have to become a dead end. You can move from the essential update to the original source when a story deserves a closer look.',
+        ],
+      },
+      {
+        heading: 'A brief that fits the day you actually have',
+        paragraphs: [
+          'The point of a news brief is not to make you spend your morning reading another dashboard. Cuppet can run the routine on a schedule that fits your day and deliver the result through the agent experience you already use. A compact opening summary gives you the shape of the news quickly, while ranked stories and context remain available when you have more time.',
+          'This format respects the difference between awareness and deep research. Some mornings you only need the three-line version before a meeting. Other days, one development may change a plan and deserve a full read. Cuppet gives you a useful starting point without pretending that every story deserves the same amount of attention.',
+        ],
+      },
+      {
+        heading: 'Less searching, more informed judgment',
+        paragraphs: [
+          'Cuppet does not ask you to outsource your judgment to a headline generator. It reduces the mechanical work around staying informed so that your judgment can focus on the parts that matter: whether a change affects your team, whether a source is convincing, and what you should do next. The assistant handles the repeated search and first pass. You keep the decision-making context.',
+          'That is the larger idea behind Cuppet. Useful AI should not create another place you have to remember to check. It should turn a clear intention into a dependable routine, bring only the relevant signal into view, and preserve a path back to the evidence. When your news search becomes a small, well-timed brief instead of a chain of tabs, you get the benefit of being informed without paying the full attention cost every day.',
+        ],
+      },
+    ],
+  },
+  {
     slug: 'the-information-problem-ai-still-hasnt-solved',
     title: "The information problem AI still hasn't solved",
     excerpt:
