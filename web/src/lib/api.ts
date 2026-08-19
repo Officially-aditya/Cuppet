@@ -258,6 +258,9 @@ export const api = {
   exportPreferenceProfile: () => apiRequest<Record<string, unknown>>("/users/me/preference-profile/export"),
   briefings: () => apiRequest<{ briefings: AgentMessage[] }>("/briefings"),
   connectors: () => apiRequest<Connector[]>("/connectors"),
+  createCustomMcpProvider: (value: { name: string; endpoint: string; description?: string; category?: string; capabilities: string[]; oauth_scopes?: string[] }) =>
+    apiRequest<Connector>("/access/providers", { method: "POST", body: json({ ...value, icon_name: "Extension" }) }),
+  deleteCustomMcpProvider: (providerId: string) => apiRequest<void>(`/access/providers/${encodeURIComponent(providerId)}`, { method: "DELETE" }),
   connectorStatus: (connectorId: string, connected: boolean) =>
     apiRequest<Connector>(`/connectors/${connectorId}/status`, {
       method: "POST",

@@ -270,6 +270,21 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     else { await api.connectorStatus(connector.id, false); await queryClient.invalidateQueries({ queryKey: ["connectors"] }); }
   };
 
+  const createCustomConnector = async (value: { name: string; endpoint: string; description: string; capabilities: string[]; oauth_scopes: string[] }) => {
+    if (demo) {
+      const connector: Connector = { id: `mcp.demo.${Date.now()}`, name: value.name, description: value.description || "Read approved data from this MCP provider.", category: "CUSTOM MCP", status: "disconnected", icon_name: "Extension", auth_configured: true, auth_method: "oauth2", required_scopes: value.oauth_scopes };
+      setDemoConnectorState((current) => [...current, connector]);
+    } else { await api.createCustomMcpProvider(value); await queryClient.invalidateQueries({ queryKey: ["connectors"] }); }
+    showToast("Custom MCP provider added.");
+  };
+
+  const deleteCustomConnector = async (connector: Connector) => {
+    if (!window.confirm(`Remove ${connector.name}?`)) return;
+    if (demo) setDemoConnectorState((current) => current.filter((item) => item.id !== connector.id));
+    else { await api.deleteCustomMcpProvider(connector.provider_id ?? connector.id); await queryClient.invalidateQueries({ queryKey: ["connectors"] }); }
+    showToast("Custom MCP provider removed.");
+  };
+
   const commandResults = useMemo(() => {
     const navigation = navItems.filter((item) => item.label.toLowerCase().includes(commandQuery.toLowerCase())).map((item) => ({ id: `nav-${item.id}`, label: item.label, note: "Go to view", action: () => setView(item.id) }));
     const agentResults = agents.filter((agent) => agent.name.toLowerCase().includes(commandQuery.toLowerCase())).slice(0, 6).map((agent) => ({ id: `agent-${agent.id}`, label: agent.name, note: "Open agent thread", action: () => selectThread(agent) }));
@@ -296,7 +311,7 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
     {view === "overview" && <OverviewPanel agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} onSelectAgent={(id) => { const agent = agents.find((item) => item.id === id); if (agent) selectThread(agent); }} onCreateAgent={() => setCreateOpen(true)} />}
     {view === "inbox" && <><InboxPane agents={agents} briefings={briefings} firstName={(me.user.name || "").split(" ")[0] || ""} selectedAgentId={selectedAgent?.id} onSelect={selectThread} onCreate={() => setCreateOpen(true)} onFeedback={() => setView("feedback")} />{selectedAgent ? <ThreadView agent={selectedAgent} messages={messages} feedback={messageFeedback} loading={!demo && messagesQuery.isLoading} sending={sending} onBack={() => setThreadOpen(false)} onSend={sendMessage} onUpload={demo ? async (file) => ({ id: `file-${Date.now()}`, name: file.name }) : async (file) => { const result = await api.upload(file); return { id: result.file.id, name: result.file.name }; }} onRun={() => void runAgent(selectedAgent)} onToggleMute={() => void updateAgent(selectedAgent.id, { notifications_muted: selectedAgent.parsed_intent?.notifications_muted !== true })} onOpenSettings={() => { setDetailAgentId(selectedAgent.id); setView("agents"); }} onClear={() => void clearMessages()} onAction={(messageId, action) => void handleMessageAction(messageId, action)} onFeedback={(messageId, value, subjectKey) => { setLocalMessageFeedback((current) => ({ ...current, [messageId]: value })); if (!demo) void api.messageFeedback(messageId, value, subjectKey).then(() => { void queryClient.invalidateQueries({ queryKey: ["personalization"] }); showToast("Thanks for the feedback."); }).catch((error) => showToast(errorMessage(error))); }} /> : <div className="empty-thread"><Bot size={24} /><h3>No agent selected</h3></div>}</>}
     {view === "agents" && <AgentsPanel agents={agents} selected={detailAgent} onSelect={(agent) => setDetailAgentId(agent.id)} onCreate={() => setCreateOpen(true)} onOpenThread={selectThread} onUpdate={updateAgent} onDelete={deleteAgent} onRun={(agent) => void runAgent(agent)} />}
-    {view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} />}
+    {view === "connectors" && <ConnectorsPanel connectors={connectors} onConnect={connect} onDisconnect={disconnect} onCreateCustom={createCustomConnector} onDeleteCustom={deleteCustomConnector} />}
     {view === "settings" && <SettingsPanel me={me} demo={demo} onExitDemo={onExitDemo} onOpenConnectors={() => setView("connectors")} />}
     {view === "feedback" && <FeedbackPanel onBack={() => setView("inbox")} onSubmit={async (topic, message) => { if (!demo) await api.feedback(topic, message); }} />}
 
