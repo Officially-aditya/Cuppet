@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Circle, LoaderCircle, Plus, Search, ShieldCheck, Trash2, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import type { Connector } from "@/lib/types";
 import { ConnectorLogo, getConnectorLogoPath } from "./connector-logo";
@@ -21,15 +21,12 @@ export function ConnectorsPanel({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("all");
   const [customOpen, setCustomOpen] = useState(false);
   const [customBusy, setCustomBusy] = useState(false);
   const [customError, setCustomError] = useState("");
   const [custom, setCustom] = useState({ name: "", endpoint: "", description: "", capabilities: "read", oauth_scopes: "" });
 
-  const categories = useMemo(() => ["all", ...Array.from(new Set(connectors.map((connector) => connector.category).filter(Boolean)))], [connectors]);
-  const visible = useMemo(() => connectors.filter((connector) => (category === "all" || connector.category === category) && `${connector.name} ${connector.description} ${connector.category}`.toLowerCase().includes(query.toLowerCase())), [category, connectors, query]);
+  const visible = connectors;
 
   const toggle = async (connector: Connector) => {
     setBusy(connector.id);
@@ -75,7 +72,7 @@ export function ConnectorsPanel({
     </header>
 
     <div className="flutter-destination-list">
-      <div className="connectors-toolbar"><div className="search-input"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search connectors" /></div><div className="connector-category-tabs">{categories.map((value) => <button key={value} className={category === value ? "active" : ""} onClick={() => setCategory(value)}>{value === "all" ? "All" : value}</button>)}</div><button className="primary-button" onClick={() => { setCustomOpen(true); setCustomError(""); }}><Plus size={15} />Custom MCP</button></div>
+      <div className="connectors-toolbar connectors-toolbar-actions"><button className="primary-button" onClick={() => { setCustomOpen(true); setCustomError(""); }}><Plus size={15} />Custom MCP</button></div>
       <div className="flutter-section-label"><b>AVAILABLE SERVICES</b><span>{visible.length} available</span></div>
       {error && <p className="form-message error connector-error">{error}</p>}
       <div className="flutter-connector-list">
@@ -93,7 +90,7 @@ export function ConnectorsPanel({
         </article>)}
       </div>
 
-      {visible.length === 0 && <div className="panel-empty"><span><Search size={20} /></span><h3>No connectors found</h3><p>Try a different search or add a custom MCP provider.</p></div>}
+      {visible.length === 0 && <div className="panel-empty"><span><Search size={20} /></span><h3>No connectors available</h3><p>Add a custom MCP provider to connect another service.</p></div>}
 
       <aside className="flutter-privacy-panel"><span><ShieldCheck size={18} /></span><div><b>Access &amp; privacy</b><p>Cuppet only uses the access you approve. Connector tokens stay encrypted on Cuppet&apos;s backend, and agents stay within each connector&apos;s granted scopes.</p></div></aside>
       {customOpen && <div className="dialog-backdrop" role="presentation"><section className="connector-dialog" role="dialog" aria-modal="true" aria-labelledby="custom-mcp-title"><header><div><p className="eyebrow">Workspace setup</p><h2 id="custom-mcp-title">Add custom MCP provider</h2></div><button className="icon-button" onClick={() => setCustomOpen(false)} aria-label="Close"><X size={18} /></button></header><form onSubmit={submitCustom}><p className="muted-copy">Connect a public HTTPS MCP endpoint. Cuppet will request only the capabilities and OAuth scopes you specify.</p><label><span>Provider name</span><input value={custom.name} onChange={(event) => setCustom((current) => ({ ...current, name: event.target.value }))} required placeholder="My MCP provider" /></label><label><span>Public HTTPS endpoint</span><input type="url" value={custom.endpoint} onChange={(event) => setCustom((current) => ({ ...current, endpoint: event.target.value }))} required placeholder="https://example.com/mcp" /></label><label><span>Description</span><textarea rows={3} value={custom.description} onChange={(event) => setCustom((current) => ({ ...current, description: event.target.value }))} placeholder="What this provider can do" /></label><label><span>Capabilities</span><input value={custom.capabilities} onChange={(event) => setCustom((current) => ({ ...current, capabilities: event.target.value }))} placeholder="read, search" /><small>Comma-separated capability names.</small></label><label><span>OAuth scopes <small>(optional)</small></span><input value={custom.oauth_scopes} onChange={(event) => setCustom((current) => ({ ...current, oauth_scopes: event.target.value }))} placeholder="profile, files.read" /></label>{customError && <p className="form-message error">{customError}</p>}<footer><button type="button" className="secondary-button" onClick={() => setCustomOpen(false)}>Cancel</button><button className="primary-button" disabled={customBusy}>{customBusy ? <LoaderCircle className="spin" size={14} /> : <Plus size={14} />}Add provider</button></footer></form></section></div>}
