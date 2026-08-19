@@ -63,7 +63,7 @@ export function SettingsPanel({ me, demo, onExitDemo, onOpenConnectors }: { me: 
 
   if (tab) return <section className="content-panel settings-panel flutter-settings-detail">
     <header className="flutter-detail-header"><button onClick={() => setTab(null)} aria-label="Back to settings"><ArrowLeft size={20} /></button><h1>{tab === "profile" ? "Profile" : tab === "notifications" ? "Notifications" : "Data & privacy"}</h1></header>
-    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettingsPanel demo={demo} />}{tab === "personalization" && <PersonalizationSettingsPanel demo={demo} />}</div>
+    <div className="settings-content">{tab === "profile" && <ProfileSettings key={`${me.user.name}-${me.preferences.time_zone}-${me.preferences.follow_device_time_zone}`} me={me} demo={demo} onExitDemo={onExitDemo} />}{tab === "notifications" && <NotificationSettings demo={demo} />}{tab === "data" && <DataSettingsPanel demo={demo} onOpenPersonalization={() => setTab("personalization")} />}{tab === "personalization" && <PersonalizationSettingsPanel demo={demo} />}</div>
   </section>;
 
   return <section className="content-panel settings-panel flutter-destination-panel">
