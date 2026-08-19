@@ -40,6 +40,13 @@ export const blogPosts: BlogPost[] = [
         ],
       },
       {
+        heading: 'How Cuppet solves the problem',
+        paragraphs: [
+          'Cuppet turns that repeated search into one persistent news agent. You describe the topics, geography, freshness, balance, and schedule that matter to you once. Cuppet then researches current sources, filters out the noise, ranks the developments that best match your instruction, and brings them back as a concise brief. You start with a useful signal instead of a blank search page.',
+          'The important shift is that Cuppet handles the recurring work without taking away your judgment. You can inspect the context behind a story, follow the original source, and refine the instruction whenever your priorities change. The system carries the search burden so you can spend your attention deciding what the news means and what deserves a response.',
+        ],
+      },
+      {
         heading: 'Tell Cuppet what deserves attention once',
         paragraphs: [
           'Cuppet starts with a persistent instruction instead of a one-time search. You can describe the brief in plain language: follow AI infrastructure and technology policy, include local and global developments, keep it balanced, and send it every morning. The instruction becomes a reusable news agent that remembers the topics, the scope, the level of freshness, and the time that works for you.',
