@@ -79,6 +79,10 @@ export function CreateAgentDialog({
             : ""
   );
   const access = Array.isArray(parsed.connector_ids) && parsed.connector_ids.length ? parsed.connector_ids.join(", ") : "Only what you connect";
+  const recipeInputs = record(preview?.recipe_inputs ?? parsed.recipe_inputs ?? configuration.recipe_inputs);
+  const recipeFields = (selectedRecipe?.fields ?? []).filter((field) => field.id !== "schedule");
+  const output = record(configuration.output);
+  const safety = String(record(configuration.policy).safety_level ?? configuration.safety_level ?? "read-only");
 
   return (
     <div className="dialog-backdrop" role="presentation">
@@ -168,9 +172,12 @@ export function CreateAgentDialog({
                 <article className="preview-info-card"><b>What it does</b><p>{action}</p></article>
                 <article className="preview-info-card"><b>When it runs</b><p>{schedule}</p></article>
                 <article className="preview-info-card"><b>Connected tools</b><p>{access}</p></article>
-                <article className="preview-info-card"><b>Safety</b><p>Read-only by default</p></article>
+                <article className="preview-info-card"><b>Output</b><p>{String(output.contract ?? configuration.output_template ?? parsed.output_template ?? "Structured agent update")}</p></article>
+                <article className="preview-info-card"><b>Safety</b><p>{safety.replaceAll("_", " ")}</p></article>
               </div>
             </div>
+
+            {recipeFields.length > 0 && <div className="creation-section recipe-review-section"><p className="creation-section-label">Recipe settings</p><div className="recipe-settings-review">{recipeFields.map((field) => <div className="recipe-setting-row" key={field.id ?? field.key ?? field.name}><span><b>{field.label ?? field.name ?? field.id}</b>{field.description && <small>{field.description}</small>}</span><strong>{recipeDisplayValue(field, recipeInputs[field.id ?? field.key ?? ""] ?? field.default ?? field.default_value)}</strong></div>)}</div></div>}
 
             <p className="preview-note">You can refine the name, schedule, notifications, and response length after creating it.</p>
             {error && <p className="form-message error">{error}</p>}
@@ -226,4 +233,17 @@ function formatScheduleLabel(value: string): string {
     return `Every ${weekday} at ${time}`;
   }
   return "Custom schedule";
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function recipeDisplayValue(field: NonNullable<AgentRecipe["fields"]>[number], value: unknown): string {
+  if (field.type === "boolean") return value === true ? "Enabled" : "Disabled";
+  if (Array.isArray(value)) return value.length ? value.map((item) => String(item)).join(", ") : "Not specified";
+  const option = field.options?.find((candidate) => typeof candidate !== "string" && candidate.value === String(value));
+  if (option && typeof option !== "string") return option.label;
+  const text = value === undefined || value === null ? "" : String(value).trim();
+  return text || "Not specified";
 }

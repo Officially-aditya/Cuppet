@@ -302,7 +302,7 @@ export function WorkspaceApp({ demo, onExitDemo }: { demo: boolean; onExitDemo?:
       <div className="sidebar-spacer" />
       <button className="command-button" title="Search" onClick={() => setCommandOpen(true)}><Search size={17} />Search<span>⌘K</span></button>
       <button className="new-agent-button" title="New agent" onClick={() => setCreateOpen(true)}><Plus size={19} />New agent</button>
-      <button title="Settings" aria-label="Open settings" className={`profile-row ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}><span className="profile-avatar">{initials(me.user.name || me.user.email)}</span><span><b>{me.user.name || "Cuppet user"}</b><small>{demo ? "Demo workspace" : me.user.email}</small></span><Settings2 size={16} /></button>
+      <button title="Settings" aria-label="Open settings" className={`profile-row ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}><span className={`profile-avatar profile-avatar-${me.user.avatar ?? 1}`}>{initials(me.user.name || me.user.email)}</span><span><b>{me.user.name || "Cuppet user"}</b><small>{demo ? "Demo workspace" : me.user.email}</small></span><Settings2 size={16} /></button>
       <button className="feedback-link" title="Send feedback" onClick={() => setView("feedback")}><MessageSquareText size={17} />Send feedback</button>
     </aside>
     {sidebarOpen && <button className="sidebar-scrim" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" />}
