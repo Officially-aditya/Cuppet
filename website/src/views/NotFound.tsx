@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import Link from 'next/link'
+import NotFoundVisual from '../components/NotFoundVisual'
 import SiteLayout from '../components/SiteLayout'
 
 export default function NotFound() {
@@ -39,39 +40,7 @@ export default function NotFound() {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-md lg:justify-self-end">
-            <div className="absolute -inset-4 rounded-[2rem] border border-[var(--forest)]/[0.08]" />
-            <div className="relative overflow-hidden rounded-[1.75rem] bg-[var(--forest)] p-5 text-[var(--paper)] shadow-[0_32px_80px_-36px_rgba(12,25,17,0.55)] sm:p-6">
-              <div className="beta-geometry absolute inset-0 opacity-70" />
-
-              <div className="relative z-10">
-                <div className="flex items-center justify-between border-b border-[#92bf9d]/20 pb-4">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#dce9de]/65">
-                    Agent route check
-                  </p>
-                  <span className="rounded-full border border-[#92bf9d]/25 px-2.5 py-1 font-mono text-[10px] text-[#dce9de]/75">
-                    404
-                  </span>
-                </div>
-
-                <div className="flex min-h-[15rem] items-center justify-center py-8">
-                  <div className="relative flex h-44 w-44 items-center justify-center rounded-full border border-[#92bf9d]/25">
-                    <div className="absolute inset-5 rounded-full border border-[#92bf9d]/20" />
-                    <div className="absolute inset-11 rounded-full border border-[#92bf9d]/25" />
-                    <div className="h-3 w-3 rounded-full bg-[#b7d4b9] shadow-[0_0_0_10px_rgba(183,212,185,0.1),0_0_32px_rgba(183,212,185,0.4)]" />
-                    <span className="absolute bottom-3 rounded-full bg-[#dce9de]/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-[#dce9de]/65">
-                      no result
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-[#92bf9d]/20 bg-black/10 p-4">
-                  <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#dce9de]/50">Requested address</p>
-                  <p className="mt-2 break-all font-mono text-xs text-[#dce9de]/80">/somewhere/else</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <NotFoundVisual />
         </div>
       </main>
     </SiteLayout>
