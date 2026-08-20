@@ -15,8 +15,8 @@ export default function NotFound() {
           <div>
             <div className="flex items-center gap-3">
               <span className="pulse-dot h-2 w-2 rounded-full bg-[var(--leaf)]" aria-hidden="true" />
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--ink-faint)]">
-                404 / route not found
+              <p className="rounded-full border border-[var(--forest)]/[0.16] bg-[var(--paper-3)] px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--forest-mid)] shadow-[0_8px_24px_-16px_rgba(23,60,42,0.4)]">
+                404 / ROUTE NOT FOUND
               </p>
             </div>
 
