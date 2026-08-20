@@ -11,6 +11,7 @@ import '../../models/preference_profile.dart';
 import '../../models/preference_profile_item.dart';
 import '../../providers/personalization_provider.dart';
 import '../../services/api.dart';
+import '../../widgets/stretch_switch.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class PersonalizationScreen extends ConsumerWidget {
@@ -112,7 +113,7 @@ class _PersonalizationBodyState extends ConsumerState<_PersonalizationBody> {
                       ),
                     ),
                   ),
-                  Switch.adaptive(
+                  StretchSwitch(
                     key: const ValueKey('personalization-enabled-switch'),
                     value: settings.enabled,
                     onChanged: _busy ? null : _setEnabled,
@@ -888,7 +889,7 @@ class _ConsentTile extends StatelessWidget {
             ],
           ),
         ),
-        Switch.adaptive(
+        StretchSwitch(
           value: value,
           onChanged: enabled ? onChanged : null,
           activeTrackColor: CuppetWorkspaceColors.primary,

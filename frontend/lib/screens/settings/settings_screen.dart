@@ -8,6 +8,7 @@ import '../../design/tokens.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/timezone_provider.dart';
 import '../../services/push_service.dart';
+import '../../widgets/stretch_switch.dart';
 import '../../widgets/user_avatar.dart';
 import '../../widgets/workspace_primitives.dart';
 
@@ -209,7 +210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     color: CuppetWorkspaceColors.primary,
                                   ),
                                 )
-                                : Switch.adaptive(
+                                : StretchSwitch(
                                   value: _pushEnabled,
                                   activeTrackColor:
                                       CuppetWorkspaceColors.primary,
@@ -247,7 +248,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     color: CuppetWorkspaceColors.primary,
                                   ),
                                 )
-                                : Switch.adaptive(
+                                : StretchSwitch(
                                   key: const ValueKey(
                                     'automatic-timezone-switch',
                                   ),

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import '../../design/tokens.dart';
+import '../stretch_switch.dart';
 
 class PickedAttachmentItem {
   const PickedAttachmentItem({
@@ -307,7 +308,7 @@ class _IntegratedMediaAttachmentPanelState
                 ),
                 Transform.scale(
                   scale: 0.8,
-                  child: Switch.adaptive(
+                  child: StretchSwitch(
                     value: _saveToDrive,
                     onChanged: (val) => setState(() => _saveToDrive = val),
                     activeTrackColor: CuppetWorkspaceColors.primary,

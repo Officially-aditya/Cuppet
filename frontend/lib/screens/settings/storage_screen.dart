@@ -8,6 +8,7 @@ import '../../models/message_archive.dart';
 import '../../providers/connectors_provider.dart';
 import '../../providers/message_archive_provider.dart';
 import '../../services/api.dart';
+import '../../widgets/stretch_switch.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class StorageScreen extends ConsumerWidget {
@@ -173,7 +174,7 @@ class _ArchiveCard extends ConsumerWidget {
                   ),
                 )
               else
-                Switch.adaptive(
+                StretchSwitch(
                   key: const ValueKey('drive-message-archive-toggle'),
                   value: enabled,
                   activeTrackColor: CuppetWorkspaceColors.primary,

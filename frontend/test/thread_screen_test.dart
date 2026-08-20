@@ -17,6 +17,7 @@ import 'package:sydney/services/agent_service.dart';
 import 'package:sydney/services/api.dart';
 import 'package:sydney/services/message_service.dart';
 import 'package:sydney/widgets/app_bottom_nav.dart';
+import 'package:sydney/widgets/stretch_switch.dart';
 
 final testAgent = Agent(
   id: 'agent-layout',
@@ -673,7 +674,7 @@ void main() {
     expect(find.text('Agent active'), findsNothing);
     expect(find.text('Pause agent'), findsOneWidget);
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      tester.widget<StretchSwitch>(find.byType(StretchSwitch)).value,
       isFalse,
     );
     expect(
@@ -681,16 +682,16 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Pause agent')).dy),
     );
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(StretchSwitch));
     await tester.pump();
     expect(find.text('Resume agent'), findsOneWidget);
     expect(find.text('Pause agent'), findsNothing);
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      tester.widget<StretchSwitch>(find.byType(StretchSwitch)).value,
       isTrue,
     );
-    final resumeSwitch = tester.widget<SwitchListTile>(
-      find.byType(SwitchListTile),
+    final resumeSwitch = tester.widget<StretchSwitch>(
+      find.byType(StretchSwitch),
     );
     expect(resumeSwitch.activeThumbColor, Colors.white);
     expect(resumeSwitch.activeTrackColor, SydneyColors.primary);

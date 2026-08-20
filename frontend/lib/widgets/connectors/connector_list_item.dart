@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../design/tokens.dart';
 import '../../models/connector.dart';
 import '../sydney_primitives.dart';
+import '../stretch_switch.dart';
 import '../workspace_primitives.dart';
 
 class ConnectorListItem extends StatelessWidget {
@@ -301,7 +302,7 @@ class _ConnectorStatusLine extends StatelessWidget {
                   : actionRequired
                   ? 'Reconnect required'
                   : 'Disconnected',
-          child: Switch.adaptive(
+          child: StretchSwitch(
             value: connected,
             activeThumbColor: SydneyColors.onPrimary,
             activeTrackColor: activeTrackColor,

@@ -5,6 +5,7 @@ import '../../design/tokens.dart';
 import '../../models/agent.dart';
 import '../../providers/agents_provider.dart';
 import '../../services/api.dart';
+import '../../widgets/stretch_switch.dart';
 import '../../widgets/workspace_primitives.dart';
 
 class AgentPreferencesScreen extends ConsumerStatefulWidget {
@@ -186,11 +187,8 @@ class _AgentPreferencesScreenState
             const SizedBox(height: SydneySpacing.sm),
             WorkspaceCard(
               padding: EdgeInsets.zero,
-              child: SwitchListTile.adaptive(
-                value: _isPaused,
-                onChanged: (paused) => setState(() => _isPaused = paused),
-                activeThumbColor: Colors.white,
-                activeTrackColor: CuppetWorkspaceColors.primary,
+              child: ListTile(
+                onTap: () => setState(() => _isPaused = !_isPaused),
                 title: Text(
                   _isPaused ? 'Resume agent' : 'Pause agent',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -206,11 +204,17 @@ class _AgentPreferencesScreenState
                     color: CuppetWorkspaceColors.muted,
                   ),
                 ),
-                secondary: Icon(
+                leading: Icon(
                   _isPaused
                       ? Icons.play_circle_outline_rounded
                       : Icons.pause_circle_outline_rounded,
                   color: CuppetWorkspaceColors.primaryInk,
+                ),
+                trailing: StretchSwitch(
+                  value: _isPaused,
+                  onChanged: (paused) => setState(() => _isPaused = paused),
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: CuppetWorkspaceColors.primary,
                 ),
               ),
             ),
