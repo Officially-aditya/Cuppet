@@ -15,7 +15,7 @@ export default function NotFound() {
           <div>
             <div className="flex items-center gap-3">
               <span className="pulse-dot h-2 w-2 rounded-full bg-[var(--leaf)]" aria-hidden="true" />
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--forest-mid)]">
+              <p className="font-mono text-lg font-bold uppercase tracking-[0.14em] text-[var(--forest-mid)] sm:text-xl">
                 404 / ROUTE NOT FOUND
               </p>
             </div>
