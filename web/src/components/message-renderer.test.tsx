@@ -36,6 +36,36 @@ describe("MessageRenderer", () => {
     expect(container.querySelector(".message-card svg")).not.toBeInTheDocument();
   });
 
+  it("groups GitHub updates by repository and keeps repositories separate", () => {
+    const github: AgentMessage = {
+      ...briefing,
+      id: "github-message",
+      content: {
+        template: "data_summary",
+        data: {
+          kind: "github_activity",
+          title: "Daily GitHub digest",
+          timeline: [
+            { title: "First change", repository: "org/app" },
+            { title: "Second change", repository: "ORG/APP" },
+            { title: "Other repo change", repository: "org/other" }
+          ]
+        }
+      }
+    };
+
+    const { container } = render(<MessageRenderer message={github} />);
+
+    expect(screen.getByText("2 updates")).toBeInTheDocument();
+    expect(screen.getAllByText("org/app")).toHaveLength(1);
+    expect(screen.getAllByText("org/other")).toHaveLength(1);
+    expect(screen.getByText("First change")).toBeInTheDocument();
+    expect(screen.getByText("Second change")).toBeInTheDocument();
+    expect(screen.getByText("Other repo change")).toBeInTheDocument();
+    expect(container.querySelectorAll(".digest-repository-group")).toHaveLength(1);
+    expect(container.querySelectorAll(".digest-list > .digest-item")).toHaveLength(2);
+  });
+
   it("extracts a useful preview from known payload fields", () => {
     expect(messageText({ template: "plain_text", data: { body: "A calm update" } })).toBe("A calm update");
     expect(messageText({ template: "all_clear", data: { message: "Nothing urgent" } })).toBe("Nothing urgent");

@@ -454,6 +454,15 @@ button { color: inherit; }
 .digest-item p { font-size: 9px; line-height: 1.5; }
 .digest-item a { color: var(--primary); font-size: 8px; text-decoration: none; }
 .digest-marker { flex: 0 0 auto; width: 8px; height: 8px; margin-top: 4px; background: var(--primary); border-radius: 50%; box-shadow: 0 0 0 4px var(--primary-soft); }
+.digest-repository-group > div { flex: 1; }
+.digest-group-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.digest-group-heading small { color: var(--muted); white-space: nowrap; }
+.digest-update-list { margin: 5px 0 0; padding-left: 16px; display: grid; gap: 6px; }
+.digest-update-list li { display: flex; justify-content: space-between; gap: 8px; padding-left: 2px; }
+.digest-update-list li > span { min-width: 0; display: grid; gap: 2px; }
+.digest-update-list li b { font-size: 9px; }
+.digest-update-list li small { font-size: 8px; }
+.digest-update-list li a { flex: 0 0 auto; }
 .source-links { margin-top: 13px; padding-top: 10px; border-top: 1px solid #eeece5; }
 .source-links summary { color: #99978e; cursor: pointer; font-size: 8px; }
 .source-links > div { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }

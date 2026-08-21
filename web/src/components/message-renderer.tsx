@@ -96,6 +96,7 @@ function sendFeedback(
 
 function TemplateContent({ template, data, messageId, onAction }: { template: string; data: UnknownRecord; messageId: string; onAction?: (messageId: string, action: MessageAction) => void }) {
   if (template === "briefing_card") return <Briefing data={data} />;
+  if (template === "data_summary" && (data.kind === "github_activity" || data.kind === "github_activity_digest")) return <Digest data={data} kind="github" />;
   if (template === "data_summary") return <DataSummary data={data} />;
   if (template === "urgency_list") return <UrgencyList data={data} />;
   if (template === "checklist" || template === "progress_tracker") return <Checklist data={data} />;
@@ -129,6 +130,21 @@ function Briefing({ data }: { data: UnknownRecord }) {
 
 function DataSummary({ data }: { data: UnknownRecord }) {
   return <><p className="message-kicker">Summary</p><h3>{text(data.title)}</h3><p>{text(data.summary || data.text || data.description)}</p>{list(data.metrics).length > 0 && <div className="metric-grid">{list(data.metrics).map((raw, index) => { const metric = record(raw); return <div className="metric" key={index}><strong>{text(metric.value)}</strong><b>{text(metric.label)}</b><small>{text(metric.sublabel)}</small></div>; })}</div>}<ItemList values={list(data.action_items).length ? list(data.action_items) : list(data.items)} /></>;
+}
+
+type DigestGroup = { repository?: string; items: UnknownRecord[] };
+
+export function groupGitHubDigestItems(items: unknown[]): DigestGroup[] {
+  const groups = new Map<string, DigestGroup>();
+  items.forEach((raw, index) => {
+    const item = record(raw);
+    const repository = text(item.repository).trim();
+    const key = repository ? `repository:${repository.toLowerCase()}` : `item:${index}`;
+    const group = groups.get(key);
+    if (group) group.items.push(item);
+    else groups.set(key, { repository: repository || undefined, items: [item] });
+  });
+  return [...groups.values()];
 }
 
 function UrgencyList({ data }: { data: UnknownRecord }) {
@@ -216,7 +232,27 @@ function Digest({ data, kind }: { data: UnknownRecord; kind: "gmail" | "github" 
   const title = text(data.title) || (kind === "gmail" ? "Inbox digest" : "GitHub activity");
   const items = list(data.items).length ? list(data.items) : list(data.timeline);
   const metrics = list(data.metrics);
-  return <><p className="message-kicker">{kind === "gmail" ? "Gmail digest" : "GitHub activity"}</p><h3>{title}</h3>{text(data.summary || data.body || data.text) && <Markdown>{text(data.summary || data.body || data.text)}</Markdown>}{metrics.length > 0 && <div className="digest-metrics">{metrics.map((raw, index) => { const metric = record(raw); return <div key={index}><strong>{text(metric.value)}</strong><small>{text(metric.label)}</small></div>; })}</div>}<div className="digest-list">{items.map((raw, index) => { const item = record(raw); const href = text(item.url); return <article key={index} className="digest-item">{kind === "github" && <span className="digest-marker" /> }<div><b>{text(item.title || item.headline || item.subject || item.name) || "Update"}</b>{text(item.repository || item.sender || item.from) && <small>{text(item.repository || item.sender || item.from)}</small>}{text(item.detail || item.preview || item.summary || item.snippet) && <p>{text(item.detail || item.preview || item.summary || item.snippet)}</p>}{href && <a href={href} target="_blank" rel="noreferrer">Open source</a>}</div></article>; })}</div>{text(data.footer) && <p className="message-footer">{text(data.footer)}</p>}</>;
+  const groups: DigestGroup[] = kind === "github" ? groupGitHubDigestItems(items) : items.map((raw) => ({ repository: undefined, items: [record(raw)] }));
+  return <><p className="message-kicker">{kind === "gmail" ? "Gmail digest" : "GitHub activity"}</p><h3>{title}</h3>{text(data.summary || data.body || data.text) && <Markdown>{text(data.summary || data.body || data.text)}</Markdown>}{metrics.length > 0 && <div className="digest-metrics">{metrics.map((raw, index) => { const metric = record(raw); return <div key={index}><strong>{text(metric.value)}</strong><small>{text(metric.label)}</small></div>; })}</div>}<div className="digest-list">{groups.map((group, index) => group.items.length > 1 && kind === "github" ? <GitHubDigestGroup key={group.repository || index} group={group} /> : <DigestItem key={group.repository || index} item={group.items[0]} kind={kind} />)}</div>{text(data.footer) && <p className="message-footer">{text(data.footer)}</p>}</>;
+}
+
+function DigestItem({ item, kind }: { item: UnknownRecord; kind: "gmail" | "github" }) {
+  const source = text(item.repository || item.sender || item.from);
+  const detail = digestDetail(item);
+  const href = text(item.url);
+  return <article className="digest-item">{kind === "github" && <span className="digest-marker" />}<div><b>{digestTitle(item)}</b>{source && <small>{source}</small>}{detail && <p>{detail}</p>}{href && <a href={href} target="_blank" rel="noreferrer">Open source</a>}</div></article>;
+}
+
+function GitHubDigestGroup({ group }: { group: DigestGroup }) {
+  return <article className="digest-item digest-repository-group"><span className="digest-marker" /><div><div className="digest-group-heading"><b>{group.repository || "Repository updates"}</b><small>{group.items.length} updates</small></div><ul className="digest-update-list">{group.items.map((item, index) => { const href = text(item.url); const detail = digestDetail(item); return <li key={index}><span><b>{digestTitle(item)}</b>{detail && <small>{detail}</small>}</span>{href && <a href={href} target="_blank" rel="noreferrer">Open source</a>}</li>; })}</ul></div></article>;
+}
+
+function digestTitle(item: UnknownRecord): string {
+  return text(item.title || item.headline || item.subject || item.name) || "Update";
+}
+
+function digestDetail(item: UnknownRecord): string {
+  return text(item.detail || item.preview || item.summary || item.snippet);
 }
 
 function resolutionLabel(value: string): string {

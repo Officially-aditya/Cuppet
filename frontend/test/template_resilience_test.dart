@@ -10,6 +10,7 @@ import 'package:sydney/widgets/templates/checklist_template.dart';
 import 'package:sydney/widgets/templates/comparison_template.dart';
 import 'package:sydney/widgets/templates/data_summary_template.dart';
 import 'package:sydney/widgets/templates/dsa_question_template.dart';
+import 'package:sydney/widgets/templates/github_activity_template.dart';
 import 'package:sydney/widgets/templates/news_brief_template.dart';
 import 'package:sydney/widgets/templates/progress_tracker_template.dart';
 import 'package:sydney/widgets/templates/briefing_card_template.dart';
@@ -672,7 +673,8 @@ void main() {
         expect(find.text('Improve news presentation'), findsOneWidget);
         expect(find.text('Fix account cache isolation'), findsOneWidget);
         expect(find.text('COMMIT'), findsNWidgets(2));
-        expect(find.text('Officially-aditya/Sydney'), findsNWidgets(2));
+        expect(find.text('Officially-aditya/Sydney'), findsOneWidget);
+        expect(find.text('2 updates'), findsOneWidget);
         expect(find.text('Read-only GitHub digest.'), findsOneWidget);
         final metricTops =
             [
@@ -685,6 +687,23 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    test('GitHub timeline groups only updates from the same repository', () {
+      final groups = groupGitHubTimeline(<Map<String, dynamic>>[
+        {'title': 'First update', 'repository': 'Officially-aditya/Sydney'},
+        {'title': 'Second update', 'repository': 'officially-aditya/sydney'},
+        {
+          'title': 'Other repository update',
+          'repository': 'Officially-aditya/Other',
+        },
+      ]);
+
+      expect(groups, hasLength(2));
+      expect(groups.first.repository, 'Officially-aditya/Sydney');
+      expect(groups.first.updates, hasLength(2));
+      expect(groups.last.repository, 'Officially-aditya/Other');
+      expect(groups.last.updates, hasLength(1));
+    });
 
     testWidgets(
       'GitHub activity identifies update types and keeps dates visible',
