@@ -10,6 +10,8 @@ import {
   type CapabilityResult
 } from "./capability-registry.js";
 import { normalizeAndValidateOutput } from "./output-registry.js";
+import { applyResponseLimitToContent } from "./response-density.js";
+import type { AgentMessageContent } from "../output.js";
 
 export async function executeAgentDefinition(input: {
   definition: AgentDefinitionV1 | AgentDefinitionV2;
@@ -54,8 +56,15 @@ export async function executeAgentDefinition(input: {
   const content = normalizeAndValidateOutput(
     output.content as { template: string; version: string; data: unknown }
   );
+  const densityAdjustedContent = applyResponseLimitToContent(
+    content as AgentMessageContent,
+    definition.policy.response_limit
+  );
   // Adapters preserve existing wire contracts during the foundation release.
   // The configured contract is still validated and exposed, while a handful of
   // legacy deterministic fallbacks can retain their historic registered shape.
-  return { ...output, content };
+  return {
+    ...output,
+    content: normalizeAndValidateOutput(densityAdjustedContent)
+  };
 }

@@ -1534,23 +1534,23 @@ function to24Hour(rawHour: string | undefined, meridiem: string | undefined): nu
 
 export function responseLimitInstruction(limit?: string): string {
   if (limit === "concise") {
-    return "RESPONSE DENSITY REQUIREMENT: The response must be extremely brief, concise, and focused. Avoid any extra explanation, detailed background, or filler. Deliver only the most essential key points or items directly.";
+    return "RESPONSE DENSITY REQUIREMENT: The response must be extremely brief, concise, and focused. Avoid any extra explanation, detailed background, or filler. Deliver only the most essential key points or items directly. For structured output, populate only core fields and omit optional context, rationale, audience analysis, and evidence summaries.";
   }
   if (limit === "detailed") {
-    return "RESPONSE DENSITY REQUIREMENT: The response must be highly detailed, verbose, and precise. Include comprehensive explanations, complete background details, and in-depth step-by-step points.";
+    return "RESPONSE DENSITY REQUIREMENT: The response must be highly detailed, verbose, and precise. Include comprehensive explanations, complete background details, and in-depth step-by-step points. Populate useful optional context, rationale, audience analysis, and evidence fields when the schema supports them.";
   }
   // Default to balanced
-  return "RESPONSE DENSITY REQUIREMENT: Deliver a balanced summary of information. Provide reasonable context and clear explanations without being overly verbose.";
+  return "RESPONSE DENSITY REQUIREMENT: Deliver a balanced summary of information. Provide reasonable context and clear explanations without being overly verbose. Include the core result plus the most useful supporting context, while omitting secondary rationale or evidence detail unless it materially changes interpretation.";
 }
 
 export function responseStyleGuidance(limit?: string): string {
   if (limit === "concise") {
-    return "Keep replies concise, extremely brief, and scannable. Use short bullets when listing items.";
+    return "Keep replies concise, extremely brief, and scannable. Use short bullets when listing items. Keep each structured item to its essential result and omit optional supporting sections.";
   }
   if (limit === "detailed") {
-    return "Provide thorough, in-depth, and comprehensive replies with complete background details and detailed step-by-step explanations.";
+    return "Provide thorough, in-depth, and comprehensive replies with complete background details and detailed step-by-step explanations. Use optional supporting sections when they add useful context.";
   }
-  return "Keep replies practical, balanced, and scannable. Provide clear context without excessive length.";
+  return "Keep replies practical, balanced, and scannable. Provide clear context without excessive length, using one useful layer of supporting detail.";
 }
 
 export function maxTokensForResponseLimit(limit?: string, fallback: number = 900): number {

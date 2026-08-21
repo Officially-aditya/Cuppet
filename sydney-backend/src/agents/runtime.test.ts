@@ -162,6 +162,50 @@ test("universal executor dispatches capability steps, not recipe metadata", asyn
   assert.equal((result.content as { template: string }).template, "news_brief");
 });
 
+test("universal executor enforces response density on structured content", async () => {
+  const prompt = "Find content ideas for Reddit every day";
+  const base = compileAgentDefinition(parseIntent(prompt), prompt);
+  const sourceContent = {
+    template: "content_extractor",
+    version: "1.0",
+    data: {
+      ideas: [
+        {
+          title: "Idea",
+          hook: "A useful hook.",
+          angle: "A distinct angle.",
+          audience_value: "A practical takeaway.",
+          evidence_summary: "Supported by a current source."
+        }
+      ]
+    }
+  };
+
+  for (const responseLimit of ["concise", "balanced", "detailed"] as const) {
+    const result = await executeAgentDefinition({
+      definition: {
+        ...base,
+        policy: { ...base.policy, response_limit: responseLimit }
+      },
+      invokeAdapter: async () => ({
+        content: sourceContent,
+        sourceRefs: [],
+        tokensUsed: 0
+      })
+    });
+    const idea = (
+      result.content as {
+        data: { ideas: Array<Record<string, unknown>> };
+      }
+    ).data.ideas[0]!;
+    assert.equal(idea.title, "Idea");
+    assert.equal(idea.hook, "A useful hook.");
+    assert.equal("angle" in idea, responseLimit !== "concise");
+    assert.equal("audience_value" in idea, responseLimit !== "concise");
+    assert.equal("evidence_summary" in idea, responseLimit === "detailed");
+  }
+});
+
 test("all fourteen scheduled output contracts validate through one registry", () => {
   const fixtures: Record<string, Record<string, unknown>> = {
     plain_text: { body: "Hello" },

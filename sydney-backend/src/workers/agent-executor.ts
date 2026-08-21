@@ -113,6 +113,10 @@ import {
 import { outputNotificationSummary } from "../agents/runtime/output-registry.js";
 import { buildRecipeExecutionPrompt } from "../agents/runtime/execution-prompt.js";
 import { splitAgentMessageContent } from "../agents/runtime/message-parts.js";
+import {
+  applyResponseLimitToRenderedMessage,
+  normalizeResponseLimit
+} from "../agents/runtime/response-density.js";
 import { isLlmTokenLimitError, withLlmUser } from "../agents/token-rate-limit.js";
 import { accessExecutionRouter } from "../access/router.js";
 import { accessProviderForUser } from "../access/provider-directory.js";
@@ -491,12 +495,17 @@ async function executeAgentJob(
     const targetSnoozedId = isSnooze ? job.data.snoozedMessageId : skippedMessageId;
     const targetTrigger = isSnooze || skippedMessageId ? ("snooze" as const) : job.data.trigger;
 
-    const rendered = await withLlmUser(agent.user_id, () =>
-      renderAgentMessage(
-        agent,
-        targetTrigger,
-        targetSnoozedId,
-        job.data.eventId
+    const rendered = applyResponseLimitToRenderedMessage(
+      await withLlmUser(agent.user_id, () =>
+        renderAgentMessage(
+          agent,
+          targetTrigger,
+          targetSnoozedId,
+          job.data.eventId
+        )
+      ),
+      normalizeResponseLimit(
+        agent.definition?.policy.response_limit ?? agent.parsed_intent.response_limit
       )
     );
 
@@ -2381,6 +2390,12 @@ async function renderContentExtractorAgent(context: {
     const niche = String(recipeInputs.niche ?? "technology");
 
     const responseLimit = parsedIntent.response_limit;
+    const ideaOutputSchema =
+      responseLimit === "concise"
+        ? '{"ideas":[{"title":"string","hook":"string"}]}'
+        : responseLimit === "detailed"
+          ? '{"ideas":[{"title":"string","hook":"string","angle":"string","audience_value":"string","evidence_summary":"string"}]}'
+          : '{"ideas":[{"title":"string","hook":"string","angle":"string","audience_value":"string"}]}';
     const promptLayers = buildRecipeExecutionPrompt({
       recipeId: "content_extractor",
       recipeVersion: numberValue(parsedIntent.recipe_version),
@@ -2390,15 +2405,14 @@ async function renderContentExtractorAgent(context: {
       recipeInputs,
       userPrompt: agent.prompt,
       responseLimit,
-      outputSchema:
-        '{"ideas":[{"title":"string","hook":"string","angle":"string","audience_value":"string","evidence_summary":"string"}]}',
+      outputSchema: ideaOutputSchema,
       runInstruction: [
         `Today is ${todayStr}. Target platform: ${platform}. Target niche: ${niche}. Use bounded web search for fresh topics tailored for ${platform}.`,
         responseLimit === "detailed"
           ? "Return deep, thorough, and highly detailed content ideas with detailed background evidence, rich hooks, comprehensive audience value analysis, and detailed angles."
           : responseLimit === "concise"
-            ? "Return extremely brief, concise content ideas with short hooks and punchy angles."
-            : "Return exactly three distinct ideas. Optimize for audience fit and angle diversity.",
+            ? "Return extremely brief, concise content ideas with only a clear title and one-sentence hook for each idea. Do not return angle, audience_value, or evidence_summary fields."
+            : "Return exactly three distinct ideas with a clear title, concise hook, useful angle, and audience value. Use search evidence to ground the ideas, but do not include an evidence_summary field.",
         "Avoid recent idea titles. If the configured niche is exhausted, broaden only to an adjacent content pillar and disclose that in the angle.",
         `Recent idea titles to avoid: ${JSON.stringify(recentIdeas)}.`
       ].join(" ")
