@@ -65,13 +65,12 @@ class _CreateScreenState extends State<CreateScreen> {
     return Scaffold(
       key: const ValueKey('create-agent-screen'),
       backgroundColor: CuppetWorkspaceColors.background,
-      appBar: const CreationAppBar(),
       body: SafeArea(
         bottom: false,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             SydneySpacing.page,
-            SydneySpacing.xs,
+            SydneySpacing.md,
             SydneySpacing.page,
             SydneySpacing.xl,
           ),

@@ -2,26 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens.dart';
 
-class CreationAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const CreationAppBar({super.key});
-
-  @override
-  Size get preferredSize => const Size.fromHeight(64);
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      automaticallyImplyLeading: false,
-      backgroundColor: CuppetWorkspaceColors.background,
-      foregroundColor: CuppetWorkspaceColors.ink,
-      surfaceTintColor: Colors.transparent,
-      scrolledUnderElevation: 0,
-      elevation: 0,
-      toolbarHeight: preferredSize.height,
-    );
-  }
-}
-
 class CreationFooter extends StatelessWidget {
   const CreationFooter({
     required this.secondaryLabel,

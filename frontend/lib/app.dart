@@ -330,14 +330,15 @@ class _RouteErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false),
-      body: Padding(
-        padding: const EdgeInsets.all(SydneySpacing.page),
-        child: Center(
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(SydneySpacing.page),
+          child: Center(
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
           ),
         ),
       ),

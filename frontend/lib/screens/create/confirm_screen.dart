@@ -121,7 +121,6 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
     return Scaffold(
       key: const ValueKey('confirm-agent-screen'),
       backgroundColor: CuppetWorkspaceColors.background,
-      appBar: const CreationAppBar(),
       body: SafeArea(
         bottom: false,
         child:
@@ -159,7 +158,7 @@ class _ConfirmScreenState extends ConsumerState<ConfirmScreen> {
                 : ListView(
                   padding: const EdgeInsets.fromLTRB(
                     SydneySpacing.page,
-                    SydneySpacing.xs,
+                    SydneySpacing.md,
                     SydneySpacing.page,
                     SydneySpacing.xl,
                   ),
