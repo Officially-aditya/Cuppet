@@ -498,19 +498,25 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
 
                   return ListView.builder(
                     controller: _scrollController,
+                    // Bottom-anchored: an opened thread renders directly on
+                    // the newest message instead of painting the oldest ones
+                    // and jumping down after the first frame.
+                    reverse: true,
                     padding: const EdgeInsets.symmetric(
                       vertical: SydneySpacing.lg,
                     ),
                     itemCount: itemCount,
                     itemBuilder: (context, index) {
-                      if (index < archivedEntries.length) {
-                        final entry = archivedEntries[index];
+                      final chronologicalIndex = itemCount - 1 - index;
+                      if (chronologicalIndex < archivedEntries.length) {
+                        final entry = archivedEntries[chronologicalIndex];
                         if (entry.dayLabel != null) {
                           return _ThreadDayPill(label: entry.dayLabel!);
                         }
                         return _ArchivedMessageTile(message: entry.message!);
                       }
-                      var relativeIndex = index - archivedEntries.length;
+                      var relativeIndex =
+                          chronologicalIndex - archivedEntries.length;
                       if (showArchiveBoundary && relativeIndex == 0) {
                         return _ArchiveBoundary(
                           state: archiveState!,
@@ -749,19 +755,21 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       if (!_scrollController.hasClients) {
         return;
       }
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      // The list is bottom-anchored (reverse: true), so offset zero is the
+      // newest message. Correction jumps handle lazy item layout growth.
+      _scrollController.jumpTo(0);
 
       // Perform secondary jumps to handle layout changes of lazy-loaded items
       _shortScrollCorrection?.cancel();
       _shortScrollCorrection = Timer(const Duration(milliseconds: 60), () {
         if (_scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          _scrollController.jumpTo(0);
         }
       });
       _longScrollCorrection?.cancel();
       _longScrollCorrection = Timer(const Duration(milliseconds: 180), () {
         if (_scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          _scrollController.jumpTo(0);
         }
       });
     });
