@@ -769,8 +769,7 @@ function parseIntentLegacy(prompt: string): ParsedIntent {
   }
 
   if (
-    stockSymbols(prompt).length > 0 ||
-    /\b(?:stock|stocks|portfolio|market close|holdings?|market\s+(?:monitor|tracker|watch|movement)|financial\s+market|stock\s+(?:monitor|tracker|watch))\b/.test(lower)
+    looksLikeStockRequest(prompt, lower)
   ) {
     return baseIntent(prompt, {
       name: "Portfolio Watch",
@@ -1592,6 +1591,42 @@ export const STOP_WORDS = new Set([
   "price", "prices", "info", "information", "details", "report", "status", "rate", "rates",
   "quotes", "quote", "share", "shares"
 ]);
+
+// Common uppercase tokens that are acronyms, not stock tickers. Without this
+// list, ordinary words like "AI" or "API" made free-form requests classify as
+// Portfolio Watch.
+const NON_TICKER_ACRONYMS = new Set([
+  "AI", "API", "PDF", "DSA", "JEE", "NEET", "SQL", "AWS", "GCP",
+  "CEO", "CTO", "CFO", "COO", "SEO", "SEM", "UI", "UX", "QA", "HR", "PR",
+  "OKR", "KPI", "NDA", "B2B", "B2C", "LLM", "ML", "NLP", "IOS", "MAC",
+  "USA", "US", "UK", "EU", "UN", "GPS", "OTP", "URL", "URI", "UUID"
+]);
+
+// Portfolio requests need real market evidence: market vocabulary, a known
+// company mapping, a cashtag, or an all-caps ticker symbol. Generic word
+// soup from stockSymbols() must not decide the classification.
+export function looksLikeStockRequest(prompt: string, lower?: string): boolean {
+  const normalized = (lower ?? prompt).toLowerCase();
+  if (
+    /\b(?:stock|stocks|portfolio|market close|holdings?|market\s+(?:monitor|tracker|watch|movement)|financial\s+market|stock\s+(?:monitor|tracker|watch))\b/.test(normalized)
+  ) {
+    return true;
+  }
+  if (
+    Object.keys(STOCK_MAPPINGS).some((key) =>
+      new RegExp(`\\b${key}\\b`, "i").test(normalized)
+    )
+  ) {
+    return true;
+  }
+  if (/\$\s*[a-z]{1,5}\b/i.test(prompt)) {
+    return true;
+  }
+  const tickers = (prompt.match(/\b[A-Z]{2,5}\b/g) ?? []).filter(
+    (symbol) => !NON_TICKER_ACRONYMS.has(symbol)
+  );
+  return tickers.length > 0;
+}
 
 export function stockSymbols(prompt: string): string[] {
   const lower = prompt.toLowerCase();

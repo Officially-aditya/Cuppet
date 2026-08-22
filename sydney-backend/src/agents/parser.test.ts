@@ -218,6 +218,41 @@ test("portfolio keywords still classify as portfolio watch without an explicit p
   assert.equal(parsed.name, "Portfolio Watch");
 });
 
+test("free-form creation requests stay generic custom agents", () => {
+  const writer = parseIntent(
+    "Create an article writer agent that brings back ideas on a daily basis"
+  );
+  assert.equal(writer.intent, "custom_read_agent");
+  assert.equal(writer.name, "Custom Agent");
+  assert.equal(writer.output_template, "plain_text");
+  assert.equal(writer.schedule_cron, "0 9 * * *");
+
+  const ideas = parseIntent(
+    "I want an agent that sends me fresh writing ideas every morning"
+  );
+  assert.equal(ideas.intent, "custom_read_agent");
+  assert.equal(ideas.name, "Custom Agent");
+  assert.equal(ideas.schedule_cron, "0 7 * * *");
+});
+
+test("tickers, cashtags, and mapped companies still classify as portfolio watch", () => {
+  for (const prompt of [
+    "Watch TSLA and NVDA price movements daily",
+    "$AAPL earnings summary each morning",
+    "Summarize RELIANCE stock every evening"
+  ]) {
+    const parsed = parseIntent(prompt);
+    assert.equal(parsed.intent, "portfolio_watch", prompt);
+  }
+});
+
+test("common acronyms do not turn requests into portfolio watch", () => {
+  const parsed = parseIntent(
+    "Let me know which AI labs are hiring this week"
+  );
+  assert.notEqual(parsed.intent, "portfolio_watch");
+});
+
 test("responseLimitInstruction returns appropriate prompts", () => {
   assert.match(responseLimitInstruction("concise"), /extremely brief/);
   assert.match(responseLimitInstruction("detailed"), /highly detailed/);
