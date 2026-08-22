@@ -310,7 +310,7 @@ class AuthService {
 
 String _googleSignInExceptionMessage(GoogleSignInException error) {
   return switch (error.code) {
-    GoogleSignInExceptionCode.canceled => 'Google sign-in was cancelled.',
+    GoogleSignInExceptionCode.canceled => 'Unable to sign in, please try again.',
     GoogleSignInExceptionCode.interrupted =>
       'Google sign-in was interrupted. Please try again.',
     GoogleSignInExceptionCode.clientConfigurationError ||
